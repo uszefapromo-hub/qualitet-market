@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard | QualitetMarket</title>
+<link rel="stylesheet" href="styles.css">
+
+</head>
+<body>
+<header class="topbar">
+  <div class="container topbar-inner">
+    <a class="brand" href="platforma.html"><span class="brand-badge">QM</span><span>QualitetMarket</span></a>
+    <nav class="nav"><a href="platforma.html" class="">Platforma</a><a href="dashboard.html" class="active">Dashboard</a><a href="sklep.html" class="">Sklep</a><a href="koszyk.html" class="">Koszyk</a><a href="zamowienia.html" class="">Zamówienia</a><a href="panel-sklepu.html" class="">Panel sklepu</a><a href="hurtownie.html" class="">Hurtownie</a><a href="cennik.html" class="">Cennik</a></nav>
+    <div class="top-actions">
+      <span class="plan-pill gradient-pill">Plan: <strong data-current-plan>BASIC</strong></span>
+      <a class="btn mobile-only" href="dashboard.html">Menu</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="card pad glow">
+        <span class="badge">Operator premium</span>
+        <h1 class="hero-title">Steruj swoim <span class="gradient-text">królestwem sprzedaży</span> z jednego panelu.</h1>
+        <p class="hero-text">Kolorowy panel pod e-commerce i marketplace. Wszystko czytelne na telefonie, bez starego chaosu i bez rozwalonego buildu.</p>
+        <div class="btns" style="margin-top:18px">
+          <a class="btn primary" href="sklep.html">Zobacz sklep</a>
+          <a class="btn secondary" href="generator-sklepu.html">Nowy sklep</a>
+          <a class="btn amber" href="hurtownie.html" data-require="pro">Import hurtowni</a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <img src="assets/dashboard-ui.svg" alt="Wizual dashboardu">
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container grid cols-4">
+      <div class="kpi color-green"><span class="label">Produkty</span><span class="value" id="kpi-products">0</span></div>
+      <div class="kpi color-violet"><span class="label">Zamówienia</span><span class="value" id="kpi-orders">0</span></div>
+      <div class="kpi color-pink"><span class="label">Sklepy</span><span class="value" id="kpi-stores">0</span></div>
+      <div class="kpi color-amber"><span class="label">Marża</span><span class="value" id="kpi-margin">20%</span></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container grid cols-2">
+      <div class="card pad">
+        <h2>Status systemu</h2>
+        <div class="list">
+          <div class="list-item"><span>Aktywny sklep</span><strong id="dash-store">demo</strong></div>
+          <div class="list-item"><span>Plan</span><strong id="dash-plan">BASIC</strong></div>
+          <div class="list-item"><span>Produkty</span><strong id="dash-products">0</strong></div>
+          <div class="list-item"><span>Zamówienia</span><strong id="dash-orders">0</strong></div>
+        </div>
+      </div>
+      <div class="card pad">
+        <h2>Szybkie akcje</h2>
+        <div class="btns">
+          <a class="btn primary" href="sklep.html">Sklep</a>
+          <a class="btn" href="koszyk.html">Koszyk</a>
+          <a class="btn" href="checkout.html">Checkout</a>
+          <a class="btn" href="zamowienia.html">Zamówienia</a>
+          <a class="btn" href="panel-sklepu.html">Panel sklepu</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('kpi-products').textContent = QM.getProducts().length;
+  document.getElementById('kpi-orders').textContent = QM.getOrders().length;
+  document.getElementById('kpi-stores').textContent = QM.getStores().length;
+  document.getElementById('kpi-margin').textContent = QM.getStoreMargin() + '%';
+  document.getElementById('dash-store').textContent = QM.getActiveStoreSlug();
+  document.getElementById('dash-plan').textContent = QM.getPlan().toUpperCase();
+  document.getElementById('dash-products').textContent = QM.getProducts().length;
+  document.getElementById('dash-orders').textContent = QM.getOrders().length;
+});
+</script>
+
+<footer class="footer"><div class="container">QualitetMarket dark marketplace • mobile first • GitHub Pages safe</div></footer>
+<script src="js/config.js"></script>
+<script src="js/planGuard.js"></script>
+
+</body>
+</html>

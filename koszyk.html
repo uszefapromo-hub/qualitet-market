@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sklep | QualitetMarket</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="shop.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="container topbar-inner">
+    <a class="brand" href="platforma.html"><span class="brand-badge">QM</span><span>QualitetMarket</span></a>
+    <nav class="nav"><a href="platforma.html" class="">Platforma</a><a href="dashboard.html" class="">Dashboard</a><a href="sklep.html" class="active">Sklep</a><a href="koszyk.html" class="">Koszyk</a><a href="zamowienia.html" class="">Zamówienia</a><a href="panel-sklepu.html" class="">Panel sklepu</a><a href="hurtownie.html" class="">Hurtownie</a><a href="cennik.html" class="">Cennik</a></nav>
+    <div class="top-actions">
+      <span class="plan-pill gradient-pill">Plan: <strong data-current-plan>BASIC</strong></span>
+      <a class="btn mobile-only" href="dashboard.html">Menu</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="container showcase">
+      <div class="card pad glow">
+        <span class="badge">Dark marketplace store</span>
+        <h1 class="hero-title">Sklep ma wyglądać jak <span class="gradient-text">premium Alibaba dark</span>.</h1>
+        <p class="hero-text">Duży hero, kolorowe CTA, dynamiczne ikony, mocna ekspozycja produktów i klimat dużej platformy B2B/B2C.</p>
+        <div class="btns" style="margin-top:18px">
+          <a class="btn primary" href="koszyk.html">Przejdź do koszyka</a>
+          <a class="btn secondary" href="panel-sklepu.html">Ustaw sklep</a>
+          <a class="btn amber" href="hurtownie.html" data-require="pro">Importuj produkty</a>
+        </div>
+        <div class="highlight-row">
+          <div class="highlight-box"><div class="muted">Styl</div><strong>Alibaba dark</strong></div>
+          <div class="highlight-box"><div class="muted">Ruch</div><strong>Ikony + marquee</strong></div>
+          <div class="highlight-box"><div class="muted">Mobile</div><strong>Responsive</strong></div>
+          <div class="highlight-box"><div class="muted">Kolor</div><strong>Premium glow</strong></div>
+        </div>
+      </div>
+      <div class="image-card">
+        <img src="assets/alibaba-dark.svg" alt="Wizual sklepu dark marketplace">
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container card pad">
+      <div class="top-actions" style="justify-content:space-between; margin-bottom:8px">
+        <div class="top-actions">
+          <span class="store-pill" id="active-store-badge">Sklep: demo</span>
+          <span class="pill gradient-pill" id="margin-badge">Marża: 20%</span>
+        </div>
+        <div class="top-actions">
+          <span class="chip">🚚 Szybka wysyłka</span>
+          <span class="chip">🌈 Premium UI</span>
+          <span class="chip">💰 Hurt / detal</span>
+        </div>
+      </div>
+      <div class="filters">
+        <input id="search-q" class="input" placeholder="Szukaj produktu...">
+        <select id="filter-category">
+          <option value="all">Wszystkie kategorie</option>
+          <option>Elektronika</option>
+          <option>Dom</option>
+          <option>Moda</option>
+          <option>Lifestyle</option>
+          <option>CSV</option>
+        </select>
+        <select id="sort-by">
+          <option value="name-asc">Sortuj: nazwa A-Z</option>
+          <option value="price-asc">Cena rosnąco</option>
+          <option value="price-desc">Cena malejąco</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div id="products-grid" class="products-grid"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer"><div class="container">QualitetMarket dark marketplace • mobile first • GitHub Pages safe</div></footer>
+<script src="js/config.js"></script>
+<script src="js/planGuard.js"></script>
+<script src="js/shop.js"></script>
+</body>
+</html>

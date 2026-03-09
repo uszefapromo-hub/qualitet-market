@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Platforma | QualitetMarket</title>
+<link rel="stylesheet" href="styles.css">
+
+</head>
+<body>
+<header class="topbar">
+  <div class="container topbar-inner">
+    <a class="brand" href="platforma.html"><span class="brand-badge">QM</span><span>QualitetMarket</span></a>
+    <nav class="nav"><a href="platforma.html" class="active">Platforma</a><a href="dashboard.html" class="">Dashboard</a><a href="sklep.html" class="">Sklep</a><a href="koszyk.html" class="">Koszyk</a><a href="zamowienia.html" class="">Zamówienia</a><a href="panel-sklepu.html" class="">Panel sklepu</a><a href="hurtownie.html" class="">Hurtownie</a><a href="cennik.html" class="">Cennik</a></nav>
+    <div class="top-actions">
+      <span class="plan-pill gradient-pill">Plan: <strong data-current-plan>BASIC</strong></span>
+      <a class="btn mobile-only" href="dashboard.html">Menu</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="card pad glow">
+        <span class="badge">Marketplace jak Alibaba • dark mode • premium</span>
+        <h1 class="hero-title">Budujemy <span class="gradient-text">ciemny kolorowy marketplace</span> z klimatem Alibaba, ale bardziej premium.</h1>
+        <p class="hero-text">Duże sekcje hero, ruchome ikonki, kolorowe karty, wizualny sklep jak wizytówka i mocne wejście do sprzedaży. To ma wyglądać od razu dobrze na telefonie i desktopie.</p>
+        <div class="btns" style="margin-top:18px">
+          <a class="btn primary" href="sklep.html">Wejdź do sklepu</a>
+          <a class="btn secondary" href="dashboard.html">Dashboard</a>
+          <a class="btn amber" href="hurtownie.html" data-require="pro">Import hurtowni</a>
+        </div>
+        <div class="grid cols-4 section" style="padding-bottom:0">
+          <div class="kpi color-green"><span class="label">Produkty</span><span class="value" id="hero-products">0</span></div>
+          <div class="kpi color-violet"><span class="label">Zamówienia</span><span class="value" id="hero-orders">0</span></div>
+          <div class="kpi color-pink"><span class="label">Sklepy</span><span class="value" id="hero-stores">0</span></div>
+          <div class="kpi color-amber"><span class="label">Plan</span><span class="value" id="hero-plan">BASIC</span></div>
+        </div>
+      </div>
+      <div class="card pad">
+        <div class="float-area">
+          <div class="float-icon i1">🚚</div>
+          <div class="float-icon i2">💎</div>
+          <div class="float-icon i3">🛒</div>
+          <div class="float-icon i4">📦</div>
+          <div class="float-icon i5">⚡</div>
+          <div class="hero-visual">
+            <img src="assets/market-hero.svg" alt="Wizual marketplace premium">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="marquee">
+        <div class="marquee-track">
+          <span class="chip">🌍 EU suppliers</span>
+          <span class="chip">📈 Multi-store</span>
+          <span class="chip">⚙️ localStorage</span>
+          <span class="chip">🛍️ Dark commerce</span>
+          <span class="chip">🚀 Mobile first</span>
+          <span class="chip">💳 Checkout ready</span>
+          <span class="chip">🏷️ Alibaba vibe</span>
+          <span class="chip">🌍 EU suppliers</span>
+          <span class="chip">📈 Multi-store</span>
+          <span class="chip">⚙️ localStorage</span>
+          <span class="chip">🛍️ Dark commerce</span>
+          <span class="chip">🚀 Mobile first</span>
+          <span class="chip">💳 Checkout ready</span>
+          <span class="chip">🏷️ Alibaba vibe</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container grid cols-3">
+      <a class="card pad" href="sklep.html">
+        <h3>Sklep premium</h3>
+        <p class="muted">Kolorowy dark store z dużym hero, kartami produktów i filtrowaniem.</p>
+      </a>
+      <a class="card pad" href="dashboard.html">
+        <h3>Dashboard operatora</h3>
+        <p class="muted">Statystyki, szybkie akcje, sklepy i plan w jednym miejscu.</p>
+      </a>
+      <a class="card pad" href="hurtownie.html" data-require="pro">
+        <h3>Hurtownie i CSV</h3>
+        <p class="muted">Import do qm_products_by_supplier_v1 i szybki start sprzedaży.</p>
+      </a>
+    </div>
+  </section>
+</main>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('hero-products').textContent = QM.getProducts().length;
+  document.getElementById('hero-orders').textContent = QM.getOrders().length;
+  document.getElementById('hero-stores').textContent = QM.getStores().length;
+  document.getElementById('hero-plan').textContent = QM.getPlan().toUpperCase();
+});
+</script>
+
+<footer class="footer"><div class="container">QualitetMarket dark marketplace • mobile first • GitHub Pages safe</div></footer>
+<script src="js/config.js"></script>
+<script src="js/planGuard.js"></script>
+
+</body>
+</html>

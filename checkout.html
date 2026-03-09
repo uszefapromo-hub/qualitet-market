@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Koszyk | QualitetMarket</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="shop.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="container topbar-inner">
+    <a class="brand" href="platforma.html"><span class="brand-badge">QM</span><span>QualitetMarket</span></a>
+    <nav class="nav"><a href="platforma.html" class="">Platforma</a><a href="dashboard.html" class="">Dashboard</a><a href="sklep.html" class="">Sklep</a><a href="koszyk.html" class="active">Koszyk</a><a href="zamowienia.html" class="">Zamówienia</a><a href="panel-sklepu.html" class="">Panel sklepu</a><a href="hurtownie.html" class="">Hurtownie</a><a href="cennik.html" class="">Cennik</a></nav>
+    <div class="top-actions">
+      <span class="plan-pill gradient-pill">Plan: <strong data-current-plan>BASIC</strong></span>
+      <a class="btn mobile-only" href="dashboard.html">Menu</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="section">
+    <div class="container cart-grid">
+      <div class="card pad">
+        <h2>Koszyk</h2>
+        <p class="muted" style="margin-bottom:14px">Produkty dodane ze sklepu.</p>
+        <div id="cart-list" class="cart-list"></div>
+      </div>
+      <div class="card pad summary">
+        <h3>Podsumowanie</h3>
+        <div id="cart-totals" class="list"></div>
+        <div class="btns" style="margin-top:14px">
+          <button class="btn primary" id="go-checkout">Przejdź do checkout</button>
+          <a class="btn" href="sklep.html">Wróć do sklepu</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer"><div class="container">QualitetMarket dark marketplace • mobile first • GitHub Pages safe</div></footer>
+<script src="js/config.js"></script>
+<script src="js/planGuard.js"></script>
+<script src="js/cart.js"></script>
+</body>
+</html>

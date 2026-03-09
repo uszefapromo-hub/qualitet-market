@@ -1,0 +1,47 @@
+QUALITET FULL FRESH REPO
+
+TO JEST NOWY CZYSTY BUILD OD ZERA
+
+PLIKI:
+- index.html -> redirect do platforma.html
+- platforma.html
+- dashboard.html
+- sklep.html
+- koszyk.html
+- checkout.html
+- zamowienia.html
+- panel-sklepu.html
+- generator-sklepu.html
+- hurtownie.html
+- cennik.html
+- styles.css
+- shop.css
+- js/config.js
+- js/planGuard.js
+- js/shop.js
+- js/cart.js
+- js/orders.js
+- js/stores.js
+- js/pricing.js
+- js/hurtownie.js
+- assets/*.svg
+
+JAK WGRAC:
+1. rozpakuj ZIP
+2. wejdź do folderu NOWE_REPO_START
+3. zaznacz wszystko ze środka
+4. wrzuć hurtem do nowego repo na GitHub
+5. commit changes
+6. włącz GitHub Pages -> main / root
+
+TEST:
+1. index.html
+2. platforma.html
+3. cennik.html -> ustaw PRO
+4. hurtownie.html -> import demo
+5. sklep.html -> dodaj do koszyka
+6. koszyk.html
+7. checkout.html
+8. zamowienia.html
+9. panel-sklepu.html
+10. generator-sklepu.html

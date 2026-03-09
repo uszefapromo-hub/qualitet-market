@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Generator sklepu | QualitetMarket</title>
+<link rel="stylesheet" href="styles.css">
+
+</head>
+<body>
+<header class="topbar">
+  <div class="container topbar-inner">
+    <a class="brand" href="platforma.html"><span class="brand-badge">QM</span><span>QualitetMarket</span></a>
+    <nav class="nav"><a href="platforma.html" class="">Platforma</a><a href="dashboard.html" class="">Dashboard</a><a href="sklep.html" class="">Sklep</a><a href="koszyk.html" class="">Koszyk</a><a href="zamowienia.html" class="">Zamówienia</a><a href="panel-sklepu.html" class="active">Panel sklepu</a><a href="hurtownie.html" class="">Hurtownie</a><a href="cennik.html" class="">Cennik</a></nav>
+    <div class="top-actions">
+      <span class="plan-pill gradient-pill">Plan: <strong data-current-plan>BASIC</strong></span>
+      <a class="btn mobile-only" href="dashboard.html">Menu</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="section">
+    <div class="container grid cols-2">
+      <div class="card pad">
+        <h2>Generator sklepu</h2>
+        <form class="form" id="generator-form">
+          <label>Nazwa sklepu<input class="input" name="name" placeholder="Sklep Gadżety Premium" required></label>
+          <label>Opis sklepu<textarea name="description" placeholder="Co sprzedajesz?"></textarea></label>
+          <label>Marża %<input class="input" type="number" name="margin" value="20" min="0" max="500"></label>
+          <button class="btn primary" type="submit">Utwórz sklep</button>
+        </form>
+      </div>
+      <div class="card pad">
+        <h3>Lista sklepów</h3>
+        <div id="stores-list" class="list"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer"><div class="container">QualitetMarket dark marketplace • mobile first • GitHub Pages safe</div></footer>
+<script src="js/config.js"></script>
+<script src="js/planGuard.js"></script>
+<script src="js/stores.js"></script>
+</body>
+</html>
