@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="pl"><head><title>Hurtownie</title><meta charset="utf-8">
+<html lang="pl"><head><title>U Szefa + QualitetMarket — start</title><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="css/styles.css"></head>
-<body data-page="hurtownie">
+<link rel="stylesheet" href="shop.css"></head>
+<body data-page="index">
 <header class="topbar">
   <div class="wrap topbar-inner">
     <a class="brand" href="index.html">
-      <img src="assets/logo-wspolne.svg" alt="U Szefa + QualitetMarket">
+      <img src="logo-wspolne.svg" alt="U Szefa + QualitetMarket">
       <div>
         <strong>U Szefa</strong>
         <span>królestwo zarabiania</span>
@@ -31,18 +31,49 @@
 
 <main class="wrap">
   <section class="page-hero compact">
-    <span class="eyebrow">Import hurtowni</span>
-    <h1>Wybierz dostawcę i zapisz gotowy prefill produktów.</h1>
-    <p>Prosty import do localStorage bez starego chaosu.</p>
+    <span class="eyebrow">Platforma sprzedaży</span>
+    <h1>U Szefa + QualitetMarket — królestwo zarabiania.</h1>
+    <p>Otwórz sklep, zarządzaj hurtowniami, ustawiaj reklamy i pilnuj marży — wszystko z jednego miejsca.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="qualitetmarket.html">Przejdź do centrum</a>
+      <a class="btn btn-secondary" href="generator-sklepu.html">Otwórz nowy sklep</a>
+    </div>
   </section>
-  <section class="supplier-grid" id="suppliers-list"></section>
+  <section class="section-grid">
+    <article class="feature-card gradient-a">
+      <h2>QualitetMarket</h2>
+      <p>Centrum dowodzenia sprzedażą, importem i marketingiem.</p>
+      <a class="link-arrow" href="qualitetmarket.html">Przejdź</a>
+    </article>
+    <article class="feature-card gradient-b">
+      <h2>Dashboard</h2>
+      <p>Statystyki, sklepy, zamówienia i marże w jednym widoku.</p>
+      <a class="link-arrow" href="dashboard.html">Otwórz</a>
+    </article>
+    <article class="feature-card gradient-c">
+      <h2>Hurtownie</h2>
+      <p>Importuj produkty z hurtowni i zapisz gotowy prefill.</p>
+      <a class="link-arrow" href="hurtownie.html">Wybierz</a>
+    </article>
+  </section>
+  <section class="stats-grid">
+    <article class="stat-card"><span>Sklepy</span><strong data-stores-count>0</strong></article>
+    <article class="stat-card"><span>Produkty</span><strong data-products-count>0</strong></article>
+    <article class="stat-card"><span>Zamówienia</span><strong data-orders-count>0</strong></article>
+    <article class="stat-card"><span>Marża</span><strong data-margin-default>20%</strong></article>
+  </section>
+  <section class="quick-links">
+    <a class="btn btn-secondary" href="sklep.html">Sklep</a>
+    <a class="btn btn-secondary" href="koszyk.html">Koszyk</a>
+    <a class="btn btn-secondary" href="platforma.html">Reklama</a>
+    <a class="btn btn-secondary" href="cennik.html">Cennik</a>
+  </section>
 </main>
-<script src="js/hurtownie.js" defer></script>
 
 <footer class="footer">
   <div class="wrap footer-grid">
     <div>
-      <img class="footer-logo" src="assets/logo-uszefa.svg" alt="U Szefa">
+      <img class="footer-logo" src="logo-uszefa.svg" alt="U Szefa">
       <p>U Szefa to menu główne i start od zera. QualitetMarket to centrum dowodzenia sprzedażą.</p>
     </div>
     <div>
@@ -59,6 +90,6 @@
     </div>
   </div>
 </footer>
-<script src="js/app.js" defer></script>
+<script src="pricing.js" defer></script>
 
 </body></html>
