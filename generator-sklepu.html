@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="pl"><head><title>Checkout</title><meta charset="utf-8">
+<html lang="pl"><head><title>Generator sklepu</title><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="css/styles.css"></head>
-<body data-page="checkout">
+<link rel="stylesheet" href="styles.css"></head>
+<body data-page="generator">
 <header class="topbar">
   <div class="wrap topbar-inner">
     <a class="brand" href="index.html">
-      <img src="assets/logo-wspolne.svg" alt="U Szefa + QualitetMarket">
+      <img src="logo-wspolne.svg" alt="U Szefa + QualitetMarket">
       <div>
         <strong>U Szefa</strong>
         <span>królestwo zarabiania</span>
@@ -30,27 +30,57 @@
 </header>
 
 <main class="wrap">
-  <section class="page-hero compact"><span class="eyebrow">Checkout</span><h1>Złóż zamówienie w 1 krok.</h1></section>
+  <section class="page-hero compact">
+    <span class="eyebrow">Generator sklepu</span>
+    <h1>Otwórz własny sklep pod swoim logo.</h1>
+    <p>Bez kodowania. Nazwa, nisza, plan, motyw i marża zapisują się od razu.</p>
+  </section>
   <section class="form-grid">
-    <form class="panel-card form-card" id="checkout-form">
-      <label>Imię i nazwisko<input required name="name"></label>
-      <label>Email<input required type="email" name="email"></label>
-      <label>Telefon<input required name="phone"></label>
-      <label>Adres<input required name="address"></label>
-      <button class="btn btn-primary" type="submit">Potwierdź zamówienie</button>
+    <form class="panel-card form-card" id="store-form">
+      <label>Nazwa sklepu<input required name="name" placeholder="Np. Królewski Market"></label>
+      <label>Nisza<input name="niche" placeholder="Np. Dom, beauty, elektronika"></label>
+      <label>Logo URL<input name="logo" placeholder="logo-uszefa.svg albo własny link"></label>
+      <label>Plan
+        <select name="plan">
+          <option value="basic">Basic</option>
+          <option value="pro">Pro</option>
+          <option value="elite">Elite</option>
+        </select>
+      </label>
+      <label>Motyw
+        <select name="theme">
+          <option value="clean">Clean</option>
+          <option value="boost">Boost</option>
+          <option value="royal">Royal</option>
+          <option value="neon">Neon</option>
+        </select>
+      </label>
+      <label>Marża %<input type="number" name="margin" min="0" max="500" value="20"></label>
+      <button class="btn btn-primary" type="submit">Zapisz sklep</button>
+      <p class="hint">Pierwsze 3 sklepy dostają promocję startową.</p>
     </form>
     <div class="panel-card">
-      <h3>Podsumowanie</h3>
-      <div id="checkout-summary"></div>
+      <h3>Podgląd</h3>
+      <div class="preview-card" data-store-preview>
+        <img src="logo-qualitet.svg" alt="logo">
+        <strong>Twój sklep</strong>
+        <span>Wybierz motyw i plan</span>
+      </div>
+      <div class="theme-preview-grid">
+        <div class="mini-theme clean">Clean</div>
+        <div class="mini-theme boost">Boost</div>
+        <div class="mini-theme royal">Royal</div>
+        <div class="mini-theme neon">Neon</div>
+      </div>
     </div>
   </section>
 </main>
-<script src="js/orders.js" defer></script>
+<script src="store.js" defer></script>
 
 <footer class="footer">
   <div class="wrap footer-grid">
     <div>
-      <img class="footer-logo" src="assets/logo-uszefa.svg" alt="U Szefa">
+      <img class="footer-logo" src="logo-uszefa.svg" alt="U Szefa">
       <p>U Szefa to menu główne i start od zera. QualitetMarket to centrum dowodzenia sprzedażą.</p>
     </div>
     <div>
@@ -67,6 +97,6 @@
     </div>
   </div>
 </footer>
-<script src="js/app.js" defer></script>
+<script src="app.js" defer></script>
 
 </body></html>

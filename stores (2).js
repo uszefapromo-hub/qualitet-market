@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const margin = Number(store.margin || window.QM.getMargin());
   hero.innerHTML = `
     <div class="shop-banner">
-      <img src="${store.logo || 'assets/logo-uszefa.svg'}" alt="Logo sklepu">
+      <img src="${store.logo || 'logo-uszefa.svg'}" alt="Logo sklepu">
       <div>
         <h2>${store.name}</h2>
         <p>${store.niche || 'Sprzedaż wielobranżowa'} • plan ${String(store.plan).toUpperCase()} • motyw ${store.theme}</p>

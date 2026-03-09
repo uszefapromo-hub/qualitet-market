@@ -34,7 +34,7 @@
       niche:'Sprzedaż wielobranżowa',
       plan: (localStorage.getItem(KEYS.plan) || 'basic'),
       theme:'clean',
-      logo:'assets/logo-uszefa.svg',
+      logo:'logo-uszefa.svg',
       margin: Number(localStorage.getItem(KEYS.margin) || 20)
     };
   }

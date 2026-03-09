@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const data = new FormData(form);
     const name = data.get('name') || 'Twój sklep';
     const niche = data.get('niche') || 'Wybierz niszę';
-    const logo = data.get('logo') || 'assets/logo-qualitet.svg';
+    const logo = data.get('logo') || 'logo-qualitet.svg';
     const plan = String(data.get('plan') || 'basic').toUpperCase();
     const theme = data.get('theme') || 'clean';
     preview.innerHTML = `<img src="${logo}" alt="logo"><strong>${name}</strong><span>${niche}</span><span>Plan ${plan} • motyw ${theme}</span>`;
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
       id: `store-${Date.now()}`,
       name: data.get('name'),
       niche: data.get('niche'),
-      logo: data.get('logo') || 'assets/logo-uszefa.svg',
+      logo: data.get('logo') || 'logo-uszefa.svg',
       logoName: (data.get('logo') || '').split('/').pop() || 'domyślne',
       plan: data.get('plan'),
       theme: data.get('theme'),
