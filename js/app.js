@@ -1045,6 +1045,46 @@
     };
   }
 
+  function initSalesCalculator(){
+    const calculator = document.querySelector('[data-sales-calculator]');
+    if(!calculator){
+      return;
+    }
+    const costInput = calculator.querySelector('[data-calc-cost]');
+    const marginInput = calculator.querySelector('[data-calc-margin]');
+    const unitsInput = calculator.querySelector('[data-calc-units]');
+    const finalTarget = calculator.querySelector('[data-calc-final]');
+    const profitTarget = calculator.querySelector('[data-calc-profit]');
+    const monthlyTarget = calculator.querySelector('[data-calc-monthly]');
+    const defaultMargin = normalizeMarginValue(marginInput ? marginInput.value : 0, 0);
+
+    const updateResults = () => {
+      const costValue = costInput ? Number.parseFloat(costInput.value) : 0;
+      const resolvedCost = Number.isNaN(costValue) ? 0 : Math.max(0, costValue);
+      const marginValue = marginInput ? marginInput.value : defaultMargin;
+      const resolvedMargin = normalizeMarginValue(marginValue, defaultMargin);
+      const unitsValue = unitsInput ? Number.parseFloat(unitsInput.value) : 0;
+      const resolvedUnits = Number.isNaN(unitsValue) ? 0 : Math.max(0, unitsValue);
+      const pricing = calculatePricing(resolvedCost, resolvedMargin);
+      if(finalTarget){
+        finalTarget.textContent = formatCurrency(pricing.finalPrice);
+      }
+      if(profitTarget){
+        profitTarget.textContent = formatCurrency(pricing.profit);
+      }
+      if(monthlyTarget){
+        monthlyTarget.textContent = formatCurrency(pricing.profit * resolvedUnits);
+      }
+    };
+
+    [costInput, marginInput, unitsInput].forEach(input => {
+      if(input){
+        input.addEventListener('input', updateResults);
+      }
+    });
+    updateResults();
+  }
+
   function addProductToStore(product, margin){
     if(!product){
       return null;
@@ -2242,6 +2282,7 @@
     initCounters();
     initHelperBoxes();
     initActivityToasts();
+    initSalesCalculator();
     initSlotsBanner();
     initLandingModal();
     initSurveyModal();

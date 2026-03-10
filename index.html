@@ -18,6 +18,7 @@
       <nav class="nav" aria-label="Główna nawigacja">
         <a href="#oferta">Oferta</a>
         <a href="#poradnik">Poradnik</a>
+        <a href="#kalkulator">Kalkulator</a>
         <a href="#ankieta">Ankieta</a>
         <a href="cennik.html">Cennik</a>
         <a href="#kontakt">Kontakt</a>
@@ -191,6 +192,47 @@
             <p>opiekun dedykowany 24/7</p>
           </article>
         </div>
+      </div>
+    </section>
+
+    <section class="calculator-section" id="kalkulator">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">Kalkulator sprzedaży</span>
+          <h2>Sprawdź opłacalność sprzedaży</h2>
+          <p>Wprowadź koszt produktu, marżę i planowaną sprzedaż, aby zobaczyć prognozowany zysk.</p>
+        </div>
+        <article class="panel-card calculator-card" data-sales-calculator>
+          <div class="calculator-grid is-columns">
+            <label class="calculator-item">
+              <span>Koszt zakupu (zł)</span>
+              <input type="number" min="0" step="0.01" value="50" data-calc-cost>
+            </label>
+            <label class="calculator-item">
+              <span>Marża (%)</span>
+              <input type="number" min="0" max="300" step="1" value="25" data-calc-margin>
+            </label>
+            <label class="calculator-item">
+              <span>Sprzedaż miesięczna (szt.)</span>
+              <input type="number" min="0" step="1" value="40" data-calc-units>
+            </label>
+          </div>
+          <div class="calculator-grid is-columns calculator-results">
+            <div class="calculator-item">
+              <span>Cena końcowa</span>
+              <strong data-calc-final>0 zł</strong>
+            </div>
+            <div class="calculator-item">
+              <span>Zysk na sztukę</span>
+              <strong data-calc-profit>0 zł</strong>
+            </div>
+            <div class="calculator-item">
+              <span>Zysk miesięczny</span>
+              <strong data-calc-monthly>0 zł</strong>
+            </div>
+          </div>
+          <p class="hint calculator-hint">Wartości są symulacją i pomagają zaplanować strategię cenową.</p>
+        </article>
       </div>
     </section>
 

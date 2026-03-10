@@ -518,6 +518,9 @@ body.modal-open{overflow:hidden}
 }
 .supplier-card.is-active{border-color:rgba(84,255,176,.6);box-shadow:0 0 0 2px rgba(84,255,176,.2)}
 .calculator-grid{display:grid;gap:12px;margin-top:14px}
+.calculator-grid.is-columns{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.calculator-results{margin-top:18px}
+.calculator-hint{margin-top:12px}
 .calculator-item{
   padding:12px 14px;
   border-radius:16px;
