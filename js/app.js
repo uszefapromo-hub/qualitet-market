@@ -31,7 +31,7 @@
   const TOAST_INTERVAL_REDUCED_MS = 9000;
   const TOAST_DISPLAY_MS = 4200;
   const TOAST_DISPLAY_REDUCED_MS = 3600;
-  const PROMO_MOTION_IDLE_MS = 45000;
+  const PROMO_MOTION_IDLE_MS = 20000;
   const SUCCESS_STATUSES = ['success', 'paid', 'true', '1', 'ok'];
   const SAMPLE_USER_NAMES = ['Jan', 'Anna', 'Marek', 'Ola', 'Kamil', 'Ewa', 'Tomasz', 'Klara', 'Paweł', 'Lena'];
   const ACTIVITY_TOAST_MESSAGES = [
@@ -462,7 +462,9 @@
       const toggle = gallery.querySelector('[data-promo-motion-toggle]');
       let idleTimeout = null;
       let manualPaused = false;
-      let autoPaused = false;
+      let idlePaused = false;
+      let visibilityPaused = false;
+      let intersectionPaused = false;
 
       const setPaused = isPaused => {
         gallery.classList.toggle('is-paused', isPaused);
@@ -477,30 +479,34 @@
       };
 
       const scheduleIdlePause = () => {
-        if(prefersReducedMotion || gallery.classList.contains('is-paused')){
+        if(prefersReducedMotion || manualPaused || visibilityPaused || intersectionPaused){
           return;
+        }
+        if(idlePaused){
+          idlePaused = false;
+          setPaused(false);
         }
         if(idleTimeout){
           clearTimeout(idleTimeout);
         }
-        idleTimeout = window.setTimeout(() => setPaused(true), PROMO_MOTION_IDLE_MS);
+        idleTimeout = window.setTimeout(() => {
+          idlePaused = true;
+          setPaused(true);
+        }, PROMO_MOTION_IDLE_MS);
+      };
+
+      const applyPauseState = () => {
+        if(manualPaused || visibilityPaused || intersectionPaused || idlePaused){
+          setPaused(true);
+          return;
+        }
+        setPaused(false);
+        scheduleIdlePause();
       };
 
       const handleVisibilityChange = isHidden => {
-        if(isHidden){
-          if(!autoPaused && !manualPaused){
-            autoPaused = true;
-            setPaused(true);
-          }
-          return;
-        }
-        if(autoPaused){
-          autoPaused = false;
-          if(!manualPaused){
-            setPaused(false);
-            scheduleIdlePause();
-          }
-        }
+        visibilityPaused = isHidden;
+        applyPauseState();
       };
 
       if(prefersReducedMotion){
@@ -521,30 +527,17 @@
           const shouldPause = !isPaused;
           manualPaused = shouldPause;
           if(shouldPause){
-            autoPaused = false;
+            idlePaused = false;
           }
-          setPaused(shouldPause);
-          if(!shouldPause){
-            scheduleIdlePause();
-          }
+          applyPauseState();
         });
       }
 
       if('IntersectionObserver' in window){
         const observer = new IntersectionObserver(entries => {
           entries.forEach(entry => {
-            if(entry.isIntersecting){
-              if(autoPaused){
-                autoPaused = false;
-                if(!manualPaused){
-                  setPaused(false);
-                  scheduleIdlePause();
-                }
-              }
-            } else if(!autoPaused && !manualPaused){
-              autoPaused = true;
-              setPaused(true);
-            }
+            intersectionPaused = !entry.isIntersecting;
+            applyPauseState();
           });
         }, {threshold: 0.35});
         observer.observe(gallery);
