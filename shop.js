@@ -16,6 +16,12 @@
     delivery: 'Wysyłka w 24h'
   };
   const STORE_SETTINGS_KEY = 'app_store_settings';
+  const STORE_MARGIN_KEY = 'qm_store_margin_pct';
+  const PLAN_DEFAULT_MARGINS = {
+    basic: 15,
+    pro: 25,
+    elite: 35
+  };
   const DEFAULT_INITIAL = 'S';
   const HASH_MULTIPLIER = 31;
   const HASH_MODULO = 10000;
@@ -43,6 +49,25 @@
 
   function formatCurrencyPLN(value){
     return CURRENCY_FORMATTER.format(value);
+  }
+
+  function parseMarginValue(value){
+    const parsed = parseFloat(value);
+    if(!Number.isFinite(parsed) || parsed < 0){
+      return null;
+    }
+    return parsed;
+  }
+
+  function getPlanDefaultMargin(plan){
+    const value = (plan || '').toLowerCase();
+    if(value === 'pro'){
+      return PLAN_DEFAULT_MARGINS.pro;
+    }
+    if(value === 'elite'){
+      return PLAN_DEFAULT_MARGINS.elite;
+    }
+    return PLAN_DEFAULT_MARGINS.basic;
   }
 
   function getInitial(name){
@@ -100,6 +125,20 @@
       return DEFAULTS.margin;
     }
     return Math.min(100, Math.max(0, parsedValue));
+  }
+
+  function resolveStoreMargin(store, settings){
+    const stored = parseMarginValue(localStorage.getItem(STORE_MARGIN_KEY));
+    if(stored !== null){
+      return stored;
+    }
+    const storeMargin = parseMarginValue(store && store.margin);
+    const settingsMargin = parseMarginValue(settings && settings.margin);
+    const plan = (store && store.plan) || resolvePlanFromSettings(settings);
+    const fallback = getPlanDefaultMargin(plan);
+    const resolved = storeMargin !== null ? storeMargin : (settingsMargin !== null ? settingsMargin : fallback);
+    localStorage.setItem(STORE_MARGIN_KEY, `${resolved}`);
+    return resolved;
   }
 
   function loadStoreSettings(){
@@ -160,6 +199,7 @@
     if(!description){
       description = DEFAULTS.description;
     }
+    const resolvedMargin = resolveStoreMargin(null, settings);
     return {
       name,
       slug: manager.normalizeSlug(settings.storeSlug || name),
@@ -172,7 +212,7 @@
       accentColor: settings.accentColor || DEFAULTS.accentColor,
       backgroundColor: settings.backgroundColor || DEFAULTS.backgroundColor,
       theme: settings.theme || settings.storeStyle || DEFAULTS.theme,
-      margin: normalizeMargin(settings.margin),
+      margin: resolvedMargin,
       plan: resolvePlanFromSettings(settings),
       trial: false
     };
@@ -409,11 +449,12 @@
       emptyState.hidden = true;
     }
 
+    const displayMargin = resolveStoreMargin(resolvedStore, storeSettings);
     const metrics = getMockMetrics(resolvedStore);
     const map = {
       'store-name': resolvedStore.name,
       'store-plan': formatPlan(resolvedStore.plan),
-      'store-margin': `${resolvedStore.margin}%`,
+      'store-margin': `${displayMargin}%`,
       'store-products': `${metrics.products}`,
       'store-revenue': formatCurrencyPLN(metrics.revenue)
     };
@@ -459,11 +500,12 @@
     document.documentElement.style.setProperty('--store-accent', resolvedStore.accentColor || DEFAULTS.accentColor);
     document.documentElement.style.setProperty('--store-background', resolvedStore.backgroundColor || DEFAULTS.backgroundColor);
 
+    const displayMargin = resolveStoreMargin(resolvedStore, storeSettings);
     const map = {
       'store-name': resolvedStore.name,
       'store-description': resolvedStore.description || DEFAULTS.description,
       'store-plan': `Plan: ${formatPlan(resolvedStore.plan)}`,
-      'store-margin': `Marża: ${resolvedStore.margin}%`,
+      'store-margin': `Marża: ${displayMargin}%`,
       'store-theme': `Styl: ${resolvedStore.theme}`,
       'store-slug': `@${resolvedStore.slug}`
     };

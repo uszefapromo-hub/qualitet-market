@@ -56,6 +56,11 @@
     pro: 'PRO',
     elite: 'ELITE'
   };
+  const PLAN_DEFAULT_MARGINS = {
+    basic: 15,
+    pro: 25,
+    elite: 35
+  };
   const OWNER_EMAIL = 'uszefaqualitetpromo@gmail.com';
   const OWNER_EMAIL_NORMALIZED = OWNER_EMAIL.trim().toLowerCase();
   const PRICE_LINKS = {
@@ -76,6 +81,15 @@
     subscriptions: 'subscriptions',
     suppliers: 'suppliers',
     activeStore: 'activeStore'
+  };
+  const PRICING_STORAGE_KEYS = {
+    productsBySupplier: 'qm_products_by_supplier_v1',
+    storeMargin: 'qm_store_margin_pct'
+  };
+  const PLATFORM_MARGIN_PCT = 5;
+  const SUPPLIER_MARKUP_PCT = {
+    detal: 8,
+    hurt: 6
   };
 
   function bindMenu(){
@@ -583,6 +597,14 @@
     return seedList;
   }
 
+  function loadProductsBySupplier(){
+    return getStoredList(PRICING_STORAGE_KEYS.productsBySupplier) || [];
+  }
+
+  function saveProductsBySupplier(list){
+    saveStoredList(PRICING_STORAGE_KEYS.productsBySupplier, list);
+  }
+
   function buildProductsFromSuppliers(suppliers){
     if(!Array.isArray(suppliers)){
       return [];
@@ -595,17 +617,46 @@
       }
       return supplier.products.map(product => {
         const margin = 30 + (index % 4) * 5;
-        const finalPrice = product.cost * (1 + margin / 100);
         const createdAt = new Date(now - (index + 1) * MS_PER_DAY).toISOString();
         const mapped = {
           id: `catalog_${product.id}`,
           name: product.name,
           cost: product.cost,
-          finalPrice: Math.round(finalPrice),
           margin,
           supplier: supplier.name,
           category: product.category,
           storeId: index % 2 === 0 ? 'store_elektronika' : 'store_moda',
+          createdAt
+        };
+        index += 1;
+        return mapped;
+      });
+    });
+  }
+
+  function buildProductsByStore(stores){
+    if(!Array.isArray(stores)){
+      return [];
+    }
+    const now = Date.now();
+    let index = 0;
+    return stores.flatMap(store => {
+      if(!Array.isArray(store.products)){
+        return [];
+      }
+      return store.products.map(product => {
+        const createdAt = new Date(now - (index + 1) * MS_PER_DAY).toISOString();
+        const mapped = {
+          id: product.id,
+          name: product.name,
+          cost: product.cost,
+          margin: product.margin,
+          supplierMode: product.supplierMode,
+          supplier: product.supplier,
+          category: product.category,
+          image: product.image,
+          description: product.description,
+          storeId: store.id,
           createdAt
         };
         index += 1;
@@ -863,7 +914,6 @@
             name: 'Smartwatch Pulsar',
             cost: 420,
             margin: 28,
-            finalPrice: 538,
             supplier: 'Elektronika'
           },
           {
@@ -871,7 +921,6 @@
             name: 'Słuchawki Quantum',
             cost: 260,
             margin: 32,
-            finalPrice: 343,
             supplier: 'Elektronika'
           }
         ],
@@ -899,7 +948,6 @@
             name: 'Kurtka Nova',
             cost: 210,
             margin: 40,
-            finalPrice: 294,
             supplier: 'Moda'
           }
         ],
@@ -1048,15 +1096,21 @@
       localStorage.setItem(OWNER_STORAGE_KEYS.activeStore, stores[0].id);
     }
     const products = ensureSeedList(OWNER_STORAGE_KEYS.products, buildProductsFromSuppliers(suppliers));
+    const productsBySupplier = ensureSeedList(
+      PRICING_STORAGE_KEYS.productsBySupplier,
+      buildProductsByStore(stores)
+    );
     const users = ensureSeedList(OWNER_STORAGE_KEYS.users, seedUsers);
     const leads = ensureSeedList(OWNER_STORAGE_KEYS.leads, seedLeads);
     const subscriptions = ensureSeedList(OWNER_STORAGE_KEYS.subscriptions, seedSubscriptions);
+    resolveStoreMargin({store: stores[0], plan: stores[0] && stores[0].plan});
 
     return {
       users,
       stores,
       leads,
       products,
+      productsBySupplier,
       subscriptions,
       suppliers
     };
@@ -1096,7 +1150,7 @@
       accentColor: '#54ffb0',
       backgroundColor: '#0f1837',
       theme: 'modern',
-      margin: 25,
+      margin: getPlanDefaultMargin('basic'),
       plan: 'basic',
       trial: true,
       products: [],
@@ -1131,6 +1185,93 @@
     return parsed;
   }
 
+  function parseStoredMargin(value){
+    const parsed = Number.parseFloat(value);
+    if(!Number.isFinite(parsed) || parsed < 0){
+      return null;
+    }
+    return parsed;
+  }
+
+  function getPlanDefaultMargin(plan){
+    const normalized = normalizePlan(plan);
+    if(normalized === 'trial'){
+      return PLAN_DEFAULT_MARGINS.basic;
+    }
+    return PLAN_DEFAULT_MARGINS[normalized] ?? PLAN_DEFAULT_MARGINS.basic;
+  }
+
+  function resolveStoreMargin(options = {}){
+    const storedMargin = parseStoredMargin(localStorage.getItem(PRICING_STORAGE_KEYS.storeMargin));
+    if(storedMargin !== null){
+      return storedMargin;
+    }
+    const storeMargin = parseStoredMargin(options.store && options.store.margin);
+    const settingsMargin = parseStoredMargin(options.settings && options.settings.margin);
+    const resolvedPlan = normalizePlan(
+      options.plan
+      || (options.store && options.store.plan)
+      || (options.settings && (options.settings.plan || options.settings.suggestedPlan))
+      || getCurrentPlan()
+    );
+    const fallbackMargin = getPlanDefaultMargin(resolvedPlan);
+    const resolvedMargin = storeMargin !== null ? storeMargin : (settingsMargin !== null ? settingsMargin : fallbackMargin);
+    localStorage.setItem(PRICING_STORAGE_KEYS.storeMargin, `${resolvedMargin}`);
+    return resolvedMargin;
+  }
+
+  function setStoreMargin(value){
+    const resolved = parseStoredMargin(value);
+    if(resolved === null){
+      return resolveStoreMargin();
+    }
+    localStorage.setItem(PRICING_STORAGE_KEYS.storeMargin, `${resolved}`);
+    return resolved;
+  }
+
+  function normalizeTradeMode(value){
+    const normalized = normalizeQueryParam(value);
+    if(['hurt', 'hurtowy', 'b2b'].includes(normalized)){
+      return 'hurt';
+    }
+    if(['detal', 'detaliczny', 'handel', 'b2c'].includes(normalized)){
+      return 'detal';
+    }
+    return '';
+  }
+
+  function getUserProfileMode(){
+    const rawProfile = localStorage.getItem('app_user_profile');
+    if(!rawProfile){
+      return '';
+    }
+    try{
+      const parsed = JSON.parse(rawProfile);
+      return normalizeTradeMode(parsed && (parsed.profile || parsed.mode || parsed.role));
+    } catch (_error){
+      return '';
+    }
+  }
+
+  function resolveSupplierMode(options = {}){
+    const candidates = [
+      options.product && (options.product.mode || options.product.tradeMode || options.product.supplierMode),
+      options.store && (options.store.mode || options.store.tradeMode),
+      options.settings && (options.settings.mode || options.settings.tradeMode || options.settings.profile),
+      getUserProfileMode()
+    ];
+    const resolved = candidates.map(normalizeTradeMode).find(value => value);
+    return resolved || 'detal';
+  }
+
+  function resolveSupplierMarkupPct(mode){
+    return SUPPLIER_MARKUP_PCT[mode] ?? SUPPLIER_MARKUP_PCT.detal;
+  }
+
+  function roundCurrency(value){
+    return Math.round(value * 100) / 100;
+  }
+
   function calculatePricing(cost, margin){
     const safeCost = Number.parseFloat(cost);
     const resolvedCost = Number.isNaN(safeCost) ? 0 : safeCost;
@@ -1142,6 +1283,35 @@
       margin: resolvedMargin,
       finalPrice: Math.round(finalPrice * 100) / 100,
       profit: Math.round(profit * 100) / 100
+    };
+  }
+
+  function calculateTieredPricing(cost, options = {}){
+    const safeCost = Number.parseFloat(cost);
+    const resolvedCost = Number.isNaN(safeCost) ? 0 : safeCost;
+    const supplierMode = resolveSupplierMode(options);
+    const supplierMarginPct = resolveSupplierMarkupPct(supplierMode);
+    const platformMarginPct = PLATFORM_MARGIN_PCT;
+    const defaultMargin = resolveStoreMargin(options);
+    const userMarginPct = normalizeMarginValue(options.userMargin, defaultMargin);
+    const priceAfterSupplier = resolvedCost * (1 + supplierMarginPct / 100);
+    const priceAfterPlatform = priceAfterSupplier * (1 + platformMarginPct / 100);
+    const finalPrice = priceAfterPlatform * (1 + userMarginPct / 100);
+    const supplierMarginValue = priceAfterSupplier - resolvedCost;
+    const platformMarginValue = priceAfterPlatform - priceAfterSupplier;
+    const userMarginValue = finalPrice - priceAfterPlatform;
+    return {
+      cost: resolvedCost,
+      supplierMode,
+      supplierMarginPct,
+      platformMarginPct,
+      userMarginPct,
+      priceAfterSupplier: roundCurrency(priceAfterSupplier),
+      priceAfterPlatform: roundCurrency(priceAfterPlatform),
+      finalPrice: roundCurrency(finalPrice),
+      supplierMarginValue: roundCurrency(supplierMarginValue),
+      platformMarginValue: roundCurrency(platformMarginValue),
+      userMarginValue: roundCurrency(userMarginValue)
     };
   }
 
@@ -1343,11 +1513,17 @@
     const marginInput = calculator.querySelector('[data-store-margin]');
     const goalInput = calculator.querySelector('[data-store-goal]');
     const planTarget = calculator.querySelector('[data-store-plan]');
+    const storedSettings = loadStoreSettings();
+    const activeStore = getActiveStore(ensureStoresList());
+    const defaultMargin = resolveStoreMargin({store: activeStore, settings: storedSettings, plan: getCurrentPlan()});
+    if(marginInput){
+      marginInput.value = `${defaultMargin}`;
+    }
 
     const update = () => {
       const niche = nicheInput ? nicheInput.value.trim() : '';
       const budgetValue = Math.max(0, normalizeNumberValue(budgetInput ? budgetInput.value : 0, 0));
-      const marginValue = normalizeMarginValue(marginInput ? marginInput.value : 0, 0);
+      const marginValue = normalizeMarginValue(marginInput ? marginInput.value : 0, defaultMargin);
       const goalValue = Math.max(0, normalizeNumberValue(goalInput ? goalInput.value : 0, 0));
       const payload = {
         niche,
@@ -1365,6 +1541,7 @@
           suggestedPlan
         }
       });
+      setStoreMargin(marginValue);
       saveStoreSettings({
         ...payload,
         suggestedPlan,
@@ -1437,14 +1614,19 @@
     }
     const storeIndex = stores.findIndex(store => store.id === activeStore.id);
     const existingProducts = Array.isArray(activeStore.products) ? [...activeStore.products] : [];
-    const pricing = calculatePricing(product.cost, margin);
+    const storeSettings = loadStoreSettings();
+    const pricing = calculateTieredPricing(product.cost, {
+      userMargin: margin,
+      store: activeStore,
+      settings: storeSettings,
+      product
+    });
     const entry = {
       id: product.id,
       name: product.name,
       cost: pricing.cost,
-      margin: pricing.margin,
-      finalPrice: pricing.finalPrice,
-      profit: pricing.profit,
+      margin: pricing.userMarginPct,
+      supplierMode: pricing.supplierMode,
       supplier: product.supplier,
       category: product.category,
       image: product.image,
@@ -1489,6 +1671,31 @@
     }
     saveStoredList(OWNER_STORAGE_KEYS.products, catalog);
 
+    const supplierCatalog = loadProductsBySupplier();
+    const supplierEntry = {
+      id: entry.id,
+      name: entry.name,
+      cost: entry.cost,
+      margin: entry.margin,
+      supplierMode: entry.supplierMode,
+      supplier: entry.supplier,
+      category: entry.category,
+      image: entry.image,
+      description: entry.description,
+      storeId: updatedStore.id,
+      createdAt: entry.addedAt
+    };
+    const supplierIndex = supplierCatalog.findIndex(item => item.id === entry.id && item.storeId === updatedStore.id);
+    if(supplierIndex >= 0){
+      supplierCatalog[supplierIndex] = {
+        ...supplierCatalog[supplierIndex],
+        ...supplierEntry
+      };
+    } else {
+      supplierCatalog.push(supplierEntry);
+    }
+    saveProductsBySupplier(supplierCatalog);
+
     return {
       store: updatedStore,
       product: entry
@@ -1517,6 +1724,9 @@
       ...existing,
       ...settings
     };
+    if(merged.margin !== undefined && merged.margin !== null){
+      setStoreMargin(merged.margin);
+    }
     const calculatorResults = loadCalculatorResults();
     const suggestedPlan = normalizeDecision(
       merged.suggestedPlan
@@ -1537,10 +1747,11 @@
     }
     const stores = ensureStoresList();
     const activeStore = getActiveStore(stores) || createFallbackStore();
+    const resolvedMargin = resolveStoreMargin({store: activeStore, plan: activeStore.plan});
     const seed = {
       niche: activeStore.name,
       budget: 12000,
-      margin: activeStore.margin,
+      margin: resolvedMargin,
       goal: 25000,
       suggestedPlan: normalizeDecision(activeStore.plan),
       storeName: activeStore.name,
@@ -1859,6 +2070,34 @@
     }
   }
 
+  function renderDashboardMarginSummary(){
+    const summary = document.querySelector('[data-margin-summary]');
+    if(!summary){
+      return;
+    }
+    const store = getActiveStore(ensureStoresList());
+    const settings = loadStoreSettings();
+    const plan = normalizePlan(
+      (store && store.plan)
+      || (settings && (settings.plan || settings.suggestedPlan))
+      || getCurrentPlan()
+    );
+    const defaultMargin = getPlanDefaultMargin(plan);
+    const storeMargin = resolveStoreMargin({store, settings, plan});
+    const userMarginTarget = summary.querySelector('[data-user-margin]');
+    if(userMarginTarget){
+      userMarginTarget.textContent = `${storeMargin}%`;
+    }
+    const planMarginTarget = summary.querySelector('[data-plan-default-margin]');
+    if(planMarginTarget){
+      planMarginTarget.textContent = `${defaultMargin}%`;
+    }
+    const infoTarget = summary.querySelector('[data-platform-margin-info]');
+    if(infoTarget){
+      infoTarget.textContent = 'Platforma automatycznie dolicza koszty hurtowni oraz marżę platformy.';
+    }
+  }
+
   function initPlanCheckoutReturn(){
     const params = new URLSearchParams(window.location.search);
     if(!params.size){
@@ -2068,6 +2307,7 @@
     startTrialIfNeeded(localStorage.getItem(STORAGE_KEYS.email));
     updateDashboardStatus();
     renderDashboardStoreSummary();
+    renderDashboardMarginSummary();
   }
 
   function getStoredUserRole(){
@@ -2127,6 +2367,7 @@
     const products = data.products;
     const subscriptions = data.subscriptions;
     const suppliers = data.suppliers;
+    const storeMap = new Map(stores.map(store => [store.id, store]));
 
     const activeSubscriptions = subscriptions.filter(subscription => subscription.status === 'active');
     const planCounts = {basic: 0, pro: 0, elite: 0};
@@ -2229,10 +2470,17 @@
     renderList(productList, sortedProducts, product => {
       const card = document.createElement('div');
       card.className = 'list-card';
+      const productStore = storeMap.get(product.storeId);
+      const pricing = calculateTieredPricing(product.cost || 0, {
+        userMargin: product.margin,
+        store: productStore,
+        settings: loadStoreSettings(),
+        product
+      });
       card.innerHTML = `
         <strong>${product.name}</strong>
         <span class="hint">${product.category || 'Kategoria'} • ${product.supplier || 'Katalog'}</span>
-        <small>Cena: ${formatCurrency(product.finalPrice || product.cost || 0)}</small>
+        <small>Cena: ${formatCurrency(pricing.finalPrice)}</small>
       `;
       return card;
     }, 'Brak nowych produktów.');
@@ -2317,7 +2565,8 @@
     const totalCost = allProducts.reduce((sum, product) => sum + (Number.parseFloat(product.cost) || 0), 0);
     const avgCost = allProducts.length ? Math.round(totalCost / allProducts.length) : 0;
     const activeStore = getActiveStore(ensureStoresList());
-    const storeMargin = activeStore ? normalizeMarginValue(activeStore.margin, 25) : 25;
+    const storeSettings = loadStoreSettings();
+    let storeMargin = resolveStoreMargin({store: activeStore, settings: storeSettings, plan: activeStore && activeStore.plan});
     const storeImportCount = activeStore && Array.isArray(activeStore.products) ? activeStore.products.length : 0;
 
     if(suppliersCount){
@@ -2364,12 +2613,17 @@
         }
         return;
       }
-      const pricing = calculatePricing(product.cost, marginValue);
+      const pricing = calculateTieredPricing(product.cost, {
+        userMargin: marginValue,
+        store: activeStore,
+        settings: storeSettings,
+        product
+      });
       if(calculatorDesc){
         calculatorDesc.textContent = `${product.name} • ${product.supplier}`;
       }
       if(calculatorMargin){
-        calculatorMargin.value = `${pricing.margin}`;
+        calculatorMargin.value = `${pricing.userMarginPct}`;
       }
       if(calculatorCost){
         calculatorCost.textContent = formatCurrency(pricing.cost);
@@ -2378,7 +2632,7 @@
         calculatorFinal.textContent = formatCurrency(pricing.finalPrice);
       }
       if(calculatorProfit){
-        calculatorProfit.textContent = formatCurrency(pricing.profit);
+        calculatorProfit.textContent = formatCurrency(pricing.userMarginValue);
       }
     };
 
@@ -2448,12 +2702,17 @@
         const finalTarget = card.querySelector('[data-product-final]');
         const profitTarget = card.querySelector('[data-product-profit]');
         const updateCardPricing = () => {
-          const pricing = calculatePricing(product.cost, marginInput ? marginInput.value : storeMargin);
+          const pricing = calculateTieredPricing(product.cost, {
+            userMargin: marginInput ? marginInput.value : storeMargin,
+            store: activeStore,
+            settings: storeSettings,
+            product
+          });
           if(finalTarget){
             finalTarget.textContent = formatCurrency(pricing.finalPrice);
           }
           if(profitTarget){
-            profitTarget.textContent = formatCurrency(pricing.profit);
+            profitTarget.textContent = formatCurrency(pricing.userMarginValue);
           }
         };
         updateCardPricing();
@@ -2586,6 +2845,13 @@
     }
     if(bulkMarginInput){
       bulkMarginInput.addEventListener('input', () => {
+        storeMargin = setStoreMargin(bulkMarginInput.value);
+        if(calculatorMargin){
+          calculatorMargin.value = `${storeMargin}`;
+          if(selectedProduct){
+            updateCalculator(selectedProduct, calculatorMargin.value);
+          }
+        }
         applyFilters();
       });
     }
@@ -2622,6 +2888,99 @@
         }
       });
     }
+  }
+
+  function initStorefrontProducts(){
+    if(document.body.dataset.page !== 'sklep'){
+      return;
+    }
+    const productsGrid = document.querySelector('[data-store-products-grid]');
+    if(!productsGrid){
+      return;
+    }
+    const emptyState = document.querySelector('[data-store-products-empty]');
+    const stores = ensureStoresList();
+    const activeStore = getActiveStore(stores);
+    const storeSettings = loadStoreSettings();
+    const storeMargin = resolveStoreMargin({store: activeStore, settings: storeSettings, plan: activeStore && activeStore.plan});
+    let storeProducts = loadProductsBySupplier();
+    if(activeStore && activeStore.id){
+      storeProducts = storeProducts.filter(product => product.storeId === activeStore.id);
+    }
+    if(!storeProducts.length && activeStore && Array.isArray(activeStore.products)){
+      storeProducts = activeStore.products.map(product => ({...product, storeId: activeStore.id}));
+    }
+    productsGrid.innerHTML = '';
+    if(!storeProducts.length){
+      if(emptyState){
+        emptyState.hidden = false;
+      }
+      return;
+    }
+    if(emptyState){
+      emptyState.hidden = true;
+    }
+    const fallbackImage = 'https://placehold.co/400x280/0f1837/FFFFFF?text=Produkt';
+    storeProducts.forEach(product => {
+      const pricing = calculateTieredPricing(product.cost, {
+        userMargin: product.margin ?? storeMargin,
+        store: activeStore,
+        settings: storeSettings,
+        product
+      });
+      const card = document.createElement('article');
+      card.className = 'product-card product-tile';
+
+      const media = document.createElement('div');
+      media.className = 'product-media';
+      const image = document.createElement('img');
+      image.src = product.image || fallbackImage;
+      image.alt = product.name || 'Produkt';
+      media.appendChild(image);
+
+      const details = document.createElement('div');
+      details.className = 'product-details';
+      const title = document.createElement('h3');
+      title.textContent = product.name || 'Produkt';
+      const hint = document.createElement('p');
+      hint.className = 'hint';
+      hint.textContent = product.description || 'Opis produktu w przygotowaniu.';
+      const meta = document.createElement('div');
+      meta.className = 'product-meta';
+      const price = document.createElement('span');
+      price.className = 'price';
+      price.textContent = formatCurrency(pricing.finalPrice);
+      meta.appendChild(price);
+
+      const supplier = document.createElement('div');
+      supplier.className = 'product-supplier';
+      const supplierText = document.createElement('span');
+      supplierText.textContent = product.supplier ? `Hurtownia: ${product.supplier}` : 'Hurtownia: —';
+      supplier.appendChild(supplierText);
+
+      const actions = document.createElement('div');
+      actions.className = 'cta-row product-actions';
+      const addButton = document.createElement('button');
+      addButton.className = 'btn btn-primary';
+      addButton.type = 'button';
+      addButton.textContent = 'Dodaj';
+      const detailsLink = document.createElement('a');
+      detailsLink.className = 'btn btn-secondary';
+      detailsLink.href = 'listing.html';
+      detailsLink.textContent = 'Szczegóły';
+      actions.appendChild(addButton);
+      actions.appendChild(detailsLink);
+
+      details.appendChild(title);
+      details.appendChild(hint);
+      details.appendChild(meta);
+      details.appendChild(supplier);
+      details.appendChild(actions);
+
+      card.appendChild(media);
+      card.appendChild(details);
+      productsGrid.appendChild(card);
+    });
   }
 
   function initStoreGenerator(){
@@ -2756,6 +3115,7 @@
     ensureFinalStorage();
     initOwnerPanel();
     initSuppliersModule();
+    initStorefrontProducts();
     initCounters();
     initHelperBoxes();
     initActivityToasts();
