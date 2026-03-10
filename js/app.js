@@ -20,6 +20,7 @@
   const SURVEY_AUTO_OPEN_DELAY = 4500;
   const LANDING_AUTO_OPEN_DELAY = 2400;
   const SURVEY_SUCCESS_TIMEOUT = 1500;
+  const SPLASH_STORAGE_KEY = 'app_splash_seen';
   const DEFAULT_LOCALE = 'pl-PL';
   const DEFAULT_TEST_SLOTS = 20;
   const DEFAULT_LIVE_STEP_MIN = 1;
@@ -88,7 +89,77 @@
     document.querySelectorAll('.nav a').forEach(link => {
       const href = link.getAttribute('href');
       if(href === `${page}.html` || (page === 'index' && href === 'index.html')){
-        link.classList.add('active');
+      link.classList.add('active');
+    }
+  });
+}
+
+  function initServiceWorker(){
+    if(!('serviceWorker' in navigator)){
+      return;
+    }
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    });
+  }
+
+  function initAppSplash(){
+    const splash = document.querySelector('[data-app-splash]');
+    if(!splash){
+      return;
+    }
+    const hideSplash = () => {
+      splash.classList.add('is-hidden');
+      splash.setAttribute('aria-hidden', 'true');
+    };
+    let hasSeen = false;
+    try{
+      hasSeen = sessionStorage.getItem(SPLASH_STORAGE_KEY) === 'true';
+    } catch (_error){
+      hasSeen = false;
+    }
+    if(hasSeen){
+      hideSplash();
+      return;
+    }
+    try{
+      sessionStorage.setItem(SPLASH_STORAGE_KEY, 'true');
+    } catch (_error){
+    }
+    window.setTimeout(hideSplash, 1400);
+  }
+
+  function initBottomNav(){
+    const nav = document.querySelector('[data-bottom-nav]');
+    if(!nav){
+      return;
+    }
+    const links = Array.from(nav.querySelectorAll('a[data-nav]'));
+    if(!links.length){
+      return;
+    }
+    const pageAliases = {
+      cennik: 'index',
+      qualitetmarket: 'index',
+      crm: 'dashboard',
+      intelligence: 'dashboard',
+      listing: 'sklep',
+      'store-generator': 'dashboard',
+      'panel-sklepu': 'dashboard',
+      'owner-panel': 'dashboard'
+    };
+    const rawPage = document.body.dataset.page || '';
+    const fallbackPath = window.location.pathname.split('/').pop() || '';
+    const fallbackKey = fallbackPath.replace('.html', '');
+    const activeKey = pageAliases[rawPage] || rawPage || pageAliases[fallbackKey] || fallbackKey || 'index';
+    links.forEach(link => {
+      const key = link.dataset.nav;
+      const isActive = key === activeKey;
+      link.classList.toggle('is-active', isActive);
+      if(isActive){
+        link.setAttribute('aria-current', 'page');
+      } else {
+        link.removeAttribute('aria-current');
       }
     });
   }
@@ -2672,7 +2743,10 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    initServiceWorker();
+    initAppSplash();
     bindMenu();
+    initBottomNav();
     ensureFinalStorage();
     initOwnerPanel();
     initSuppliersModule();
