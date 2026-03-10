@@ -85,7 +85,8 @@
   }
 
   function normalizeMargin(rawValue){
-    const parsedValue = rawValue === '' ? NaN : parseFloat(rawValue);
+    const isBlank = rawValue === '' || rawValue == null;
+    const parsedValue = isBlank ? NaN : parseFloat(rawValue);
     if(!Number.isFinite(parsedValue)){
       return DEFAULTS.margin;
     }
@@ -229,7 +230,7 @@
       renderLogo(logoPreview, activeStore);
     }
 
-    function handleSave(redirectUrl){
+    function handleGeneratorSave(redirectUrl){
       const storeData = buildStoreFromForm(form);
       if(!storeData.name){
         if(typeof form.reportValidity === 'function'){
@@ -251,18 +252,18 @@
 
     form.addEventListener('submit', event => {
       event.preventDefault();
-      handleSave('panel-sklepu.html');
+      handleGeneratorSave('panel-sklepu.html');
     });
 
     if(previewButton){
       previewButton.addEventListener('click', () => {
-        handleSave('sklep.html');
+        handleGeneratorSave('sklep.html');
       });
     }
 
     if(panelButton){
       panelButton.addEventListener('click', () => {
-        handleSave('panel-sklepu.html');
+        handleGeneratorSave('panel-sklepu.html');
       });
     }
   }
