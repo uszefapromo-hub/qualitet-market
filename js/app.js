@@ -114,7 +114,7 @@
   }
 
   function getStoredNumber(key, fallback = 0){
-    const value = Number.parseInt(localStorage.getItem(key), 10);
+    const value = parseInt(localStorage.getItem(key), 10);
     return Number.isNaN(value) ? fallback : value;
   }
 
@@ -140,21 +140,32 @@
     const listExists = storedList !== null;
     const users = storedList || [];
     let currentCount = storedCount;
+    const hasEmail = Boolean(email);
+    const emailKnown = hasEmail && users.includes(email);
+    let shouldAddEmail = false;
+    let shouldIncrement = false;
 
-    if(email){
+    if(hasEmail){
       if(listExists){
-        if(!users.includes(email)){
-          users.push(email);
-          currentCount = storedCount + 1;
+        if(!emailKnown){
+          shouldAddEmail = true;
+          shouldIncrement = true;
         }
       } else if(storedCount === 0){
-        users.push(email);
-        currentCount = storedCount + 1;
+        shouldAddEmail = true;
+        shouldIncrement = true;
       } else {
-        users.push(email);
+        shouldAddEmail = true;
       }
     } else if(storedCount === 0){
       currentCount = 1;
+    }
+
+    if(shouldAddEmail){
+      users.push(email);
+    }
+    if(shouldIncrement){
+      currentCount = storedCount + 1;
     }
 
     localStorage.setItem(STORAGE_KEYS.usersCount, `${currentCount}`);
@@ -193,17 +204,22 @@
 
   function updateDashboardStatus(){
     const trialTargets = document.querySelectorAll('[data-trial-remaining]');
+    const remaining = getTrialRemainingDays();
     if(trialTargets.length){
-      const remaining = getTrialRemainingDays();
       trialTargets.forEach(target => {
         target.textContent = `${remaining}`;
       });
     }
     const trialLabel = document.querySelector('[data-trial-label]');
     if(trialLabel){
-      const remaining = getTrialRemainingDays();
       if(remaining === 1){
         trialLabel.textContent = 'dzień pozostał';
+      } else if(
+        remaining % 10 >= 2
+        && remaining % 10 <= 4
+        && (remaining % 100 < 12 || remaining % 100 > 14)
+      ){
+        trialLabel.textContent = 'dni pozostały';
       } else {
         trialLabel.textContent = 'dni pozostało';
       }
@@ -211,7 +227,6 @@
     const planTarget = document.querySelector('[data-user-plan]');
     if(planTarget){
       const storedPlan = localStorage.getItem(STORAGE_KEYS.plan);
-      const remaining = getTrialRemainingDays();
       const plan = storedPlan || (remaining > 0 ? 'trial' : 'basic');
       planTarget.textContent = plan === 'trial' ? 'Trial' : 'Basic';
     }
