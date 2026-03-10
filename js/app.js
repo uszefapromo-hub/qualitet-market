@@ -583,6 +583,10 @@
     return param ? param.toString().trim().toLowerCase() : '';
   }
 
+  /**
+   * Determines success for Stripe redirect callbacks using status/success flags or
+   * a returned session id paired with a pending plan.
+   */
   function isCheckoutSuccess(statusParam, successParam, sessionId, pendingPlan) {
     const hasStatusSuccess = SUCCESS_STATUSES.includes(statusParam);
     const hasSuccessFlag = SUCCESS_STATUSES.includes(successParam);
