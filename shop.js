@@ -39,7 +39,7 @@
     return 'Basic';
   }
 
-  function formatCurrency(value){
+  function formatCurrencyPLN(value){
     return CURRENCY_FORMATTER.format(value);
   }
 
@@ -84,6 +84,14 @@
     preview.textContent = slug ? `Adres: uszefaqualitet.pl/${slug}` : 'Adres: —';
   }
 
+  function normalizeMargin(rawValue){
+    const parsedValue = rawValue === '' ? NaN : parseFloat(rawValue);
+    if(!Number.isFinite(parsedValue)){
+      return DEFAULTS.margin;
+    }
+    return Math.min(100, Math.max(0, parsedValue));
+  }
+
   function buildStoreFromForm(form){
     const nameInput = form.querySelector('input[name="storeName"]');
     const slugInput = form.querySelector('input[name="storeSlug"]');
@@ -100,11 +108,7 @@
     const name = nameInput ? nameInput.value.trim() : '';
     const slug = manager.normalizeSlug(slugInput && slugInput.value ? slugInput.value : name);
     const marginRaw = marginInput ? marginInput.value : '';
-    const marginValue = marginRaw === '' ? NaN : parseFloat(marginRaw);
-
-    const normalizedMargin = Number.isFinite(marginValue)
-      ? Math.min(100, Math.max(0, marginValue))
-      : DEFAULTS.margin;
+    const normalizedMargin = normalizeMargin(marginRaw);
 
     return {
       name,
@@ -308,7 +312,7 @@
       'store-plan': formatPlan(store.plan),
       'store-margin': `${store.margin}%`,
       'store-products': `${metrics.products}`,
-      'store-revenue': formatCurrency(metrics.revenue)
+      'store-revenue': formatCurrencyPLN(metrics.revenue)
     };
 
     Object.entries(map).forEach(([key, value]) => {
