@@ -324,13 +324,143 @@ a{color:#fff;text-decoration:none}
 }
 .survey-success{margin-top:16px;color:var(--accent-green);font-weight:700}
 body.modal-open{overflow:hidden}
+.calculator-shell{padding:32px 0 60px;display:flex;flex-direction:column;gap:22px}
+.calculator-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;align-items:start}
+.calculator-form{display:flex;flex-direction:column;gap:16px}
+.calculator-form .form-grid{padding:0;gap:16px}
+.calculator-form .hint{margin:6px 0 0}
+.calculator-results{display:flex;flex-direction:column;gap:16px}
+.calculator-metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.metric-card{
+  padding:20px;
+  border-radius:20px;
+  border:1px solid rgba(53,217,255,.25);
+  background:rgba(7,18,33,.82);
+  box-shadow:var(--shadow);
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.metric-card span{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:1px}
+.metric-card p{margin:0;color:var(--muted);font-size:13px}
+.metric-card.highlight{
+  border-color:rgba(84,255,176,.6);
+  background:linear-gradient(135deg,rgba(53,217,255,.18),rgba(84,255,176,.16));
+}
+.metric-value{
+  font-size:clamp(34px,4vw,56px);
+  letter-spacing:1px;
+  font-weight:800;
+  color:var(--accent-green);
+}
+.metric-value.is-animated{animation:metricPulse .6s ease}
+.calculator-cta{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+  margin-top:6px;
+}
+.calculator-cta[hidden]{display:none}
+.calculator-cta .btn{width:100%}
+.calculator-note{
+  padding:14px 16px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(7,18,33,.7);
+  color:var(--muted);
+  font-size:14px;
+}
+.calculator-tiles{padding:40px 0 46px}
+.calc-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.calc-tile{
+  padding:24px;
+  border-radius:24px;
+  border:1px solid var(--stroke);
+  background:rgba(7,18,33,.78);
+  box-shadow:var(--shadow);
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  min-height:220px;
+  transition:transform .2s ease,border-color .2s ease;
+}
+.calc-tile span{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:1px}
+.calc-tile strong{font-size:24px}
+.calc-tile p{margin:0;color:var(--muted)}
+.calc-tile .tile-cta{margin-top:auto;color:var(--yellow);font-weight:700}
+.calc-tile:hover{transform:translateY(-4px);border-color:rgba(53,217,255,.55)}
+.plan-card{
+  padding:24px;
+  border-radius:24px;
+  border:1px solid var(--stroke);
+  background:rgba(7,18,33,.82);
+  box-shadow:var(--shadow);
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+}
+.plan-card strong{font-size:clamp(38px,5vw,64px);letter-spacing:2px}
+.plan-card.plan-basic{
+  border-color:rgba(53,217,255,.45);
+  background:linear-gradient(140deg,rgba(53,217,255,.16),rgba(7,18,33,.92));
+}
+.plan-card.plan-pro{
+  border-color:rgba(255,216,77,.5);
+  background:linear-gradient(140deg,rgba(255,216,77,.2),rgba(7,18,33,.9));
+}
+.plan-card.plan-elite{
+  border-color:rgba(255,79,216,.45);
+  background:linear-gradient(140deg,rgba(255,79,216,.22),rgba(7,18,33,.92));
+}
+.plan-desc{color:var(--muted);margin:0}
+.plan-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.plan-stats span{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:1px}
+.plan-stats strong{font-size:22px}
+.plan-stats strong.is-animated{animation:metricPulse .6s ease}
+.plan-note{margin:0;color:var(--muted)}
+.toggle-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.toggle-card{
+  position:relative;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:14px 16px;
+  border-radius:18px;
+  border:1px solid var(--stroke);
+  background:rgba(255,255,255,.06);
+  cursor:pointer;
+  font-weight:600;
+}
+.toggle-card input{position:absolute;opacity:0;pointer-events:none}
+.toggle-indicator{
+  width:18px;
+  height:18px;
+  border-radius:6px;
+  border:1px solid rgba(255,255,255,.4);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.toggle-card input:checked + .toggle-indicator{
+  background:linear-gradient(135deg,var(--accent-blue),var(--accent-green));
+  border-color:transparent;
+}
+.toggle-label{display:flex;flex-direction:column;gap:4px}
+.toggle-label small{color:var(--muted);font-weight:400}
+@keyframes metricPulse{
+  0%{transform:scale(.96);opacity:.6}
+  60%{transform:scale(1.02);opacity:1}
+  100%{transform:scale(1);opacity:1}
+}
 @media (prefers-reduced-motion: reduce){
   .helper-card{transform:none;transition:none}
   .promo-value{transition:none}
   .activity-toast{transform:none;transition:none}
+  .metric-value.is-animated{animation:none}
+  .plan-stats strong.is-animated{animation:none}
 }
 @media (max-width: 980px){
-  .hero-grid,.section-grid,.dashboard-grid,.form-grid,.pricing-grid,.supplier-grid,.products-grid,.footer-grid,.stats-grid,.marketplace-block,.promo-grid,.helper-grid,.store-summary-grid,.style-options,.activity-grid,.results-grid{grid-template-columns:1fr}
+  .hero-grid,.section-grid,.dashboard-grid,.form-grid,.pricing-grid,.supplier-grid,.products-grid,.footer-grid,.stats-grid,.marketplace-block,.promo-grid,.helper-grid,.store-summary-grid,.style-options,.activity-grid,.results-grid,.calculator-grid,.calculator-metrics,.calc-tiles,.plan-stats,.toggle-grid,.calculator-cta{grid-template-columns:1fr}
   .survey-card{flex-direction:column;align-items:flex-start}
   .activity-banner{flex-direction:column;align-items:flex-start}
   .activity-remaining{align-items:flex-start;text-align:left}

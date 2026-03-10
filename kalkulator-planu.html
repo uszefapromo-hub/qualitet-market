@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Kalkulator planu - UszefaQualitet</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="kalkulator-planu" class="calculator-page">
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>UszefaQualitet</strong>
+          <span>QualitetMarket</span>
+          <span class="brand-tag">Kalkulator planu</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Nawigacja kalkulatorów">
+        <a href="kalkulator-marzy.html">Marża</a>
+        <a href="kalkulator-zysku.html">Zysk</a>
+        <a href="kalkulator-planu.html">Plan</a>
+        <a href="index.html#kalkulatory">Landing</a>
+      </nav>
+      <a class="btn btn-primary topbar-cta" href="login.html">Wejdź do platformy</a>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <main class="wrap calculator-shell">
+    <section class="page-hero compact">
+      <span class="eyebrow">Kalkulator planu</span>
+      <h1>Dobierz plan dla swojego sklepu</h1>
+      <p class="lead">Odpowiedz na kilka pytań i od razu poznaj rekomendowany plan BASIC, PRO lub ELITE.</p>
+    </section>
+
+    <section class="calculator-grid">
+      <form class="panel-card form-card calculator-form" data-plan-calculator>
+        <div class="form-grid">
+          <label>
+            Ile produktów chcesz dodać?
+            <input type="number" name="products" min="0" step="1" value="60" inputmode="numeric" data-input-products>
+            <span class="hint">Szacowana liczba produktów w katalogu.</span>
+          </label>
+          <label>
+            Ile chcesz zarabiać miesięcznie (zł)?
+            <input type="number" name="target" min="0" step="1" value="6000" inputmode="numeric" data-input-target>
+            <span class="hint">Docelowy zysk z miesiąca.</span>
+          </label>
+        </div>
+        <div class="toggle-grid">
+          <label class="toggle-card">
+            <input type="checkbox" name="ads" data-input-ads>
+            <span class="toggle-indicator"></span>
+            <span class="toggle-label">Chcę reklamy <small>Wsparcie kampanii i promocji</small></span>
+          </label>
+          <label class="toggle-card">
+            <input type="checkbox" name="automation" data-input-automation>
+            <span class="toggle-indicator"></span>
+            <span class="toggle-label">Chcę automatyzację <small>Automatyczne działania sprzedażowe</small></span>
+          </label>
+        </div>
+        <div class="calculator-note">
+          Rekomendacja uwzględnia zarówno skalę sprzedaży, jak i dodatkowe potrzeby.
+        </div>
+      </form>
+
+      <div class="calculator-results">
+        <div class="plan-card plan-pro" data-plan-card>
+          <span class="eyebrow">Rekomendowany plan</span>
+          <strong data-plan-name>PRO</strong>
+          <p class="plan-desc" data-plan-desc></p>
+          <div class="plan-stats">
+            <div>
+              <span>Cel miesięczny</span>
+              <strong data-plan-target data-value="0">0 zł</strong>
+            </div>
+            <div>
+              <span>Produkty</span>
+              <strong data-plan-products data-value="0">0</strong>
+            </div>
+          </div>
+          <p class="plan-note" data-plan-note></p>
+        </div>
+        <div class="calculator-cta" data-plan-cta hidden>
+          <a class="btn btn-primary" href="generator-sklepu.html">Otwórz sklep</a>
+          <a class="btn btn-secondary" href="login.html">Wybierz plan</a>
+          <a class="btn btn-secondary" href="sklep.html">Zobacz demo</a>
+          <a class="btn btn-secondary" href="login.html">Zacznij teraz</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/app.js" defer></script>
+  <script src="js/calculators.js" defer></script>
+</body>
+</html>
