@@ -39,6 +39,12 @@
     {limit: 5, days: 30}
   ];
   const DEFAULT_TRIAL_DAYS = 7;
+  const PLAN_LABELS = {
+    trial: 'Trial',
+    basic: 'Basic',
+    pro: 'PRO',
+    elite: 'ELITE'
+  };
 
   function bindMenu(){
     const button = document.querySelector('[data-menu-toggle]');
@@ -378,6 +384,11 @@
     }
   }
 
+  function getStoredPlan(){
+    const storedPlan = localStorage.getItem(STORAGE_KEYS.plan);
+    return storedPlan ? storedPlan.toLowerCase() : '';
+  }
+
   function loadStoreSettings(){
     const raw = localStorage.getItem(STORAGE_KEYS.storeSettings);
     if(!raw){
@@ -430,6 +441,19 @@
     }
   }
 
+  function formatPlanLabel(plan){
+    const normalized = (plan || '').toLowerCase();
+    return PLAN_LABELS[normalized] || PLAN_LABELS.basic;
+  }
+
+  function resolvePlan(remaining){
+    const storedPlan = getStoredPlan();
+    if(storedPlan){
+      return storedPlan;
+    }
+    return remaining > 0 ? 'trial' : 'basic';
+  }
+
   function startTrialIfNeeded(email){
     if(localStorage.getItem(STORAGE_KEYS.trialStart)){
       return;
@@ -464,7 +488,10 @@
     }
     localStorage.setItem(STORAGE_KEYS.trialDays, `${trialDays}`);
     localStorage.setItem(STORAGE_KEYS.trialStart, new Date().toISOString());
-    localStorage.setItem(STORAGE_KEYS.plan, 'trial');
+    const existingPlan = getStoredPlan();
+    if(!existingPlan || existingPlan === 'trial'){
+      localStorage.setItem(STORAGE_KEYS.plan, 'trial');
+    }
   }
 
   function getTrialRemainingDays(){
@@ -480,7 +507,10 @@
     const elapsedDays = Math.floor((Date.now() - startDate.getTime()) / MS_PER_DAY);
     const remaining = Math.max(trialDays - elapsedDays, 0);
     if(remaining === 0){
-      localStorage.setItem(STORAGE_KEYS.plan, 'basic');
+      const storedPlan = getStoredPlan();
+      if(!storedPlan || storedPlan === 'trial'){
+        localStorage.setItem(STORAGE_KEYS.plan, 'basic');
+      }
     }
     return remaining;
   }
@@ -502,21 +532,84 @@
   function updateDashboardStatus(){
     const trialTargets = document.querySelectorAll('[data-trial-remaining]');
     const remaining = getTrialRemainingDays();
+    const plan = resolvePlan(remaining);
     if(trialTargets.length){
       trialTargets.forEach(target => {
-        target.textContent = `${remaining}`;
+        target.textContent = plan === 'trial' ? `${remaining}` : 'Aktywny';
       });
     }
     const trialLabel = document.querySelector('[data-trial-label]');
     if(trialLabel){
-      trialLabel.textContent = getTrialLabel(remaining);
+      trialLabel.textContent = plan === 'trial' ? getTrialLabel(remaining) : 'plan';
     }
     const planTarget = document.querySelector('[data-user-plan]');
     if(planTarget){
-      const storedPlan = localStorage.getItem(STORAGE_KEYS.plan);
-      const plan = storedPlan || (remaining > 0 ? 'trial' : 'basic');
-      planTarget.textContent = plan === 'trial' ? 'Trial' : 'Basic';
+      planTarget.textContent = formatPlanLabel(plan);
     }
+    updatePlanStatusLabels(plan);
+    updatePlanPurchaseButtons(plan);
+  }
+
+  function updatePlanStatusLabels(plan){
+    const statusTargets = document.querySelectorAll('[data-plan-status]');
+    if(!statusTargets.length){
+      return;
+    }
+    const label = formatPlanLabel(plan);
+    statusTargets.forEach(target => {
+      target.textContent = `Aktywny plan: ${label}`;
+    });
+  }
+
+  function updatePlanPurchaseButtons(plan){
+    const buttons = document.querySelectorAll('[data-plan-buy]');
+    if(!buttons.length){
+      return;
+    }
+    buttons.forEach(button => {
+      const buttonPlan = (button.dataset.planBuy || '').toLowerCase();
+      if(!button.dataset.planDefault){
+        button.dataset.planDefault = button.textContent.trim();
+      }
+      const isActive = buttonPlan && buttonPlan === plan;
+      if(isActive){
+        button.textContent = 'Aktualny plan';
+        button.disabled = true;
+        button.setAttribute('aria-disabled', 'true');
+      } else {
+        button.textContent = button.dataset.planDefault;
+        button.disabled = false;
+        button.removeAttribute('aria-disabled');
+      }
+    });
+  }
+
+  function handlePlanPurchase(plan){
+    const normalizedPlan = (plan || '').toLowerCase();
+    if(!normalizedPlan){
+      return;
+    }
+    localStorage.setItem(STORAGE_KEYS.plan, normalizedPlan);
+    if(normalizedPlan !== 'trial'){
+      localStorage.setItem(STORAGE_KEYS.trialDays, '0');
+    }
+    updateDashboardStatus();
+  }
+
+  function initPlanPurchaseButtons(){
+    const buttons = document.querySelectorAll('[data-plan-buy]');
+    if(!buttons.length){
+      updatePlanStatusLabels(resolvePlan(getTrialRemainingDays()));
+      return;
+    }
+    const plan = resolvePlan(getTrialRemainingDays());
+    updatePlanPurchaseButtons(plan);
+    updatePlanStatusLabels(plan);
+    buttons.forEach(button => {
+      button.addEventListener('click', () => {
+        handlePlanPurchase(button.dataset.planBuy);
+      });
+    });
   }
 
   function renderDashboardStoreSummary(){
@@ -692,6 +785,7 @@
     initStoreGenerator();
     initLoginForm();
     guardDashboard();
+    initPlanPurchaseButtons();
   });
 
   window.addEventListener('pagehide', () => {

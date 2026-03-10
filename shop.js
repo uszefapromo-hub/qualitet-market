@@ -23,19 +23,33 @@
   const MOCK_PRODUCTS_RANGE = 24;
   const MOCK_REVENUE_BASE = 12000;
   const MOCK_REVENUE_RANGE = 9000;
+  const USER_PLAN_KEY = 'app_user_plan';
   const CURRENCY_FORMATTER = new Intl.NumberFormat('pl-PL', {
     style: 'currency',
     currency: 'PLN',
     maximumFractionDigits: 0
   });
 
+  function getUserPlan(){
+    const storedPlan = localStorage.getItem(USER_PLAN_KEY);
+    return storedPlan ? storedPlan.toLowerCase() : '';
+  }
+
+  function resolvePlan(storePlan){
+    const userPlan = getUserPlan();
+    return userPlan || storePlan;
+  }
+
   function formatPlan(plan){
     const value = (plan || '').toLowerCase();
+    if(value === 'trial'){
+      return 'Trial';
+    }
     if(value === 'pro'){
-      return 'Pro';
+      return 'PRO';
     }
     if(value === 'elite'){
-      return 'Elite';
+      return 'ELITE';
     }
     return 'Basic';
   }
@@ -325,9 +339,10 @@
     }
 
     const metrics = getMockMetrics(store);
+    const plan = resolvePlan(store.plan);
     const map = {
       'store-name': store.name,
-      'store-plan': formatPlan(store.plan),
+      'store-plan': formatPlan(plan),
       'store-margin': `${store.margin}%`,
       'store-products': `${metrics.products}`,
       'store-revenue': formatCurrencyPLN(metrics.revenue)
@@ -371,10 +386,11 @@
     document.documentElement.style.setProperty('--store-accent', store.accentColor || DEFAULTS.accentColor);
     document.documentElement.style.setProperty('--store-background', store.backgroundColor || DEFAULTS.backgroundColor);
 
+    const plan = resolvePlan(store.plan);
     const map = {
       'store-name': store.name,
       'store-description': store.description || DEFAULTS.description,
-      'store-plan': `Plan: ${formatPlan(store.plan)}`,
+      'store-plan': `Plan: ${formatPlan(plan)}`,
       'store-margin': `Marża: ${store.margin}%`,
       'store-theme': `Styl: ${store.theme}`,
       'store-slug': `@${store.slug}`
