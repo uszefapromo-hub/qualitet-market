@@ -1,1 +1,1 @@
-document.write('<script src="js/stores.js"><\/script>');
+/* sklepy.js – static build, no document.write */

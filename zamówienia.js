@@ -1,1 +1,1 @@
-document.write('<script src="js/orders.js"><\/script>');
+/* zamówienia.js – static build, no document.write */

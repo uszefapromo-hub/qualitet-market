@@ -1,1 +1,64 @@
-document.write('<script src="js/hurtownie.js"><\/script>');
+<!doctype html>
+<html lang="pl"><head><title>Koszyk</title><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="css/styles.css"></head>
+<body data-page="koszyk">
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="index.html">
+      <img src="logo-wspolne.svg" alt="U Szefa + QualitetMarket">
+      <div><strong>U Szefa</strong><span>królestwo zarabiania</span></div>
+    </a>
+    <nav class="nav" aria-label="Główna nawigacja">
+      <a href="index.html">Start</a>
+      <a href="qualitetmarket.html">QualitetMarket</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="generator-sklepu.html">Nowy sklep</a>
+      <a href="hurtownie.html">Hurtownie</a>
+      <a href="platforma.html">Reklama</a>
+      <a href="cennik.html">Cennik</a>
+      <a href="sklep.html">Sklep</a>
+      <a href="koszyk.html">Koszyk</a>
+      <a href="zamowienia.html">Zamówienia</a>
+      <a href="qualitetmarket.html">Panel sklepu</a>
+    </nav>
+    <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+  </div>
+</header>
+<main class="wrap">
+  <section class="page-hero compact">
+    <span class="eyebrow">Koszyk</span>
+    <h1>Twoje produkty do zamówienia.</h1>
+  </section>
+  <section class="dashboard-grid">
+    <div class="panel-card" id="cart-list"></div>
+    <div class="panel-card">
+      <h3>Podsumowanie</h3>
+      <div id="cart-summary"></div>
+      <a class="btn btn-primary" href="checkout.html" style="margin-top:14px">Zamów teraz</a>
+    </div>
+  </section>
+</main>
+<script src="hurtownie.js" defer></script>
+<script src="js/planGuard.js" defer></script>
+<footer class="footer">
+  <div class="wrap footer-grid">
+    <div>
+      <img class="footer-logo" src="logo-uszefa.svg" alt="U Szefa">
+      <p>U Szefa to menu główne i start od zera. QualitetMarket to centrum dowodzenia sprzedażą.</p>
+    </div>
+    <div>
+      <h4>Szybki start</h4>
+      <a href="generator-sklepu.html">Otwórz sklep</a>
+      <a href="hurtownie.html">Wybierz hurtownię</a>
+      <a href="platforma.html">Ustaw reklamę</a>
+    </div>
+    <div>
+      <h4>System</h4>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="sklep.html">Podgląd sklepu</a>
+      <a href="zamowienia.html">Zamówienia</a>
+    </div>
+  </div>
+</footer>
+</body></html>
