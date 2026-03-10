@@ -468,6 +468,7 @@ body.store-shop{
   --card-muted:rgba(30,41,59,.92);
   --stroke:rgba(148,163,184,.2);
   --shadow:0 20px 45px rgba(2,6,23,.5);
+  --marketplace-grid-columns:3;
   --store-background:#0f172a;
   background:
     radial-gradient(circle at top right, rgba(56,217,255,.12), transparent 32%),
@@ -706,7 +707,7 @@ body.store-shop .slider-meta{
 body.store-shop .category-grid{
   display:grid;
   gap:18px;
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(var(--marketplace-grid-columns),1fr);
 }
 
 body.store-shop .category-card{
@@ -762,7 +763,7 @@ body.store-shop .category-info p{
 }
 
 body.store-shop .product-grid-large{
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(var(--marketplace-grid-columns),1fr);
   padding:0 0 18px;
 }
 
@@ -868,7 +869,7 @@ body.store-shop .promo-card.highlight{
 }
 
 body.store-shop .supplier-grid-large{
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:repeat(var(--marketplace-grid-columns),1fr);
   gap:18px;
 }
 
