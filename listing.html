@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Listing produktów - UszefaQualitet</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="listing">
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>UszefaQualitet</strong>
+          <span>QualitetMarket</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Nawigacja">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="cennik.html">Cennik</a>
+        <a href="index.html">Start</a>
+      </nav>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <main data-require="pro">
+    <section class="page-hero compact">
+      <div class="wrap">
+        <span class="eyebrow">Moduł PRO</span>
+        <h1>Listing produktów</h1>
+        <p class="lead">Publikuj oferty hurtowe i kontroluj widoczność produktów w platformie.</p>
+      </div>
+    </section>
+
+    <section class="promo-section">
+      <div class="wrap">
+        <div class="promo-grid">
+          <div class="promo-card">
+            <span>Listy produktów</span>
+            <strong class="promo-value">Inteligentne katalogi</strong>
+            <p>Twórz listy ofert dla różnych kanałów sprzedaży.</p>
+          </div>
+          <div class="promo-card">
+            <span>Automaty</span>
+            <strong class="promo-value">Synchronizacja cen</strong>
+            <p>Aktualizuj stany magazynowe i marże automatycznie.</p>
+          </div>
+          <div class="promo-card highlight">
+            <span>Kontrola</span>
+            <strong class="promo-value">Monitoring jakości</strong>
+            <p>Śledź skuteczność listingów i poprawiaj wyniki.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="upgrade-modal" data-upgrade-modal hidden>
+    <div class="upgrade-window" role="dialog" aria-modal="true" aria-labelledby="upgrade-title">
+      <button class="upgrade-close" type="button" data-upgrade-close aria-label="Zamknij okno">×</button>
+      <span class="eyebrow">Upgrade</span>
+      <h2 id="upgrade-title">Odblokuj plan <span data-upgrade-plan>PRO</span></h2>
+      <p class="hint" data-upgrade-message>Ta funkcja wymaga planu PRO.</p>
+      <div class="upgrade-actions">
+        <a class="btn btn-secondary" href="https://buy.stripe.com/28E4gz3qP0er3AL2P0ak000" data-plan-purchase="basic" data-upgrade-cta target="_blank" rel="noopener">Kup BASIC</a>
+        <a class="btn btn-primary" href="https://buy.stripe.com/aFa5kD9PdgdpgnxdtEak001" data-plan-purchase="pro" data-upgrade-cta target="_blank" rel="noopener">Kup PRO</a>
+        <a class="btn btn-secondary" href="https://buy.stripe.com/7sY4gz5yX6CP0ozdtEak002" data-plan-purchase="elite" data-upgrade-cta target="_blank" rel="noopener">Kup ELITE</a>
+      </div>
+      <p class="plan-note">Po zakupie wróć do dashboardu, aby aktywować plan.</p>
+    </div>
+  </div>
+
+  <script src="js/app.js" defer></script>
+</body>
+</html>

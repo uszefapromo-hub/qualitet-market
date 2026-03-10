@@ -308,7 +308,8 @@ a{color:#fff;text-decoration:none}
 }
 .survey-form{display:grid;gap:14px;margin-top:16px}
 .survey-form .cta-row{margin-top:6px}
-.survey-close{
+.survey-close,
+.upgrade-close{
   position:absolute;
   top:16px;
   right:16px;
@@ -323,6 +324,44 @@ a{color:#fff;text-decoration:none}
   cursor:pointer;
 }
 .survey-success{margin-top:16px;color:var(--accent-green);font-weight:700}
+.pricing-section{padding:36px 0 46px}
+.plan-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+.plan-note{color:var(--muted);margin:8px 0 0}
+.upgrade-modal{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:rgba(4,8,20,.72);
+  z-index:150;
+}
+.upgrade-modal[hidden]{display:none}
+.upgrade-window{
+  position:relative;
+  width:min(640px,100%);
+  border-radius:24px;
+  border:1px solid var(--stroke);
+  background:rgba(7,18,33,.95);
+  padding:26px;
+  box-shadow:var(--shadow);
+}
+.upgrade-actions{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:18px;
+}
+.btn.is-highlight{
+  outline:2px solid var(--yellow);
+  outline-offset:2px;
+}
+[data-require].is-locked{
+  pointer-events:none;
+  opacity:.35;
+  filter:blur(2px);
+}
 body.modal-open{overflow:hidden}
 @media (prefers-reduced-motion: reduce){
   .helper-card{transform:none;transition:none}

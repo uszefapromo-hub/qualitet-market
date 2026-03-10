@@ -23,10 +23,12 @@
       <nav class="sidebar-nav" aria-label="Menu panelu">
         <a class="active" href="dashboard.html">Dashboard</a>
         <a href="generator-sklepu.html">Mój sklep</a>
-        <a href="#">Produkty</a>
-        <a href="#">Reklamy</a>
-        <a href="#">Kalkulacja</a>
-        <a href="#">Subskrypcja</a>
+        <a href="hurtownie.html">Hurtownie</a>
+        <a href="qualitetmarket.html">QualitetMarket</a>
+        <a href="listing.html">Listing</a>
+        <a href="crm.html">CRM</a>
+        <a href="intelligence.html">Intelligence</a>
+        <a href="cennik.html">Subskrypcja</a>
         <a href="#">Ustawienia</a>
       </nav>
     </aside>
@@ -45,6 +47,14 @@
             <span>Plan</span>
             <strong data-user-plan>Trial</strong>
           </div>
+          <div aria-label="Status aktywacji">
+            <span>Status</span>
+            <strong data-plan-status>Aktywny</strong>
+          </div>
+        </div>
+        <div class="plan-actions">
+          <button class="btn btn-primary" type="button" data-upgrade-open data-upgrade-plan="pro">Upgrade planu</button>
+          <a class="btn btn-secondary" href="mailto:UszefaQualitetpromo@gmail.com?subject=Zarz%C4%85dzanie%20planem">Zarządzaj planem</a>
         </div>
       </section>
 
@@ -74,6 +84,50 @@
         <p class="hint store-summary-helper" data-store-helper>Najpierw stwórz sklep, aby przejść dalej.</p>
       </section>
 
+      <section class="panel-card">
+        <div class="section-head">
+          <span class="eyebrow">Cennik</span>
+          <h2>Odblokuj narzędzia sprzedaży</h2>
+          <p class="hint">Kup plan i aktywuj dostęp do modułów PRO oraz ELITE.</p>
+        </div>
+        <div class="pricing-grid">
+          <article class="price-card">
+            <h3>Basic</h3>
+            <strong>Start</strong>
+            <p class="hint">Podstawowy dostęp do platformy.</p>
+            <ul>
+              <li>Dashboard + generator sklepu</li>
+              <li>Oferta startowa U SZEFA</li>
+              <li>Podstawowe wsparcie</li>
+            </ul>
+            <a class="btn btn-secondary" href="https://buy.stripe.com/28E4gz3qP0er3AL2P0ak000" data-plan-purchase="basic" target="_blank" rel="noopener">Kup BASIC</a>
+          </article>
+          <article class="price-card featured">
+            <span class="badge">Pro</span>
+            <h3>Pro</h3>
+            <strong>Biznes</strong>
+            <p class="hint">Dostęp do hurtowni i CRM.</p>
+            <ul>
+              <li>Hurtownie, QualitetMarket, Listing</li>
+              <li>CRM i narzędzia sprzedaży</li>
+              <li>Priorytetowe wsparcie</li>
+            </ul>
+            <a class="btn btn-primary" href="https://buy.stripe.com/aFa5kD9PdgdpgnxdtEak001" data-plan-purchase="pro" target="_blank" rel="noopener">Kup PRO</a>
+          </article>
+          <article class="price-card">
+            <h3>Elite</h3>
+            <strong>Premium</strong>
+            <p class="hint">Zaawansowana analityka i opiekun.</p>
+            <ul>
+              <li>Qualitet Intelligence</li>
+              <li>Dedykowany opiekun i SLA</li>
+              <li>Najwyższe limity platformy</li>
+            </ul>
+            <a class="btn btn-secondary" href="https://buy.stripe.com/7sY4gz5yX6CP0ozdtEak002" data-plan-purchase="elite" target="_blank" rel="noopener">Kup ELITE</a>
+          </article>
+        </div>
+      </section>
+
       <section class="helper-grid dashboard-helpers">
         <article class="helper-card tip" data-helper>
           <h3>TIP</h3>
@@ -96,5 +150,19 @@
   </div>
 
   <script src="js/app.js" defer></script>
+  <div class="upgrade-modal" data-upgrade-modal hidden>
+    <div class="upgrade-window" role="dialog" aria-modal="true" aria-labelledby="upgrade-title">
+      <button class="upgrade-close" type="button" data-upgrade-close aria-label="Zamknij okno">×</button>
+      <span class="eyebrow">Upgrade</span>
+      <h2 id="upgrade-title">Odblokuj plan <span data-upgrade-plan>PRO</span></h2>
+      <p class="hint" data-upgrade-message>Ta funkcja wymaga planu PRO.</p>
+      <div class="upgrade-actions">
+        <a class="btn btn-secondary" href="https://buy.stripe.com/28E4gz3qP0er3AL2P0ak000" data-plan-purchase="basic" data-upgrade-cta target="_blank" rel="noopener">Kup BASIC</a>
+        <a class="btn btn-primary" href="https://buy.stripe.com/aFa5kD9PdgdpgnxdtEak001" data-plan-purchase="pro" data-upgrade-cta target="_blank" rel="noopener">Kup PRO</a>
+        <a class="btn btn-secondary" href="https://buy.stripe.com/7sY4gz5yX6CP0ozdtEak002" data-plan-purchase="elite" data-upgrade-cta target="_blank" rel="noopener">Kup ELITE</a>
+      </div>
+      <p class="plan-note">Po zakupie wróć do dashboardu, aby aktywować plan.</p>
+    </div>
+  </div>
 </body>
 </html>
