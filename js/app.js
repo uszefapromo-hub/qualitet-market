@@ -3430,7 +3430,7 @@
       const productCount = Array.isArray(supplier.products) ? supplier.products.length : 0;
       card.innerHTML = `
         <div class="supplier-meta">
-          <img src="${supplier.logo}" alt="${supplier.name}">
+          <img src="${supplier.logo}" alt="${supplier.name}" onerror="this.src='https://placehold.co/48x48/0f1837/FFFFFF?text=${encodeURIComponent((supplier.name || 'H').slice(0, 2).toUpperCase())}'">
           <div>
             <strong>${supplier.name}</strong>
             <small>${supplier.category}</small>
@@ -3536,7 +3536,11 @@
 
     const resolveSupplierPlan = supplier => normalizePlan(supplier && supplier.plan) || 'basic';
     const isSupplierLocked = supplier => getPlanLevel(resolveSupplierPlan(supplier)) > currentPlanLevel;
-    const getSupplierLockLabel = plan => (plan === 'elite' ? 'Elite only' : 'Premium');
+    const getSupplierPlanTagClass = plan => {
+      const planMap = {elite: 'tag-elite', pro: 'tag-premium', basic: 'tag-basic'};
+      return planMap[plan] || 'tag-basic';
+    };
+    const getSupplierLogoFallback = name => `https://placehold.co/48x48/0f1837/FFFFFF?text=${encodeURIComponent((name || 'H').slice(0, 2).toUpperCase())}`;
     const firstAvailableSupplier = suppliers.find(supplier => !isSupplierLocked(supplier)) || null;
     let selectedSupplier = firstAvailableSupplier;
     let currentProducts = [];
@@ -3780,19 +3784,21 @@
       suppliers.forEach(supplier => {
         const requiredPlan = resolveSupplierPlan(supplier);
         const locked = isSupplierLocked(supplier);
-        const lockLabel = getSupplierLockLabel(requiredPlan);
         const card = document.createElement('article');
         card.className = 'supplier-card';
         card.dataset.locked = locked ? 'true' : 'false';
         card.dataset.supplierId = supplier.slug;
         card.dataset.supplierPlan = requiredPlan;
+        const planTagClass = getSupplierPlanTagClass(requiredPlan);
+        const planTagText = `Plan: ${formatPlanLabel(requiredPlan)}`;
         const lockTag = locked
-          ? `<span class="tag tag-lock ${requiredPlan === 'elite' ? 'tag-elite' : 'tag-premium'}" aria-label="${lockLabel} - wymaga planu ${formatPlanLabel(requiredPlan)}">${lockLabel}</span>`
-          : '';
-        const importLabel = locked ? 'Upgrade' : 'Importuj';
+          ? `<span class="tag tag-lock ${planTagClass}" aria-label="Wymaga planu ${formatPlanLabel(requiredPlan)}" role="status">🔒 ${planTagText}</span>`
+          : `<span class="tag ${planTagClass}" aria-label="Dostępny w planie ${formatPlanLabel(requiredPlan)}">${planTagText}</span>`;
+        const importLabel = locked ? 'Odblokuj' : 'Importuj';
+        const logoFallback = getSupplierLogoFallback(supplier.name);
         card.innerHTML = `
           <div class="supplier-meta">
-            <img src="${supplier.logo}" alt="${supplier.name}">
+            <img src="${supplier.logo}" alt="${supplier.name}" onerror="this.src='${logoFallback}'">
             <div>
               <strong>${supplier.name}</strong>
               <span class="hint">${supplier.category}</span>
