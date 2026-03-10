@@ -147,25 +147,15 @@
     let currentCount = storedCount;
     const hasEmail = Boolean(email);
     const emailKnown = hasEmail && users.includes(email);
-    let shouldAddEmail = false;
-    let shouldIncrement = false;
 
-    if(hasEmail){
-      if(!emailKnown){
-        shouldAddEmail = true;
-        if(listExists || storedCount === 0){
-          shouldIncrement = true;
-        }
-      }
-    } else if(storedCount === 0){
-      currentCount = 1;
-    }
-
-    if(shouldAddEmail){
+    if(hasEmail && !emailKnown){
+      const shouldIncrement = listExists || storedCount === 0;
       users.push(email);
-    }
-    if(shouldIncrement){
-      currentCount = storedCount + 1;
+      if(shouldIncrement){
+        currentCount = storedCount + 1;
+      }
+    } else if(!hasEmail && storedCount === 0){
+      currentCount = 1;
     }
 
     localStorage.setItem(STORAGE_KEYS.usersCount, `${currentCount}`);
@@ -201,6 +191,20 @@
     return remaining;
   }
 
+  function getTrialLabel(remaining){
+    if(remaining === 1){
+      return 'dzień pozostał';
+    }
+    if(
+      remaining % 10 >= 2
+      && remaining % 10 <= 4
+      && (remaining % 100 < 12 || remaining % 100 > 14)
+    ){
+      return 'dni pozostały';
+    }
+    return 'dni pozostało';
+  }
+
   function updateDashboardStatus(){
     const trialTargets = document.querySelectorAll('[data-trial-remaining]');
     const remaining = getTrialRemainingDays();
@@ -211,17 +215,7 @@
     }
     const trialLabel = document.querySelector('[data-trial-label]');
     if(trialLabel){
-      if(remaining === 1){
-        trialLabel.textContent = 'dzień pozostał';
-      } else if(
-        remaining % 10 >= 2
-        && remaining % 10 <= 4
-        && (remaining % 100 < 12 || remaining % 100 > 14)
-      ){
-        trialLabel.textContent = 'dni pozostały';
-      } else {
-        trialLabel.textContent = 'dni pozostało';
-      }
+      trialLabel.textContent = getTrialLabel(remaining);
     }
     const planTarget = document.querySelector('[data-user-plan]');
     if(planTarget){

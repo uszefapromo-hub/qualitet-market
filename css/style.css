@@ -18,7 +18,7 @@
   --accent-green-dark:#1ca66b;
   --shadow:0 20px 40px rgba(0,0,0,.22);
   --topbar-offset:90px;
-  --topbar-height:120px;
+  --topbar-height:90px;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
