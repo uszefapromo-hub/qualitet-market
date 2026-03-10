@@ -1,1 +1,1 @@
-document.write('<script src="js/shop.js"><\/script>');
+/* sklep.js — placeholder; shop functionality is in js/stores (2).js via sklep.html */
