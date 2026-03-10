@@ -8,7 +8,8 @@
     trialStart: 'app_user_trial_start',
     plan: 'app_user_plan',
     storeSettings: 'app_store_settings',
-    storeReady: 'app_store_ready'
+    storeReady: 'app_store_ready',
+    leadPopupSubmitted: 'app_lead_popup_submitted'
   };
   const MS_PER_DAY = 1000 * 60 * 60 * 24;
   const TRIAL_RULES = [
@@ -442,12 +443,97 @@
     });
   }
 
+  function setLeadSubmitted(){
+    localStorage.setItem(STORAGE_KEYS.leadPopupSubmitted, 'true');
+  }
+
+  function showLeadSuccess(form){
+    const success = form.querySelector('[data-lead-success]');
+    if(success){
+      success.hidden = false;
+    }
+  }
+
+  function initLeadForms(closePopup){
+    const forms = document.querySelectorAll('[data-lead-form]');
+    if(!forms.length){
+      return;
+    }
+    forms.forEach(form => {
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        setLeadSubmitted();
+        showLeadSuccess(form);
+        if(form.hasAttribute('data-lead-popup-form') && typeof closePopup === 'function'){
+          setTimeout(() => {
+            closePopup();
+          }, 1200);
+        }
+      });
+    });
+  }
+
+  function initLeadPopup(){
+    const popup = document.querySelector('[data-lead-popup]');
+    if(!popup){
+      return;
+    }
+    const openButtons = document.querySelectorAll('[data-open-lead-popup]');
+    const closeButtons = popup.querySelectorAll('[data-close-lead-popup]');
+    let popupTimer = null;
+    const hasSubmitted = () => localStorage.getItem(STORAGE_KEYS.leadPopupSubmitted) === 'true';
+
+    const openPopup = () => {
+      if(hasSubmitted()){
+        return;
+      }
+      if(popupTimer){
+        clearTimeout(popupTimer);
+        popupTimer = null;
+      }
+      popup.classList.add('is-visible');
+      popup.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('popup-open');
+    };
+
+    const closePopup = () => {
+      popup.classList.remove('is-visible');
+      popup.setAttribute('aria-hidden', 'true');
+      document.body.classList.remove('popup-open');
+    };
+
+    closeButtons.forEach(button => {
+      button.addEventListener('click', () => closePopup());
+    });
+
+    openButtons.forEach(button => {
+      button.addEventListener('click', event => {
+        const href = button.getAttribute('href');
+        if(href === '#popup'){
+          event.preventDefault();
+        }
+        openPopup();
+      });
+    });
+
+    if(!hasSubmitted()){
+      popupTimer = setTimeout(openPopup, 10000);
+    }
+
+    if(window.location.hash === '#popup' && !hasSubmitted()){
+      openPopup();
+    }
+
+    initLeadForms(closePopup);
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     bindMenu();
     initCounters();
     initHelperBoxes();
     initStoreGenerator();
     initLoginForm();
+    initLeadPopup();
     guardDashboard();
   });
 })();
