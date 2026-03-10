@@ -5,7 +5,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#f8fafc">
+  <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
@@ -44,7 +44,64 @@
   </header>
 
   <main class="wrap shop-shell" data-store-shop>
-    <div data-store-content>
+    <div class="hero-grid" data-store-content>
+      <aside class="hero-side hero-side-left">
+        <div class="hero-side-card">
+          <span class="hero-side-title">Popularne kategorie</span>
+          <div class="hero-category-grid">
+            <div class="hero-category-tile">
+              <img src="assets/images/demo/category-electronics.svg" alt="Elektronika" width="26" height="26">
+              <span>Elektronika</span>
+            </div>
+            <div class="hero-category-tile">
+              <img src="assets/images/demo/category-business.svg" alt="Biznes" width="26" height="26">
+              <span>Biznes</span>
+            </div>
+            <div class="hero-category-tile">
+              <img src="assets/images/demo/category-home.svg" alt="Dom i wnętrza" width="26" height="26">
+              <span>Dom i wnętrza</span>
+            </div>
+            <div class="hero-category-tile">
+              <img src="assets/images/demo/category-fashion.svg" alt="Moda" width="26" height="26">
+              <span>Moda</span>
+            </div>
+            <div class="hero-category-tile">
+              <img src="assets/images/demo/category-tools.svg" alt="Narzędzia" width="26" height="26">
+              <span>Narzędzia</span>
+            </div>
+            <div class="hero-category-tile">
+              <img src="assets/images/demo/category-auto.svg" alt="Auto i flota" width="26" height="26">
+              <span>Auto i flota</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero-side-card">
+          <span class="hero-side-title">Szybkie filtry</span>
+          <div class="themes-row">
+            <span class="theme-pill">Bestsellery</span>
+            <span class="theme-pill">Nowości</span>
+            <span class="theme-pill">Dostawa 24h</span>
+            <span class="theme-pill">Top marża</span>
+          </div>
+          <div class="cta-row">
+            <a class="btn btn-secondary" href="listing.html">Pełny listing</a>
+          </div>
+        </div>
+        <div class="hero-side-card">
+          <span class="hero-side-title">Zaufani dostawcy</span>
+          <div class="hero-logo-grid">
+            <img src="assets/images/demo/supplier-neotech.svg" alt="NeoTech" width="90" height="40">
+            <img src="assets/images/demo/supplier-homehub.svg" alt="HomeHub" width="90" height="40">
+            <img src="assets/images/demo/supplier-fashionlane.svg" alt="FashionLane" width="90" height="40">
+            <img src="assets/images/demo/supplier-autofleet.svg" alt="AutoFleet" width="90" height="40">
+          </div>
+          <div class="cta-row">
+            <a class="btn btn-secondary" href="hurtownie.html">Hurtownie</a>
+          </div>
+        </div>
+      </aside>
+
+      <div class="hero-main">
       <section class="panel-card store-hero-banner">
         <div class="store-hero-content">
           <div class="shop-logo" data-logo-preview>
@@ -129,7 +186,7 @@
             </div>
           </div>
           <div class="app-cta-media">
-            <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=900&q=80" alt="Zarządzanie sklepem z telefonu" loading="lazy" decoding="async">
+            <img src="assets/images/demo/product-smartphone.svg" alt="Zarządzanie sklepem z telefonu" loading="lazy" decoding="async">
             <span class="app-cta-badge">Sklep mobile PRO</span>
           </div>
         </div>
@@ -287,7 +344,7 @@
             </div>
           </div>
           <div class="app-cta-media">
-            <img src="https://images.unsplash.com/photo-1487611459768-bd414656ea10?auto=format&fit=crop&w=900&q=80" alt="Sprzedaż mobilna w sklepie" loading="lazy" decoding="async">
+            <img src="assets/images/demo/product-sneakers.svg" alt="Sprzedaż mobilna w sklepie" loading="lazy" decoding="async">
             <span class="app-cta-badge">Sprzedaż live</span>
           </div>
         </div>
@@ -529,6 +586,66 @@
           </div>
         </div>
       </section>
+      </div>
+
+      <aside class="hero-side hero-side-right">
+        <div class="hero-side-card">
+          <span class="hero-side-title">Top produkty</span>
+          <div class="hero-product-list">
+            <div class="hero-product-item">
+              <img src="assets/images/demo/product-smartphone.svg" alt="Smartfon 5G" width="32" height="32">
+              <div>
+                <span>Smartfon 5G</span>
+                <strong>1 299 zł</strong>
+              </div>
+            </div>
+            <div class="hero-product-item">
+              <img src="assets/images/demo/product-sofa.svg" alt="Sofa modułowa" width="32" height="32">
+              <div>
+                <span>Sofa modułowa</span>
+                <strong>2 480 zł</strong>
+              </div>
+            </div>
+            <div class="hero-product-item">
+              <img src="assets/images/demo/product-drill.svg" alt="Wiertarka PRO" width="32" height="32">
+              <div>
+                <span>Wiertarka PRO</span>
+                <strong>489 zł</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="hero-side-card hero-market-card">
+          <span class="hero-side-title">Rynek w liczbach</span>
+          <img class="hero-market-graphic" src="assets/images/demo/hero-market.svg" alt="Wykres statystyk rynku">
+          <div class="hero-market-stats">
+            <div>
+              <strong>12 450</strong>
+              <span>ofert</span>
+            </div>
+            <div>
+              <strong>128</strong>
+              <span>hurtowni</span>
+            </div>
+            <div>
+              <strong>98%</strong>
+              <span>satysfakcji</span>
+            </div>
+            <div>
+              <strong>24/7</strong>
+              <span>obsługi</span>
+            </div>
+          </div>
+        </div>
+        <div class="hero-side-card">
+          <span class="hero-side-title">Plan PRO / ELITE</span>
+          <p class="hint">Odblokuj hurtownie premium, pakiet AI i promocje marketplace.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="cennik.html">Aktywuj plan</a>
+            <a class="btn btn-secondary" href="login.html">Zaloguj</a>
+          </div>
+        </div>
+      </aside>
     </div>
 
     <section class="panel-card shop-empty" data-store-empty hidden>

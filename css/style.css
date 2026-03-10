@@ -251,6 +251,7 @@ body.auth-page .auth-layout{flex-direction:column;gap:20px}
   border:1px solid rgba(255,255,255,.12);
   background:rgba(7,18,33,.78);
   padding:10px;
+  aspect-ratio:3 / 2;
 }
 .hero-market-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .hero-market-stats span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px}
