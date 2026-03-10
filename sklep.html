@@ -43,8 +43,52 @@
     </div>
   </header>
 
-  <main class="wrap shop-shell" data-store-shop>
-    <div data-store-content>
+  <main class="wrap shop-shell marketplace-shell" data-store-shop>
+    <div class="marketplace-layout">
+      <aside class="marketplace-aside marketplace-aside-left">
+        <article class="panel-card aside-card">
+          <span class="eyebrow">Aplikacja</span>
+          <h3>Zainstaluj QualitetMarket</h3>
+          <p class="hint">Zarządzaj sklepem, hurtowniami i promocjami z telefonu. Dodaj aplikację do ekranu głównego.</p>
+          <div class="aside-media">
+            <img src="assets/images/demo/product-smartphone.svg" alt="Aplikacja mobilna QualitetMarket">
+          </div>
+          <div class="cta-row">
+            <button class="btn btn-primary" type="button" data-app-install-open>Zainstaluj aplikację</button>
+            <a class="btn btn-secondary" href="#mobile-sklep">Instrukcja</a>
+          </div>
+        </article>
+        <article class="panel-card aside-card">
+          <span class="eyebrow">Plan PRO</span>
+          <h3>Hurtownie premium</h3>
+          <p class="hint">Odblokuj hurtownie premium i zwiększ marżę na topowych produktach.</p>
+          <ul class="aside-list">
+            <li>Ekskluzywne stany i ceny</li>
+            <li>Priorytetowe dostawy 24h</li>
+            <li>Marketing marketplace PRO</li>
+          </ul>
+          <a class="btn btn-primary" href="cennik.html">Aktywuj PRO</a>
+        </article>
+        <article class="panel-card aside-card">
+          <span class="eyebrow">Reklama platformy</span>
+          <h3>Qualitet Ads</h3>
+          <p class="hint">Wystaw produkty w slotach sponsorowanych i przyciągnij nowych klientów.</p>
+          <div class="aside-media">
+            <img src="assets/images/demo/category-business.svg" alt="Reklamy marketplace">
+          </div>
+          <a class="btn btn-secondary" href="listing.html">Zarezerwuj reklamę</a>
+        </article>
+        <article class="panel-card aside-card">
+          <span class="eyebrow">Dodaj do ekranu</span>
+          <h3>Sklep w kieszeni</h3>
+          <p class="hint">Otwieraj panel jednym kliknięciem i kontroluj sprzedaż mobilnie.</p>
+          <div class="aside-media">
+            <img src="assets/images/demo/category-electronics.svg" alt="Sklep w telefonie">
+          </div>
+          <button class="btn btn-secondary" type="button" data-app-install-open>Dodaj do ekranu</button>
+        </article>
+      </aside>
+      <div class="marketplace-main" data-store-content>
       <section class="panel-card store-hero-banner">
         <div class="store-hero-content">
           <div class="shop-logo" data-logo-preview>
@@ -129,7 +173,7 @@
             </div>
           </div>
           <div class="app-cta-media">
-            <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=900&q=80" alt="Zarządzanie sklepem z telefonu" loading="lazy" decoding="async">
+            <img src="assets/images/demo/hero-market.svg" alt="Zarządzanie sklepem z telefonu" loading="lazy" decoding="async">
             <span class="app-cta-badge">Sklep mobile PRO</span>
           </div>
         </div>
@@ -176,6 +220,94 @@
               </div>
             </article>
           </div>
+        </div>
+      </section>
+
+      <section class="store-section marketplace-modules" id="moduly">
+        <div class="section-head">
+          <span class="eyebrow">Marketplace PRO</span>
+          <h2>Sklep, aplikacja i AI w jednym panelu</h2>
+          <p>Wszystkie moduły platformy zebrane w jednym widoku marketplace. Wybierz, co aktywujesz.</p>
+        </div>
+        <div class="marketplace-module-grid">
+          <article class="marketplace-module-card">
+            <div class="module-media">
+              <img src="assets/images/demo/product-sneakers.svg" alt="Sklep marketplace">
+            </div>
+            <div class="module-content">
+              <span class="tag">Sklep</span>
+              <h3>Sklep marketplace</h3>
+              <p class="hint">Kafle ofert, dynamiczne listingi i szybkie wdrożenie sprzedaży.</p>
+              <div class="cta-row module-actions">
+                <a class="btn btn-secondary" href="panel-sklepu.html">Panel sklepu</a>
+              </div>
+            </div>
+          </article>
+          <article class="marketplace-module-card">
+            <div class="module-media">
+              <img src="assets/images/demo/product-smartphone.svg" alt="Aplikacja mobilna">
+            </div>
+            <div class="module-content">
+              <span class="tag">Aplikacja</span>
+              <h3>Aplikacja mobilna</h3>
+              <p class="hint">Zamówienia, powiadomienia i statusy hurtowni w telefonie.</p>
+              <div class="cta-row module-actions">
+                <button class="btn btn-primary" type="button" data-app-install-open>Otwórz aplikację</button>
+              </div>
+            </div>
+          </article>
+          <article class="marketplace-module-card">
+            <div class="module-media">
+              <img src="assets/images/demo/product-drill.svg" alt="Subskrypcje premium">
+            </div>
+            <div class="module-content">
+              <span class="tag">Subskrypcje</span>
+              <h3>Plany PRO / ELITE</h3>
+              <p class="hint">Odblokuj hurtownie premium, automatyzacje i priorytetowe wsparcie.</p>
+              <div class="cta-row module-actions">
+                <a class="btn btn-secondary" href="cennik.html">Zobacz plany</a>
+              </div>
+            </div>
+          </article>
+          <article class="marketplace-module-card">
+            <div class="module-media">
+              <img src="assets/images/demo/category-tools.svg" alt="AI pomocnik">
+            </div>
+            <div class="module-content">
+              <span class="tag">AI pomocnik</span>
+              <h3>Intelligence Helper</h3>
+              <p class="hint">AI rekomenduje ceny, opisy i trendy sprzedażowe w czasie rzeczywistym.</p>
+              <div class="cta-row module-actions">
+                <a class="btn btn-secondary" href="intelligence.html">Uruchom AI</a>
+              </div>
+            </div>
+          </article>
+          <article class="marketplace-module-card">
+            <div class="module-media">
+              <img src="assets/images/demo/category-business.svg" alt="Reklamy i landing pages">
+            </div>
+            <div class="module-content">
+              <span class="tag">Reklamy</span>
+              <h3>Reklamy i landing pages</h3>
+              <p class="hint">Uruchom kampanie sprzedażowe i promuj produkty na stronie głównej.</p>
+              <div class="cta-row module-actions">
+                <a class="btn btn-secondary" href="listing.html">Stwórz kampanię</a>
+              </div>
+            </div>
+          </article>
+          <article class="marketplace-module-card">
+            <div class="module-media">
+              <img src="assets/images/demo/hero-market.svg" alt="Wejście do platformy">
+            </div>
+            <div class="module-content">
+              <span class="tag">Platforma</span>
+              <h3>Wejście do platformy</h3>
+              <p class="hint">Panel sprzedaży, magazyn, hurtownie i raporty w jednym miejscu.</p>
+              <div class="cta-row module-actions">
+                <a class="btn btn-primary" href="login.html">Wejdź do aplikacji</a>
+              </div>
+            </div>
+          </article>
         </div>
       </section>
 
@@ -287,7 +419,7 @@
             </div>
           </div>
           <div class="app-cta-media">
-            <img src="https://images.unsplash.com/photo-1487611459768-bd414656ea10?auto=format&fit=crop&w=900&q=80" alt="Sprzedaż mobilna w sklepie" loading="lazy" decoding="async">
+            <img src="assets/images/demo/product-sneakers.svg" alt="Sprzedaż mobilna w sklepie" loading="lazy" decoding="async">
             <span class="app-cta-badge">Sprzedaż live</span>
           </div>
         </div>
@@ -414,6 +546,46 @@
         </div>
       </section>
 
+      <section class="store-section marketplace-ads" id="reklamy">
+        <div class="section-head">
+          <span class="eyebrow">Reklamy / strony sprzedażowe</span>
+          <h2>Widoczność w marketplace i landing pages</h2>
+          <p>Wyróżnij ofertę wśród konkurencji dzięki kampaniom premium.</p>
+        </div>
+        <div class="marketplace-ads-grid">
+          <article class="ads-card">
+            <div class="ads-media">
+              <img src="assets/images/demo/category-fashion.svg" alt="Reklamy fashion">
+            </div>
+            <div class="ads-content">
+              <h3>Trend kampanie</h3>
+              <p class="hint">Miejsca promowane na stronie głównej marketplace.</p>
+              <a class="btn btn-secondary" href="listing.html">Rezerwuj slot</a>
+            </div>
+          </article>
+          <article class="ads-card">
+            <div class="ads-media">
+              <img src="assets/images/demo/category-home.svg" alt="Landing pages sprzedażowe">
+            </div>
+            <div class="ads-content">
+              <h3>Landing pages sprzedażowe</h3>
+              <p class="hint">Dedykowane strony akcji sezonowych i hurtowych.</p>
+              <a class="btn btn-secondary" href="generator-sklepu.html">Stwórz landing</a>
+            </div>
+          </article>
+          <article class="ads-card">
+            <div class="ads-media">
+              <img src="assets/images/demo/category-electronics.svg" alt="Reklamy elektronika">
+            </div>
+            <div class="ads-content">
+              <h3>Reklamy produktowe</h3>
+              <p class="hint">Dynamiczne bannery i CTA w module ofert.</p>
+              <a class="btn btn-secondary" href="listing.html">Dodaj reklamę</a>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <section class="store-section" id="hurtownie">
         <div class="section-head">
           <span class="eyebrow">Hurtownie</span>
@@ -508,6 +680,38 @@
         </div>
       </section>
 
+      <section class="store-section marketplace-entry" id="platforma">
+        <div class="section-head">
+          <span class="eyebrow">Wejście do platformy</span>
+          <h2>Wejdź do panelu marketplace i zarządzaj sprzedażą</h2>
+          <p>Panel sprzedaży, zamówienia i automatyzacje są dostępne w jednym miejscu.</p>
+        </div>
+        <div class="platform-entry-grid">
+          <article class="panel-card entry-card">
+            <div class="entry-media">
+              <img src="assets/images/demo/hero-market.svg" alt="Panel marketplace">
+            </div>
+            <h3>Panel sprzedaży</h3>
+            <p class="hint">Zarządzaj ofertami, hurtowniami i zamówieniami w jednym dashboardzie.</p>
+            <div class="cta-row">
+              <a class="btn btn-primary" href="login.html">Zaloguj się</a>
+              <a class="btn btn-secondary" href="dashboard.html">Przejdź do panelu</a>
+            </div>
+          </article>
+          <article class="panel-card entry-card">
+            <div class="entry-media">
+              <img src="assets/images/demo/product-smartphone.svg" alt="Aplikacja mobilna">
+            </div>
+            <h3>Wejście mobilne</h3>
+            <p class="hint">Dodaj aplikację do ekranu głównego i steruj sklepem z telefonu.</p>
+            <div class="cta-row">
+              <button class="btn btn-primary" type="button" data-app-install-open>Dodaj do ekranu</button>
+              <a class="btn btn-secondary" href="#mobile-sklep">Instrukcja</a>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <section class="panel-card shop-contact">
         <h2>Kontakt i obsługa</h2>
         <p class="hint">Dane kontaktowe uzupełnione w generatorze sklepu.</p>
@@ -529,6 +733,48 @@
           </div>
         </div>
       </section>
+    </div>
+      <aside class="marketplace-aside marketplace-aside-right">
+        <article class="panel-card aside-card">
+          <span class="eyebrow">AI pomocnik</span>
+          <h3>Intelligence Helper</h3>
+          <p class="hint">AI podpowiada ceny, trendy i gotowe opisy produktów marketplace.</p>
+          <div class="aside-media">
+            <img src="assets/images/demo/category-tools.svg" alt="AI pomocnik">
+          </div>
+          <a class="btn btn-secondary" href="intelligence.html">Uruchom AI</a>
+        </article>
+        <article class="panel-card aside-card aside-highlight">
+          <span class="eyebrow">Subskrypcje</span>
+          <h3>PRO + ELITE</h3>
+          <p class="hint">Pakiety premium odblokowują hurtownie PRO, kampanie AI i automatyzacje.</p>
+          <div class="aside-tags">
+            <span class="tag">Premium</span>
+            <span class="tag">VIP</span>
+            <span class="tag">AI</span>
+          </div>
+          <a class="btn btn-primary" href="cennik.html">Zobacz subskrypcje</a>
+        </article>
+        <article class="panel-card aside-card">
+          <span class="eyebrow">Hurtownie</span>
+          <h3>Topowe dostawy</h3>
+          <p class="hint">Połącz sklep z hurtowniami premium i przyspiesz realizację zamówień.</p>
+          <div class="aside-media aside-logos">
+            <img src="assets/images/demo/supplier-neotech.svg" alt="NeoTech">
+            <img src="assets/images/demo/supplier-homehub.svg" alt="HomeHub">
+          </div>
+          <a class="btn btn-secondary" href="hurtownie.html">Wejdź do hurtowni</a>
+        </article>
+        <article class="panel-card aside-card">
+          <span class="eyebrow">Wejście do aplikacji</span>
+          <h3>Zaloguj się i startuj</h3>
+          <p class="hint">Pełny panel sprzedaży i magazynu dostępny 24/7 z dowolnego urządzenia.</p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="login.html">Wejdź do aplikacji</a>
+            <a class="btn btn-secondary" href="dashboard.html">Dashboard</a>
+          </div>
+        </article>
+      </aside>
     </div>
 
     <section class="panel-card shop-empty" data-store-empty hidden>
