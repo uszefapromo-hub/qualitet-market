@@ -23,21 +23,21 @@
   const MOCK_PRODUCTS_RANGE = 24;
   const MOCK_REVENUE_BASE = 12000;
   const MOCK_REVENUE_RANGE = 9000;
-  const USER_PLAN_KEY = 'app_user_plan';
+  const PLAN_STORAGE_KEY = 'app_user_plan';
   const CURRENCY_FORMATTER = new Intl.NumberFormat('pl-PL', {
     style: 'currency',
     currency: 'PLN',
     maximumFractionDigits: 0
   });
 
-  function getUserPlan(){
-    const storedPlan = localStorage.getItem(USER_PLAN_KEY);
+  function getStoredPlan(){
+    const storedPlan = localStorage.getItem(PLAN_STORAGE_KEY);
     return storedPlan ? storedPlan.toLowerCase() : '';
   }
 
   function resolvePlan(storePlan){
-    const userPlan = getUserPlan();
-    return userPlan || storePlan;
+    const storedPlan = getStoredPlan();
+    return storedPlan || storePlan;
   }
 
   function formatPlan(plan){

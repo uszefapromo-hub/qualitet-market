@@ -39,6 +39,7 @@
     {limit: 5, days: 30}
   ];
   const DEFAULT_TRIAL_DAYS = 7;
+  const planButtonDefaults = new WeakMap();
   const PLAN_LABELS = {
     trial: 'Trial',
     basic: 'Basic',
@@ -568,8 +569,8 @@
     }
     buttons.forEach(button => {
       const buttonPlan = (button.dataset.planBuy || '').toLowerCase();
-      if(!button.dataset.planDefault){
-        button.dataset.planDefault = button.textContent.trim();
+      if(!planButtonDefaults.has(button)){
+        planButtonDefaults.set(button, button.textContent.trim());
       }
       const isActive = buttonPlan && buttonPlan === plan;
       if(isActive){
@@ -577,7 +578,7 @@
         button.disabled = true;
         button.setAttribute('aria-disabled', 'true');
       } else {
-        button.textContent = button.dataset.planDefault;
+        button.textContent = planButtonDefaults.get(button) || button.textContent;
         button.disabled = false;
         button.removeAttribute('aria-disabled');
       }
