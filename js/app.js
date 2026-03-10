@@ -56,6 +56,7 @@
     elite: 'ELITE'
   };
   const OWNER_EMAIL = 'uszefaqualitetpromo@gmail.com';
+  const OWNER_EMAIL_NORMALIZED = OWNER_EMAIL.trim().toLowerCase();
   const PRICE_LINKS = {
     basic: '',
     pro: '',
@@ -1128,11 +1129,8 @@
       }
     }
     const trafficCalc = results && results.trafficCalc ? results.trafficCalc : null;
-    if(trafficCalc){
-      const trafficSignal = normalizeNumberValue(
-        trafficCalc.monthlyVisits ?? trafficCalc.visits ?? trafficCalc.traffic,
-        0
-      );
+    if(trafficCalc && trafficCalc.visits !== undefined){
+      const trafficSignal = normalizeNumberValue(trafficCalc.visits, 0);
       if(trafficSignal > 0){
         plans.push(getPlanRecommendationForValue(trafficSignal, PLAN_RECOMMENDATION_THRESHOLDS.traffic));
       }
@@ -1169,12 +1167,14 @@
   function updateCalculatorResults(partial){
     const existing = loadCalculatorResults() || {};
     const merged = {
-      profitCalc: existing.profitCalc || null,
-      storeCalc: existing.storeCalc || null,
-      trafficCalc: existing.trafficCalc || null,
       ...existing,
       ...partial
     };
+    ['profitCalc', 'storeCalc', 'trafficCalc'].forEach(key => {
+      if(merged[key] === undefined){
+        merged[key] = null;
+      }
+    });
     merged.decision = resolvePlanDecision(merged);
     saveCalculatorResults(merged);
     applyPlanRecommendation(merged);
@@ -1759,7 +1759,8 @@
     const helper = summary.querySelector('[data-store-helper]');
     const settings = loadStoreSettings();
     const ready = localStorage.getItem(STORAGE_KEYS.storeReady) === 'true' && settings;
-    const storeName = settings && (settings.storeName || settings.niche) ? (settings.storeName || settings.niche) : 'Brak danych';
+    const resolvedStoreName = settings ? (settings.storeName || settings.niche) : '';
+    const storeName = resolvedStoreName ? resolvedStoreName : 'Brak danych';
     const hasGoal = settings && settings.goal !== undefined && settings.goal !== null;
     const storeStyle = settings && (settings.storeStyle || hasGoal)
       ? (settings.storeStyle || `Cel: ${formatCurrency(settings.goal)}`)
@@ -2016,7 +2017,7 @@
       return true;
     }
     const email = normalizeQueryParam(localStorage.getItem(STORAGE_KEYS.email));
-    return email && email === normalizeQueryParam(OWNER_EMAIL);
+    return email && email === OWNER_EMAIL_NORMALIZED;
   }
 
   function applyOwnerAccessState(){
@@ -2658,7 +2659,7 @@
       const email = emailInput ? emailInput.value.trim() : '';
       if(email){
         localStorage.setItem(STORAGE_KEYS.email, email);
-        if(normalizeQueryParam(email) === normalizeQueryParam(OWNER_EMAIL)){
+        if(normalizeQueryParam(email) === OWNER_EMAIL_NORMALIZED){
           localStorage.setItem(STORAGE_KEYS.role, 'owner');
         } else {
           localStorage.removeItem(STORAGE_KEYS.role);

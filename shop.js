@@ -134,7 +134,8 @@
   }
 
   function resolvePlanFromSettings(settings){
-    const value = (settings && (settings.suggestedPlan || settings.plan) || '').toString().toLowerCase();
+    const rawPlan = settings ? (settings.suggestedPlan || settings.plan) : '';
+    const value = rawPlan ? rawPlan.toString().toLowerCase() : '';
     if(value === 'pro' || value === 'elite'){
       return value;
     }
@@ -146,7 +147,8 @@
       return null;
     }
     const name = (settings.storeName || settings.niche || '').trim() || 'Mój sklep';
-    const goalValue = Number.isFinite(parseFloat(settings.goal)) ? parseFloat(settings.goal) : null;
+    const parsedGoal = parseFloat(settings.goal);
+    const goalValue = Number.isFinite(parsedGoal) ? parsedGoal : null;
     const description = settings.storeDescription
       || (settings.niche ? `Sklep w branży ${settings.niche}.` : '')
       || (goalValue !== null ? `Cel sprzedaży: ${formatCurrencyPLN(goalValue)}` : '')
