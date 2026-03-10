@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="pl"><head><title>Hurtownie</title><meta charset="utf-8">
+<html lang="pl"><head><title>U Szefa – królestwo zarabiania</title><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="css/styles.css"></head>
-<body data-page="hurtownie">
+<body data-page="index">
 <header class="topbar">
   <div class="wrap topbar-inner">
     <a class="brand" href="index.html">
@@ -30,14 +30,68 @@
 </header>
 
 <main class="wrap">
-  <section class="page-hero compact">
-    <span class="eyebrow">Import hurtowni</span>
-    <h1>Wybierz dostawcę i zapisz gotowy prefill produktów.</h1>
-    <p>Prosty import do localStorage bez starego chaosu.</p>
+  <section class="hero">
+    <div class="hero-grid">
+      <div>
+        <span class="eyebrow">Start tutaj</span>
+        <h1>Zarabiaj online razem z U Szefa i QualitetMarket.</h1>
+        <p class="lead">Sklepy, marże, hurtownie, subskrypcje i reklamy – wszystko z jednego panelu. Bez chaosu, bez kodowania.</p>
+        <div class="cta-row" style="margin-top:22px">
+          <a class="btn btn-primary" href="generator-sklepu.html">Otwórz swój sklep</a>
+          <a class="btn btn-secondary" href="qualitetmarket.html">QualitetMarket</a>
+        </div>
+        <div class="promo-banner" data-promo-left>Sprawdzanie promocji startowej…</div>
+      </div>
+      <div>
+        <img src="assets/logo-wspolne.svg" alt="U Szefa + QualitetMarket" style="width:220px;margin:0 auto">
+      </div>
+    </div>
   </section>
-  <section class="supplier-grid" id="suppliers-list"></section>
+
+  <section class="stats-grid">
+    <article class="stat-card"><span>Sklepy</span><strong data-stores-count>0</strong></article>
+    <article class="stat-card"><span>Produkty</span><strong data-products-count>0</strong></article>
+    <article class="stat-card"><span>Zamówienia</span><strong data-orders-count>0</strong></article>
+    <article class="stat-card"><span>Marża</span><strong data-margin-default>20%</strong></article>
+  </section>
+
+  <section class="section-grid">
+    <article class="feature-card gradient-a">
+      <h2>QualitetMarket</h2>
+      <p>Centrum dowodzenia sprzedażą: sklepy, marże, CRM, reklamy i hurtownie w jednym miejscu.</p>
+      <a class="link-arrow" href="qualitetmarket.html">Wejdź do centrum →</a>
+    </article>
+    <article class="feature-card gradient-b">
+      <h2>Hurtownie</h2>
+      <p>Importuj produkty od sprawdzonych dostawców i zapisz gotowy prefill listingu.</p>
+      <a class="link-arrow" href="hurtownie.html">Wybierz dostawcę →</a>
+    </article>
+    <article class="feature-card gradient-c">
+      <h2>Cennik subskrypcji</h2>
+      <p>Trzy plany: Basic, Pro, Elite. Pierwsze 3 sklepy dostają wdrożenie promocyjne.</p>
+      <a class="link-arrow" href="cennik.html">Zobacz plany →</a>
+    </article>
+  </section>
+
+  <section class="marketplace-block">
+    <div>
+      <h2>Jeden system. Wiele sklepów.</h2>
+      <p class="lead">U Szefa to platforma dla ambitnych sprzedawców, którzy chcą zarabiać z e-commerce bez bariery technicznej.</p>
+      <div class="cta-row" style="margin-top:18px">
+        <a class="btn btn-primary" href="dashboard.html">Dashboard</a>
+        <a class="btn btn-secondary" href="cennik.html">Wybierz plan</a>
+      </div>
+    </div>
+    <div>
+      <div class="themes-row">
+        <div class="theme-pill">📦 Hurtownie</div>
+        <div class="theme-pill">🏪 Sklep</div>
+        <div class="theme-pill">📣 Reklama</div>
+        <div class="theme-pill">📊 Dashboard</div>
+      </div>
+    </div>
+  </section>
 </main>
-<script src="js/hurtownie.js" defer></script>
 
 <footer class="footer">
   <div class="wrap footer-grid">

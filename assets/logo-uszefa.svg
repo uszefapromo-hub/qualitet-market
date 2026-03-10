@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="260" viewBox="0 0 820 260">
+<defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#ffc857"/><stop offset="1" stop-color="#ff8a3d"/></linearGradient></defs>
+<rect width="820" height="260" rx="40" fill="#0b1427"/>
+<circle cx="110" cy="130" r="74" fill="url(#g)"/><path d="M82 136c18-4 31-18 38-40 8 15 20 24 36 29-10 27-27 45-50 54-21-7-36-22-46-43 6 0 14 0 22 0z" fill="#1f1200"/>
+<text x="210" y="118" font-family="Inter,Arial" font-size="52" font-weight="900" fill="#fff">U SZEFA</text>
+<text x="210" y="170" font-family="Inter,Arial" font-size="26" font-weight="600" fill="#aab8d7">menu główne dla królestwa zarabiania</text></svg>

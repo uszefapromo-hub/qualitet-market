@@ -1,8 +1,13 @@
 <!doctype html>
-<html lang="pl"><head><title>Panel sklepu</title><meta charset="utf-8">
+<html lang="pl">
+<head>
+  <title>QualitetMarket — centrum dowodzenia</title>
+  <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="css/styles.css"></head>
-<body data-page="panel-sklepu">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="qualitetmarket">
+
 <header class="topbar">
   <div class="wrap topbar-inner">
     <a class="brand" href="index.html">
@@ -30,20 +35,53 @@
 </header>
 
 <main class="wrap">
-  <section class="page-hero compact"><span class="eyebrow">Panel sklepu</span><h1>Zarządzaj aktywnym sklepem.</h1></section>
+  <section class="page-hero compact">
+    <span class="eyebrow">QualitetMarket</span>
+    <h1>Centrum dowodzenia sprzedażą i reklamą.</h1>
+    <p>Tu zaczynasz od zera, pilnujesz sklepów, marży, reklam, ofert i importu z hurtowni.</p>
+  </section>
+
   <section class="dashboard-grid">
-    <article class="panel-card" id="active-store-card"></article>
     <article class="panel-card">
-      <h3>Akcje</h3>
-      <div class="quick-links">
-        <a class="btn btn-secondary" href="sklep.html">Podgląd sklepu</a>
-        <a class="btn btn-secondary" href="platforma.html">Zmień marżę</a>
-        <a class="btn btn-secondary" href="cennik.html">Zmień plan</a>
-      </div>
+      <h3>Sklepy</h3>
+      <p data-stores-count>0</p>
+      <a class="btn btn-secondary" href="generator-sklepu.html">Dodaj sklep</a>
+    </article>
+    <article class="panel-card">
+      <h3>Aktywna marża</h3>
+      <p data-margin-default>20%</p>
+      <a class="btn btn-secondary" href="platforma.html">Zmień marżę</a>
+    </article>
+    <article class="panel-card">
+      <h3>Prefill inteligencji</h3>
+      <p data-intel-status>Brak</p>
+      <button class="btn btn-secondary" data-fill-intel>Wstaw dane startowe</button>
+    </article>
+    <article class="panel-card">
+      <h3>CRM</h3>
+      <p data-crm-status>Puste</p>
+      <button class="btn btn-secondary" data-fill-crm>Stwórz wzór CRM</button>
+    </article>
+  </section>
+
+  <section class="section-grid">
+    <article class="feature-card gradient-a">
+      <h2>Import hurtowni</h2>
+      <p>Ładujesz produkty i system zapisuje gotowy prefill listingu.</p>
+      <a class="link-arrow" href="hurtownie.html">Przejdź</a>
+    </article>
+    <article class="feature-card gradient-b">
+      <h2>Sklep z własnym logo</h2>
+      <p>Każdy sprzedawca może otworzyć swój sklep i ustawić własny styl.</p>
+      <a class="link-arrow" href="panel-sklepu.html">Zarządzaj sklepem</a>
+    </article>
+    <article class="feature-card gradient-c">
+      <h2>Subskrypcje miesięczne</h2>
+      <p>Basic, Pro i Elite z promocją wdrożeniową dla pierwszych trzech sklepów.</p>
+      <a class="link-arrow" href="cennik.html">Zobacz cennik</a>
     </article>
   </section>
 </main>
-<script src="js/stores.js" defer></script>
 
 <footer class="footer">
   <div class="wrap footer-grid">
@@ -67,4 +105,5 @@
 </footer>
 <script src="js/app.js" defer></script>
 
-</body></html>
+</body>
+</html>

@@ -1,11 +1,70 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="120" viewBox="0 0 400 120">
-<defs>
-<linearGradient id="g1" x1="0" x2="1"><stop stop-color="#ffd84d"/><stop offset="1" stop-color="#ff4fd8"/></linearGradient>
-<linearGradient id="g2" x1="0" x2="1"><stop stop-color="#38d9ff"/><stop offset="1" stop-color="#9e77ff"/></linearGradient>
-</defs>
-<rect width="400" height="120" rx="28" fill="#111a35"/>
-<circle cx="42" cy="60" r="20" fill="url(#g1)"/>
-<rect x="72" y="40" width="40" height="40" rx="12" fill="url(#g2)"/>
-<text x="130" y="52" fill="#fff" font-family="Arial" font-weight="700" font-size="28">U Szefa + QualitetMarket</text>
-<text x="130" y="82" fill="#b8c0ff" font-family="Arial" font-size="16">sprzedaż • sklepy • reklama • zarabianie</text>
-</svg>
+<!doctype html>
+<html lang="pl"><head><title>Panel sklepu</title><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="css/styles.css"></head>
+<body data-page="panel-sklepu">
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="index.html">
+      <img src="assets/logo-wspolne.svg" alt="U Szefa + QualitetMarket">
+      <div>
+        <strong>U Szefa</strong>
+        <span>królestwo zarabiania</span>
+      </div>
+    </a>
+    <nav class="nav" aria-label="Główna nawigacja">
+      <a href="index.html">Start</a>
+      <a href="qualitetmarket.html">QualitetMarket</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="generator-sklepu.html">Nowy sklep</a>
+      <a href="hurtownie.html">Hurtownie</a>
+      <a href="platforma.html">Reklama</a>
+      <a href="cennik.html">Cennik</a>
+      <a href="sklep.html">Sklep</a>
+      <a href="koszyk.html">Koszyk</a>
+      <a href="zamowienia.html">Zamówienia</a>
+      <a href="panel-sklepu.html">Panel sklepu</a>
+    </nav>
+    <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="page-hero compact"><span class="eyebrow">Panel sklepu</span><h1>Zarządzaj aktywnym sklepem.</h1></section>
+  <section class="dashboard-grid">
+    <article class="panel-card" id="active-store-card"></article>
+    <article class="panel-card">
+      <h3>Akcje</h3>
+      <div class="quick-links">
+        <a class="btn btn-secondary" href="sklep.html">Podgląd sklepu</a>
+        <a class="btn btn-secondary" href="platforma.html">Zmień marżę</a>
+        <a class="btn btn-secondary" href="cennik.html">Zmień plan</a>
+      </div>
+    </article>
+  </section>
+</main>
+<script src="js/stores.js" defer></script>
+
+<footer class="footer">
+  <div class="wrap footer-grid">
+    <div>
+      <img class="footer-logo" src="assets/logo-uszefa.svg" alt="U Szefa">
+      <p>U Szefa to menu główne i start od zera. QualitetMarket to centrum dowodzenia sprzedażą.</p>
+    </div>
+    <div>
+      <h4>Szybki start</h4>
+      <a href="generator-sklepu.html">Otwórz sklep</a>
+      <a href="hurtownie.html">Wybierz hurtownię</a>
+      <a href="platforma.html">Ustaw reklamę</a>
+    </div>
+    <div>
+      <h4>System</h4>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="sklep.html">Podgląd sklepu</a>
+      <a href="zamowienia.html">Zamówienia</a>
+    </div>
+  </div>
+</footer>
+<script src="js/app.js" defer></script>
+
+</body></html>
