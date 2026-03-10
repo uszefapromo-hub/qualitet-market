@@ -1,1 +1,1 @@
-document.write('<script src="js/orders.js"><\/script>');
+/* zamówienia.js — placeholder; orders functionality is in js/orders.js */

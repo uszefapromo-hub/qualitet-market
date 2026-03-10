@@ -1,1 +1,81 @@
-document.write('<script src="js/orders.js"><\/script>');
+<!doctype html>
+<html lang="pl"><head><title>Platforma reklamowa</title><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="css/styles.css"></head>
+<body data-page="platforma">
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="index.html">
+      <img src="assets/logo-wspolne.svg" alt="U Szefa + QualitetMarket">
+      <div>
+        <strong>U Szefa</strong>
+        <span>królestwo zarabiania</span>
+      </div>
+    </a>
+    <nav class="nav" aria-label="Główna nawigacja">
+      <a href="index.html">Start</a>
+      <a href="qualitetmarket.html">QualitetMarket</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="generator-sklepu.html">Nowy sklep</a>
+      <a href="hurtownie.html">Hurtownie</a>
+      <a href="platforma.html">Reklama</a>
+      <a href="cennik.html">Cennik</a>
+      <a href="sklep.html">Sklep</a>
+      <a href="koszyk.html">Koszyk</a>
+      <a href="zamowienia.html">Zamówienia</a>
+      <a href="panel-sklepu.html">Panel sklepu</a>
+    </nav>
+    <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="page-hero compact">
+    <span class="eyebrow">Platforma reklamowa</span>
+    <h1>Ustaw marżę i kalkulator ceny sprzedaży.</h1>
+    <p>Wylicz cenę końcową, zysk i próg rentowności kampanii.</p>
+  </section>
+  <section class="form-grid">
+    <form class="panel-card form-card" id="margin-form">
+      <label>Koszt zakupu (zł)<input type="number" name="cost" min="0" step="0.01" value="50"></label>
+      <label>Marża (%)<input type="number" name="margin" min="0" max="500" step="1" value="20"></label>
+      <label>Budżet reklam dziennie (zł)<input type="number" name="ads" min="0" step="1" value="10"></label>
+      <label>Ilość produktów<input type="number" name="qty" min="1" step="1" value="10"></label>
+      <button class="btn btn-primary" type="submit">Zapisz marżę</button>
+    </form>
+    <div class="panel-card">
+      <h3>Wyniki</h3>
+      <div class="kv"><span>Cena sprzedaży</span><strong data-price-result>—</strong></div>
+      <div class="kv"><span>Zysk na szt.</span><strong data-profit-result>—</strong></div>
+      <div class="kv"><span>Próg rentowności</span><strong data-break-even>—</strong></div>
+      <div class="kv"><span>Łączny zysk</span><strong data-total-profit>—</strong></div>
+      <div class="kv"><span>Dzienny budżet reklam</span><strong data-daily-ads>—</strong></div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-grid">
+    <div>
+      <img class="footer-logo" src="assets/logo-uszefa.svg" alt="U Szefa">
+      <p>U Szefa to menu główne i start od zera. QualitetMarket to centrum dowodzenia sprzedażą.</p>
+    </div>
+    <div>
+      <h4>Szybki start</h4>
+      <a href="generator-sklepu.html">Otwórz sklep</a>
+      <a href="hurtownie.html">Wybierz hurtownię</a>
+      <a href="platforma.html">Ustaw reklamę</a>
+    </div>
+    <div>
+      <h4>System</h4>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="sklep.html">Podgląd sklepu</a>
+      <a href="zamowienia.html">Zamówienia</a>
+    </div>
+  </div>
+</footer>
+
+<script src="js/app.js" defer></script>
+<script src="js/platforma.js" defer></script>
+
+</body></html>
