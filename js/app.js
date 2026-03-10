@@ -32,6 +32,8 @@
   const TOAST_INTERVAL_REDUCED_MS = 9000;
   const TOAST_DISPLAY_MS = 4200;
   const TOAST_DISPLAY_REDUCED_MS = 3600;
+  const PROMO_MOTION_IDLE_MS = 20000;
+  const PROMO_MOTION_INTERSECTION_THRESHOLD = 0.35;
   const SUCCESS_STATUSES = ['success', 'paid', 'true', '1', 'ok'];
   const SAMPLE_USER_NAMES = ['Jan', 'Anna', 'Marek', 'Ola', 'Kamil', 'Ewa', 'Tomasz', 'Klara', 'Paweł', 'Lena'];
   const ACTIVITY_TOAST_MESSAGES = [
@@ -462,6 +464,119 @@
     }, {threshold: 0.3});
 
     boxes.forEach(box => observer.observe(box));
+  }
+
+  function initPromoMotion(){
+    const galleries = Array.from(document.querySelectorAll('[data-promo-motion]'));
+    if(!galleries.length){
+      return;
+    }
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const controllers = [];
+
+    galleries.forEach(gallery => {
+      const toggle = gallery.querySelector('[data-promo-motion-toggle]');
+      let idleTimeout = null;
+      let manualPaused = false;
+      let idlePaused = false;
+      let visibilityPaused = false;
+      let intersectionPaused = false;
+
+      const updateToggleButton = isPaused => {
+        if(!toggle){
+          return;
+        }
+        toggle.setAttribute('aria-pressed', isPaused ? 'true' : 'false');
+        toggle.textContent = isPaused ? 'Wznów animację' : 'Zatrzymaj animację';
+      };
+
+      const setPaused = isPaused => {
+        gallery.classList.toggle('is-paused', isPaused);
+        if(isPaused && idleTimeout){
+          clearTimeout(idleTimeout);
+          idleTimeout = null;
+        }
+        updateToggleButton(isPaused);
+      };
+
+      const scheduleIdlePause = () => {
+        if(prefersReducedMotion || manualPaused || visibilityPaused || intersectionPaused){
+          return;
+        }
+        if(idlePaused){
+          idlePaused = false;
+          setPaused(false);
+        }
+        if(idleTimeout){
+          clearTimeout(idleTimeout);
+        }
+        idleTimeout = window.setTimeout(() => {
+          idlePaused = true;
+          setPaused(true);
+        }, PROMO_MOTION_IDLE_MS);
+      };
+
+      const applyPauseState = () => {
+        if(manualPaused || visibilityPaused || intersectionPaused || idlePaused){
+          setPaused(true);
+          return;
+        }
+        setPaused(false);
+        scheduleIdlePause();
+      };
+
+      const handleVisibilityChange = isHidden => {
+        visibilityPaused = isHidden;
+        applyPauseState();
+      };
+
+      if(prefersReducedMotion){
+        if(toggle){
+          toggle.disabled = true;
+          toggle.textContent = 'Animacja wyłączona';
+          toggle.setAttribute('aria-pressed', 'true');
+        }
+        gallery.classList.add('is-paused');
+        return;
+      }
+
+      scheduleIdlePause();
+
+      if(toggle){
+        toggle.addEventListener('click', () => {
+          const isPaused = gallery.classList.contains('is-paused');
+          const shouldPause = !isPaused;
+          manualPaused = shouldPause;
+          if(shouldPause){
+            idlePaused = false;
+          }
+          applyPauseState();
+        });
+      }
+
+      if('IntersectionObserver' in window){
+        const observer = new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            intersectionPaused = !entry.isIntersecting;
+            applyPauseState();
+          });
+        }, {threshold: PROMO_MOTION_INTERSECTION_THRESHOLD});
+        observer.observe(gallery);
+      }
+
+      ['mouseenter', 'focusin', 'pointerdown'].forEach(eventName => {
+        gallery.addEventListener(eventName, scheduleIdlePause);
+      });
+
+      controllers.push({handleVisibilityChange});
+    });
+
+    if(controllers.length){
+      document.addEventListener('visibilitychange', () => {
+        const isHidden = document.hidden;
+        controllers.forEach(controller => controller.handleVisibilityChange(isHidden));
+      });
+    }
   }
 
   function initActivityToasts(){
@@ -3223,6 +3338,7 @@
     initStorefrontProducts();
     initCounters();
     initHelperBoxes();
+    initPromoMotion();
     initActivityToasts();
     initSalesCalculator();
     initStoreCalculator();
