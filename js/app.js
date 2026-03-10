@@ -44,14 +44,65 @@
     return Number.isNaN(target) ? null : target;
   }
 
+  function formatCounterValue(el, value){
+    const numericValue = typeof value === 'number' ? value : Number.parseInt(value, 10);
+    const safeValue = Number.isNaN(numericValue) ? 0 : numericValue;
+    const format = el.dataset.counterFormat;
+    let formatted = `${safeValue}`;
+    if(format === 'grouped' || format === 'currency'){
+      formatted = new Intl.NumberFormat('pl-PL').format(safeValue);
+    }
+    if(format === 'currency'){
+      formatted = `${formatted} zł`;
+    }
+    const suffix = el.dataset.counterSuffix;
+    if(suffix && format !== 'currency'){
+      formatted = `${formatted} ${suffix}`;
+    }
+    return formatted;
+  }
+
   function setCounterValue(el, value){
-    el.textContent = `${value}`;
+    const formattedValue = formatCounterValue(el, value);
+    el.textContent = formattedValue;
     if(el.dataset.counterLabel){
-      el.setAttribute('aria-label', `${el.dataset.counterLabel}: ${value}`);
+      el.setAttribute('aria-label', `${el.dataset.counterLabel}: ${formattedValue}`);
     }
   }
 
-  function animateCounter(el){
+  function hasLiveCounter(el){
+    return el.hasAttribute('data-counter-live');
+  }
+
+  function startLiveCounter(el){
+    if(!hasLiveCounter(el) || el.dataset.counterLiveActive === 'true'){
+      return;
+    }
+    const min = Number.parseInt(el.dataset.counterLiveMin, 10);
+    const max = Number.parseInt(el.dataset.counterLiveMax, 10);
+    const interval = Number.parseInt(el.dataset.counterLiveInterval, 10);
+    const stepMin = Number.isNaN(min) ? 1 : min;
+    const stepMax = Number.isNaN(max) ? 3 : max;
+    const intervalMs = Number.isNaN(interval) ? 6500 : interval;
+    let currentValue = getCounterTarget(el);
+    if(currentValue === null){
+      currentValue = 0;
+    }
+    el.dataset.counterLiveActive = 'true';
+
+    setInterval(() => {
+      const deltaRange = Math.max(stepMax - stepMin, 0);
+      const delta = stepMin + Math.floor(Math.random() * (deltaRange + 1));
+      if(delta <= 0){
+        return;
+      }
+      currentValue += delta;
+      el.dataset.counter = `${currentValue}`;
+      setCounterValue(el, currentValue);
+    }, intervalMs);
+  }
+
+  function animateCounter(el, onComplete){
     const target = getCounterTarget(el);
     if(target === null){
       setCounterValue(el, 0);
@@ -66,6 +117,8 @@
       setCounterValue(el, value);
       if(progress < 1){
         requestAnimationFrame(step);
+      } else if(typeof onComplete === 'function'){
+        onComplete();
       }
     }
 
@@ -81,6 +134,9 @@
       counters.forEach(counter => {
         const target = getCounterTarget(counter);
         setCounterValue(counter, target === null ? 0 : target);
+        if(!prefersReducedMotion){
+          startLiveCounter(counter);
+        }
       });
       return;
     }
@@ -88,7 +144,9 @@
     const observer = new IntersectionObserver(entries => {
       entries.forEach(entry => {
         if(entry.isIntersecting){
-          animateCounter(entry.target);
+          const targetEl = entry.target;
+          const onComplete = hasLiveCounter(targetEl) ? () => startLiveCounter(targetEl) : null;
+          animateCounter(targetEl, onComplete);
           observer.unobserve(entry.target);
         }
       });
@@ -122,6 +180,40 @@
     }, {threshold: 0.3});
 
     boxes.forEach(box => observer.observe(box));
+  }
+
+  function initActivityToasts(){
+    const container = document.querySelector('[data-activity-toasts]');
+    if(!container){
+      return;
+    }
+    const messages = [
+      {title: 'Nowy użytkownik otworzył sklep', detail: 'Aktywacja ukończona'},
+      {title: 'Jan dodał produkt', detail: 'Nowa kolekcja premium'},
+      {title: 'Ktoś kupił plan PRO', detail: 'Subskrypcja aktywna'},
+      {title: 'Nowy sklep aktywowany', detail: 'Integracja płatności gotowa'},
+      {title: 'Sprzedaż zakończona', detail: 'Zamówienie wysłane'}
+    ];
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const intervalMs = prefersReducedMotion ? 9000 : 5200;
+    const displayMs = prefersReducedMotion ? 3600 : 4200;
+
+    const showToast = () => {
+      const message = messages[Math.floor(Math.random() * messages.length)];
+      const toast = document.createElement('div');
+      toast.className = 'activity-toast';
+      toast.innerHTML = `<strong>${message.title}</strong><span>${message.detail}</span>`;
+      container.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('is-visible'));
+
+      setTimeout(() => {
+        toast.classList.remove('is-visible');
+        setTimeout(() => toast.remove(), 400);
+      }, displayMs);
+    };
+
+    showToast();
+    setInterval(showToast, intervalMs);
   }
 
   function initSurveyModal(){
@@ -533,6 +625,7 @@
     bindMenu();
     initCounters();
     initHelperBoxes();
+    initActivityToasts();
     initSurveyModal();
     initStoreGenerator();
     initLoginForm();
