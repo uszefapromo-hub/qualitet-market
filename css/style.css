@@ -172,7 +172,8 @@ a{color:#fff;text-decoration:none}
 .hero-title{font-size:clamp(48px,7vw,88px);letter-spacing:2px;margin:12px 0 10px}
 .brand-stack{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
 .brand-stack span{padding:8px 14px;border-radius:999px;border:1px solid rgba(53,217,255,.35);background:rgba(3,14,28,.6);font-weight:700}
-.hero-visual{display:flex;justify-content:flex-end}
+.hero-visual{display:flex;flex-direction:column;align-items:flex-end;gap:18px}
+.hero-image{width:100%;max-width:360px;height:auto}
 .hero-card{padding:28px;border-radius:24px;background:rgba(3,16,32,.72);border:1px solid rgba(53,217,255,.25);box-shadow:var(--shadow);max-width:380px}
 .hero-card h2{margin-top:0}
 .hero-highlights{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:20px}
