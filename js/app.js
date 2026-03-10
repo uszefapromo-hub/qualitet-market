@@ -9,6 +9,11 @@
     plan: 'app_user_plan'
   };
   const MS_PER_DAY = 1000 * 60 * 60 * 24;
+  const TRIAL_RULES = [
+    {limit: 3, days: 60},
+    {limit: 5, days: 30}
+  ];
+  const DEFAULT_TRIAL_DAYS = 7;
 
   function bindMenu(){
     const button = document.querySelector('[data-menu-toggle]');
@@ -126,7 +131,7 @@
     try{
       const parsed = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed : [];
-    } catch (error){
+    } catch (_error){
       return [];
     }
   }
@@ -168,11 +173,10 @@
       localStorage.setItem(STORAGE_KEYS.usersList, JSON.stringify(users));
     }
 
-    let trialDays = 7;
-    if(currentCount <= 3){
-      trialDays = 60;
-    } else if(currentCount <= 5){
-      trialDays = 30;
+    let trialDays = DEFAULT_TRIAL_DAYS;
+    const rule = TRIAL_RULES.find(entry => currentCount <= entry.limit);
+    if(rule){
+      trialDays = rule.days;
     }
     localStorage.setItem(STORAGE_KEYS.trialDays, `${trialDays}`);
     localStorage.setItem(STORAGE_KEYS.trialStart, new Date().toISOString());
