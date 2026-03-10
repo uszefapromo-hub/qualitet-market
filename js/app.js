@@ -1,4 +1,20 @@
 (function(){
+  const STORAGE_KEYS = {
+    email: 'app_user_email',
+    logged: 'app_user_logged',
+    usersCount: 'app_users_count',
+    usersList: 'app_users_list',
+    trialDays: 'app_user_trial_days',
+    trialStart: 'app_user_trial_start',
+    plan: 'app_user_plan'
+  };
+  const MS_PER_DAY = 1000 * 60 * 60 * 24;
+  const TRIAL_RULES = [
+    {limit: 3, days: 60},
+    {limit: 5, days: 30}
+  ];
+  const DEFAULT_TRIAL_DAYS = 7;
+
   function bindMenu(){
     const button = document.querySelector('[data-menu-toggle]');
     const nav = document.querySelector('.nav');
@@ -102,9 +118,149 @@
     boxes.forEach(box => observer.observe(box));
   }
 
+  function getStoredNumber(key, fallback = 0){
+    const value = parseInt(localStorage.getItem(key), 10);
+    return Number.isNaN(value) ? fallback : value;
+  }
+
+  function getStoredList(key){
+    const raw = localStorage.getItem(key);
+    if(!raw){
+      return null;
+    }
+    try{
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (_error){
+      return [];
+    }
+  }
+
+  function startTrialIfNeeded(email){
+    if(localStorage.getItem(STORAGE_KEYS.trialStart)){
+      return;
+    }
+    const storedCount = getStoredNumber(STORAGE_KEYS.usersCount, 0);
+    const storedList = getStoredList(STORAGE_KEYS.usersList);
+    const listExists = storedList !== null;
+    const users = storedList || [];
+    let currentCount = storedCount;
+    const hasEmail = Boolean(email);
+    const emailKnown = hasEmail && users.includes(email);
+
+    if(hasEmail && !emailKnown){
+      const shouldIncrement = listExists || storedCount === 0;
+      users.push(email);
+      if(shouldIncrement){
+        currentCount = storedCount + 1;
+      }
+    } else if(!hasEmail && storedCount === 0){
+      currentCount = 1;
+    }
+
+    localStorage.setItem(STORAGE_KEYS.usersCount, `${currentCount}`);
+    if(users.length){
+      localStorage.setItem(STORAGE_KEYS.usersList, JSON.stringify(users));
+    }
+
+    let trialDays = DEFAULT_TRIAL_DAYS;
+    const rule = TRIAL_RULES.find(entry => currentCount <= entry.limit);
+    if(rule){
+      trialDays = rule.days;
+    }
+    localStorage.setItem(STORAGE_KEYS.trialDays, `${trialDays}`);
+    localStorage.setItem(STORAGE_KEYS.trialStart, new Date().toISOString());
+    localStorage.setItem(STORAGE_KEYS.plan, 'trial');
+  }
+
+  function getTrialRemainingDays(){
+    const trialDays = getStoredNumber(STORAGE_KEYS.trialDays, 0);
+    const trialStart = localStorage.getItem(STORAGE_KEYS.trialStart);
+    if(!trialStart || trialDays <= 0){
+      return 0;
+    }
+    const startDate = new Date(trialStart);
+    if(Number.isNaN(startDate.getTime())){
+      return 0;
+    }
+    const elapsedDays = Math.floor((Date.now() - startDate.getTime()) / MS_PER_DAY);
+    const remaining = Math.max(trialDays - elapsedDays, 0);
+    if(remaining === 0){
+      localStorage.setItem(STORAGE_KEYS.plan, 'basic');
+    }
+    return remaining;
+  }
+
+  function getTrialLabel(remaining){
+    if(remaining === 1){
+      return 'dzień pozostał';
+    }
+    if(
+      remaining % 10 >= 2
+      && remaining % 10 <= 4
+      && (remaining % 100 < 12 || remaining % 100 > 14)
+    ){
+      return 'dni pozostały';
+    }
+    return 'dni pozostało';
+  }
+
+  function updateDashboardStatus(){
+    const trialTargets = document.querySelectorAll('[data-trial-remaining]');
+    const remaining = getTrialRemainingDays();
+    if(trialTargets.length){
+      trialTargets.forEach(target => {
+        target.textContent = `${remaining}`;
+      });
+    }
+    const trialLabel = document.querySelector('[data-trial-label]');
+    if(trialLabel){
+      trialLabel.textContent = getTrialLabel(remaining);
+    }
+    const planTarget = document.querySelector('[data-user-plan]');
+    if(planTarget){
+      const storedPlan = localStorage.getItem(STORAGE_KEYS.plan);
+      const plan = storedPlan || (remaining > 0 ? 'trial' : 'basic');
+      planTarget.textContent = plan === 'trial' ? 'Trial' : 'Basic';
+    }
+  }
+
+  function guardDashboard(){
+    if(document.body.dataset.page !== 'dashboard'){
+      return;
+    }
+    const logged = localStorage.getItem(STORAGE_KEYS.logged) === 'true';
+    if(!logged){
+      window.location.href = 'login.html';
+      return;
+    }
+    startTrialIfNeeded(localStorage.getItem(STORAGE_KEYS.email));
+    updateDashboardStatus();
+  }
+
+  function initLoginForm(){
+    const form = document.querySelector('[data-login-form]');
+    if(!form){
+      return;
+    }
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const emailInput = form.querySelector('input[name="email"]');
+      const email = emailInput ? emailInput.value.trim() : '';
+      if(email){
+        localStorage.setItem(STORAGE_KEYS.email, email);
+      }
+      localStorage.setItem(STORAGE_KEYS.logged, 'true');
+      startTrialIfNeeded(email);
+      window.location.href = 'dashboard.html';
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     bindMenu();
     initCounters();
     initHelperBoxes();
+    initLoginForm();
+    guardDashboard();
   });
 })();

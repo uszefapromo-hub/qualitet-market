@@ -17,6 +17,8 @@
   --accent-blue-dark:#1c8fb8;
   --accent-green-dark:#1ca66b;
   --shadow:0 20px 40px rgba(0,0,0,.22);
+  --topbar-offset:90px;
+  --topbar-height:90px;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -113,6 +115,21 @@ a{color:#fff;text-decoration:none}
 .store-card{padding:14px 16px;border:1px solid var(--stroke);border-radius:18px;background:rgba(255,255,255,.04)}
 .empty{color:var(--muted)}
 .topbar-cta{margin-left:auto}
+.brand-tag{display:block;color:var(--accent-green);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1px}
+.auth-layout{min-height:calc(100vh - var(--topbar-height));display:flex;align-items:center;justify-content:center;padding:40px 0 60px}
+.auth-card{width:min(420px,100%);margin:0 auto}
+.auth-card h1{margin-top:0}
+.auth-actions{margin-top:12px}
+.dashboard-shell{width:min(1200px,calc(100% - 28px));margin:24px auto 50px;display:grid;grid-template-columns:240px 1fr;gap:22px}
+.sidebar{border:1px solid var(--stroke);background:rgba(7,18,33,.78);border-radius:24px;padding:18px;box-shadow:var(--shadow);position:sticky;top:var(--topbar-offset);height:fit-content}
+.sidebar-nav{display:flex;flex-direction:column;gap:8px}
+.sidebar-nav a{padding:12px 14px;border-radius:14px;font-weight:600;color:var(--muted)}
+.sidebar-nav a.active,.sidebar-nav a:hover{background:rgba(255,255,255,.08);color:#fff}
+.dashboard-main{display:flex;flex-direction:column;gap:18px}
+.dashboard-welcome{padding:24px}
+.dashboard-meta{display:flex;flex-wrap:wrap;gap:16px;margin-top:16px}
+.dashboard-meta div{border:1px solid var(--stroke);background:rgba(255,255,255,.06);border-radius:16px;padding:12px 16px;min-width:180px}
+.dashboard-meta span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
 .hero-entry{padding:70px 0 50px;position:relative;overflow:hidden}
 .hero-entry::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 10% 20%, rgba(53,217,255,.18), transparent 55%),radial-gradient(circle at 90% 10%, rgba(84,255,176,.16), transparent 45%)}
 .hero-entry .wrap{position:relative}
@@ -158,4 +175,8 @@ a{color:#fff;text-decoration:none}
   .topbar-inner{flex-wrap:wrap}
   .menu-toggle{order:2;margin-left:auto}
   .topbar-cta{order:3;width:100%;justify-content:center;margin-top:12px;margin-left:0}
+  .dashboard-shell{grid-template-columns:1fr;margin-top:12px}
+  .sidebar{position:static}
+  .dashboard-meta{flex-direction:column}
+  .auth-layout{min-height:auto;padding:30px 0 40px}
 }
