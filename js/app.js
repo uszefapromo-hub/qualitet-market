@@ -154,16 +154,7 @@
   }
 
   function loadStoreSettings(){
-    const raw = localStorage.getItem(STORAGE_KEYS.storeSettings);
-    if(!raw){
-      return null;
-    }
-    try{
-      const parsed = JSON.parse(raw);
-      return parsed && typeof parsed === 'object' ? parsed : null;
-    } catch (_error){
-      return null;
-    }
+    return getStoredObject(STORAGE_KEYS.storeSettings);
   }
 
   function saveStoreSettings(settings){
