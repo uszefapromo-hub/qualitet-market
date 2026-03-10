@@ -519,7 +519,7 @@
     localStorage.setItem(STORAGE_KEYS.trialDays, `${trialDays}`);
     localStorage.setItem(STORAGE_KEYS.trialStart, new Date().toISOString());
     const existingPlan = getStoredPlan();
-    if(!existingPlan || existingPlan === 'trial'){
+    if(!existingPlan){
       localStorage.setItem(STORAGE_KEYS.plan, 'trial');
     }
   }
@@ -538,9 +538,11 @@
     const remaining = Math.max(trialDays - elapsedDays, 0);
     if(remaining === 0){
       const storedPlan = getStoredPlan();
-      if(!storedPlan || storedPlan === 'trial'){
+      if(storedPlan === 'trial'){
         localStorage.setItem(STORAGE_KEYS.plan, 'basic');
       }
+      localStorage.removeItem(STORAGE_KEYS.trialDays);
+      localStorage.removeItem(STORAGE_KEYS.trialStart);
     }
     return remaining;
   }
@@ -620,7 +622,7 @@
     buttons.forEach(button => {
       const buttonPlan = (button.dataset.planBuy || '').toLowerCase();
       if(!button.dataset.planOriginalText){
-        button.dataset.planOriginalText = button.textContent.trim();
+        button.dataset.planOriginalText = getPlanCta(buttonPlan) || button.textContent.trim();
       }
       const isActive = buttonPlan && buttonPlan === plan;
       if(isActive){
