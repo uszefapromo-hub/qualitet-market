@@ -1,12 +1,12 @@
 <!doctype html>
 <html lang="pl">
 <head>
-  <title>Dashboard - HurtDetal Uszefa QUALITET</title>
+  <title>Logowanie - HurtDetal Uszefa QUALITET</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-page="dashboard">
+<body data-page="login">
   <header class="topbar">
     <div class="wrap topbar-inner">
       <a class="brand" href="index.html">
@@ -27,22 +27,27 @@
 
   <main class="wrap">
     <section class="page-hero compact">
-      <span class="eyebrow">Dashboard</span>
-      <h1>Centrum dowodzenia po resetowaniu.</h1>
-      <p>Najważniejsze wskaźniki są teraz dostępne w uproszczonej formie.</p>
+      <span class="eyebrow">Dostęp</span>
+      <h1>Zaloguj się do panelu.</h1>
+      <p>Uproszczony ekran logowania pozostawiony po czyszczeniu repozytorium.</p>
     </section>
     <section class="dashboard-grid">
       <article class="panel-card">
-        <h3>Stan konta</h3>
-        <div class="kv"><span>Aktywne konto</span><strong>Tak</strong></div>
-        <div class="kv"><span>Plan</span><strong>Startowy</strong></div>
-      </article>
-      <article class="panel-card">
-        <h3>Szybkie akcje</h3>
-        <div class="quick-links">
-          <a class="btn btn-secondary" href="login.html">Zmień konto</a>
-          <a class="btn btn-secondary" href="index.html">Powrót na start</a>
-        </div>
+        <h2>Logowanie</h2>
+        <form class="form-card">
+          <label>
+            Email
+            <input type="email" name="email" placeholder="email@domena.pl" autocomplete="email">
+          </label>
+          <label>
+            Hasło
+            <input type="password" name="password" placeholder="••••••••" autocomplete="current-password">
+          </label>
+          <div class="cta-row">
+            <button class="btn btn-primary" type="button">Zaloguj</button>
+            <button class="btn btn-secondary" type="button">Przypomnij hasło</button>
+          </div>
+        </form>
       </article>
     </section>
   </main>
@@ -51,16 +56,16 @@
     <div class="wrap footer-grid">
       <div>
         <img class="footer-logo" src="assets/images/logo-uszefa.svg" alt="U Szefa">
-        <p>Dashboard pozostaje minimalistyczny zgodnie z trybem resetu.</p>
+        <p>U Szefa to szybki dostęp do ustawień i dashboardu.</p>
       </div>
       <div>
         <h4>Szybki start</h4>
-        <a href="login.html">Logowanie</a>
-        <a href="index.html">Strona główna</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="index.html">Powrót na start</a>
       </div>
       <div>
         <h4>System</h4>
-        <a href="dashboard.html">Dashboard</a>
+        <a href="login.html">Logowanie</a>
       </div>
     </div>
   </footer>

@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="650" viewBox="0 0 1000 650">
-<defs><linearGradient id="a" x1="0" x2="1"><stop stop-color="#43d9ff"/><stop offset="1" stop-color="#8d7dff"/></linearGradient><linearGradient id="b" x1="0" x2="1"><stop stop-color="#ffc857"/><stop offset="1" stop-color="#ff8a3d"/></linearGradient></defs>
-<rect width="1000" height="650" rx="34" fill="#0b1529"/>
-<rect x="72" y="92" width="856" height="466" rx="28" fill="#ffffff08" stroke="#ffffff20"/>
-<path d="M140 470l145-130 110 68 145-160 112 82 136-144" fill="none" stroke="url(#a)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
-<circle cx="140" cy="470" r="14" fill="#43d9ff"/><circle cx="285" cy="340" r="14" fill="#8d7dff"/><circle cx="395" cy="408" r="14" fill="#ffc857"/><circle cx="540" cy="248" r="14" fill="#ff8a3d"/><circle cx="652" cy="330" r="14" fill="#43d9ff"/><circle cx="788" cy="186" r="14" fill="#ffc857"/>
-<rect x="122" y="138" width="188" height="86" rx="22" fill="url(#b)"/>
-<text x="150" y="190" font-family="Inter,Arial" font-size="32" font-weight="900" fill="#1d1200">WZROST</text></svg>
