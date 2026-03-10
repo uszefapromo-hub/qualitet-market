@@ -3,10 +3,12 @@
     email: 'app_user_email',
     logged: 'app_user_logged',
     usersCount: 'app_users_count',
+    usersList: 'app_users_list',
     trialDays: 'app_user_trial_days',
     trialStart: 'app_user_trial_start',
     plan: 'app_user_plan'
   };
+  const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
   function bindMenu(){
     const button = document.querySelector('[data-menu-toggle]');
@@ -116,12 +118,50 @@
     return Number.isNaN(value) ? fallback : value;
   }
 
-  function startTrialIfNeeded(){
+  function getStoredList(key){
+    const raw = localStorage.getItem(key);
+    if(!raw){
+      return null;
+    }
+    try{
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error){
+      return [];
+    }
+  }
+
+  function startTrialIfNeeded(email){
     if(localStorage.getItem(STORAGE_KEYS.trialStart)){
       return;
     }
-    const currentCount = getStoredNumber(STORAGE_KEYS.usersCount, 0) + 1;
+    const storedCount = getStoredNumber(STORAGE_KEYS.usersCount, 0);
+    const storedList = getStoredList(STORAGE_KEYS.usersList);
+    const listExists = storedList !== null;
+    const users = storedList || [];
+    let currentCount = storedCount;
+
+    if(email){
+      if(listExists){
+        if(!users.includes(email)){
+          users.push(email);
+          currentCount = storedCount + 1;
+        }
+      } else if(storedCount === 0){
+        users.push(email);
+        currentCount = storedCount + 1;
+      } else {
+        users.push(email);
+      }
+    } else if(storedCount === 0){
+      currentCount = 1;
+    }
+
     localStorage.setItem(STORAGE_KEYS.usersCount, `${currentCount}`);
+    if(users.length){
+      localStorage.setItem(STORAGE_KEYS.usersList, JSON.stringify(users));
+    }
+
     let trialDays = 7;
     if(currentCount <= 3){
       trialDays = 60;
@@ -143,7 +183,7 @@
     if(Number.isNaN(startDate.getTime())){
       return 0;
     }
-    const elapsedDays = Math.floor((Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+    const elapsedDays = Math.floor((Date.now() - startDate.getTime()) / MS_PER_DAY);
     const remaining = Math.max(trialDays - elapsedDays, 0);
     if(remaining === 0){
       localStorage.setItem(STORAGE_KEYS.plan, 'basic');
@@ -158,6 +198,15 @@
       trialTargets.forEach(target => {
         target.textContent = `${remaining}`;
       });
+    }
+    const trialLabel = document.querySelector('[data-trial-label]');
+    if(trialLabel){
+      const remaining = getTrialRemainingDays();
+      if(remaining === 1){
+        trialLabel.textContent = 'dzień pozostał';
+      } else {
+        trialLabel.textContent = 'dni pozostało';
+      }
     }
     const planTarget = document.querySelector('[data-user-plan]');
     if(planTarget){
@@ -177,7 +226,7 @@
       window.location.href = 'login.html';
       return;
     }
-    startTrialIfNeeded();
+    startTrialIfNeeded(localStorage.getItem(STORAGE_KEYS.email));
     updateDashboardStatus();
   }
 
@@ -194,7 +243,7 @@
         localStorage.setItem(STORAGE_KEYS.email, email);
       }
       localStorage.setItem(STORAGE_KEYS.logged, 'true');
-      startTrialIfNeeded();
+      startTrialIfNeeded(email);
       window.location.href = 'dashboard.html';
     });
   }
