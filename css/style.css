@@ -61,7 +61,7 @@ a{color:#fff;text-decoration:none}
 .hero{padding:52px 0 26px}
 .page-hero{padding:46px 0 20px}
 .hero-grid,.section-grid,.dashboard-grid,.form-grid,.pricing-grid,.supplier-grid,.products-grid,.stats-grid,.footer-grid{display:grid;gap:18px}
-.hero-grid{grid-template-columns:minmax(0,220px) minmax(0,1fr) minmax(0,220px);align-items:start;grid-template-areas:"left main right"}
+.hero-grid{grid-template-columns:minmax(0,220px) minmax(0,1fr) minmax(0,220px);align-items:start;grid-template-areas:"hero-left hero-main hero-right"}
 .hero h1,.page-hero h1{font-size:clamp(34px,5vw,64px);line-height:1.02;margin:10px 0 16px}
 .lead,.page-hero p{font-size:18px;color:var(--muted);max-width:760px}
 .eyebrow{display:inline-block;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid var(--stroke);color:var(--yellow);font-weight:700;font-size:13px}
@@ -196,10 +196,10 @@ body.auth-page .auth-layout{flex-direction:column;gap:20px}
 .hero-entry::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 10% 20%, rgba(53,217,255,.18), transparent 55%),radial-gradient(circle at 90% 10%, rgba(84,255,176,.16), transparent 45%)}
 .hero-entry .wrap{position:relative}
 .hero-copy{max-width:560px}
-.hero-main{display:grid;gap:22px;grid-area:main}
+.hero-main{display:grid;gap:22px;grid-area:hero-main}
 .hero-side{display:flex;flex-direction:column;gap:16px}
-.hero-side-left{grid-area:left}
-.hero-side-right{grid-area:right}
+.hero-side-left{grid-area:hero-left}
+.hero-side-right{grid-area:hero-right}
 .hero-side-card{
   padding:16px;
   border-radius:20px;
@@ -259,7 +259,7 @@ body.auth-page .auth-layout{flex-direction:column;gap:20px}
 .brand-stack{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
 .brand-stack span{padding:8px 14px;border-radius:999px;border:1px solid rgba(56,189,248,.4);background:rgba(15,23,42,.65);font-weight:700}
 .hero-visual{display:flex;flex-direction:column;align-items:flex-start;gap:18px}
-.hero-image{width:100%;max-width:320px;height:auto;align-self:center}
+.hero-image{width:100%;max-width:320px;height:auto}
 .hero-card{padding:28px;border-radius:24px;background:rgba(15,23,42,.82);border:1px solid rgba(56,189,248,.3);box-shadow:var(--shadow);max-width:380px}
 .hero-card h2{margin-top:0}
 .hero-highlights{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:20px}
@@ -994,7 +994,7 @@ body.has-bottom-nav.has-app-install-bar .install-banner{
   .footer-grid,
   .stats-grid,
   .marketplace-block{grid-template-columns:1fr}
-  .hero-grid{grid-template-areas:"main" "left" "right"}
+  .hero-grid{grid-template-areas:"hero-main" "hero-left" "hero-right"}
   .promo-grid,
   .helper-grid,
   .store-summary-grid,
