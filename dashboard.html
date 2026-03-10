@@ -23,11 +23,12 @@
       <nav class="sidebar-nav" aria-label="Menu panelu">
         <a class="active" href="dashboard.html">Dashboard</a>
         <a href="generator-sklepu.html">Mój sklep</a>
-        <a href="#">Produkty</a>
-        <a href="#">Reklamy</a>
-        <a href="#">Kalkulacja</a>
-        <a href="#">Subskrypcja</a>
-        <a href="#">Ustawienia</a>
+        <a href="hurtownie.html" data-require="pro">Hurtownie</a>
+        <a href="qualitetmarket.html" data-require="pro">QualitetMarket</a>
+        <a href="listing.html" data-require="pro">Listing</a>
+        <a href="crm.html" data-require="pro">CRM</a>
+        <a href="intelligence.html" data-require="elite">Intelligence</a>
+        <a href="cennik.html">Subskrypcja</a>
       </nav>
     </aside>
 
@@ -72,6 +73,32 @@
           </div>
         </div>
         <p class="hint store-summary-helper" data-store-helper>Najpierw stwórz sklep, aby przejść dalej.</p>
+      </section>
+
+      <section class="panel-card plan-status" data-plan-panel>
+        <div class="plan-status-head">
+          <div>
+            <span class="eyebrow">Subskrypcja</span>
+            <h2>Status planu</h2>
+            <p class="hint">Sprawdź dostęp do modułów i poziom konta.</p>
+          </div>
+          <a class="btn btn-primary" href="cennik.html" data-plan-cta>Ulepsz plan</a>
+        </div>
+        <div class="plan-status-grid">
+          <div class="plan-status-item">
+            <span>Aktualny plan</span>
+            <strong data-plan-name>Basic</strong>
+          </div>
+          <div class="plan-status-item">
+            <span>Status</span>
+            <strong data-plan-status>Aktywny</strong>
+          </div>
+          <div class="plan-status-item">
+            <span>Trial</span>
+            <strong><span data-plan-trial>0</span> dni</strong>
+          </div>
+        </div>
+        <p class="hint plan-status-hint" data-plan-hint>Plan Basic daje dostęp do podstawowych modułów sprzedaży.</p>
       </section>
 
       <section class="helper-grid dashboard-helpers">

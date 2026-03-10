@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Cennik - HurtDetal Uszefa QUALITET</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="cennik" class="pricing-page">
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>UszefaQualitet</strong>
+          <span>QualitetMarket</span>
+          <span class="brand-tag">U SZEFA</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Główna nawigacja">
+        <a href="index.html">Start</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="cennik.html">Cennik</a>
+      </nav>
+      <a class="btn btn-primary topbar-cta" href="login.html">Wejdź do platformy</a>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="wrap">
+        <span class="eyebrow">Cennik U SZEFA</span>
+        <h1>Wybierz plan subskrypcji</h1>
+        <p class="lead">Zacznij od planu BASIC z 7-dniowym trialem, a następnie rozwijaj sprzedaż dzięki planom PRO i ELITE.</p>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <div class="panel-card plan-success" data-plan-success hidden>
+        <span class="eyebrow">Subskrypcja aktywna</span>
+        <h2>Plan <span data-plan-success-name>Basic</span> jest już aktywny</h2>
+        <p class="hint">Twoje konto zostało zaktualizowane. Przejdź do dashboardu, aby odblokować nowe moduły.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="dashboard.html">Przejdź do dashboardu</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap pricing-grid">
+      <article class="price-card" data-plan-card data-plan="basic">
+        <div class="plan-header">
+          <h3>BASIC</h3>
+          <span class="plan-current" data-current-plan hidden>AKTYWNY</span>
+        </div>
+        <strong>29 zł / miesiąc</strong>
+        <p class="hint">7 dni trialu na start</p>
+        <ul>
+          <li>Podstawowy panel sprzedaży</li>
+          <li>Lista produktów i zamówień</li>
+          <li>Wsparcie startowe U SZEFA</li>
+        </ul>
+        <a class="btn btn-primary" href="https://buy.stripe.com/test_basic" data-plan-checkout data-plan="basic">Kup BASIC</a>
+      </article>
+
+      <article class="price-card featured" data-plan-card data-plan="pro">
+        <span class="badge">Najczęściej wybierany</span>
+        <div class="plan-header">
+          <h3>PRO</h3>
+          <span class="plan-current" data-current-plan hidden>AKTYWNY</span>
+        </div>
+        <strong>79 zł / miesiąc</strong>
+        <p class="hint">Pełny dostęp do hurtowni i listingów</p>
+        <ul>
+          <li>Moduł Hurtownie + QualitetMarket</li>
+          <li>Listing i CRM sprzedaży</li>
+          <li>Priorytetowe wsparcie 24/7</li>
+        </ul>
+        <a class="btn btn-primary" href="https://buy.stripe.com/test_pro" data-plan-checkout data-plan="pro">Kup PRO</a>
+      </article>
+
+      <article class="price-card" data-plan-card data-plan="elite">
+        <div class="plan-header">
+          <h3>ELITE</h3>
+          <span class="plan-current" data-current-plan hidden>AKTYWNY</span>
+        </div>
+        <strong>199 zł / miesiąc</strong>
+        <p class="hint">Ekskluzywne AI + analityka sprzedaży</p>
+        <ul>
+          <li>Intelligence + analizy predykcyjne</li>
+          <li>Dedykowany opiekun i wdrożenie</li>
+          <li>Pełny pakiet automatyzacji</li>
+        </ul>
+        <a class="btn btn-primary" href="https://buy.stripe.com/test_elite" data-plan-checkout data-plan="elite">Kup ELITE</a>
+      </article>
+    </section>
+
+    <section class="wrap">
+      <div class="panel-card pricing-note">
+        <h2>Bez backendu, 100% GitHub Pages</h2>
+        <p class="hint">System subskrypcji działa w pełni po stronie przeglądarki. Po opłaceniu Stripe przekieruje Cię z powrotem do platformy, gdzie aktywuje się plan.</p>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/app.js" defer></script>
+</body>
+</html>
