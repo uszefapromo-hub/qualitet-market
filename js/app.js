@@ -14,7 +14,8 @@
     surveySeen: 'app_survey_seen',
     pendingPlan: 'app_pending_plan',
     landingSeen: 'app_landing_seen',
-    calculatorResults: 'calculatorResults'
+    calculatorResults: 'calculatorResults',
+    userProfile: 'app_user_profile'
   };
   const MS_PER_DAY = 1000 * 60 * 60 * 24;
   const SURVEY_AUTO_OPEN_DELAY = 4500;
@@ -1185,7 +1186,7 @@
     return parsed;
   }
 
-  function parseStoredMargin(value){
+  function parseMarginPercentage(value){
     const parsed = Number.parseFloat(value);
     if(!Number.isFinite(parsed) || parsed < 0){
       return null;
@@ -1202,12 +1203,12 @@
   }
 
   function resolveStoreMargin(options = {}){
-    const storedMargin = parseStoredMargin(localStorage.getItem(PRICING_STORAGE_KEYS.storeMargin));
+    const storedMargin = parseMarginPercentage(localStorage.getItem(PRICING_STORAGE_KEYS.storeMargin));
     if(storedMargin !== null){
       return storedMargin;
     }
-    const storeMargin = parseStoredMargin(options.store && options.store.margin);
-    const settingsMargin = parseStoredMargin(options.settings && options.settings.margin);
+    const storeMargin = parseMarginPercentage(options.store && options.store.margin);
+    const settingsMargin = parseMarginPercentage(options.settings && options.settings.margin);
     const resolvedPlan = normalizePlan(
       options.plan
       || (options.store && options.store.plan)
@@ -1221,7 +1222,7 @@
   }
 
   function setStoreMargin(value){
-    const resolved = parseStoredMargin(value);
+    const resolved = parseMarginPercentage(value);
     if(resolved === null){
       return resolveStoreMargin();
     }
@@ -1241,7 +1242,7 @@
   }
 
   function getUserProfileMode(){
-    const rawProfile = localStorage.getItem('app_user_profile');
+    const rawProfile = localStorage.getItem(STORAGE_KEYS.userProfile);
     if(!rawProfile){
       return '';
     }
@@ -2315,7 +2316,7 @@
     if(storedRole){
       return storedRole;
     }
-    const rawProfile = localStorage.getItem('app_user_profile');
+    const rawProfile = localStorage.getItem(STORAGE_KEYS.userProfile);
     if(!rawProfile){
       return '';
     }
