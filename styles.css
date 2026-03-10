@@ -486,6 +486,24 @@ body.store-shop .slider-meta{
   font-weight:700;
 }
 
+body.store-shop .slider-info{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  flex:1;
+}
+
+body.store-shop .slider-info h3{
+  margin:0;
+  font-size:16px;
+}
+
+body.store-shop .slider-info p{
+  margin:0;
+  font-size:13px;
+  color:var(--muted);
+}
+
 body.store-shop .category-grid{
   display:grid;
   gap:18px;
@@ -754,6 +772,16 @@ body.store-shop .plan-visual span{
 body.store-shop .plan-visual strong{
   font-size:28px;
   letter-spacing:2px;
+}
+
+body.store-shop .shop-contact{
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+}
+
+body.store-shop .shop-contact h2{
+  margin:0;
 }
 
 @keyframes fadeUp{
