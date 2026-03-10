@@ -353,7 +353,7 @@ a{color:#fff;text-decoration:none}
   flex-wrap:wrap;
   margin-top:18px;
 }
-.btn.is-highlighted{
+.btn.is-selected{
   outline:2px solid var(--yellow);
   outline-offset:2px;
 }

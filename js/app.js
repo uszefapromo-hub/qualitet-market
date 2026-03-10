@@ -58,7 +58,7 @@
     pro: 'Ta funkcja wymaga planu PRO.',
     elite: 'Ta funkcja wymaga planu ELITE.'
   };
-  let openUpgradeModal = null;
+  let upgradeModalOpener = null;
 
   function bindMenu(){
     const button = document.querySelector('[data-menu-toggle]');
@@ -716,7 +716,7 @@
       }
       ctaButtons.forEach(button => {
         const plan = normalizePlan(button.dataset.planPurchase);
-        button.classList.toggle('is-highlighted', plan === normalizedPlan);
+        button.classList.toggle('is-selected', plan === normalizedPlan);
       });
     };
 
@@ -731,7 +731,7 @@
       document.body.classList.remove('modal-open');
     };
 
-    openUpgradeModal = openModal;
+    upgradeModalOpener = openModal;
 
     closeButtons.forEach(button => {
       button.addEventListener('click', closeModal);
@@ -774,8 +774,8 @@
         requiredPlan = getHighestRequiredPlan(requiredPlan, neededPlan);
       }
     });
-    if(requiredPlan && typeof openUpgradeModal === 'function'){
-      openUpgradeModal(requiredPlan);
+    if(requiredPlan && typeof upgradeModalOpener === 'function'){
+      upgradeModalOpener(requiredPlan);
     }
   }
 
