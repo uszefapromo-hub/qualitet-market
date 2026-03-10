@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Panel sklepu - HurtDetal Uszefa QUALITET</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="store-panel">
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>UszefaQualitet</strong>
+          <span>QualitetMarket</span>
+          <span class="brand-tag">U SZEFA</span>
+        </div>
+      </a>
+      <div class="cta-row">
+        <a class="btn btn-secondary" href="generator-sklepu.html">Generator sklepu</a>
+        <a class="btn btn-primary" href="sklep.html">Podgląd sklepu</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap panel-shell" data-store-panel>
+    <div data-store-content>
+      <section class="panel-card">
+        <span class="eyebrow">Panel sklepu</span>
+        <h1 data-store-name>Panel sklepu</h1>
+        <p class="lead">Zarządzaj sprzedażą i kontroluj ustawienia sklepu.</p>
+      </section>
+
+      <section class="panel-card panel-metrics">
+        <div class="metric-card">
+          <span>Plan</span>
+          <strong data-store-plan>Basic</strong>
+        </div>
+        <div class="metric-card">
+          <span>Marża</span>
+          <strong data-store-margin>0%</strong>
+        </div>
+        <div class="metric-card">
+          <span>Ilość produktów</span>
+          <strong data-store-products>0</strong>
+        </div>
+        <div class="metric-card">
+          <span>Przychód (mock)</span>
+          <strong data-store-revenue>0 zł</strong>
+        </div>
+      </section>
+
+      <section class="panel-card panel-actions">
+        <h2>Szybkie akcje</h2>
+        <div class="cta-row">
+          <button class="btn btn-primary" type="button">Dodaj produkt</button>
+          <a class="btn btn-secondary" href="sklep.html">Sklep</a>
+          <button class="btn btn-secondary" type="button">Reklamy</button>
+          <button class="btn btn-secondary" type="button">Ustawienia</button>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel-card panel-empty" data-store-empty hidden>
+      <h2>Brak aktywnego sklepu</h2>
+      <p class="hint">Utwórz sklep w generatorze, aby aktywować panel.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="generator-sklepu.html">Przejdź do generatora</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="stores.js" defer></script>
+  <script src="shop.js" defer></script>
+</body>
+</html>

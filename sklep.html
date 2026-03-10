@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Sklep - HurtDetal Uszefa QUALITET</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="store-shop">
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>UszefaQualitet</strong>
+          <span>QualitetMarket</span>
+          <span class="brand-tag">U SZEFA</span>
+        </div>
+      </a>
+      <div class="cta-row">
+        <a class="btn btn-secondary" href="panel-sklepu.html">Panel sklepu</a>
+        <a class="btn btn-primary" href="generator-sklepu.html">Ustawienia sklepu</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap shop-shell" data-store-shop>
+    <div data-store-content>
+      <section class="panel-card shop-hero">
+        <div class="shop-logo" data-logo-preview>
+          <span>U</span>
+          <img alt="Logo sklepu">
+        </div>
+        <div>
+          <span class="eyebrow" data-store-theme>Styl: modern</span>
+          <h1 data-store-name>Sklep</h1>
+          <p class="lead" data-store-description></p>
+          <p class="field-hint" data-store-slug></p>
+          <div class="shop-badges">
+            <span class="badge-pill" data-store-plan>Plan: Basic</span>
+            <span class="badge-pill" data-store-margin>Marża: 0%</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-card shop-products">
+        <h2>Produkty sklepu</h2>
+        <p class="hint">Przykładowa kolekcja prezentująca styl sklepu.</p>
+        <div class="products-grid">
+          <article class="product-card">
+            <h3>Zestaw Premium</h3>
+            <p class="hint">Ekskluzywna oferta U SZEFA</p>
+            <span class="price">189 zł</span>
+          </article>
+          <article class="product-card">
+            <h3>Pakiet Market</h3>
+            <p class="hint">Najczęściej wybierany zestaw</p>
+            <span class="price">99 zł</span>
+          </article>
+          <article class="product-card">
+            <h3>Start Modern</h3>
+            <p class="hint">Lekki start dla nowych klientów</p>
+            <span class="price">59 zł</span>
+          </article>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel-card shop-empty" data-store-empty hidden>
+      <h2>Brak aktywnego sklepu</h2>
+      <p class="hint">Najpierw utwórz sklep w generatorze, aby zobaczyć podgląd.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="generator-sklepu.html">Utwórz sklep</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="stores.js" defer></script>
+  <script src="shop.js" defer></script>
+</body>
+</html>
