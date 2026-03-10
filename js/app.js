@@ -1137,7 +1137,11 @@
         plans.push(getPlanRecommendationForValue(trafficSignal, PLAN_RECOMMENDATION_THRESHOLDS.traffic));
       }
     }
-    return plans.reduce((best, plan) => {
+    const validPlans = plans.filter(plan => getPlanLevel(plan) >= 0);
+    if(!validPlans.length){
+      return 'basic';
+    }
+    return validPlans.reduce((best, plan) => {
       const bestLevel = getPlanLevel(best);
       const planLevel = getPlanLevel(plan);
       return planLevel > bestLevel ? plan : best;
@@ -1314,7 +1318,7 @@
       const visits = Math.max(0, normalizeNumberValue(visitsInput ? visitsInput.value : 0, 0));
       const conversion = Math.max(0, normalizeNumberValue(conversionInput ? conversionInput.value : 0, 0));
       const orderValue = Math.max(0, normalizeNumberValue(orderInput ? orderInput.value : 0, 0));
-      const conversionRate = conversion > 1 ? conversion / 100 : conversion;
+      const conversionRate = Math.max(0, Math.min(conversion / 100, 1));
       const orders = Math.round(visits * conversionRate);
       const revenue = Math.round(orders * orderValue);
       if(ordersTarget){
@@ -1756,7 +1760,8 @@
     const settings = loadStoreSettings();
     const ready = localStorage.getItem(STORAGE_KEYS.storeReady) === 'true' && settings;
     const storeName = settings && (settings.storeName || settings.niche) ? (settings.storeName || settings.niche) : 'Brak danych';
-    const storeStyle = settings && (settings.storeStyle || settings.goal)
+    const hasGoal = settings && settings.goal !== undefined && settings.goal !== null;
+    const storeStyle = settings && (settings.storeStyle || hasGoal)
       ? (settings.storeStyle || `Cel: ${formatCurrency(settings.goal)}`)
       : '---';
 
