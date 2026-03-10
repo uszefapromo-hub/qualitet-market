@@ -83,7 +83,9 @@
     if(!('serviceWorker' in navigator)){
       return;
     }
-    navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+    navigator.serviceWorker.register('/service-worker.js').catch(error => {
+      console.warn('Service worker registration failed.', error);
+    });
   }
 
   function initBottomNav(){

@@ -45,7 +45,10 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
           return response;
         })
-        .catch(() => caches.match('/index.html'))
+        .catch(error => {
+          console.warn('Offline fallback served for navigation.', error);
+          return caches.match('index.html');
+        })
     );
     return;
   }
