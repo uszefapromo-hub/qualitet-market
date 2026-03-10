@@ -1,0 +1,107 @@
+@import url("css/style.css");
+
+:root{
+  --bg:#f8fafc;
+  --bg-2:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --card:#ffffff;
+  --stroke:#e2e8f0;
+  --shadow:0 18px 40px rgba(15,23,42,.12);
+  --accent-blue:#2563eb;
+  --accent-green:#22c55e;
+  --accent-blue-dark:#1d4ed8;
+  --accent-green-dark:#16a34a;
+}
+
+body{
+  background:linear-gradient(180deg,#f8fafc 0%, #ffffff 100%);
+  color:var(--text);
+}
+
+a{color:inherit}
+
+.topbar{
+  background:rgba(255,255,255,.94);
+  border-bottom:1px solid var(--stroke);
+}
+
+.nav a:hover,
+.nav a.active{
+  background:rgba(37,99,235,.12);
+  color:#0f172a;
+}
+
+.nav.open{
+  background:#ffffff;
+}
+
+.menu-toggle{
+  background:#fff;
+  color:var(--text);
+  border:1px solid var(--stroke);
+}
+
+.btn-primary{
+  background:linear-gradient(135deg,var(--accent-blue-dark),var(--accent-green-dark));
+  color:#fff;
+}
+
+.btn-secondary{
+  background:#ffffff;
+  color:var(--text);
+  border:1px solid var(--stroke);
+  box-shadow:0 12px 24px rgba(15,23,42,.08);
+}
+
+.eyebrow{
+  background:rgba(37,99,235,.12);
+  border:1px solid rgba(37,99,235,.2);
+  color:#1d4ed8;
+}
+
+.theme-pill{
+  background:rgba(15,23,42,.05);
+}
+
+.brand-stack span{
+  border:1px solid rgba(37,99,235,.25);
+  background:rgba(37,99,235,.1);
+}
+
+.hero-card{
+  background:#ffffff;
+  border:1px solid rgba(37,99,235,.2);
+}
+
+.promo-motion-gallery{
+  background:#ffffff;
+  border:1px solid var(--stroke);
+}
+
+.promo-card{
+  background:#ffffff;
+  border-color:rgba(37,99,235,.2);
+}
+
+.promo-value{
+  color:var(--accent-blue);
+}
+
+.bottom-nav{
+  background:#ffffff;
+  border-top:1px solid var(--stroke);
+}
+
+.bottom-nav a{
+  color:var(--muted);
+}
+
+.bottom-nav a.is-active{
+  background:rgba(37,99,235,.12);
+  color:#1d4ed8;
+}
+
+.bottom-nav a.is-active svg path{
+  stroke:#1d4ed8;
+}
