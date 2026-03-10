@@ -99,7 +99,7 @@
     const name = nameInput ? nameInput.value.trim() : '';
     const slug = manager.normalizeSlug(slugInput && slugInput.value ? slugInput.value : name);
     const marginRaw = marginInput ? marginInput.value : '';
-    const marginValue = parseFloat(marginRaw);
+    const marginValue = marginRaw === '' ? NaN : parseFloat(marginRaw);
 
     return {
       name,
