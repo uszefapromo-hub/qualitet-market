@@ -446,7 +446,7 @@
     return PLAN_LABELS[normalized] || PLAN_LABELS.basic;
   }
 
-  function resolvePlan(remaining){
+  function resolveCurrentPlan(remaining){
     const storedPlan = getStoredPlan();
     if(storedPlan){
       return storedPlan;
@@ -532,7 +532,7 @@
   function updateDashboardStatus(){
     const trialTargets = document.querySelectorAll('[data-trial-remaining]');
     const remaining = getTrialRemainingDays();
-    const plan = resolvePlan(remaining);
+    const plan = resolveCurrentPlan(remaining);
     if(trialTargets.length){
       trialTargets.forEach(target => {
         target.textContent = plan === 'trial' ? `${remaining}` : 'Aktywny';
@@ -599,10 +599,10 @@
   function initPlanPurchaseButtons(){
     const buttons = document.querySelectorAll('[data-plan-buy]');
     if(!buttons.length){
-      updatePlanStatusLabels(resolvePlan(getTrialRemainingDays()));
+      updatePlanStatusLabels(resolveCurrentPlan(getTrialRemainingDays()));
       return;
     }
-    const plan = resolvePlan(getTrialRemainingDays());
+    const plan = resolveCurrentPlan(getTrialRemainingDays());
     updatePlanPurchaseButtons(plan);
     updatePlanStatusLabels(plan);
     buttons.forEach(button => {
