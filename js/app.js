@@ -599,7 +599,8 @@
     if(!normalized){
       return PLAN_LABELS.basic;
     }
-    return normalized.toUpperCase();
+    const label = normalized.replace(/[-_]+/g, ' ').trim();
+    return label.replace(/\b\w/g, char => char.toUpperCase());
   }
 
   function getPlanLevel(plan){
