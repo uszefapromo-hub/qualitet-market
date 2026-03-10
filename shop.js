@@ -21,6 +21,11 @@
   const MOCK_PRODUCTS_RANGE = 24;
   const MOCK_REVENUE_BASE = 12000;
   const MOCK_REVENUE_RANGE = 9000;
+  const CURRENCY_FORMATTER = new Intl.NumberFormat('pl-PL', {
+    style: 'currency',
+    currency: 'PLN',
+    maximumFractionDigits: 0
+  });
 
   function formatPlan(plan){
     const value = (plan || '').toLowerCase();
@@ -34,11 +39,7 @@
   }
 
   function formatCurrency(value){
-    return new Intl.NumberFormat('pl-PL', {
-      style: 'currency',
-      currency: 'PLN',
-      maximumFractionDigits: 0
-    }).format(value);
+    return CURRENCY_FORMATTER.format(value);
   }
 
   function getInitial(name){
@@ -222,6 +223,9 @@
     function handleSave(redirectUrl){
       const storeData = buildStoreFromForm(form);
       if(!storeData.name){
+        if(typeof form.reportValidity === 'function'){
+          form.reportValidity();
+        }
         return;
       }
       const saved = manager.upsertStore({
