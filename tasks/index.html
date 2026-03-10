@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zadania - HurtDetal Uszefa QUALITET</title>
+  <script>
+    (function(){
+      var path = window.location.pathname;
+      var match = path.match(/\/tasks\/([^/?#]+)/);
+      var taskId = match ? match[1] : '';
+      var search = window.location.search;
+      var params = new URLSearchParams(search);
+      if(taskId){
+        params.set('id', taskId);
+      }
+      var newUrl = (window.location.origin || '') + '/tasks.html' + (params.toString() ? '?' + params.toString() : '');
+      window.location.replace(newUrl);
+    })();
+  </script>
+</head>
+<body></body>
+</html>

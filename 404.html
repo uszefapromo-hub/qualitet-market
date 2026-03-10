@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Przekierowanie - HurtDetal Uszefa QUALITET</title>
+  <script>
+    (function(){
+      var path = window.location.pathname;
+      var search = window.location.search;
+      var params = new URLSearchParams(search);
+
+      var tasksMatch = path.match(/\/tasks\/([^/?#]+)/);
+      if(tasksMatch){
+        params.set('id', tasksMatch[1]);
+        window.location.replace(
+          window.location.origin + '/tasks.html' +
+          (params.toString() ? '?' + params.toString() : '')
+        );
+        return;
+      }
+
+      if(path.replace(/\/$/, '') === '/tasks'){
+        window.location.replace(
+          window.location.origin + '/tasks.html' +
+          (search || '')
+        );
+        return;
+      }
+
+      window.location.replace(window.location.origin + '/index.html');
+    })();
+  </script>
+</head>
+<body></body>
+</html>
