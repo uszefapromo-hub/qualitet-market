@@ -2013,10 +2013,11 @@
     if(!localStorage.getItem(OWNER_STORAGE_KEYS.activeStore) && stores.length){
       localStorage.setItem(OWNER_STORAGE_KEYS.activeStore, stores[0].id);
     }
-    const products = ensureSeedList(OWNER_STORAGE_KEYS.products, buildProductsFromSuppliers(suppliers));
+    const allSupplierProducts = buildProductsFromSuppliers(suppliers);
+    const products = ensureSeedList(OWNER_STORAGE_KEYS.products, allSupplierProducts);
     const productsBySupplier = ensureSeedList(
       PRICING_STORAGE_KEYS.productsBySupplier,
-      buildProductsByStore(stores)
+      allSupplierProducts.map(p => ({...p, storeId: (stores[0] && stores[0].id) || p.storeId}))
     );
     const users = ensureSeedList(OWNER_STORAGE_KEYS.users, seedUsers);
     const leads = ensureSeedList(OWNER_STORAGE_KEYS.leads, seedLeads);
@@ -3927,7 +3928,8 @@
     if(!storeProducts.length && activeStore && Array.isArray(activeStore.products)){
       storeProducts = activeStore.products.map(product => ({...product, storeId: activeStore.id}));
     }
-    if(!storeProducts.length){
+    const storeCategoryCount = new Set(storeProducts.map(p => p.category)).size;
+    if(!storeProducts.length || storeCategoryCount < 5){
       if(!storefrontFallbackProducts){
         const fallbackSuppliers = ensureOwnerDemoData().suppliers;
         storefrontFallbackProducts = buildProductsFromSuppliers(fallbackSuppliers);
