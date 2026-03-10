@@ -451,103 +451,118 @@
   }
 
   function initPromoMotion(){
-    const gallery = document.querySelector('[data-promo-motion]');
-    if(!gallery){
+    const galleries = Array.from(document.querySelectorAll('[data-promo-motion]'));
+    if(!galleries.length){
       return;
     }
-    const toggle = gallery.querySelector('[data-promo-motion-toggle]');
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let idleTimeout = null;
-    let manualPaused = false;
-    let autoPaused = false;
+    const controllers = [];
 
-    const setPaused = isPaused => {
-      gallery.classList.toggle('is-paused', isPaused);
-      if(isPaused && idleTimeout){
-        clearTimeout(idleTimeout);
-        idleTimeout = null;
-      }
-      if(toggle){
-        toggle.setAttribute('aria-pressed', isPaused ? 'true' : 'false');
-        toggle.textContent = isPaused ? 'Wznów animację' : 'Zatrzymaj animację';
-      }
-    };
+    galleries.forEach(gallery => {
+      const toggle = gallery.querySelector('[data-promo-motion-toggle]');
+      let idleTimeout = null;
+      let manualPaused = false;
+      let autoPaused = false;
 
-    const scheduleIdlePause = () => {
-      if(prefersReducedMotion || gallery.classList.contains('is-paused')){
-        return;
-      }
-      if(idleTimeout){
-        clearTimeout(idleTimeout);
-      }
-      idleTimeout = window.setTimeout(() => setPaused(true), PROMO_MOTION_IDLE_MS);
-    };
-
-    if(prefersReducedMotion){
-      if(toggle){
-        toggle.disabled = true;
-        toggle.textContent = 'Animacja wyłączona';
-        toggle.setAttribute('aria-pressed', 'true');
-      }
-      gallery.classList.add('is-paused');
-      return;
-    }
-
-    scheduleIdlePause();
-
-    if(toggle){
-      toggle.addEventListener('click', () => {
-        const isPaused = gallery.classList.contains('is-paused');
-        const shouldPause = !isPaused;
-        manualPaused = shouldPause;
-        if(shouldPause){
-          autoPaused = false;
+      const setPaused = isPaused => {
+        gallery.classList.toggle('is-paused', isPaused);
+        if(isPaused && idleTimeout){
+          clearTimeout(idleTimeout);
+          idleTimeout = null;
         }
-        setPaused(shouldPause);
-        if(!shouldPause){
-          scheduleIdlePause();
+        if(toggle){
+          toggle.setAttribute('aria-pressed', isPaused ? 'true' : 'false');
+          toggle.textContent = isPaused ? 'Wznów animację' : 'Zatrzymaj animację';
         }
-      });
-    }
+      };
 
-    if('IntersectionObserver' in window){
-      const observer = new IntersectionObserver(entries => {
-        entries.forEach(entry => {
-          if(entry.isIntersecting){
-            if(autoPaused){
-              autoPaused = false;
-              if(!manualPaused){
-                setPaused(false);
-                scheduleIdlePause();
-              }
-            }
-          } else if(!autoPaused){
+      const scheduleIdlePause = () => {
+        if(prefersReducedMotion || gallery.classList.contains('is-paused')){
+          return;
+        }
+        if(idleTimeout){
+          clearTimeout(idleTimeout);
+        }
+        idleTimeout = window.setTimeout(() => setPaused(true), PROMO_MOTION_IDLE_MS);
+      };
+
+      const handleVisibilityChange = isHidden => {
+        if(isHidden){
+          if(!autoPaused && !manualPaused){
             autoPaused = true;
             setPaused(true);
           }
-        });
-      }, {threshold: 0.35});
-      observer.observe(gallery);
-    }
-
-    ['mouseenter', 'focusin', 'pointerdown'].forEach(eventName => {
-      gallery.addEventListener(eventName, scheduleIdlePause);
-    });
-
-    document.addEventListener('visibilitychange', () => {
-      if(document.hidden){
-        if(!autoPaused){
-          autoPaused = true;
-          setPaused(true);
+          return;
         }
-      } else if(autoPaused){
-        autoPaused = false;
-        if(!manualPaused){
-          setPaused(false);
-          scheduleIdlePause();
+        if(autoPaused){
+          autoPaused = false;
+          if(!manualPaused){
+            setPaused(false);
+            scheduleIdlePause();
+          }
         }
+      };
+
+      if(prefersReducedMotion){
+        if(toggle){
+          toggle.disabled = true;
+          toggle.textContent = 'Animacja wyłączona';
+          toggle.setAttribute('aria-pressed', 'true');
+        }
+        gallery.classList.add('is-paused');
+        return;
       }
+
+      scheduleIdlePause();
+
+      if(toggle){
+        toggle.addEventListener('click', () => {
+          const isPaused = gallery.classList.contains('is-paused');
+          const shouldPause = !isPaused;
+          manualPaused = shouldPause;
+          if(shouldPause){
+            autoPaused = false;
+          }
+          setPaused(shouldPause);
+          if(!shouldPause){
+            scheduleIdlePause();
+          }
+        });
+      }
+
+      if('IntersectionObserver' in window){
+        const observer = new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            if(entry.isIntersecting){
+              if(autoPaused){
+                autoPaused = false;
+                if(!manualPaused){
+                  setPaused(false);
+                  scheduleIdlePause();
+                }
+              }
+            } else if(!autoPaused && !manualPaused){
+              autoPaused = true;
+              setPaused(true);
+            }
+          });
+        }, {threshold: 0.35});
+        observer.observe(gallery);
+      }
+
+      ['mouseenter', 'focusin', 'pointerdown'].forEach(eventName => {
+        gallery.addEventListener(eventName, scheduleIdlePause);
+      });
+
+      controllers.push({handleVisibilityChange});
     });
+
+    if(controllers.length){
+      document.addEventListener('visibilitychange', () => {
+        const isHidden = document.hidden;
+        controllers.forEach(controller => controller.handleVisibilityChange(isHidden));
+      });
+    }
   }
 
   function initActivityToasts(){
