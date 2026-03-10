@@ -1,0 +1,7 @@
+<svg width="220" height="120" viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg">
+  <rect width="220" height="120" rx="22" fill="#2a1c14"/>
+  <rect x="40" y="58" width="50" height="20" rx="10" fill="#ffb36b"/>
+  <circle cx="52" cy="88" r="10" fill="#ffb36b"/>
+  <circle cx="78" cy="88" r="10" fill="#ffb36b"/>
+  <text x="102" y="70" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#ffffff" font-weight="700">AutoFleet</text>
+</svg>
