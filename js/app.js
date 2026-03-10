@@ -39,7 +39,6 @@
   let activityToastIntervalId = null;
   let upgradeModal = null;
   let upgradeModalInitialized = false;
-  const TRIAL_RULES = [];
   const DEFAULT_TRIAL_DAYS = 7;
   const PLAN_LEVELS = {
     trial: 0,
@@ -507,7 +506,7 @@
   }
 
   function startTrialIfNeeded(email){
-    const existingPlan = (localStorage.getItem(STORAGE_KEYS.plan) || '').toLowerCase();
+    const existingPlan = normalizePlan(localStorage.getItem(STORAGE_KEYS.plan));
     if(existingPlan && existingPlan !== 'trial'){
       return;
     }
@@ -537,12 +536,7 @@
       localStorage.setItem(STORAGE_KEYS.usersList, JSON.stringify(users));
     }
 
-    let trialDays = DEFAULT_TRIAL_DAYS;
-    const rule = TRIAL_RULES.find(entry => currentCount <= entry.limit);
-    if(rule){
-      trialDays = rule.days;
-    }
-    localStorage.setItem(STORAGE_KEYS.trialDays, `${trialDays}`);
+    localStorage.setItem(STORAGE_KEYS.trialDays, `${DEFAULT_TRIAL_DAYS}`);
     localStorage.setItem(STORAGE_KEYS.trialStart, new Date().toISOString());
     localStorage.setItem(STORAGE_KEYS.plan, 'trial');
   }
@@ -660,7 +654,7 @@
     }
     const trialLabel = document.querySelector('[data-trial-label]');
     if(trialLabel){
-      trialLabel.textContent = currentPlan === 'trial' ? getTrialLabel(remaining) : 'brak trialu';
+      trialLabel.textContent = currentPlan === 'trial' ? getTrialLabel(remaining) : 'Brak trialu';
     }
     const planTarget = document.querySelector('[data-user-plan]');
     if(planTarget){
@@ -857,7 +851,7 @@
       return;
     }
     initUpgradeModal();
-    const planLabel = formatPlanLabel(requiredPlan).toUpperCase();
+    const planLabel = formatPlanLabel(requiredPlan);
     const titleTarget = modal.querySelector('[data-upgrade-plan]');
     if(titleTarget){
       titleTarget.textContent = planLabel;
