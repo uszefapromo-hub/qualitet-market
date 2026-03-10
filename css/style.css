@@ -439,13 +439,111 @@ a{color:#fff;text-decoration:none}
 .is-locked{opacity:.6;cursor:not-allowed}
 body.page-locked main{filter:blur(2px);opacity:.4;pointer-events:none}
 body.modal-open{overflow:hidden}
+.owner-metrics{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.owner-plan-grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.action-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.action-card{
+  padding:16px;
+  border-radius:18px;
+  border:1px solid var(--stroke);
+  background:rgba(255,255,255,.06);
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-weight:700;
+  color:#fff;
+}
+.action-card span{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:1px}
+.list-card{
+  padding:14px 16px;
+  border-radius:18px;
+  border:1px solid var(--stroke);
+  background:rgba(255,255,255,.06);
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.list-card small{color:var(--muted)}
+.status-pill.is-hot{background:rgba(255,79,216,.18);border-color:rgba(255,79,216,.5);color:#ffd6f3}
+.status-pill.is-warm{background:rgba(255,216,77,.18);border-color:rgba(255,216,77,.5);color:#fff1b6}
+.status-pill.is-cold{background:rgba(56,217,255,.18);border-color:rgba(56,217,255,.45);color:#d8f6ff}
+.chart-card{display:flex;flex-direction:column;gap:16px}
+.chart-rows{display:grid;gap:12px}
+.chart-row{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--muted);font-size:12px}
+.chart-bar{position:relative;height:10px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+.chart-bar span{
+  display:block;
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(135deg,rgba(53,217,255,.65),rgba(84,255,176,.85));
+  width:var(--value,50%);
+}
+.supplier-layout{display:grid;grid-template-columns:2fr 1fr;gap:18px}
+.filter-row{display:grid;grid-template-columns:1fr 220px 200px;gap:12px;align-items:end;margin:18px 0}
+.filter-field label{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.filter-field input,.filter-field select{
+  width:100%;
+  height:44px;
+  border-radius:12px;
+  border:1px solid var(--stroke);
+  background:rgba(255,255,255,.08);
+  color:#fff;
+  padding:0 12px;
+}
+.product-meta{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.product-input{display:flex;flex-direction:column;gap:6px;font-weight:700}
+.product-input input{
+  height:40px;
+  border-radius:12px;
+  border:1px solid var(--stroke);
+  background:rgba(255,255,255,.08);
+  color:#fff;
+  padding:0 12px;
+}
+.price-stack{display:flex;flex-direction:column;gap:4px}
+.price-stack span{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:1px}
+.price-stack strong{font-size:22px}
+.product-actions{display:flex;flex-wrap:wrap;gap:10px}
+.tag{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 10px;
+  border-radius:999px;
+  border:1px solid var(--stroke);
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:1px;
+  color:var(--muted);
+}
+.supplier-card.is-active{border-color:rgba(84,255,176,.6);box-shadow:0 0 0 2px rgba(84,255,176,.2)}
+.calculator-grid{display:grid;gap:12px;margin-top:14px}
+.calculator-item{
+  padding:12px 14px;
+  border-radius:16px;
+  border:1px solid var(--stroke);
+  background:rgba(255,255,255,.06);
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.calculator-item input{
+  height:42px;
+  border-radius:12px;
+  border:1px solid var(--stroke);
+  background:rgba(255,255,255,.08);
+  color:#fff;
+  padding:0 12px;
+}
+.supplier-meta{display:flex;align-items:center;gap:12px}
+.supplier-meta img{width:52px;height:52px;border-radius:18px;background:#fff}
 @media (prefers-reduced-motion: reduce){
   .helper-card{transform:none;transition:none}
   .promo-value{transition:none}
   .activity-toast{transform:none;transition:none}
 }
 @media (max-width: 980px){
-  .hero-grid,.section-grid,.dashboard-grid,.form-grid,.pricing-grid,.supplier-grid,.products-grid,.footer-grid,.stats-grid,.marketplace-block,.promo-grid,.helper-grid,.store-summary-grid,.plan-status-grid,.style-options,.activity-grid,.results-grid{grid-template-columns:1fr}
+  .hero-grid,.section-grid,.dashboard-grid,.form-grid,.pricing-grid,.supplier-grid,.products-grid,.footer-grid,.stats-grid,.marketplace-block,.promo-grid,.helper-grid,.store-summary-grid,.plan-status-grid,.style-options,.activity-grid,.results-grid,.supplier-layout,.action-grid,.filter-row{grid-template-columns:1fr}
   .survey-card{flex-direction:column;align-items:flex-start}
   .activity-banner{flex-direction:column;align-items:flex-start}
   .activity-remaining{align-items:flex-start;text-align:left}

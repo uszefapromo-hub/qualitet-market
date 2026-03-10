@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Panel właściciela - HurtDetal Uszefa QUALITET</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="owner-panel" class="dashboard-page owner-page">
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>UszefaQualitet</strong>
+          <span>QualitetMarket</span>
+          <span class="brand-tag">U SZEFA</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Główna nawigacja">
+        <a href="index.html">Start</a>
+        <a href="owner-panel.html">Panel właściciela</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="cennik.html">Cennik</a>
+      </nav>
+      <a class="btn btn-primary topbar-cta" href="dashboard.html">Panel użytkownika</a>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <div class="dashboard-shell owner-shell">
+    <aside class="sidebar">
+      <nav class="sidebar-nav" aria-label="Menu właściciela">
+        <a class="active" href="owner-panel.html">Panel właściciela</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="panel-sklepu.html">Panel sklepu</a>
+        <a href="generator-sklepu.html">Generator sklepu</a>
+        <a href="hurtownie.html">Hurtownie</a>
+        <a href="crm.html">Leady i CRM</a>
+        <a href="cennik.html">Plany i subskrypcje</a>
+        <a href="index.html">Landing</a>
+      </nav>
+    </aside>
+
+    <main class="dashboard-main">
+      <section class="panel-card dashboard-welcome">
+        <span class="eyebrow">Centrum dowodzenia</span>
+        <h1>Panel właściciela</h1>
+        <p class="hint">W jednym miejscu monitorujesz wszystkie sklepy, hurtownie i subskrypcje.</p>
+        <div class="dashboard-meta">
+          <div>
+            <span>Alerty systemowe</span>
+            <strong>Brak krytycznych zdarzeń</strong>
+          </div>
+          <div>
+            <span>Synchronizacja</span>
+            <strong>Aktualizacja 5 min temu</strong>
+          </div>
+          <div>
+            <span>Operacje dziś</span>
+            <strong>+18 importów</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats-grid owner-metrics">
+        <div class="stat-card">
+          <span>Użytkownicy</span>
+          <strong data-counter data-counter-format="grouped" data-owner-users>0</strong>
+        </div>
+        <div class="stat-card">
+          <span>Sklepy</span>
+          <strong data-counter data-counter-format="grouped" data-owner-stores>0</strong>
+        </div>
+        <div class="stat-card">
+          <span>Produkty</span>
+          <strong data-counter data-counter-format="grouped" data-owner-products>0</strong>
+        </div>
+        <div class="stat-card">
+          <span>Leady</span>
+          <strong data-counter data-counter-format="grouped" data-owner-leads>0</strong>
+        </div>
+        <div class="stat-card">
+          <span>Przychód (mock)</span>
+          <strong data-counter data-counter-format="currency" data-owner-revenue>0</strong>
+        </div>
+        <div class="stat-card">
+          <span>Sprzedaż (mock)</span>
+          <strong data-counter data-counter-format="grouped" data-owner-sales>0</strong>
+        </div>
+      </section>
+
+      <section class="panel-card">
+        <div class="section-head">
+          <span class="eyebrow">Subskrypcje</span>
+          <h2>Aktywne plany</h2>
+          <p class="hint">Podział aktywnych subskrypcji według planów.</p>
+        </div>
+        <div class="stats-grid owner-plan-grid">
+          <div class="stat-card">
+            <span>Basic</span>
+            <strong data-counter data-counter-format="grouped" data-owner-plan-basic>0</strong>
+          </div>
+          <div class="stat-card">
+            <span>Pro</span>
+            <strong data-counter data-counter-format="grouped" data-owner-plan-pro>0</strong>
+          </div>
+          <div class="stat-card">
+            <span>Elite</span>
+            <strong data-counter data-counter-format="grouped" data-owner-plan-elite>0</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="panel-card chart-card">
+          <div class="section-head">
+            <span class="eyebrow">Rozkład planów</span>
+            <h2>Wykres subskrypcji</h2>
+          </div>
+          <div class="chart-rows">
+            <div class="chart-row">
+              <span>Basic</span>
+              <span data-plan-chart-value="basic">0 (0%)</span>
+            </div>
+            <div class="chart-bar"><span data-plan-chart-bar="basic"></span></div>
+            <div class="chart-row">
+              <span>Pro</span>
+              <span data-plan-chart-value="pro">0 (0%)</span>
+            </div>
+            <div class="chart-bar"><span data-plan-chart-bar="pro"></span></div>
+            <div class="chart-row">
+              <span>Elite</span>
+              <span data-plan-chart-value="elite">0 (0%)</span>
+            </div>
+            <div class="chart-bar"><span data-plan-chart-bar="elite"></span></div>
+          </div>
+        </article>
+
+        <article class="panel-card chart-card">
+          <div class="section-head">
+            <span class="eyebrow">Leady</span>
+            <h2>Temperatura leadów</h2>
+          </div>
+          <div class="chart-rows">
+            <div class="chart-row">
+              <span>Gorące</span>
+              <span data-lead-chart-value="hot">0 (0%)</span>
+            </div>
+            <div class="chart-bar"><span data-lead-chart-bar="hot"></span></div>
+            <div class="chart-row">
+              <span>Ciepłe</span>
+              <span data-lead-chart-value="warm">0 (0%)</span>
+            </div>
+            <div class="chart-bar"><span data-lead-chart-bar="warm"></span></div>
+            <div class="chart-row">
+              <span>Zimne</span>
+              <span data-lead-chart-value="cold">0 (0%)</span>
+            </div>
+            <div class="chart-bar"><span data-lead-chart-bar="cold"></span></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel-card">
+        <div class="section-head">
+          <span class="eyebrow">Szybkie akcje</span>
+          <h2>Najważniejsze skróty</h2>
+        </div>
+        <div class="action-grid">
+          <a class="action-card" href="hurtownie.html">
+            <span>Hurtownie</span>
+            Dodaj hurtownię
+          </a>
+          <a class="action-card" href="panel-sklepu.html">
+            <span>Sklepy</span>
+            Zarządzaj sklepami
+          </a>
+          <a class="action-card" href="crm.html">
+            <span>Leady</span>
+            Zobacz leady
+          </a>
+          <a class="action-card" href="cennik.html">
+            <span>Plany</span>
+            Zarządzaj planami
+          </a>
+          <a class="action-card" href="index.html">
+            <span>Landing</span>
+            Przejdź do landing
+          </a>
+          <a class="action-card" href="generator-sklepu.html">
+            <span>Generator</span>
+            Przejdź do generatora
+          </a>
+          <a class="action-card" href="dashboard.html">
+            <span>Dashboard</span>
+            Przejdź do dashboardu
+          </a>
+        </div>
+      </section>
+
+      <section class="section-grid">
+        <article class="panel-card">
+          <div class="section-head">
+            <span class="eyebrow">Ostatnie sklepy</span>
+            <h2>Nowe sklepy</h2>
+          </div>
+          <div class="list-cards" data-owner-stores-list></div>
+        </article>
+        <article class="panel-card">
+          <div class="section-head">
+            <span class="eyebrow">Ostatnie zgłoszenia</span>
+            <h2>Nowe leady</h2>
+          </div>
+          <div class="list-cards" data-owner-leads-list></div>
+        </article>
+        <article class="panel-card">
+          <div class="section-head">
+            <span class="eyebrow">Ostatnie produkty</span>
+            <h2>Nowe produkty</h2>
+          </div>
+          <div class="list-cards" data-owner-products-list></div>
+        </article>
+      </section>
+
+      <section class="panel-card">
+        <div class="section-head">
+          <span class="eyebrow">Hurtownie</span>
+          <h2>Aktywne hurtownie</h2>
+          <p class="hint">Najważniejsze źródła produktów w sieci.</p>
+        </div>
+        <div class="list-cards" data-owner-suppliers-list></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/app.js" defer></script>
+</body>
+</html>

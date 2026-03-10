@@ -31,7 +31,7 @@
       <div class="wrap">
         <span class="eyebrow">Moduł PRO</span>
         <h1>Hurtownie</h1>
-        <p class="lead">Monitoruj oferty hurtowe, stany magazynowe i kanały dystrybucji w jednym miejscu.</p>
+        <p class="lead">Wybieraj hurtownie, importuj produkty i ustawiaj marże bez wychodzenia z panelu.</p>
         <div class="cta-row">
           <a class="btn btn-primary" href="cennik.html">Ulepsz plan</a>
           <a class="btn btn-secondary" href="dashboard.html">Wróć do dashboardu</a>
@@ -39,19 +39,107 @@
       </div>
     </section>
 
+    <section class="wrap stats-grid">
+      <div class="stat-card">
+        <span>Hurtownie</span>
+        <strong data-counter data-counter-format="grouped" data-suppliers-count>0</strong>
+      </div>
+      <div class="stat-card">
+        <span>Produkty w katalogu</span>
+        <strong data-counter data-counter-format="grouped" data-products-count>0</strong>
+      </div>
+      <div class="stat-card">
+        <span>Średni koszt zakupu</span>
+        <strong data-counter data-counter-format="currency" data-average-cost>0</strong>
+      </div>
+      <div class="stat-card">
+        <span>Importy dziś</span>
+        <strong data-counter data-counter-format="grouped" data-imports-today>0</strong>
+      </div>
+    </section>
+
     <section class="wrap section-grid">
       <article class="feature-card gradient-a">
         <h2>Agregacja dostawców</h2>
-        <p class="hint">Sprawdzaj dostępność produktów w wielu hurtowniach jednocześnie.</p>
+        <p class="hint">Porównuj oferty hurtowe i dostępność w jednym miejscu.</p>
       </article>
       <article class="feature-card gradient-b">
-        <h2>Alerty cenowe</h2>
-        <p class="hint">Otrzymuj powiadomienia o zmianach cen i nowych promocjach.</p>
+        <h2>Monitorowanie marż</h2>
+        <p class="hint">Ustawiaj marże i natychmiast sprawdzaj cenę końcową.</p>
       </article>
       <article class="feature-card gradient-c">
-        <h2>Automatyczna synchronizacja</h2>
-        <p class="hint">Integracje API pomagają utrzymać aktualne dane w sklepie.</p>
+        <h2>Synchronizacja katalogu</h2>
+        <p class="hint">Dodawaj produkty do sklepu jednym kliknięciem.</p>
       </article>
+    </section>
+
+    <section class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Hurtownie</span>
+        <h2>Lista hurtowni</h2>
+        <p class="hint">Wybierz hurtownię, aby zobaczyć dostępne produkty i ceny zakupu.</p>
+      </div>
+      <div class="supplier-grid" data-suppliers-grid></div>
+      <p class="empty" data-suppliers-empty hidden>Brak dostępnych hurtowni. Dodaj nowe w panelu właściciela.</p>
+    </section>
+
+    <section class="wrap supplier-layout">
+      <article class="panel-card supplier-products">
+        <div class="section-head">
+          <span class="eyebrow">Wybrana hurtownia</span>
+          <h2 data-selected-supplier-name>Wybierz hurtownię</h2>
+          <p class="hint" data-selected-supplier-desc>Po lewej stronie wybierz hurtownię, aby zobaczyć produkty.</p>
+        </div>
+        <div class="filter-row">
+          <div class="filter-field">
+            <label for="product-search">Wyszukiwarka</label>
+            <input id="product-search" type="search" placeholder="Szukaj produktu" data-product-search>
+          </div>
+          <div class="filter-field">
+            <label for="product-category">Kategoria</label>
+            <select id="product-category" data-product-category>
+              <option value="all">Wszystkie</option>
+            </select>
+          </div>
+          <div class="filter-field">
+            <label for="bulk-margin">Marża importu (%)</label>
+            <input id="bulk-margin" type="number" min="0" max="300" step="1" value="25" data-bulk-margin>
+          </div>
+        </div>
+        <div class="cta-row">
+          <button class="btn btn-secondary" type="button" data-import-store>Importuj do sklepu</button>
+          <span class="hint" data-import-status>Wybierz produkty i dodaj je do sklepu.</span>
+        </div>
+        <div class="products-grid" data-products-grid></div>
+        <p class="empty" data-products-empty hidden>Brak produktów spełniających kryteria.</p>
+      </article>
+
+      <aside class="panel-card calculator-card" data-calculator>
+        <span class="eyebrow">Kalkulator marży</span>
+        <h2>Kontrola ceny końcowej</h2>
+        <p class="hint" data-calculator-desc>Wybierz produkt z listy, aby policzyć zysk.</p>
+        <div class="calculator-grid">
+          <div class="calculator-item">
+            <span>Koszt zakupu</span>
+            <strong data-calculator-cost>0 zł</strong>
+          </div>
+          <label class="calculator-item">
+            Marża (%)
+            <input type="number" min="0" max="300" step="1" value="25" data-calculator-margin>
+          </label>
+          <div class="calculator-item">
+            <span>Cena końcowa</span>
+            <strong data-calculator-final>0 zł</strong>
+          </div>
+          <div class="calculator-item">
+            <span>Zysk</span>
+            <strong data-calculator-profit>0 zł</strong>
+          </div>
+        </div>
+        <div class="cta-row">
+          <button class="btn btn-primary" type="button" data-calculator-add>Dodaj do mojego sklepu</button>
+        </div>
+      </aside>
     </section>
   </main>
 

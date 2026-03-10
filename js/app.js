@@ -53,6 +53,15 @@
     pro: 'PRO',
     elite: 'ELITE'
   };
+  const OWNER_STORAGE_KEYS = {
+    users: 'users',
+    stores: 'stores',
+    leads: 'leads',
+    products: 'products',
+    subscriptions: 'subscriptions',
+    suppliers: 'suppliers',
+    activeStore: 'activeStore'
+  };
 
   function bindMenu(){
     const button = document.querySelector('[data-menu-toggle]');
@@ -103,6 +112,25 @@
       formatted = `${formatted} ${suffix}`;
     }
     return formatted;
+  }
+
+  function formatCurrency(value){
+    const numericValue = typeof value === 'number' ? value : Number.parseFloat(value);
+    const safeValue = Number.isNaN(numericValue) ? 0 : numericValue;
+    const locale = document.documentElement.lang || DEFAULT_LOCALE;
+    return `${new Intl.NumberFormat(locale, {maximumFractionDigits: 2}).format(safeValue)} zł`;
+  }
+
+  function formatDate(value){
+    if(!value){
+      return '—';
+    }
+    const date = new Date(value);
+    if(Number.isNaN(date.getTime())){
+      return '—';
+    }
+    const locale = document.documentElement.lang || DEFAULT_LOCALE;
+    return new Intl.DateTimeFormat(locale, {dateStyle: 'medium'}).format(date);
   }
 
   function setCounterValue(el, value){
@@ -452,6 +480,641 @@
     } catch (_error){
       return [];
     }
+  }
+
+  function saveStoredList(key, list){
+    if(!Array.isArray(list)){
+      return;
+    }
+    localStorage.setItem(key, JSON.stringify(list));
+  }
+
+  function ensureSeedList(key, seedList){
+    const existing = getStoredList(key);
+    if(Array.isArray(existing) && existing.length){
+      return existing;
+    }
+    saveStoredList(key, seedList);
+    return seedList;
+  }
+
+  function buildProductsFromSuppliers(suppliers){
+    if(!Array.isArray(suppliers)){
+      return [];
+    }
+    const now = Date.now();
+    let index = 0;
+    return suppliers.flatMap(supplier => {
+      if(!Array.isArray(supplier.products)){
+        return [];
+      }
+      return supplier.products.map(product => {
+        const margin = 30 + (index % 4) * 5;
+        const finalPrice = product.cost * (1 + margin / 100);
+        const createdAt = new Date(now - (index + 1) * MS_PER_DAY).toISOString();
+        const mapped = {
+          id: `catalog_${product.id}`,
+          name: product.name,
+          cost: product.cost,
+          finalPrice: Math.round(finalPrice),
+          margin,
+          supplier: supplier.name,
+          category: product.category,
+          storeId: index % 2 === 0 ? 'store_elektronika' : 'store_moda',
+          createdAt
+        };
+        index += 1;
+        return mapped;
+      });
+    });
+  }
+
+  function ensureOwnerDemoData(){
+    const seedSuppliers = [
+      {
+        id: 'supplier_elektronika',
+        name: 'Elektronika',
+        slug: 'elektronika',
+        category: 'Elektronika',
+        description: 'Premium elektronika użytkowa i akcesoria smart.',
+        logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=E',
+        products: [
+          {
+            id: 'elektro_watch',
+            name: 'Smartwatch Pulsar',
+            cost: 420,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Smartwatch',
+            description: 'Wyświetlacz AMOLED, tryby sportowe, szybkie ładowanie.',
+            supplier: 'Elektronika',
+            category: 'Wearables'
+          },
+          {
+            id: 'elektro_audio',
+            name: 'Słuchawki Quantum',
+            cost: 260,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Audio',
+            description: 'Redukcja szumów, etui premium, 40h pracy.',
+            supplier: 'Elektronika',
+            category: 'Audio'
+          },
+          {
+            id: 'elektro_cam',
+            name: 'Kamera Auri',
+            cost: 610,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Kamera',
+            description: 'Kamera 4K do monitoringu i vlogowania.',
+            supplier: 'Elektronika',
+            category: 'Foto'
+          }
+        ]
+      },
+      {
+        id: 'supplier_dom',
+        name: 'Dom i ogród',
+        slug: 'dom-i-ogrod',
+        category: 'Dom i ogród',
+        description: 'Nowoczesne wyposażenie domu i strefy outdoor.',
+        logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=D',
+        products: [
+          {
+            id: 'home_lamp',
+            name: 'Lampa Halo',
+            cost: 190,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Lampa',
+            description: 'Regulowane światło, sterowanie aplikacją.',
+            supplier: 'Dom i ogród',
+            category: 'Oświetlenie'
+          },
+          {
+            id: 'home_garden',
+            name: 'Zestaw ogrodowy Leaf',
+            cost: 520,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Ogród',
+            description: 'Aluminiowe meble, odporność na warunki.',
+            supplier: 'Dom i ogród',
+            category: 'Ogród'
+          },
+          {
+            id: 'home_robot',
+            name: 'Robot sprzątający Orbit',
+            cost: 840,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Robot',
+            description: 'Mapowanie 3D, automatyczne mopowanie.',
+            supplier: 'Dom i ogród',
+            category: 'AGD'
+          }
+        ]
+      },
+      {
+        id: 'supplier_moda',
+        name: 'Moda',
+        slug: 'moda',
+        category: 'Moda',
+        description: 'Nowe kolekcje street i premium fashion.',
+        logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=M',
+        products: [
+          {
+            id: 'fashion_jacket',
+            name: 'Kurtka Nova',
+            cost: 210,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Kurtka',
+            description: 'Wodoodporna, lekka, w zestawie torba.',
+            supplier: 'Moda',
+            category: 'Odzież'
+          },
+          {
+            id: 'fashion_sneakers',
+            name: 'Sneakers Lumen',
+            cost: 240,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Sneakers',
+            description: 'Limitowana edycja, wkładka gel.',
+            supplier: 'Moda',
+            category: 'Obuwie'
+          },
+          {
+            id: 'fashion_bag',
+            name: 'Torba City',
+            cost: 120,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Torba',
+            description: 'Skóra ekologiczna, trzy komory.',
+            supplier: 'Moda',
+            category: 'Akcesoria'
+          }
+        ]
+      },
+      {
+        id: 'supplier_kids',
+        name: 'Dziecko',
+        slug: 'dziecko',
+        category: 'Dziecko',
+        description: 'Produkty wspierające rozwój i bezpieczeństwo dzieci.',
+        logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=K',
+        products: [
+          {
+            id: 'kids_stroller',
+            name: 'Wózek Comet',
+            cost: 980,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Wózek',
+            description: 'Ultralekki stelaż, amortyzacja premium.',
+            supplier: 'Dziecko',
+            category: 'Wózki'
+          },
+          {
+            id: 'kids_blocks',
+            name: 'Klocki Cosmo',
+            cost: 140,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Klocki',
+            description: 'Zestaw kreatywny, 250 elementów.',
+            supplier: 'Dziecko',
+            category: 'Zabawki'
+          },
+          {
+            id: 'kids_monitor',
+            name: 'Niania Halo',
+            cost: 360,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Niania',
+            description: 'Kamera nocna, czujnik temperatury.',
+            supplier: 'Dziecko',
+            category: 'Elektronika'
+          }
+        ]
+      },
+      {
+        id: 'supplier_auto',
+        name: 'Auto',
+        slug: 'auto',
+        category: 'Auto',
+        description: 'Akcesoria samochodowe i wyposażenie premium.',
+        logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=A',
+        products: [
+          {
+            id: 'auto_cam',
+            name: 'Wideorejestrator Drive',
+            cost: 320,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Auto+Cam',
+            description: 'Nagrywanie 4K, tryb parkingowy.',
+            supplier: 'Auto',
+            category: 'Elektronika'
+          },
+          {
+            id: 'auto_detail',
+            name: 'Zestaw detailingowy',
+            cost: 180,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Detailing',
+            description: 'Kosmetyki premium, mikrofibry.',
+            supplier: 'Auto',
+            category: 'Kosmetyki'
+          },
+          {
+            id: 'auto_holder',
+            name: 'Uchwyt Gravity',
+            cost: 90,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Uchwyt',
+            description: 'Automatyczny zacisk, ładowanie Qi.',
+            supplier: 'Auto',
+            category: 'Akcesoria'
+          }
+        ]
+      },
+      {
+        id: 'supplier_beauty',
+        name: 'Beauty',
+        slug: 'beauty',
+        category: 'Beauty',
+        description: 'Kosmetyki i urządzenia beauty w segmencie premium.',
+        logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=B',
+        products: [
+          {
+            id: 'beauty_serum',
+            name: 'Serum Glow',
+            cost: 150,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Serum',
+            description: 'Witamina C, efekt rozświetlenia.',
+            supplier: 'Beauty',
+            category: 'Pielęgnacja'
+          },
+          {
+            id: 'beauty_dryer',
+            name: 'Suszarka Aura',
+            cost: 310,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Suszarka',
+            description: 'Jonizacja, tryb pielęgnacyjny.',
+            supplier: 'Beauty',
+            category: 'Sprzęt'
+          },
+          {
+            id: 'beauty_spa',
+            name: 'Zestaw SPA',
+            cost: 120,
+            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=SPA',
+            description: 'Świece, olejki, maski regenerujące.',
+            supplier: 'Beauty',
+            category: 'Relaks'
+          }
+        ]
+      }
+    ];
+
+    const seedStores = [
+      {
+        id: 'store_elektronika',
+        name: 'Qualitet Elektronika',
+        slug: 'qualitet-elektronika',
+        description: 'Sklep z elektroniką premium dla wymagających.',
+        logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=QE',
+        email: 'elektronika@uszefaqualitet.pl',
+        phone: '+48 690 220 111',
+        delivery: 'Wysyłka 24h',
+        primaryColor: '#35d9ff',
+        accentColor: '#54ffb0',
+        backgroundColor: '#0f1837',
+        theme: 'modern',
+        margin: 22,
+        plan: 'pro',
+        trial: false,
+        products: [
+          {
+            id: 'elektro_watch',
+            name: 'Smartwatch Pulsar',
+            cost: 420,
+            margin: 28,
+            finalPrice: 538,
+            supplier: 'Elektronika'
+          },
+          {
+            id: 'elektro_audio',
+            name: 'Słuchawki Quantum',
+            cost: 260,
+            margin: 32,
+            finalPrice: 343,
+            supplier: 'Elektronika'
+          }
+        ],
+        createdAt: '2026-02-12T09:18:00Z'
+      },
+      {
+        id: 'store_moda',
+        name: 'Qualitet Moda',
+        slug: 'qualitet-moda',
+        description: 'Trendy streetwear i kolekcje premium.',
+        logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=QM',
+        email: 'moda@uszefaqualitet.pl',
+        phone: '+48 690 220 222',
+        delivery: 'Wysyłka 48h',
+        primaryColor: '#ff4fd8',
+        accentColor: '#ffd84d',
+        backgroundColor: '#0f1837',
+        theme: 'royal',
+        margin: 30,
+        plan: 'elite',
+        trial: false,
+        products: [
+          {
+            id: 'fashion_jacket',
+            name: 'Kurtka Nova',
+            cost: 210,
+            margin: 40,
+            finalPrice: 294,
+            supplier: 'Moda'
+          }
+        ],
+        createdAt: '2026-02-19T13:05:00Z'
+      },
+      {
+        id: 'store_dom',
+        name: 'Dom & Lifestyle',
+        slug: 'dom-lifestyle',
+        description: 'Nowoczesne produkty do domu i ogrodu.',
+        logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=DL',
+        email: 'dom@uszefaqualitet.pl',
+        phone: '+48 690 220 333',
+        delivery: 'Wysyłka 72h',
+        primaryColor: '#9e77ff',
+        accentColor: '#5fff9d',
+        backgroundColor: '#0f1837',
+        theme: 'clean',
+        margin: 25,
+        plan: 'basic',
+        trial: true,
+        products: [],
+        createdAt: '2026-02-24T08:22:00Z'
+      }
+    ];
+
+    const seedUsers = [
+      {
+        id: 'user_anna',
+        name: 'Anna Nowak',
+        email: 'anna@uszefaqualitet.pl',
+        plan: 'pro',
+        createdAt: '2026-02-08T07:40:00Z'
+      },
+      {
+        id: 'user_marek',
+        name: 'Marek Kowalski',
+        email: 'marek@uszefaqualitet.pl',
+        plan: 'basic',
+        createdAt: '2026-02-11T11:20:00Z'
+      },
+      {
+        id: 'user_ola',
+        name: 'Ola Zielińska',
+        email: 'ola@uszefaqualitet.pl',
+        plan: 'elite',
+        createdAt: '2026-02-15T14:10:00Z'
+      },
+      {
+        id: 'user_tomasz',
+        name: 'Tomasz Kaczmarek',
+        email: 'tomasz@uszefaqualitet.pl',
+        plan: 'pro',
+        createdAt: '2026-02-21T09:55:00Z'
+      },
+      {
+        id: 'user_klaudia',
+        name: 'Klaudia Nowicka',
+        email: 'klaudia@uszefaqualitet.pl',
+        plan: 'basic',
+        createdAt: '2026-02-25T16:05:00Z'
+      }
+    ];
+
+    const seedLeads = [
+      {
+        id: 'lead_anna',
+        name: 'Anna Grochowska',
+        email: 'anna.g@firma.pl',
+        source: 'Landing',
+        status: 'hot',
+        createdAt: '2026-02-26T08:15:00Z'
+      },
+      {
+        id: 'lead_tomasz',
+        name: 'Tomasz K.',
+        email: 'tomek@handel.pl',
+        source: 'Webinar',
+        status: 'warm',
+        createdAt: '2026-02-27T12:40:00Z'
+      },
+      {
+        id: 'lead_kinga',
+        name: 'Kinga Brzoza',
+        email: 'kinga@atelier.pl',
+        source: 'Facebook',
+        status: 'cold',
+        createdAt: '2026-02-28T14:05:00Z'
+      },
+      {
+        id: 'lead_daniel',
+        name: 'Daniel P.',
+        email: 'daniel@startup.pl',
+        source: 'Polecenie',
+        status: 'warm',
+        createdAt: '2026-03-01T10:30:00Z'
+      }
+    ];
+
+    const seedSubscriptions = [
+      {
+        id: 'sub_anna',
+        userId: 'user_anna',
+        plan: 'pro',
+        status: 'active',
+        amount: 79,
+        createdAt: '2026-02-09T08:00:00Z'
+      },
+      {
+        id: 'sub_marek',
+        userId: 'user_marek',
+        plan: 'basic',
+        status: 'active',
+        amount: 29,
+        createdAt: '2026-02-12T12:10:00Z'
+      },
+      {
+        id: 'sub_ola',
+        userId: 'user_ola',
+        plan: 'elite',
+        status: 'active',
+        amount: 199,
+        createdAt: '2026-02-16T14:40:00Z'
+      },
+      {
+        id: 'sub_tomasz',
+        userId: 'user_tomasz',
+        plan: 'pro',
+        status: 'active',
+        amount: 79,
+        createdAt: '2026-02-21T10:10:00Z'
+      },
+      {
+        id: 'sub_klaudia',
+        userId: 'user_klaudia',
+        plan: 'basic',
+        status: 'trial',
+        amount: 0,
+        createdAt: '2026-02-26T17:20:00Z'
+      }
+    ];
+
+    const suppliers = ensureSeedList(OWNER_STORAGE_KEYS.suppliers, seedSuppliers);
+    const stores = ensureSeedList(OWNER_STORAGE_KEYS.stores, seedStores);
+    if(!localStorage.getItem(OWNER_STORAGE_KEYS.activeStore) && stores.length){
+      localStorage.setItem(OWNER_STORAGE_KEYS.activeStore, stores[0].id);
+    }
+    const products = ensureSeedList(OWNER_STORAGE_KEYS.products, buildProductsFromSuppliers(suppliers));
+    const users = ensureSeedList(OWNER_STORAGE_KEYS.users, seedUsers);
+    const leads = ensureSeedList(OWNER_STORAGE_KEYS.leads, seedLeads);
+    const subscriptions = ensureSeedList(OWNER_STORAGE_KEYS.subscriptions, seedSubscriptions);
+
+    return {
+      users,
+      stores,
+      leads,
+      products,
+      subscriptions,
+      suppliers
+    };
+  }
+
+  function getActiveStore(stores){
+    if(!Array.isArray(stores) || !stores.length){
+      return null;
+    }
+    const activeId = localStorage.getItem(OWNER_STORAGE_KEYS.activeStore);
+    let activeStore = stores.find(store => store.id === activeId);
+    if(!activeStore){
+      activeStore = stores[stores.length - 1];
+      localStorage.setItem(OWNER_STORAGE_KEYS.activeStore, activeStore.id);
+    }
+    return activeStore;
+  }
+
+  function createFallbackStore(){
+    return {
+      id: `store_${Date.now().toString(36)}`,
+      name: 'Mój sklep',
+      slug: 'moj-sklep',
+      description: 'Sklep uruchomiony automatycznie po imporcie produktów.',
+      logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=MS',
+      email: 'kontakt@twojsklep.pl',
+      phone: '+48 500 000 000',
+      delivery: 'Wysyłka 24h',
+      primaryColor: '#35d9ff',
+      accentColor: '#54ffb0',
+      backgroundColor: '#0f1837',
+      theme: 'modern',
+      margin: 25,
+      plan: 'basic',
+      trial: true,
+      products: [],
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  function ensureStoresList(){
+    const stores = getStoredList(OWNER_STORAGE_KEYS.stores);
+    if(Array.isArray(stores) && stores.length){
+      return stores;
+    }
+    const fallback = createFallbackStore();
+    saveStoredList(OWNER_STORAGE_KEYS.stores, [fallback]);
+    localStorage.setItem(OWNER_STORAGE_KEYS.activeStore, fallback.id);
+    return [fallback];
+  }
+
+  function normalizeMarginValue(value, fallback = 0){
+    const parsed = Number.parseFloat(value);
+    if(Number.isNaN(parsed)){
+      return fallback;
+    }
+    return Math.max(0, parsed);
+  }
+
+  function calculatePricing(cost, margin){
+    const safeCost = Number.parseFloat(cost);
+    const resolvedCost = Number.isNaN(safeCost) ? 0 : safeCost;
+    const resolvedMargin = normalizeMarginValue(margin, 0);
+    const finalPrice = resolvedCost * (1 + resolvedMargin / 100);
+    const profit = finalPrice - resolvedCost;
+    return {
+      cost: resolvedCost,
+      margin: resolvedMargin,
+      finalPrice: Math.round(finalPrice * 100) / 100,
+      profit: Math.round(profit * 100) / 100
+    };
+  }
+
+  function addProductToStore(product, margin){
+    if(!product){
+      return null;
+    }
+    const stores = ensureStoresList();
+    let activeStore = getActiveStore(stores);
+    if(!activeStore){
+      const fallback = createFallbackStore();
+      stores.push(fallback);
+      localStorage.setItem(OWNER_STORAGE_KEYS.activeStore, fallback.id);
+      activeStore = fallback;
+    }
+    const storeIndex = stores.findIndex(store => store.id === activeStore.id);
+    const existingProducts = Array.isArray(activeStore.products) ? [...activeStore.products] : [];
+    const pricing = calculatePricing(product.cost, margin);
+    const entry = {
+      id: product.id,
+      name: product.name,
+      cost: pricing.cost,
+      margin: pricing.margin,
+      finalPrice: pricing.finalPrice,
+      profit: pricing.profit,
+      supplier: product.supplier,
+      category: product.category,
+      image: product.image,
+      description: product.description,
+      addedAt: new Date().toISOString()
+    };
+    const existingIndex = existingProducts.findIndex(item => item.id === entry.id && item.supplier === entry.supplier);
+    if(existingIndex >= 0){
+      existingProducts[existingIndex] = {
+        ...existingProducts[existingIndex],
+        ...entry
+      };
+    } else {
+      existingProducts.push(entry);
+    }
+    const updatedStore = {
+      ...activeStore,
+      products: existingProducts,
+      updatedAt: new Date().toISOString()
+    };
+    if(storeIndex >= 0){
+      stores[storeIndex] = updatedStore;
+    } else {
+      stores.push(updatedStore);
+    }
+    saveStoredList(OWNER_STORAGE_KEYS.stores, stores);
+
+    const catalog = getStoredList(OWNER_STORAGE_KEYS.products) || [];
+    const catalogEntry = {
+      ...entry,
+      storeId: updatedStore.id,
+      createdAt: new Date().toISOString()
+    };
+    const catalogIndex = catalog.findIndex(item => item.id === entry.id && item.storeId === updatedStore.id);
+    if(catalogIndex >= 0){
+      catalog[catalogIndex] = {
+        ...catalog[catalogIndex],
+        ...catalogEntry
+      };
+    } else {
+      catalog.push(catalogEntry);
+    }
+    saveStoredList(OWNER_STORAGE_KEYS.products, catalog);
+
+    return {
+      store: updatedStore,
+      product: entry
+    };
   }
 
   function loadStoreSettings(){
@@ -944,6 +1607,514 @@
     renderDashboardStoreSummary();
   }
 
+  function initOwnerPanel(){
+    if(document.body.dataset.page !== 'owner-panel'){
+      return;
+    }
+    const data = ensureOwnerDemoData();
+    const users = data.users;
+    const stores = data.stores;
+    const leads = data.leads;
+    const products = data.products;
+    const subscriptions = data.subscriptions;
+    const suppliers = data.suppliers;
+
+    const activeSubscriptions = subscriptions.filter(subscription => subscription.status === 'active');
+    const planCounts = {basic: 0, pro: 0, elite: 0};
+    activeSubscriptions.forEach(subscription => {
+      const normalizedPlan = normalizePlan(subscription.plan);
+      if(normalizedPlan && planCounts[normalizedPlan] !== undefined){
+        planCounts[normalizedPlan] += 1;
+      }
+    });
+    const revenue = activeSubscriptions.reduce((sum, subscription) => {
+      const amount = Number.parseFloat(subscription.amount);
+      return sum + (Number.isNaN(amount) ? 0 : amount);
+    }, 0);
+    const sales = products.length;
+
+    const counters = [
+      ['[data-owner-users]', users.length],
+      ['[data-owner-stores]', stores.length],
+      ['[data-owner-products]', products.length],
+      ['[data-owner-leads]', leads.length],
+      ['[data-owner-revenue]', Math.round(revenue)],
+      ['[data-owner-sales]', sales],
+      ['[data-owner-plan-basic]', planCounts.basic],
+      ['[data-owner-plan-pro]', planCounts.pro],
+      ['[data-owner-plan-elite]', planCounts.elite]
+    ];
+    counters.forEach(([selector, value]) => {
+      const target = document.querySelector(selector);
+      if(target){
+        target.dataset.counter = `${Math.max(0, Math.round(value))}`;
+      }
+    });
+
+    const planTargets = [
+      {selector: '[data-owner-plan-basic]', value: planCounts.basic},
+      {selector: '[data-owner-plan-pro]', value: planCounts.pro},
+      {selector: '[data-owner-plan-elite]', value: planCounts.elite}
+    ];
+    window.setTimeout(() => {
+      planTargets.forEach(({selector, value}) => {
+        const target = document.querySelector(selector);
+        if(target){
+          setCounterValue(target, value);
+        }
+      });
+    }, 1300);
+
+    const storeList = document.querySelector('[data-owner-stores-list]');
+    const leadList = document.querySelector('[data-owner-leads-list]');
+    const productList = document.querySelector('[data-owner-products-list]');
+    const supplierList = document.querySelector('[data-owner-suppliers-list]');
+
+    const renderList = (container, items, builder, emptyMessage) => {
+      if(!container){
+        return;
+      }
+      container.innerHTML = '';
+      if(!items.length){
+        const empty = document.createElement('p');
+        empty.className = 'empty';
+        empty.textContent = emptyMessage;
+        container.appendChild(empty);
+        return;
+      }
+      items.forEach(item => container.appendChild(builder(item)));
+    };
+
+    const sortedStores = [...stores].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 3);
+    renderList(storeList, sortedStores, store => {
+      const card = document.createElement('div');
+      card.className = 'list-card';
+      const productCount = Array.isArray(store.products) ? store.products.length : 0;
+      card.innerHTML = `
+        <strong>${store.name}</strong>
+        <span class="hint">Plan ${formatPlanLabel(store.plan)} • ${productCount} produktów</span>
+        <small>Dodano: ${formatDate(store.createdAt)}</small>
+      `;
+      return card;
+    }, 'Brak ostatnich sklepów.');
+
+    const leadStatusMeta = {
+      hot: {label: 'Gorący lead', className: 'is-hot'},
+      warm: {label: 'Ciepły lead', className: 'is-warm'},
+      cold: {label: 'Zimny lead', className: 'is-cold'}
+    };
+    const sortedLeads = [...leads].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 3);
+    renderList(leadList, sortedLeads, lead => {
+      const meta = leadStatusMeta[lead.status] || {label: 'Nowy lead', className: 'is-pending'};
+      const card = document.createElement('div');
+      card.className = 'list-card';
+      card.innerHTML = `
+        <strong>${lead.name}</strong>
+        <span class="status-pill ${meta.className}">${meta.label}</span>
+        <small>${lead.email} • ${lead.source}</small>
+      `;
+      return card;
+    }, 'Brak nowych leadów.');
+
+    const sortedProducts = [...products].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 3);
+    renderList(productList, sortedProducts, product => {
+      const card = document.createElement('div');
+      card.className = 'list-card';
+      card.innerHTML = `
+        <strong>${product.name}</strong>
+        <span class="hint">${product.category || 'Kategoria'} • ${product.supplier || 'Katalog'}</span>
+        <small>Cena: ${formatCurrency(product.finalPrice || product.cost || 0)}</small>
+      `;
+      return card;
+    }, 'Brak nowych produktów.');
+
+    const topSuppliers = [...suppliers].slice(0, 4);
+    renderList(supplierList, topSuppliers, supplier => {
+      const card = document.createElement('div');
+      card.className = 'list-card';
+      const productCount = Array.isArray(supplier.products) ? supplier.products.length : 0;
+      card.innerHTML = `
+        <div class="supplier-meta">
+          <img src="${supplier.logo}" alt="${supplier.name}">
+          <div>
+            <strong>${supplier.name}</strong>
+            <small>${supplier.category}</small>
+          </div>
+        </div>
+        <small>${productCount} produktów w katalogu</small>
+      `;
+      return card;
+    }, 'Brak aktywnych hurtowni.');
+
+    const updateChart = (prefix, values) => {
+      const total = Object.values(values).reduce((sum, value) => sum + value, 0) || 1;
+      Object.entries(values).forEach(([key, value]) => {
+        const percent = Math.round((value / total) * 100);
+        const bar = document.querySelector(`[data-${prefix}-chart-bar="${key}"]`);
+        const label = document.querySelector(`[data-${prefix}-chart-value="${key}"]`);
+        if(bar){
+          bar.style.setProperty('--value', `${percent}%`);
+        }
+        if(label){
+          label.textContent = `${value} (${percent}%)`;
+        }
+      });
+    };
+
+    updateChart('plan', planCounts);
+
+    const leadCounts = leads.reduce((acc, lead) => {
+      const status = lead.status || 'cold';
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {hot: 0, warm: 0, cold: 0});
+    updateChart('lead', leadCounts);
+  }
+
+  function initSuppliersModule(){
+    if(document.body.dataset.page !== 'hurtownie'){
+      return;
+    }
+    const data = ensureOwnerDemoData();
+    const suppliers = data.suppliers;
+    const suppliersGrid = document.querySelector('[data-suppliers-grid]');
+    const suppliersEmpty = document.querySelector('[data-suppliers-empty]');
+    const productsGrid = document.querySelector('[data-products-grid]');
+    const productsEmpty = document.querySelector('[data-products-empty]');
+    if(!suppliersGrid || !productsGrid){
+      return;
+    }
+
+    const supplierName = document.querySelector('[data-selected-supplier-name]');
+    const supplierDesc = document.querySelector('[data-selected-supplier-desc]');
+    const searchInput = document.querySelector('[data-product-search]');
+    const categorySelect = document.querySelector('[data-product-category]');
+    const bulkMarginInput = document.querySelector('[data-bulk-margin]');
+    const importButton = document.querySelector('[data-import-store]');
+    const importStatus = document.querySelector('[data-import-status]');
+    const calculator = document.querySelector('[data-calculator]');
+    const calculatorCost = calculator ? calculator.querySelector('[data-calculator-cost]') : null;
+    const calculatorMargin = calculator ? calculator.querySelector('[data-calculator-margin]') : null;
+    const calculatorFinal = calculator ? calculator.querySelector('[data-calculator-final]') : null;
+    const calculatorProfit = calculator ? calculator.querySelector('[data-calculator-profit]') : null;
+    const calculatorDesc = calculator ? calculator.querySelector('[data-calculator-desc]') : null;
+    const calculatorAdd = calculator ? calculator.querySelector('[data-calculator-add]') : null;
+    const suppliersCount = document.querySelector('[data-suppliers-count]');
+    const productsCount = document.querySelector('[data-products-count]');
+    const averageCost = document.querySelector('[data-average-cost]');
+    const importsToday = document.querySelector('[data-imports-today]');
+
+    const allProducts = suppliers.flatMap(supplier => supplier.products || []);
+    const totalCost = allProducts.reduce((sum, product) => sum + (Number.parseFloat(product.cost) || 0), 0);
+    const avgCost = allProducts.length ? Math.round(totalCost / allProducts.length) : 0;
+    const activeStore = getActiveStore(ensureStoresList());
+    const storeMargin = activeStore ? normalizeMarginValue(activeStore.margin, 25) : 25;
+    const storeImportCount = activeStore && Array.isArray(activeStore.products) ? activeStore.products.length : 0;
+
+    if(suppliersCount){
+      suppliersCount.dataset.counter = `${suppliers.length}`;
+    }
+    if(productsCount){
+      productsCount.dataset.counter = `${allProducts.length}`;
+    }
+    if(averageCost){
+      averageCost.dataset.counter = `${avgCost}`;
+      averageCost.dataset.counterFormat = 'currency';
+    }
+    if(importsToday){
+      importsToday.dataset.counter = `${storeImportCount}`;
+    }
+
+    if(bulkMarginInput){
+      bulkMarginInput.value = `${storeMargin}`;
+    }
+    if(calculatorMargin){
+      calculatorMargin.value = `${storeMargin}`;
+    }
+
+    let selectedSupplier = suppliers[0] || null;
+    let currentProducts = [];
+    let selectedProduct = null;
+
+    const updateCalculator = (product, marginValue) => {
+      if(!calculator){
+        return;
+      }
+      if(!product){
+        if(calculatorDesc){
+          calculatorDesc.textContent = 'Wybierz produkt z listy, aby policzyć zysk.';
+        }
+        if(calculatorCost){
+          calculatorCost.textContent = formatCurrency(0);
+        }
+        if(calculatorFinal){
+          calculatorFinal.textContent = formatCurrency(0);
+        }
+        if(calculatorProfit){
+          calculatorProfit.textContent = formatCurrency(0);
+        }
+        return;
+      }
+      const pricing = calculatePricing(product.cost, marginValue);
+      if(calculatorDesc){
+        calculatorDesc.textContent = `${product.name} • ${product.supplier}`;
+      }
+      if(calculatorMargin){
+        calculatorMargin.value = `${pricing.margin}`;
+      }
+      if(calculatorCost){
+        calculatorCost.textContent = formatCurrency(pricing.cost);
+      }
+      if(calculatorFinal){
+        calculatorFinal.textContent = formatCurrency(pricing.finalPrice);
+      }
+      if(calculatorProfit){
+        calculatorProfit.textContent = formatCurrency(pricing.profit);
+      }
+    };
+
+    const updateImportsCounter = () => {
+      if(!importsToday){
+        return;
+      }
+      const refreshedStores = ensureStoresList();
+      const refreshedStore = getActiveStore(refreshedStores);
+      const count = refreshedStore && Array.isArray(refreshedStore.products) ? refreshedStore.products.length : 0;
+      importsToday.dataset.counter = `${count}`;
+      setCounterValue(importsToday, count);
+    };
+
+    const updateStatus = message => {
+      if(importStatus){
+        importStatus.textContent = message;
+      }
+    };
+
+    const renderProducts = products => {
+      productsGrid.innerHTML = '';
+      if(!products.length){
+        if(productsEmpty){
+          productsEmpty.hidden = false;
+        }
+        return;
+      }
+      if(productsEmpty){
+        productsEmpty.hidden = true;
+      }
+      products.forEach(product => {
+        const card = document.createElement('article');
+        card.className = 'product-card';
+        const defaultMargin = bulkMarginInput ? normalizeMarginValue(bulkMarginInput.value, storeMargin) : storeMargin;
+        card.innerHTML = `
+          <img src="${product.image}" alt="${product.name}">
+          <div class="product-meta">
+            <div>
+              <span class="tag">${product.category}</span>
+              <h3>${product.name}</h3>
+              <p class="hint">${product.description || 'Opis produktu w przygotowaniu.'}</p>
+            </div>
+            <div class="price-stack">
+              <span>Koszt zakupu</span>
+              <strong data-product-cost>${formatCurrency(product.cost)}</strong>
+            </div>
+            <label class="product-input">
+              Marża (%)
+              <input type="number" min="0" max="300" step="1" value="${defaultMargin}" data-product-margin>
+            </label>
+            <div class="price-stack">
+              <span>Cena końcowa</span>
+              <strong data-product-final>0 zł</strong>
+            </div>
+            <div class="price-stack">
+              <span>Zysk</span>
+              <strong data-product-profit>0 zł</strong>
+            </div>
+            <div class="product-actions">
+              <button class="btn btn-primary" type="button" data-add-product>Dodaj do mojego sklepu</button>
+              <button class="btn btn-secondary" type="button" data-select-product>Ustaw w kalkulatorze</button>
+            </div>
+          </div>
+        `;
+        const marginInput = card.querySelector('[data-product-margin]');
+        const finalTarget = card.querySelector('[data-product-final]');
+        const profitTarget = card.querySelector('[data-product-profit]');
+        const updateCardPricing = () => {
+          const pricing = calculatePricing(product.cost, marginInput ? marginInput.value : storeMargin);
+          if(finalTarget){
+            finalTarget.textContent = formatCurrency(pricing.finalPrice);
+          }
+          if(profitTarget){
+            profitTarget.textContent = formatCurrency(pricing.profit);
+          }
+        };
+        updateCardPricing();
+        if(marginInput){
+          marginInput.addEventListener('input', () => {
+            updateCardPricing();
+            if(selectedProduct && selectedProduct.id === product.id){
+              updateCalculator(product, marginInput.value);
+            }
+          });
+        }
+        const addButton = card.querySelector('[data-add-product]');
+        if(addButton){
+          addButton.addEventListener('click', () => {
+            const result = addProductToStore(product, marginInput ? marginInput.value : storeMargin);
+            if(result){
+              updateStatus(`Dodano "${product.name}" do ${result.store.name}.`);
+              updateImportsCounter();
+            }
+          });
+        }
+        const selectButton = card.querySelector('[data-select-product]');
+        if(selectButton){
+          selectButton.addEventListener('click', () => {
+            selectedProduct = product;
+            updateCalculator(product, marginInput ? marginInput.value : storeMargin);
+          });
+        }
+        productsGrid.appendChild(card);
+      });
+    };
+
+    const applyFilters = () => {
+      if(!selectedSupplier){
+        currentProducts = [];
+        renderProducts([]);
+        return;
+      }
+      const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
+      const category = categorySelect ? categorySelect.value : 'all';
+      currentProducts = (selectedSupplier.products || []).filter(product => {
+        const matchesCategory = category === 'all' || product.category === category;
+        const description = (product.description || '').toLowerCase();
+        const matchesSearch = !searchTerm || product.name.toLowerCase().includes(searchTerm)
+          || description.includes(searchTerm);
+        return matchesCategory && matchesSearch;
+      });
+      renderProducts(currentProducts);
+    };
+
+    const populateCategories = supplier => {
+      if(!categorySelect){
+        return;
+      }
+      categorySelect.innerHTML = '<option value="all">Wszystkie</option>';
+      const categories = Array.from(new Set((supplier.products || []).map(product => product.category))).sort();
+      categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        categorySelect.appendChild(option);
+      });
+    };
+
+    const selectSupplier = supplier => {
+      selectedSupplier = supplier;
+      if(supplierName){
+        supplierName.textContent = supplier ? supplier.name : 'Wybierz hurtownię';
+      }
+      if(supplierDesc){
+        supplierDesc.textContent = supplier ? supplier.description : '';
+      }
+      populateCategories(supplier);
+      applyFilters();
+      const firstProduct = supplier && supplier.products ? supplier.products[0] : null;
+      selectedProduct = firstProduct;
+      updateCalculator(firstProduct, calculatorMargin ? calculatorMargin.value : storeMargin);
+      Array.from(suppliersGrid.children).forEach(child => {
+        const isActive = supplier && child.dataset.supplierId === supplier.slug;
+        child.classList.toggle('is-active', isActive);
+      });
+    };
+
+    const renderSuppliers = () => {
+      suppliersGrid.innerHTML = '';
+      if(!suppliers.length){
+        if(suppliersEmpty){
+          suppliersEmpty.hidden = false;
+        }
+        return;
+      }
+      if(suppliersEmpty){
+        suppliersEmpty.hidden = true;
+      }
+      suppliers.forEach(supplier => {
+        const card = document.createElement('article');
+        card.className = 'supplier-card';
+        card.dataset.supplierId = supplier.slug;
+        card.innerHTML = `
+          <div class="supplier-meta">
+            <img src="${supplier.logo}" alt="${supplier.name}">
+            <div>
+              <strong>${supplier.name}</strong>
+              <span class="hint">${supplier.category}</span>
+            </div>
+          </div>
+          <p class="hint">${supplier.description}</p>
+          <div class="cta-row">
+            <button class="btn btn-secondary" type="button">Zobacz produkty</button>
+            <span class="tag">${(supplier.products || []).length} produktów</span>
+          </div>
+        `;
+        card.addEventListener('click', () => {
+          selectSupplier(supplier);
+        });
+        suppliersGrid.appendChild(card);
+      });
+    };
+
+    renderSuppliers();
+    if(selectedSupplier){
+      selectSupplier(selectedSupplier);
+    }
+
+    if(searchInput){
+      searchInput.addEventListener('input', applyFilters);
+    }
+    if(categorySelect){
+      categorySelect.addEventListener('change', applyFilters);
+    }
+    if(bulkMarginInput){
+      bulkMarginInput.addEventListener('input', () => {
+        applyFilters();
+      });
+    }
+    if(importButton){
+      importButton.addEventListener('click', () => {
+        if(!currentProducts.length){
+          updateStatus('Brak produktów do importu.');
+          return;
+        }
+        const marginValue = bulkMarginInput ? bulkMarginInput.value : storeMargin;
+        currentProducts.forEach(product => addProductToStore(product, marginValue));
+        updateStatus(`Zaimportowano ${currentProducts.length} produktów do sklepu.`);
+        updateImportsCounter();
+      });
+    }
+    if(calculatorMargin){
+      calculatorMargin.addEventListener('input', () => {
+        if(selectedProduct){
+          updateCalculator(selectedProduct, calculatorMargin.value);
+        }
+      });
+    }
+    if(calculatorAdd){
+      calculatorAdd.addEventListener('click', () => {
+        if(!selectedProduct){
+          updateStatus('Najpierw wybierz produkt z listy.');
+          return;
+        }
+        const marginValue = calculatorMargin ? calculatorMargin.value : storeMargin;
+        const result = addProductToStore(selectedProduct, marginValue);
+        if(result){
+          updateStatus(`Dodano "${selectedProduct.name}" do ${result.store.name}.`);
+          updateImportsCounter();
+        }
+      });
+    }
+  }
+
   function initStoreGenerator(){
     const form = document.querySelector('[data-store-form]');
     if(!form){
@@ -1065,6 +2236,9 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     bindMenu();
+    ensureOwnerDemoData();
+    initOwnerPanel();
+    initSuppliersModule();
     initCounters();
     initHelperBoxes();
     initActivityToasts();
