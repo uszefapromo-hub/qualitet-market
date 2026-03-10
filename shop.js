@@ -44,9 +44,9 @@
     return CURRENCY_FORMATTER.format(value);
   }
 
-  function parseNumber(value){
+  function parseNumber(value, fallback = 0){
     const parsedValue = typeof value === 'string' ? parseFloat(value) : Number(value);
-    return Number.isFinite(parsedValue) ? parsedValue : NaN;
+    return Number.isFinite(parsedValue) ? parsedValue : fallback;
   }
 
   function getInitial(name){
@@ -431,7 +431,7 @@
   }
 
   function getProductPricing(product, fallbackMargin){
-    const cost = parseNumber(product.cost);
+    const cost = parseNumber(product.cost, 0);
     const margin = Number.isFinite(product.margin) ? product.margin : fallbackMargin;
     const safeCost = Number.isFinite(cost) ? cost : 0;
     const finalPrice = Number.isFinite(product.finalPrice)
