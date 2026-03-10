@@ -66,9 +66,9 @@
   const OWNER_EMAIL = 'uszefaqualitetpromo@gmail.com';
   const OWNER_EMAIL_NORMALIZED = OWNER_EMAIL.trim().toLowerCase();
   const PRICE_LINKS = {
-    basic: '',
-    pro: '',
-    elite: ''
+    basic: 'https://buy.stripe.com/28E4gz3qP0er3AL2P0ak000',
+    pro: 'https://buy.stripe.com/aFa5kD9PdgdpgnxdtEak001',
+    elite: 'https://buy.stripe.com/7sY4gz5yX6CP0ozdtEak002'
   };
   const PLAN_RECOMMENDATION_THRESHOLDS = {
     profit: {pro: 8000, elite: 20000},
