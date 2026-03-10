@@ -458,16 +458,18 @@
     const toggle = gallery.querySelector('[data-promo-motion-toggle]');
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let idleTimeout = null;
+    let manualPaused = false;
+    let autoPaused = false;
 
-    const setPaused = paused => {
-      gallery.classList.toggle('is-paused', paused);
-      if(paused && idleTimeout){
+    const setPaused = isPaused => {
+      gallery.classList.toggle('is-paused', isPaused);
+      if(isPaused && idleTimeout){
         clearTimeout(idleTimeout);
         idleTimeout = null;
       }
       if(toggle){
-        toggle.setAttribute('aria-pressed', paused ? 'true' : 'false');
-        toggle.textContent = paused ? 'Wznów animację' : 'Zatrzymaj animację';
+        toggle.setAttribute('aria-pressed', isPaused ? 'true' : 'false');
+        toggle.textContent = isPaused ? 'Wznów animację' : 'Zatrzymaj animację';
       }
     };
 
@@ -495,13 +497,37 @@
 
     if(toggle){
       toggle.addEventListener('click', () => {
-        const paused = gallery.classList.contains('is-paused');
-        const shouldPause = !paused;
+        const isPaused = gallery.classList.contains('is-paused');
+        const shouldPause = !isPaused;
+        manualPaused = shouldPause;
+        if(shouldPause){
+          autoPaused = false;
+        }
         setPaused(shouldPause);
         if(!shouldPause){
           scheduleIdlePause();
         }
       });
+    }
+
+    if('IntersectionObserver' in window){
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if(entry.isIntersecting){
+            if(autoPaused){
+              autoPaused = false;
+              if(!manualPaused){
+                setPaused(false);
+                scheduleIdlePause();
+              }
+            }
+          } else if(!autoPaused){
+            autoPaused = true;
+            setPaused(true);
+          }
+        });
+      }, {threshold: 0.35});
+      observer.observe(gallery);
     }
 
     ['mouseenter', 'focusin', 'pointerdown'].forEach(eventName => {
@@ -510,10 +536,16 @@
 
     document.addEventListener('visibilitychange', () => {
       if(document.hidden){
-        setPaused(true);
-      } else {
-        setPaused(false);
-        scheduleIdlePause();
+        if(!autoPaused){
+          autoPaused = true;
+          setPaused(true);
+        }
+      } else if(autoPaused){
+        autoPaused = false;
+        if(!manualPaused){
+          setPaused(false);
+          scheduleIdlePause();
+        }
       }
     });
   }
