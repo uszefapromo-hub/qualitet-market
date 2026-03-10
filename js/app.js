@@ -1123,7 +1123,24 @@
   }
 
   function loadProductsBySupplier(){
-    return getStoredList(PRICING_STORAGE_KEYS.productsBySupplier) || [];
+    const list = getStoredList(PRICING_STORAGE_KEYS.productsBySupplier) || [];
+    return list.map(item => {
+      if(!item || typeof item !== 'object'){
+        return item;
+      }
+      const resolvedImage = item.image || item.img || 'https://placehold.co/400x280/0f1837/FFFFFF?text=Produkt';
+      const resolvedCostRaw = Number.parseFloat(item.cost ?? item.price);
+      const resolvedCost = Number.isNaN(resolvedCostRaw) ? 0 : resolvedCostRaw;
+      const resolvedPriceRaw = Number.parseFloat(item.price);
+      const resolvedPrice = Number.isNaN(resolvedPriceRaw) ? resolvedCost : resolvedPriceRaw;
+      return {
+        ...item,
+        cost: resolvedCost,
+        price: resolvedPrice,
+        image: resolvedImage,
+        img: item.img || resolvedImage
+      };
+    });
   }
 
   function saveProductsBySupplier(list){
@@ -1143,13 +1160,22 @@
       return supplier.products.map(product => {
         const margin = 30 + (index % 4) * 5;
         const createdAt = new Date(now - (index + 1) * MS_PER_DAY).toISOString();
+        const resolvedImage = product.image || product.img || 'https://placehold.co/400x280/0f1837/FFFFFF?text=Produkt';
+        const costRaw = Number.parseFloat(product.cost ?? product.price);
+        const cost = Number.isNaN(costRaw) ? 0 : costRaw;
+        const priceRaw = Number.parseFloat(product.price);
+        const price = Number.isNaN(priceRaw) ? cost : priceRaw;
         const mapped = {
           id: `catalog_${product.id}`,
           name: product.name,
-          cost: product.cost,
+          cost,
+          price,
           margin,
           supplier: supplier.name,
           category: product.category,
+          image: resolvedImage,
+          img: product.img || resolvedImage,
+          description: product.description,
           storeId: index % 2 === 0 ? 'store_elektronika' : 'store_moda',
           createdAt
         };
@@ -1171,15 +1197,27 @@
       }
       return store.products.map(product => {
         const createdAt = new Date(now - (index + 1) * MS_PER_DAY).toISOString();
+        const resolvedImage = product.image || product.img || 'https://placehold.co/400x280/0f1837/FFFFFF?text=Produkt';
+        const costRaw = Number.parseFloat(product.cost ?? product.price);
+        const cost = Number.isNaN(costRaw) ? 0 : costRaw;
+        const pricing = calculateTieredPricing(cost, {
+          userMargin: product.margin,
+          store,
+          product
+        });
+        const priceRaw = Number.parseFloat(product.price);
+        const price = Number.isNaN(priceRaw) ? pricing.finalPrice : priceRaw;
         const mapped = {
           id: product.id,
           name: product.name,
-          cost: product.cost,
+          cost,
+          price,
           margin: product.margin,
           supplierMode: product.supplierMode,
           supplier: product.supplier,
           category: product.category,
-          image: product.image,
+          image: resolvedImage,
+          img: product.img || resolvedImage,
           description: product.description,
           storeId: store.id,
           createdAt
@@ -1193,224 +1231,460 @@
   function ensureOwnerDemoData(){
     const seedSuppliers = [
       {
-        id: 'supplier_elektronika',
-        name: 'Elektronika',
-        slug: 'elektronika',
-        category: 'Elektronika',
-        description: 'Premium elektronika użytkowa i akcesoria smart.',
-        logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=E',
+        id: 'supplier_aliexpress',
+        name: 'AliExpress',
+        slug: 'aliexpress',
+        plan: 'basic',
+        category: 'Marketplace globalny',
+        description: 'Największy marketplace z elektroniką i akcesoriami w cenach hurtowych.',
+        logo: 'https://logo.clearbit.com/aliexpress.com',
         products: [
           {
-            id: 'elektro_watch',
-            name: 'Smartwatch Pulsar',
-            cost: 420,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Smartwatch',
-            description: 'Wyświetlacz AMOLED, tryby sportowe, szybkie ładowanie.',
-            supplier: 'Elektronika',
-            category: 'Wearables'
+            id: 'aliexpress_powerbank',
+            name: 'Powerbank 20000 mAh Voltix',
+            cost: 119,
+            price: 119,
+            img: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80',
+            description: 'Szybkie ładowanie PD 22.5W, dwa porty USB-C.',
+            supplier: 'AliExpress',
+            category: 'Elektronika',
+            sourceUrl: 'https://www.aliexpress.com/item/1005006440213.html'
           },
           {
-            id: 'elektro_audio',
-            name: 'Słuchawki Quantum',
-            cost: 260,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Audio',
-            description: 'Redukcja szumów, etui premium, 40h pracy.',
-            supplier: 'Elektronika',
-            category: 'Audio'
+            id: 'aliexpress_dashcam',
+            name: 'Kamera samochodowa RoadEye 4K',
+            cost: 189,
+            price: 189,
+            img: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=600&q=80',
+            description: 'Nagrywanie nocne, sensor Sony, Wi-Fi w aplikacji.',
+            supplier: 'AliExpress',
+            category: 'Auto',
+            sourceUrl: 'https://allegro.pl/oferta/kamera-samochodowa-4k-11887762189'
           },
           {
-            id: 'elektro_cam',
-            name: 'Kamera Auri',
-            cost: 610,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Kamera',
-            description: 'Kamera 4K do monitoringu i vlogowania.',
-            supplier: 'Elektronika',
-            category: 'Foto'
+            id: 'aliexpress_usbkit',
+            name: 'Zestaw kabli USB-C 3w1',
+            cost: 39,
+            price: 39,
+            img: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?auto=format&fit=crop&w=600&q=80',
+            description: 'Kable 1.2m, oplot nylonowy, szybkie ładowanie.',
+            supplier: 'AliExpress',
+            category: 'Akcesoria',
+            sourceUrl: 'https://www.amazon.pl/dp/B0C5J5V9PT'
+          },
+          {
+            id: 'aliexpress_lamps',
+            name: 'Lampy solarne ogrodowe SolarGlow',
+            cost: 79,
+            price: 79,
+            img: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=600&q=80',
+            description: 'Zestaw 8 lamp, czujnik zmierzchu, wodoodporne.',
+            supplier: 'AliExpress',
+            category: 'Dom i ogród',
+            sourceUrl: 'https://www.aliexpress.com/item/1005005821222.html'
           }
         ]
       },
       {
-        id: 'supplier_dom',
-        name: 'Dom i ogród',
-        slug: 'dom-i-ogrod',
+        id: 'supplier_cj',
+        name: 'CJ Dropshipping',
+        slug: 'cj-dropshipping',
+        plan: 'basic',
+        category: 'Dropshipping globalny',
+        description: 'Szeroki katalog ubrań, sportu i akcesoriów gotowych do importu.',
+        logo: 'https://logo.clearbit.com/cjdropshipping.com',
+        products: [
+          {
+            id: 'cj_softshell',
+            name: 'Kurtka Softshell Arctic',
+            cost: 169,
+            price: 169,
+            img: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80',
+            description: 'Wodoodporny softshell, odpinany kaptur.',
+            supplier: 'CJ Dropshipping',
+            category: 'Moda',
+            sourceUrl: 'https://cjdropshipping.com/product/softshell-jacket-389232'
+          },
+          {
+            id: 'cj_backpack',
+            name: 'Plecak miejski UrbanLine',
+            cost: 129,
+            price: 129,
+            img: 'https://images.unsplash.com/photo-1514474959185-1472d4b98f6b?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1514474959185-1472d4b98f6b?auto=format&fit=crop&w=600&q=80',
+            description: 'Pojemność 18L, kieszeń na laptop 15".',
+            supplier: 'CJ Dropshipping',
+            category: 'Akcesoria',
+            sourceUrl: 'https://www.amazon.pl/dp/B0C9T3FZVN'
+          },
+          {
+            id: 'cj_bottle',
+            name: 'Bidon termiczny SportFlow',
+            cost: 49,
+            price: 49,
+            img: 'https://images.unsplash.com/photo-1526402462723-6c3b7b78c816?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1526402462723-6c3b7b78c816?auto=format&fit=crop&w=600&q=80',
+            description: 'Stal nierdzewna, utrzymuje temperaturę 12h.',
+            supplier: 'CJ Dropshipping',
+            category: 'Sport',
+            sourceUrl: 'https://allegro.pl/oferta/bidon-termiczny-820ml-14208746019'
+          }
+        ]
+      },
+      {
+        id: 'supplier_eprolo',
+        name: 'EPROLO',
+        slug: 'eprolo',
+        plan: 'basic',
+        category: 'Import dziecięcy',
+        description: 'Produkty dziecięce oraz wyposażenie domu do szybkiego dropshippingu.',
+        logo: 'https://logo.clearbit.com/eprolo.com',
+        products: [
+          {
+            id: 'eprolo_blocks',
+            name: 'Klocki STEM Explorer 320 el.',
+            cost: 99,
+            price: 99,
+            img: 'https://images.unsplash.com/photo-1555529771-122e5d9f2345?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1555529771-122e5d9f2345?auto=format&fit=crop&w=600&q=80',
+            description: 'Kreatywny zestaw edukacyjny, wiek 6+.',
+            supplier: 'EPROLO',
+            category: 'Dzieci',
+            sourceUrl: 'https://www.olx.pl/d/oferta/klocki-stem-320-el-564211223'
+          },
+          {
+            id: 'eprolo_mat',
+            name: 'Mata edukacyjna SoftPlay',
+            cost: 139,
+            price: 139,
+            img: 'https://images.unsplash.com/photo-1504151932400-72d4384f04b3?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1504151932400-72d4384f04b3?auto=format&fit=crop&w=600&q=80',
+            description: 'Miękka mata, kontrastowe kolory, zabawki sensoryczne.',
+            supplier: 'EPROLO',
+            category: 'Dzieci',
+            sourceUrl: 'https://www.aliexpress.com/item/1005002331201.html'
+          },
+          {
+            id: 'eprolo_organizer',
+            name: 'Organizer do szafy FlexiBox',
+            cost: 59,
+            price: 59,
+            img: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=600&q=80',
+            description: 'Modułowe kosze do garderoby i szuflad.',
+            supplier: 'EPROLO',
+            category: 'Wyposażenie domu',
+            sourceUrl: 'https://allegro.pl/oferta/organizer-do-szafy-15822499321'
+          }
+        ]
+      },
+      {
+        id: 'supplier_vidaxl',
+        name: 'VidaXL',
+        slug: 'vidaxl',
+        plan: 'pro',
         category: 'Dom i ogród',
-        description: 'Nowoczesne wyposażenie domu i strefy outdoor.',
-        logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=D',
+        description: 'Europejski dostawca mebli i wyposażenia domowego.',
+        logo: 'https://logo.clearbit.com/vidaxl.com',
         products: [
           {
-            id: 'home_lamp',
-            name: 'Lampa Halo',
-            cost: 190,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Lampa',
-            description: 'Regulowane światło, sterowanie aplikacją.',
-            supplier: 'Dom i ogród',
-            category: 'Oświetlenie'
+            id: 'vidaxl_garden_set',
+            name: 'Zestaw mebli ogrodowych Porto',
+            cost: 1290,
+            price: 1290,
+            img: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=600&q=80',
+            description: '4 krzesła, stół hartowany, poduszki outdoor.',
+            supplier: 'VidaXL',
+            category: 'Dom i ogród',
+            sourceUrl: 'https://www.vidaxl.pl/e/zestaw-mebli-ogrodowych-porto/123456'
           },
           {
-            id: 'home_garden',
-            name: 'Zestaw ogrodowy Leaf',
-            cost: 520,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Ogród',
-            description: 'Aluminiowe meble, odporność na warunki.',
-            supplier: 'Dom i ogród',
-            category: 'Ogród'
+            id: 'vidaxl_sofa',
+            name: 'Sofa modułowa Loft 3w1',
+            cost: 1890,
+            price: 1890,
+            img: 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=600&q=80',
+            description: 'Tapicerka łatwoczyszcząca, 4 moduły.',
+            supplier: 'VidaXL',
+            category: 'Wyposażenie domu',
+            sourceUrl: 'https://www.vidaxl.pl/e/sofa-modulowa-loft/7891011'
           },
           {
-            id: 'home_robot',
-            name: 'Robot sprzątający Orbit',
-            cost: 840,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Robot',
-            description: 'Mapowanie 3D, automatyczne mopowanie.',
-            supplier: 'Dom i ogród',
-            category: 'AGD'
+            id: 'vidaxl_rack',
+            name: 'Regał industrialny LoftLine',
+            cost: 590,
+            price: 590,
+            img: 'https://images.unsplash.com/photo-1519710164239-da123dc03ef4?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1519710164239-da123dc03ef4?auto=format&fit=crop&w=600&q=80',
+            description: 'Metal i drewno, 5 półek, łatwy montaż.',
+            supplier: 'VidaXL',
+            category: 'Wyposażenie domu',
+            sourceUrl: 'https://www.vidaxl.pl/e/regal-industrialny/554433'
           }
         ]
       },
       {
-        id: 'supplier_moda',
-        name: 'Moda',
-        slug: 'moda',
-        category: 'Moda',
-        description: 'Nowe kolekcje street i premium fashion.',
-        logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=M',
+        id: 'supplier_banggood',
+        name: 'Banggood',
+        slug: 'banggood',
+        plan: 'pro',
+        category: 'Elektronika i RTV AGD',
+        description: 'Popularny dostawca elektroniki i sprzętu RTV.',
+        logo: 'https://logo.clearbit.com/banggood.com',
         products: [
           {
-            id: 'fashion_jacket',
-            name: 'Kurtka Nova',
-            cost: 210,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Kurtka',
-            description: 'Wodoodporna, lekka, w zestawie torba.',
-            supplier: 'Moda',
-            category: 'Odzież'
+            id: 'banggood_robot',
+            name: 'Robot sprzątający CleanBot',
+            cost: 799,
+            price: 799,
+            img: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=600&q=80',
+            description: 'Mapowanie laserowe, funkcja mopowania.',
+            supplier: 'Banggood',
+            category: 'RTV AGD',
+            sourceUrl: 'https://www.banggood.com/robot-sprzatajacy-cleanbot-p-1966202.html'
           },
           {
-            id: 'fashion_sneakers',
-            name: 'Sneakers Lumen',
-            cost: 240,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Sneakers',
-            description: 'Limitowana edycja, wkładka gel.',
-            supplier: 'Moda',
-            category: 'Obuwie'
+            id: 'banggood_drone',
+            name: 'Dron sportowy AirFlash',
+            cost: 699,
+            price: 699,
+            img: 'https://images.unsplash.com/photo-1473968512647-3e447244af8f?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1473968512647-3e447244af8f?auto=format&fit=crop&w=600&q=80',
+            description: 'Kamera 2K, stabilizacja obrazu, zasięg 1200m.',
+            supplier: 'Banggood',
+            category: 'Elektronika',
+            sourceUrl: 'https://www.banggood.com/sport-drone-airflash-p-1978821.html'
           },
           {
-            id: 'fashion_bag',
-            name: 'Torba City',
-            cost: 120,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Torba',
-            description: 'Skóra ekologiczna, trzy komory.',
-            supplier: 'Moda',
-            category: 'Akcesoria'
+            id: 'banggood_induction',
+            name: 'Kuchenka indukcyjna SlimCook',
+            cost: 459,
+            price: 459,
+            img: 'https://images.unsplash.com/photo-1506368249639-73a05d6f6488?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1506368249639-73a05d6f6488?auto=format&fit=crop&w=600&q=80',
+            description: 'Panel dotykowy, 9 poziomów mocy.',
+            supplier: 'Banggood',
+            category: 'RTV AGD',
+            sourceUrl: 'https://www.banggood.com/induction-cooker-slimcook-p-2011301.html'
           }
         ]
       },
       {
-        id: 'supplier_kids',
-        name: 'Dziecko',
-        slug: 'dziecko',
-        category: 'Dziecko',
-        description: 'Produkty wspierające rozwój i bezpieczeństwo dzieci.',
-        logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=K',
+        id: 'supplier_costway',
+        name: 'Costway',
+        slug: 'costway',
+        plan: 'pro',
+        category: 'Wyposażenie domu',
+        description: 'Dostawca mebli i artykułów do domu w segmencie value.',
+        logo: 'https://logo.clearbit.com/costway.com',
         products: [
           {
-            id: 'kids_stroller',
-            name: 'Wózek Comet',
+            id: 'costway_rocker',
+            name: 'Fotel bujany Nordic',
+            cost: 620,
+            price: 620,
+            img: 'https://images.unsplash.com/photo-1487014679447-9f8336841d58?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1487014679447-9f8336841d58?auto=format&fit=crop&w=600&q=80',
+            description: 'Drewniana podstawa, tapicerka boucle.',
+            supplier: 'Costway',
+            category: 'Wyposażenie domu',
+            sourceUrl: 'https://www.costway.com/fotel-bujany-nordic.html'
+          },
+          {
+            id: 'costway_gazebo',
+            name: 'Altana ogrodowa GardenLux',
             cost: 980,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Wózek',
-            description: 'Ultralekki stelaż, amortyzacja premium.',
-            supplier: 'Dziecko',
-            category: 'Wózki'
-          },
-          {
-            id: 'kids_blocks',
-            name: 'Klocki Cosmo',
-            cost: 140,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Klocki',
-            description: 'Zestaw kreatywny, 250 elementów.',
-            supplier: 'Dziecko',
-            category: 'Zabawki'
-          },
-          {
-            id: 'kids_monitor',
-            name: 'Niania Halo',
-            cost: 360,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Niania',
-            description: 'Kamera nocna, czujnik temperatury.',
-            supplier: 'Dziecko',
-            category: 'Elektronika'
+            price: 980,
+            img: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=600&q=80',
+            description: 'Stalowa konstrukcja, moskitiery i zasłony.',
+            supplier: 'Costway',
+            category: 'Dom i ogród',
+            sourceUrl: 'https://www.costway.com/altana-ogrodowa-gardenlux.html'
           }
         ]
       },
       {
-        id: 'supplier_auto',
-        name: 'Auto',
-        slug: 'auto',
-        category: 'Auto',
-        description: 'Akcesoria samochodowe i wyposażenie premium.',
-        logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=A',
+        id: 'supplier_hertwill',
+        name: 'Hertwill',
+        slug: 'hertwill',
+        plan: 'pro',
+        category: 'Narzędzia i auto',
+        description: 'Specjalistyczny dostawca narzędzi oraz wyposażenia automotive.',
+        logo: 'https://logo.clearbit.com/hertwill.com',
         products: [
           {
-            id: 'auto_cam',
-            name: 'Wideorejestrator Drive',
-            cost: 320,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Auto+Cam',
-            description: 'Nagrywanie 4K, tryb parkingowy.',
-            supplier: 'Auto',
-            category: 'Elektronika'
+            id: 'hertwill_drill',
+            name: 'Zestaw wkrętarek DualPower',
+            cost: 430,
+            price: 430,
+            img: 'https://images.unsplash.com/photo-1504306660926-3ec4b92f91b1?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1504306660926-3ec4b92f91b1?auto=format&fit=crop&w=600&q=80',
+            description: '2 akumulatory, walizka transportowa, 42 bity.',
+            supplier: 'Hertwill',
+            category: 'Narzędzia',
+            sourceUrl: 'https://www.hertwill.com/zestaw-wkretarek-dualpower.html'
           },
           {
-            id: 'auto_detail',
-            name: 'Zestaw detailingowy',
-            cost: 180,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Detailing',
-            description: 'Kosmetyki premium, mikrofibry.',
-            supplier: 'Auto',
-            category: 'Kosmetyki'
+            id: 'hertwill_toolcase',
+            name: 'Walizka narzędziowa ProBox 120',
+            cost: 260,
+            price: 260,
+            img: 'https://images.unsplash.com/photo-1580894894513-541e068a3d76?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1580894894513-541e068a3d76?auto=format&fit=crop&w=600&q=80',
+            description: '120 elementów, stal chromowana, organizer.',
+            supplier: 'Hertwill',
+            category: 'Narzędzia',
+            sourceUrl: 'https://www.hertwill.com/walizka-narzedziowa-probox-120.html'
           },
           {
-            id: 'auto_holder',
-            name: 'Uchwyt Gravity',
-            cost: 90,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Uchwyt',
-            description: 'Automatyczny zacisk, ładowanie Qi.',
-            supplier: 'Auto',
-            category: 'Akcesoria'
-          }
-        ]
-      },
-      {
-        id: 'supplier_beauty',
-        name: 'Beauty',
-        slug: 'beauty',
-        category: 'Beauty',
-        description: 'Kosmetyki i urządzenia beauty w segmencie premium.',
-        logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=B',
-        products: [
-          {
-            id: 'beauty_serum',
-            name: 'Serum Glow',
-            cost: 150,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Serum',
-            description: 'Witamina C, efekt rozświetlenia.',
-            supplier: 'Beauty',
-            category: 'Pielęgnacja'
-          },
-          {
-            id: 'beauty_dryer',
-            name: 'Suszarka Aura',
+            id: 'hertwill_jack',
+            name: 'Podnośnik hydrauliczny AutoLift',
             cost: 310,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=Suszarka',
-            description: 'Jonizacja, tryb pielęgnacyjny.',
-            supplier: 'Beauty',
-            category: 'Sprzęt'
+            price: 310,
+            img: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=600&q=80',
+            description: 'Udźwig 2T, szybki zawór spustowy.',
+            supplier: 'Hertwill',
+            category: 'Auto',
+            sourceUrl: 'https://www.hertwill.com/podnosnik-hydrauliczny-autolift.html'
+          }
+        ]
+      },
+      {
+        id: 'supplier_bigbuy',
+        name: 'BigBuy',
+        slug: 'bigbuy',
+        plan: 'elite',
+        category: 'Sport i lifestyle',
+        description: 'Europejski hurtowy partner sportowy i lifestyle.',
+        logo: 'https://logo.clearbit.com/bigbuy.eu',
+        products: [
+          {
+            id: 'bigbuy_dumbbells',
+            name: 'Hantle regulowane FlexGym 20kg',
+            cost: 450,
+            price: 450,
+            img: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=600&q=80',
+            description: 'Regulacja 4-20 kg, ergonomiczny uchwyt.',
+            supplier: 'BigBuy',
+            category: 'Sport',
+            sourceUrl: 'https://www.bigbuy.eu/hantle-regulowane-flexgym.html'
           },
           {
-            id: 'beauty_spa',
-            name: 'Zestaw SPA',
+            id: 'bigbuy_mat',
+            name: 'Mata fitness GripPro',
+            cost: 85,
+            price: 85,
+            img: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=600&q=80',
+            description: 'Antypoślizgowa mata do treningu i jogi.',
+            supplier: 'BigBuy',
+            category: 'Sport',
+            sourceUrl: 'https://www.bigbuy.eu/mata-fitness-grippro.html'
+          },
+          {
+            id: 'bigbuy_kitchen',
+            name: 'Zestaw akcesoriów kuchennych ChefKit',
             cost: 120,
-            image: 'https://placehold.co/400x280/0f1837/FFFFFF?text=SPA',
-            description: 'Świece, olejki, maski regenerujące.',
-            supplier: 'Beauty',
-            category: 'Relaks'
+            price: 120,
+            img: 'https://images.unsplash.com/photo-1498579809087-ef1e558fd1da?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1498579809087-ef1e558fd1da?auto=format&fit=crop&w=600&q=80',
+            description: '15 elementów, silikon premium, stojak.',
+            supplier: 'BigBuy',
+            category: 'Akcesoria',
+            sourceUrl: 'https://www.bigbuy.eu/zestaw-akcesoriow-chefkit.html'
+          }
+        ]
+      },
+      {
+        id: 'supplier_spocket',
+        name: 'Spocket',
+        slug: 'spocket',
+        plan: 'elite',
+        category: 'Moda premium',
+        description: 'Dostawca odzieży i akcesoriów premium z USA i EU.',
+        logo: 'https://logo.clearbit.com/spocket.co',
+        products: [
+          {
+            id: 'spocket_hoodie',
+            name: 'Bluza premium StreetCloud',
+            cost: 199,
+            price: 199,
+            img: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80',
+            description: 'Bawełna 400g, oversize fit, haft 3D.',
+            supplier: 'Spocket',
+            category: 'Moda',
+            sourceUrl: 'https://www.spocket.co/product/premium-hoodie-streetcloud'
+          },
+          {
+            id: 'spocket_bag',
+            name: 'Torba skórzana Milano',
+            cost: 280,
+            price: 280,
+            img: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80',
+            description: 'Skóra naturalna, pasek crossbody, 3 kieszenie.',
+            supplier: 'Spocket',
+            category: 'Akcesoria',
+            sourceUrl: 'https://www.spocket.co/product/torba-skorzana-milano'
+          }
+        ]
+      },
+      {
+        id: 'supplier_syncee',
+        name: 'Syncee',
+        slug: 'syncee',
+        plan: 'elite',
+        category: 'RTV AGD premium',
+        description: 'Dostawca sprzętu RTV AGD i smart home w segmencie premium.',
+        logo: 'https://logo.clearbit.com/syncee.co',
+        products: [
+          {
+            id: 'syncee_coffee',
+            name: 'Ekspres do kawy AromaOne',
+            cost: 860,
+            price: 860,
+            img: 'https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=600&q=80',
+            description: 'System parzenia 15 bar, młynek stalowy.',
+            supplier: 'Syncee',
+            category: 'RTV AGD',
+            sourceUrl: 'https://www.syncee.co/product/ekspres-aromaone'
+          },
+          {
+            id: 'syncee_purifier',
+            name: 'Oczyszczacz powietrza AirPure',
+            cost: 920,
+            price: 920,
+            img: 'https://images.unsplash.com/photo-1503602642458-232111445657?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1503602642458-232111445657?auto=format&fit=crop&w=600&q=80',
+            description: 'Filtr HEPA 13, tryb nocny, czujnik PM2.5.',
+            supplier: 'Syncee',
+            category: 'RTV AGD',
+            sourceUrl: 'https://www.syncee.co/product/oczyszczacz-airpure'
+          },
+          {
+            id: 'syncee_smartplug',
+            name: 'Smart gniazdko HomeLink',
+            cost: 59,
+            price: 59,
+            img: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80',
+            description: 'Sterowanie aplikacją, sceny smart home.',
+            supplier: 'Syncee',
+            category: 'Elektronika',
+            sourceUrl: 'https://www.syncee.co/product/smart-gniazdko-homelink'
           }
         ]
       }
@@ -1435,18 +1709,40 @@
         trial: false,
         products: [
           {
-            id: 'elektro_watch',
-            name: 'Smartwatch Pulsar',
-            cost: 420,
+            id: 'aliexpress_powerbank',
+            name: 'Powerbank 20000 mAh Voltix',
+            cost: 119,
+            price: 119,
             margin: 28,
-            supplier: 'Elektronika'
+            supplier: 'AliExpress',
+            category: 'Elektronika',
+            img: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=600&q=80',
+            description: 'Szybkie ładowanie PD 22.5W, dwa porty USB-C.'
           },
           {
-            id: 'elektro_audio',
-            name: 'Słuchawki Quantum',
-            cost: 260,
+            id: 'banggood_drone',
+            name: 'Dron sportowy AirFlash',
+            cost: 699,
+            price: 699,
             margin: 32,
-            supplier: 'Elektronika'
+            supplier: 'Banggood',
+            category: 'Elektronika',
+            img: 'https://images.unsplash.com/photo-1473968512647-3e447244af8f?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1473968512647-3e447244af8f?auto=format&fit=crop&w=600&q=80',
+            description: 'Kamera 2K, stabilizacja obrazu, zasięg 1200m.'
+          },
+          {
+            id: 'syncee_coffee',
+            name: 'Ekspres do kawy AromaOne',
+            cost: 860,
+            price: 860,
+            margin: 26,
+            supplier: 'Syncee',
+            category: 'RTV AGD',
+            img: 'https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?auto=format&fit=crop&w=600&q=80',
+            description: 'System parzenia 15 bar, młynek stalowy.'
           }
         ],
         createdAt: '2026-02-12T09:18:00Z'
@@ -1469,11 +1765,40 @@
         trial: false,
         products: [
           {
-            id: 'fashion_jacket',
-            name: 'Kurtka Nova',
-            cost: 210,
-            margin: 40,
-            supplier: 'Moda'
+            id: 'cj_softshell',
+            name: 'Kurtka Softshell Arctic',
+            cost: 169,
+            price: 169,
+            margin: 38,
+            supplier: 'CJ Dropshipping',
+            category: 'Moda',
+            img: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80',
+            description: 'Wodoodporny softshell, odpinany kaptur.'
+          },
+          {
+            id: 'spocket_hoodie',
+            name: 'Bluza premium StreetCloud',
+            cost: 199,
+            price: 199,
+            margin: 42,
+            supplier: 'Spocket',
+            category: 'Moda',
+            img: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=600&q=80',
+            description: 'Bawełna 400g, oversize fit, haft 3D.'
+          },
+          {
+            id: 'spocket_bag',
+            name: 'Torba skórzana Milano',
+            cost: 280,
+            price: 280,
+            margin: 36,
+            supplier: 'Spocket',
+            category: 'Akcesoria',
+            img: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=600&q=80',
+            description: 'Skóra naturalna, pasek crossbody, 3 kieszenie.'
           }
         ],
         createdAt: '2026-02-19T13:05:00Z'
@@ -1494,7 +1819,44 @@
         margin: 25,
         plan: 'basic',
         trial: true,
-        products: [],
+        products: [
+          {
+            id: 'vidaxl_garden_set',
+            name: 'Zestaw mebli ogrodowych Porto',
+            cost: 1290,
+            price: 1290,
+            margin: 24,
+            supplier: 'VidaXL',
+            category: 'Dom i ogród',
+            img: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=600&q=80',
+            description: '4 krzesła, stół hartowany, poduszki outdoor.'
+          },
+          {
+            id: 'costway_rocker',
+            name: 'Fotel bujany Nordic',
+            cost: 620,
+            price: 620,
+            margin: 26,
+            supplier: 'Costway',
+            category: 'Wyposażenie domu',
+            img: 'https://images.unsplash.com/photo-1487014679447-9f8336841d58?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1487014679447-9f8336841d58?auto=format&fit=crop&w=600&q=80',
+            description: 'Drewniana podstawa, tapicerka boucle.'
+          },
+          {
+            id: 'eprolo_organizer',
+            name: 'Organizer do szafy FlexiBox',
+            cost: 59,
+            price: 59,
+            margin: 20,
+            supplier: 'EPROLO',
+            category: 'Wyposażenie domu',
+            img: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=600&q=80',
+            image: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=600&q=80',
+            description: 'Modułowe kosze do garderoby i szuflad.'
+          }
+        ],
         createdAt: '2026-02-24T08:22:00Z'
       }
     ];
@@ -2129,6 +2491,10 @@
     if(!product){
       return null;
     }
+    const resolvedCostRaw = Number.parseFloat(product.cost ?? product.price);
+    const resolvedCost = Number.isNaN(resolvedCostRaw) ? 0 : resolvedCostRaw;
+    const resolvedImage = product.image || product.img || 'https://placehold.co/400x280/0f1837/FFFFFF?text=Produkt';
+    const resolvedPriceRaw = Number.parseFloat(product.price);
     const stores = ensureStoresList();
     let activeStore = getActiveStore(stores);
     if(!activeStore){
@@ -2140,21 +2506,30 @@
     const storeIndex = stores.findIndex(store => store.id === activeStore.id);
     const existingProducts = Array.isArray(activeStore.products) ? [...activeStore.products] : [];
     const storeSettings = loadStoreSettings();
-    const pricing = calculateTieredPricing(product.cost, {
+    const pricing = calculateTieredPricing(resolvedCost, {
       userMargin: margin,
       store: activeStore,
       settings: storeSettings,
       product
     });
+    const resolvedPrice = Number.isNaN(resolvedPriceRaw) ? pricing.finalPrice : resolvedPriceRaw;
     const entry = {
       id: product.id,
       name: product.name,
       cost: pricing.cost,
+      price: resolvedPrice,
       margin: pricing.userMarginPct,
       supplierMode: pricing.supplierMode,
+      supplierMarginPct: pricing.supplierMarginPct,
+      platformMarginPct: pricing.platformMarginPct,
+      supplierMarginValue: pricing.supplierMarginValue,
+      platformMarginValue: pricing.platformMarginValue,
+      userMarginValue: pricing.userMarginValue,
+      finalPrice: pricing.finalPrice,
       supplier: product.supplier,
       category: product.category,
-      image: product.image,
+      image: resolvedImage,
+      img: product.img || resolvedImage,
       description: product.description,
       addedAt: new Date().toISOString()
     };
@@ -2201,11 +2576,19 @@
       id: entry.id,
       name: entry.name,
       cost: entry.cost,
+      price: entry.price,
       margin: entry.margin,
       supplierMode: entry.supplierMode,
+      supplierMarginPct: entry.supplierMarginPct,
+      platformMarginPct: entry.platformMarginPct,
+      supplierMarginValue: entry.supplierMarginValue,
+      platformMarginValue: entry.platformMarginValue,
+      userMarginValue: entry.userMarginValue,
+      finalPrice: entry.finalPrice,
       supplier: entry.supplier,
       category: entry.category,
       image: entry.image,
+      img: entry.img,
       description: entry.description,
       storeId: updatedStore.id,
       createdAt: entry.addedAt
@@ -3087,12 +3470,21 @@
     const importsToday = document.querySelector('[data-imports-today]');
 
     const allProducts = suppliers.flatMap(supplier => supplier.products || []);
-    const totalCost = allProducts.reduce((sum, product) => sum + (Number.parseFloat(product.cost) || 0), 0);
+    const totalCost = allProducts.reduce((sum, product) => {
+      const costRaw = Number.parseFloat(product.cost ?? product.price);
+      return sum + (Number.isNaN(costRaw) ? 0 : costRaw);
+    }, 0);
     const avgCost = allProducts.length ? Math.round(totalCost / allProducts.length) : 0;
     const activeStore = getActiveStore(ensureStoresList());
     const storeSettings = loadStoreSettings();
     let storeMargin = resolveStoreMargin({store: activeStore, settings: storeSettings, plan: activeStore && activeStore.plan});
     const storeImportCount = activeStore && Array.isArray(activeStore.products) ? activeStore.products.length : 0;
+    const currentPlan = normalizePlan(
+      (activeStore && activeStore.plan)
+      || (storeSettings && (storeSettings.plan || storeSettings.suggestedPlan))
+      || getCurrentPlan()
+    );
+    const currentPlanLevel = getPlanLevel(currentPlan);
 
     if(suppliersCount){
       suppliersCount.dataset.counter = `${suppliers.length}`;
@@ -3115,7 +3507,11 @@
       calculatorMargin.value = `${storeMargin}`;
     }
 
-    let selectedSupplier = suppliers[0] || null;
+    const resolveSupplierPlan = supplier => normalizePlan(supplier && supplier.plan) || 'basic';
+    const isSupplierLocked = supplier => getPlanLevel(resolveSupplierPlan(supplier)) > currentPlanLevel;
+    const getSupplierLockLabel = plan => (plan === 'elite' ? 'Elite only' : 'Premium');
+    const firstAvailableSupplier = suppliers.find(supplier => !isSupplierLocked(supplier)) || suppliers[0] || null;
+    let selectedSupplier = firstAvailableSupplier;
     let currentProducts = [];
     let selectedProduct = null;
 
@@ -3138,7 +3534,9 @@
         }
         return;
       }
-      const pricing = calculateTieredPricing(product.cost, {
+      const resolvedCostRaw = Number.parseFloat(product.cost ?? product.price);
+      const resolvedCost = Number.isNaN(resolvedCostRaw) ? 0 : resolvedCostRaw;
+      const pricing = calculateTieredPricing(resolvedCost, {
         userMargin: marginValue,
         store: activeStore,
         settings: storeSettings,
@@ -3178,6 +3576,17 @@
       }
     };
 
+    const importSupplierProducts = supplier => {
+      if(!supplier || !Array.isArray(supplier.products) || !supplier.products.length){
+        updateStatus('Brak produktów do importu.');
+        return;
+      }
+      const marginValue = bulkMarginInput ? bulkMarginInput.value : storeMargin;
+      supplier.products.forEach(product => addProductToStore(product, marginValue));
+      updateStatus(`Zaimportowano ${supplier.products.length} produktów z ${supplier.name}.`);
+      updateImportsCounter();
+    };
+
     const renderProducts = products => {
       productsGrid.innerHTML = '';
       if(!products.length){
@@ -3190,11 +3599,14 @@
         productsEmpty.hidden = true;
       }
       products.forEach(product => {
+        const resolvedCostRaw = Number.parseFloat(product.cost ?? product.price);
+        const resolvedCost = Number.isNaN(resolvedCostRaw) ? 0 : resolvedCostRaw;
+        const resolvedImage = product.image || product.img || 'https://placehold.co/400x280/0f1837/FFFFFF?text=Produkt';
         const card = document.createElement('article');
         card.className = 'product-card';
         const defaultMargin = bulkMarginInput ? normalizeMarginValue(bulkMarginInput.value, storeMargin) : storeMargin;
         card.innerHTML = `
-          <img src="${product.image}" alt="${product.name}">
+          <img src="${resolvedImage}" alt="${product.name}">
           <div class="product-meta">
             <div>
               <span class="tag">${product.category}</span>
@@ -3203,7 +3615,7 @@
             </div>
             <div class="price-stack">
               <span>Koszt zakupu</span>
-              <strong data-product-cost>${formatCurrency(product.cost)}</strong>
+              <strong data-product-cost>${formatCurrency(resolvedCost)}</strong>
             </div>
             <label class="product-input">
               Marża (%)
@@ -3227,7 +3639,7 @@
         const finalTarget = card.querySelector('[data-product-final]');
         const profitTarget = card.querySelector('[data-product-profit]');
         const updateCardPricing = () => {
-          const pricing = calculateTieredPricing(product.cost, {
+          const pricing = calculateTieredPricing(resolvedCost, {
             userMargin: marginInput ? marginInput.value : storeMargin,
             store: activeStore,
             settings: storeSettings,
@@ -3303,6 +3715,14 @@
     };
 
     const selectSupplier = supplier => {
+      if(!supplier){
+        return;
+      }
+      const requiredPlan = resolveSupplierPlan(supplier);
+      if(isSupplierLocked(supplier)){
+        showUpgradeModal(requiredPlan);
+        return;
+      }
       selectedSupplier = supplier;
       if(supplierName){
         supplierName.textContent = supplier ? supplier.name : 'Wybierz hurtownię';
@@ -3333,9 +3753,18 @@
         suppliersEmpty.hidden = true;
       }
       suppliers.forEach(supplier => {
+        const requiredPlan = resolveSupplierPlan(supplier);
+        const locked = isSupplierLocked(supplier);
+        const lockLabel = getSupplierLockLabel(requiredPlan);
         const card = document.createElement('article');
         card.className = 'supplier-card';
+        card.classList.toggle('is-locked', locked);
         card.dataset.supplierId = supplier.slug;
+        card.dataset.supplierPlan = requiredPlan;
+        const lockTag = locked
+          ? `<span class="tag tag-lock ${requiredPlan === 'elite' ? 'tag-elite' : 'tag-premium'}">${lockLabel}</span>`
+          : '';
+        const importLabel = locked ? 'Upgrade' : 'Importuj';
         card.innerHTML = `
           <div class="supplier-meta">
             <img src="${supplier.logo}" alt="${supplier.name}">
@@ -3346,13 +3775,32 @@
           </div>
           <p class="hint">${supplier.description}</p>
           <div class="cta-row">
-            <button class="btn btn-secondary" type="button">Zobacz produkty</button>
+            <button class="btn btn-primary" type="button" data-supplier-import>${importLabel}</button>
+            <button class="btn btn-secondary" type="button" data-supplier-view>Zobacz produkty</button>
+            ${lockTag}
             <span class="tag">${(supplier.products || []).length} produktów</span>
           </div>
         `;
-        card.addEventListener('click', () => {
-          selectSupplier(supplier);
-        });
+        card.addEventListener('click', () => selectSupplier(supplier));
+        const viewButton = card.querySelector('[data-supplier-view]');
+        if(viewButton){
+          viewButton.addEventListener('click', event => {
+            event.stopPropagation();
+            selectSupplier(supplier);
+          });
+        }
+        const importAction = card.querySelector('[data-supplier-import]');
+        if(importAction){
+          importAction.addEventListener('click', event => {
+            event.stopPropagation();
+            if(locked){
+              showUpgradeModal(requiredPlan);
+              return;
+            }
+            selectSupplier(supplier);
+            importSupplierProducts(supplier);
+          });
+        }
         suppliersGrid.appendChild(card);
       });
     };
@@ -3435,6 +3883,13 @@
     if(!storeProducts.length && activeStore && Array.isArray(activeStore.products)){
       storeProducts = activeStore.products.map(product => ({...product, storeId: activeStore.id}));
     }
+    if(!storeProducts.length){
+      const fallbackSuppliers = ensureOwnerDemoData().suppliers;
+      storeProducts = buildProductsFromSuppliers(fallbackSuppliers).map(product => ({
+        ...product,
+        storeId: (activeStore && activeStore.id) || product.storeId
+      }));
+    }
     productsGrid.innerHTML = '';
     if(!storeProducts.length){
       if(emptyState){
@@ -3447,7 +3902,9 @@
     }
     const fallbackImage = 'https://placehold.co/400x280/0f1837/FFFFFF?text=Produkt';
     storeProducts.forEach(product => {
-      const pricing = calculateTieredPricing(product.cost, {
+      const resolvedCostRaw = Number.parseFloat(product.cost ?? product.price);
+      const resolvedCost = Number.isNaN(resolvedCostRaw) ? 0 : resolvedCostRaw;
+      const pricing = calculateTieredPricing(resolvedCost, {
         userMargin: product.margin ?? storeMargin,
         store: activeStore,
         settings: storeSettings,
@@ -3459,12 +3916,15 @@
       const media = document.createElement('div');
       media.className = 'product-media';
       const image = document.createElement('img');
-      image.src = product.image || fallbackImage;
+      image.src = product.image || product.img || fallbackImage;
       image.alt = product.name || 'Produkt';
       media.appendChild(image);
 
       const details = document.createElement('div');
       details.className = 'product-details';
+      const category = document.createElement('span');
+      category.className = 'tag';
+      category.textContent = product.category || 'Kategoria';
       const title = document.createElement('h3');
       title.textContent = product.name || 'Produkt';
       const hint = document.createElement('p');
@@ -3496,6 +3956,7 @@
       actions.appendChild(addButton);
       actions.appendChild(detailsLink);
 
+      details.appendChild(category);
       details.appendChild(title);
       details.appendChild(hint);
       details.appendChild(meta);
