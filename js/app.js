@@ -15,6 +15,25 @@
   const MS_PER_DAY = 1000 * 60 * 60 * 24;
   const SURVEY_AUTO_OPEN_DELAY = 4500;
   const SURVEY_SUCCESS_TIMEOUT = 1500;
+  const DEFAULT_LOCALE = 'pl-PL';
+  const DEFAULT_TEST_SLOTS = 20;
+  const DEFAULT_LIVE_STEP_MIN = 1;
+  const DEFAULT_LIVE_STEP_MAX = 3;
+  const DEFAULT_LIVE_INTERVAL_MS = 6500;
+  const TOAST_INTERVAL_MS = 5200;
+  const TOAST_INTERVAL_REDUCED_MS = 9000;
+  const TOAST_DISPLAY_MS = 4200;
+  const TOAST_DISPLAY_REDUCED_MS = 3600;
+  const SAMPLE_USER_NAMES = ['Jan', 'Anna', 'Marek', 'Ola', 'Kamil', 'Ewa', 'Tomasz', 'Klara', 'Paweł', 'Lena'];
+  const ACTIVITY_TOAST_MESSAGES = [
+    {title: 'Nowy użytkownik otworzył sklep', detail: 'Aktywacja ukończona'},
+    {title: '{name} dodał produkt', detail: 'Nowa kolekcja premium', useName: true},
+    {title: 'Ktoś kupił plan PRO', detail: 'Subskrypcja aktywna'},
+    {title: 'Nowy sklep aktywowany', detail: 'Integracja płatności gotowa'},
+    {title: 'Sprzedaż zakończona', detail: 'Zamówienie wysłane'}
+  ];
+  const liveCounterIntervals = new Map();
+  let activityToastIntervalId = null;
   const TRIAL_RULES = [
     {limit: 3, days: 60},
     {limit: 5, days: 30}
@@ -37,6 +56,15 @@
     });
   }
 
+  function getRandomElement(list){
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
+  function getRandomIncrement(minValue, maxValue){
+    const range = Math.max(maxValue - minValue, 0);
+    return minValue + Math.floor(Math.random() * (range + 1));
+  }
+
   function getCounterTarget(el){
     const rawValue = el.dataset.counter;
     if(!rawValue) return null;
@@ -50,7 +78,8 @@
     const format = el.dataset.counterFormat;
     let formatted = `${safeValue}`;
     if(format === 'grouped' || format === 'currency'){
-      formatted = new Intl.NumberFormat('pl-PL').format(safeValue);
+      const locale = document.documentElement.lang || DEFAULT_LOCALE;
+      formatted = new Intl.NumberFormat(locale).format(safeValue);
     }
     if(format === 'currency'){
       formatted = `${formatted} zł`;
@@ -81,25 +110,29 @@
     const min = Number.parseInt(el.dataset.counterLiveMin, 10);
     const max = Number.parseInt(el.dataset.counterLiveMax, 10);
     const interval = Number.parseInt(el.dataset.counterLiveInterval, 10);
-    const stepMin = Number.isNaN(min) ? 1 : min;
-    const stepMax = Number.isNaN(max) ? 3 : max;
-    const intervalMs = Number.isNaN(interval) ? 6500 : interval;
+    const stepMin = Number.isNaN(min) ? DEFAULT_LIVE_STEP_MIN : min;
+    const stepMax = Number.isNaN(max) ? DEFAULT_LIVE_STEP_MAX : max;
+    const resolvedMin = Math.min(stepMin, stepMax);
+    const resolvedMax = Math.max(stepMin, stepMax);
+    const intervalMs = Number.isNaN(interval) ? DEFAULT_LIVE_INTERVAL_MS : interval;
     let currentValue = getCounterTarget(el);
     if(currentValue === null){
       currentValue = 0;
     }
     el.dataset.counterLiveActive = 'true';
 
-    setInterval(() => {
-      const deltaRange = Math.max(stepMax - stepMin, 0);
-      const delta = stepMin + Math.floor(Math.random() * (deltaRange + 1));
-      if(delta <= 0){
+    const intervalId = window.setInterval(() => {
+      if(!document.body.contains(el)){
+        clearInterval(intervalId);
+        liveCounterIntervals.delete(el);
         return;
       }
+      const delta = getRandomIncrement(resolvedMin, resolvedMax);
       currentValue += delta;
       el.dataset.counter = `${currentValue}`;
       setCounterValue(el, currentValue);
     }, intervalMs);
+    liveCounterIntervals.set(el, intervalId);
   }
 
   function animateCounter(el, onComplete){
@@ -134,6 +167,8 @@
       counters.forEach(counter => {
         const target = getCounterTarget(counter);
         setCounterValue(counter, target === null ? 0 : target);
+        counter.setAttribute('aria-live', 'polite');
+        counter.setAttribute('aria-atomic', 'true');
         if(!prefersReducedMotion){
           startLiveCounter(counter);
         }
@@ -155,6 +190,8 @@
     counters.forEach(counter => {
       const target = getCounterTarget(counter);
       setCounterValue(counter, 0);
+      counter.setAttribute('aria-live', 'polite');
+      counter.setAttribute('aria-atomic', 'true');
       if(target !== null){
         observer.observe(counter);
       }
@@ -187,22 +224,31 @@
     if(!container){
       return;
     }
-    const messages = [
-      {title: 'Nowy użytkownik otworzył sklep', detail: 'Aktywacja ukończona'},
-      {title: 'Jan dodał produkt', detail: 'Nowa kolekcja premium'},
-      {title: 'Ktoś kupił plan PRO', detail: 'Subskrypcja aktywna'},
-      {title: 'Nowy sklep aktywowany', detail: 'Integracja płatności gotowa'},
-      {title: 'Sprzedaż zakończona', detail: 'Zamówienie wysłane'}
-    ];
+    if(activityToastIntervalId){
+      return;
+    }
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const intervalMs = prefersReducedMotion ? 9000 : 5200;
-    const displayMs = prefersReducedMotion ? 3600 : 4200;
+    const intervalMs = prefersReducedMotion ? TOAST_INTERVAL_REDUCED_MS : TOAST_INTERVAL_MS;
+    const displayMs = prefersReducedMotion ? TOAST_DISPLAY_REDUCED_MS : TOAST_DISPLAY_MS;
 
     const showToast = () => {
-      const message = messages[Math.floor(Math.random() * messages.length)];
+      if(!document.body.contains(container)){
+        if(activityToastIntervalId){
+          clearInterval(activityToastIntervalId);
+          activityToastIntervalId = null;
+        }
+        return;
+      }
+      const message = getRandomElement(ACTIVITY_TOAST_MESSAGES);
       const toast = document.createElement('div');
       toast.className = 'activity-toast';
-      toast.innerHTML = `<strong>${message.title}</strong><span>${message.detail}</span>`;
+      const title = document.createElement('strong');
+      const randomUserName = getRandomElement(SAMPLE_USER_NAMES);
+      const titleText = message.useName ? message.title.replaceAll('{name}', randomUserName) : message.title;
+      title.textContent = titleText;
+      const detail = document.createElement('span');
+      detail.textContent = message.detail;
+      toast.append(title, detail);
       container.appendChild(toast);
       requestAnimationFrame(() => toast.classList.add('is-visible'));
 
@@ -213,7 +259,22 @@
     };
 
     showToast();
-    setInterval(showToast, intervalMs);
+    activityToastIntervalId = window.setInterval(showToast, intervalMs);
+  }
+
+  function initSlotsBanner(){
+    const banners = document.querySelectorAll('[data-slots-total]');
+    if(!banners.length){
+      return;
+    }
+    banners.forEach(banner => {
+      const totalValue = Number.parseInt(banner.dataset.slotsTotal, 10);
+      const target = banner.querySelector('[data-slots-total-value]');
+      const resolvedTotal = Number.isNaN(totalValue) ? DEFAULT_TEST_SLOTS : totalValue;
+      if(target){
+        target.textContent = `${resolvedTotal}`;
+      }
+    });
   }
 
   function initSurveyModal(){
@@ -626,9 +687,19 @@
     initCounters();
     initHelperBoxes();
     initActivityToasts();
+    initSlotsBanner();
     initSurveyModal();
     initStoreGenerator();
     initLoginForm();
     guardDashboard();
+  });
+
+  window.addEventListener('pagehide', () => {
+    liveCounterIntervals.forEach(intervalId => clearInterval(intervalId));
+    liveCounterIntervals.clear();
+    if(activityToastIntervalId){
+      clearInterval(activityToastIntervalId);
+      activityToastIntervalId = null;
+    }
   });
 })();
