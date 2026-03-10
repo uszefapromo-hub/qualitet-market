@@ -13,7 +13,7 @@
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-page="owner-panel" class="dashboard-page owner-page has-bottom-nav">
+<body data-page="owner-panel" class="dashboard-page owner-page has-bottom-nav has-app-cta">
   <div class="app-splash" data-app-splash>
     <div class="app-splash-card">
       <div class="app-splash-logo">
@@ -95,26 +95,32 @@
         <div class="stat-card">
           <span>Użytkownicy</span>
           <strong data-counter data-counter-format="grouped" data-owner-users>0</strong>
+          <small class="stat-note">Start projektu</small>
         </div>
         <div class="stat-card">
           <span>Sklepy</span>
           <strong data-counter data-counter-format="grouped" data-owner-stores>0</strong>
+          <small class="stat-note">Miejsca testowe</small>
         </div>
         <div class="stat-card">
           <span>Produkty</span>
           <strong data-counter data-counter-format="grouped" data-owner-products>0</strong>
+          <small class="stat-note">Oferta startowa</small>
         </div>
         <div class="stat-card">
           <span>Leady</span>
           <strong data-counter data-counter-format="grouped" data-owner-leads>0</strong>
+          <small class="stat-note">Pierwsza fala partnerów</small>
         </div>
         <div class="stat-card">
           <span>Przychód (mock)</span>
           <strong data-counter data-counter-format="currency" data-owner-revenue>0</strong>
+          <small class="stat-note">Dane startowe</small>
         </div>
         <div class="stat-card">
           <span>Sprzedaż (mock)</span>
           <strong data-counter data-counter-format="grouped" data-owner-sales>0</strong>
+          <small class="stat-note">Program testowy</small>
         </div>
       </section>
 
@@ -128,14 +134,17 @@
           <div class="stat-card">
             <span>Basic</span>
             <strong data-counter data-counter-format="grouped" data-owner-plan-basic>0</strong>
+            <small class="stat-note">Pakiet startowy</small>
           </div>
           <div class="stat-card">
             <span>Pro</span>
             <strong data-counter data-counter-format="grouped" data-owner-plan-pro>0</strong>
+            <small class="stat-note">Zgłoszenia pilotowe</small>
           </div>
           <div class="stat-card">
             <span>Elite</span>
             <strong data-counter data-counter-format="grouped" data-owner-plan-elite>0</strong>
+            <small class="stat-note">Oferta premium</small>
           </div>
         </div>
       </section>
@@ -260,7 +269,50 @@
         <div class="list-cards" data-owner-suppliers-list></div>
       </section>
       </div>
-    </main>
+        <section class="app-promo-section">
+      <div class="app-promo-card">
+        <div class="app-promo-media">
+          <div class="app-phone-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="7" y="2.5" width="10" height="19" rx="2"></rect>
+              <path d="M11 18h2"></path>
+            </svg>
+          </div>
+          <span class="app-promo-label">Aplikacja webowa • dodaj do ekranu</span>
+        </div>
+        <div class="app-promo-content">
+          <span class="eyebrow">Aplikacja mobilna</span>
+          <h2>U SZEFA w Twoim telefonie</h2>
+          <p class="hint">Zarządzaj sklepem, hurtowniami i zamówieniami w jednym panelu mobilnym.</p>
+          <ul class="app-benefits">
+            <li>Szybki dostęp</li>
+            <li>Panel w telefonie</li>
+            <li>Zarządzanie sklepem</li>
+            <li>Hurtownie i zamówienia w 1 miejscu</li>
+          </ul>
+        </div>
+        <div class="app-promo-actions">
+          <a class="btn btn-primary" href="login.html">Otwórz aplikację</a>
+          <a class="btn btn-secondary" href="login.html">Dodaj do telefonu</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+  </div>
+
+  <div class="app-cta-sticky" data-app-cta>
+    <div class="wrap app-cta-inner">
+      <div class="app-cta-copy">
+        <span class="app-cta-eyebrow">Aplikacja webowa</span>
+        <strong>Dodaj U SZEFA do telefonu</strong>
+        <span class="app-cta-note">Dodaj do ekranu głównego i uruchom panel w telefonie.</span>
+      </div>
+      <div class="app-cta-actions">
+        <a class="btn btn-primary" href="login.html">Otwórz aplikację</a>
+        <a class="btn btn-secondary" href="login.html">Dodaj do ekranu</a>
+      </div>
+    </div>
   </div>
 
   <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
