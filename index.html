@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="pl"><head><title>Hurtownie</title><meta charset="utf-8">
+<html lang="pl"><head><title>U Szefa + QualitetMarket — królestwo zarabiania</title><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="css/styles.css"></head>
-<body data-page="hurtownie">
+<body data-page="index">
 <header class="topbar">
   <div class="wrap topbar-inner">
     <a class="brand" href="index.html">
@@ -30,14 +30,69 @@
 </header>
 
 <main class="wrap">
-  <section class="page-hero compact">
-    <span class="eyebrow">Import hurtowni</span>
-    <h1>Wybierz dostawcę i zapisz gotowy prefill produktów.</h1>
-    <p>Prosty import do localStorage bez starego chaosu.</p>
+  <section class="hero">
+    <div class="hero-grid">
+      <div>
+        <span class="eyebrow">U Szefa + QualitetMarket</span>
+        <h1>Królestwo zarabiania na wyciągnięcie ręki.</h1>
+        <p class="lead">Otwórz własny sklep, importuj produkty z hurtowni, ustaw reklamy i zarządzaj sprzedażą — wszystko bez kodowania.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="generator-sklepu.html">Otwórz sklep za darmo</a>
+          <a class="btn btn-secondary" href="qualitetmarket.html">QualitetMarket</a>
+        </div>
+        <p class="promo-banner">🎁 Pierwsze 3 sklepy dostają promocję startową — nie przegap!</p>
+      </div>
+      <div class="image-card">
+        <img src="assets/logo-wspolne.svg" alt="U Szefa + QualitetMarket">
+      </div>
+    </div>
   </section>
-  <section class="supplier-grid" id="suppliers-list"></section>
+
+  <section class="stats-grid">
+    <article class="stat-card"><span>Produkty</span><strong data-products-count>0</strong></article>
+    <article class="stat-card"><span>Zamówienia</span><strong data-orders-count>0</strong></article>
+    <article class="stat-card"><span>Sklepy</span><strong data-stores-count>0</strong></article>
+    <article class="stat-card"><span>Marża</span><strong data-margin-default>20%</strong></article>
+  </section>
+
+  <section class="section-grid">
+    <article class="feature-card gradient-a">
+      <h2>Import hurtowni</h2>
+      <p>Ładujesz produkty z EU Home Supply, Beauty Max lub Tech Flow. System zapisuje gotowy prefill listingu.</p>
+      <a class="link-arrow" href="hurtownie.html">Wybierz hurtownię →</a>
+    </article>
+    <article class="feature-card gradient-b">
+      <h2>Sklep pod własnym logo</h2>
+      <p>Każdy sprzedawca otwiera swój sklep, ustawia własny motyw, plan i marżę. Bez kodowania.</p>
+      <a class="link-arrow" href="generator-sklepu.html">Otwórz sklep →</a>
+    </article>
+    <article class="feature-card gradient-c">
+      <h2>Centrum dowodzenia</h2>
+      <p>Dashboard, panel sklepu, reklamy, zamówienia — wszystko w jednym miejscu, gotowe pod GitHub Pages.</p>
+      <a class="link-arrow" href="dashboard.html">Przejdź do dashboardu →</a>
+    </article>
+  </section>
+
+  <section class="marketplace-block">
+    <div>
+      <span class="eyebrow">QualitetMarket</span>
+      <h2>Centrum zarządzania sprzedażą i reklamą</h2>
+      <p class="lead">Pilnuj sklepów, marży, reklam, ofert i importów z hurtowni z jednego panelu.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="qualitetmarket.html">Wejdź do QualitetMarket</a>
+        <a class="btn btn-secondary" href="cennik.html">Zobacz plany</a>
+      </div>
+    </div>
+    <div>
+      <div class="themes-row">
+        <div class="theme-pill">Clean</div>
+        <div class="theme-pill">Boost</div>
+        <div class="theme-pill">Royal</div>
+        <div class="theme-pill">Neon</div>
+      </div>
+    </div>
+  </section>
 </main>
-<script src="js/hurtownie.js" defer></script>
 
 <footer class="footer">
   <div class="wrap footer-grid">
