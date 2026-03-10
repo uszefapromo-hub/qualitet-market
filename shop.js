@@ -10,6 +10,7 @@
     backgroundColor: '#f5f7fb',
     theme: 'modern',
     margin: 15,
+    productsCount: 24,
     plan: 'basic',
     trial: true,
     description: 'Nowoczesny sklep online na platformie U SZEFA.'
@@ -93,6 +94,15 @@
     return Math.min(100, Math.max(0, parsedValue));
   }
 
+  function normalizeProductsCount(rawValue){
+    const isBlank = rawValue === '' || rawValue == null;
+    const parsedValue = isBlank ? NaN : parseInt(rawValue, 10);
+    if(!Number.isFinite(parsedValue)){
+      return DEFAULTS.productsCount;
+    }
+    return Math.max(0, parsedValue);
+  }
+
   function buildStoreFromForm(form){
     const nameInput = form.querySelector('input[name="storeName"]');
     const slugInput = form.querySelector('input[name="storeSlug"]');
@@ -103,6 +113,7 @@
     const backgroundInput = form.querySelector('input[name="backgroundColor"]');
     const themeSelect = form.querySelector('select[name="storeTheme"]');
     const marginInput = form.querySelector('input[name="storeMargin"]');
+    const productsInput = form.querySelector('input[name="storeProducts"]');
     const planSelect = form.querySelector('select[name="storePlan"]');
     const trialSelect = form.querySelector('select[name="storeTrial"]');
 
@@ -110,6 +121,7 @@
     const slug = manager.normalizeSlug(slugInput && slugInput.value ? slugInput.value : name);
     const marginRaw = marginInput ? marginInput.value : '';
     const normalizedMargin = normalizeMargin(marginRaw);
+    const normalizedProducts = normalizeProductsCount(productsInput ? productsInput.value : '');
 
     return {
       name,
@@ -121,6 +133,7 @@
       backgroundColor: backgroundInput ? backgroundInput.value : DEFAULTS.backgroundColor,
       theme: themeSelect ? themeSelect.value : DEFAULTS.theme,
       margin: normalizedMargin,
+      productsCount: normalizedProducts,
       plan: planSelect ? planSelect.value : DEFAULTS.plan,
       trial: trialSelect ? trialSelect.value === 'true' : DEFAULTS.trial
     };
@@ -140,6 +153,7 @@
       backgroundColor: store.backgroundColor,
       storeTheme: store.theme,
       storeMargin: store.margin,
+      storeProducts: store.productsCount,
       storePlan: store.plan,
       storeTrial: store.trial ? 'true' : 'false'
     };
@@ -166,6 +180,11 @@
     const primaryInput = form.querySelector('input[name="primaryColor"]');
     const accentInput = form.querySelector('input[name="accentColor"]');
     const backgroundInput = form.querySelector('input[name="backgroundColor"]');
+    const themeSelect = form.querySelector('select[name="storeTheme"]');
+    const marginInput = form.querySelector('input[name="storeMargin"]');
+    const planSelect = form.querySelector('select[name="storePlan"]');
+    const trialSelect = form.querySelector('select[name="storeTrial"]');
+    const productsInput = form.querySelector('input[name="storeProducts"]');
     const slugPreview = form.querySelector('[data-slug-preview]');
     const logoPreview = form.querySelector('[data-logo-preview]');
     const primaryChip = form.querySelector('[data-primary-chip]');
@@ -173,6 +192,16 @@
     const backgroundChip = form.querySelector('[data-background-chip]');
     const previewButton = form.querySelector('[data-store-preview]');
     const panelButton = form.querySelector('[data-store-panel]');
+    const livePreview = document.querySelector('[data-live-preview]');
+    const previewStore = livePreview ? livePreview.querySelector('[data-preview-store]') : null;
+    const previewLogo = livePreview ? livePreview.querySelector('[data-preview-logo]') : null;
+    const previewName = livePreview ? livePreview.querySelector('[data-preview-name]') : null;
+    const previewPlan = livePreview ? livePreview.querySelector('[data-preview-plan]') : null;
+    const previewMargin = livePreview ? livePreview.querySelector('[data-preview-margin]') : null;
+    const previewProducts = livePreview ? livePreview.querySelector('[data-preview-products]') : null;
+    const previewPanelPlan = livePreview ? livePreview.querySelector('[data-preview-panel-plan]') : null;
+    const previewPanelMargin = livePreview ? livePreview.querySelector('[data-preview-panel-margin]') : null;
+    const previewPanelProducts = livePreview ? livePreview.querySelector('[data-preview-panel-products]') : null;
 
     let activeStore = manager.getActiveStore();
     if(activeStore){
@@ -230,6 +259,46 @@
       renderLogo(logoPreview, activeStore);
     }
 
+    function updateLivePreview(){
+      if(!livePreview){
+        return;
+      }
+      const storeData = buildStoreFromForm(form);
+      const name = storeData.name || 'Twoja nazwa';
+      const planLabel = formatPlan(storeData.plan);
+      const marginLabel = `${storeData.margin}%`;
+      const productsLabel = `${storeData.productsCount}`;
+
+      if(previewStore){
+        previewStore.style.setProperty('--preview-primary', storeData.primaryColor || DEFAULTS.primaryColor);
+        previewStore.style.setProperty('--preview-accent', storeData.accentColor || DEFAULTS.accentColor);
+      }
+      renderLogo(previewLogo, {name, logo: storeData.logo});
+      if(previewName){
+        previewName.textContent = name;
+      }
+      if(previewPlan){
+        previewPlan.textContent = `Plan ${planLabel}`;
+      }
+      if(previewMargin){
+        previewMargin.textContent = `Marża: ${marginLabel}`;
+      }
+      if(previewProducts){
+        previewProducts.textContent = `Produkty: ${productsLabel}`;
+      }
+      if(previewPanelPlan){
+        previewPanelPlan.textContent = planLabel;
+      }
+      if(previewPanelMargin){
+        previewPanelMargin.textContent = marginLabel;
+      }
+      if(previewPanelProducts){
+        previewPanelProducts.textContent = productsLabel;
+      }
+    }
+
+    updateLivePreview();
+
     function handleGeneratorSave(redirectUrl){
       const storeData = buildStoreFromForm(form);
       if(!storeData.name){
@@ -266,6 +335,17 @@
         handleGeneratorSave('panel-sklepu.html');
       });
     }
+
+    [nameInput, logoInput, primaryInput, accentInput, backgroundInput, productsInput].forEach(input => {
+      if(input){
+        input.addEventListener('input', updateLivePreview);
+      }
+    });
+    [themeSelect, marginInput, planSelect, trialSelect].forEach(select => {
+      if(select){
+        select.addEventListener('change', updateLivePreview);
+      }
+    });
   }
 
   function hashString(value){
@@ -276,7 +356,11 @@
 
   function getMockMetrics(store){
     const seed = hashString(store.id || store.slug || store.name);
-    const products = MOCK_PRODUCTS_BASE + (seed % MOCK_PRODUCTS_RANGE);
+    const parsedProducts = Number.isFinite(store.productsCount)
+      ? store.productsCount
+      : parseInt(store.productsCount, 10);
+    const hasProductCount = Number.isFinite(parsedProducts);
+    const products = hasProductCount ? parsedProducts : MOCK_PRODUCTS_BASE + (seed % MOCK_PRODUCTS_RANGE);
     const revenue = MOCK_REVENUE_BASE + (seed % MOCK_REVENUE_RANGE);
     return {products, revenue};
   }

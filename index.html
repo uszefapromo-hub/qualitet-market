@@ -60,6 +60,211 @@
       </div>
     </section>
 
+    <section class="cta-tiles-section" id="start">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">Start sprzedaży</span>
+          <h2>Wybierz akcję i uruchom sklep bez wysiłku</h2>
+          <p>Mocne kafle prowadzą Cię do kolejnego kroku. Kliknij, policz, wybierz plan i uruchom sprzedaż.</p>
+        </div>
+        <div class="cta-tiles-grid">
+          <a class="cta-tile highlight" href="generator-sklepu.html" data-popup-trigger data-popup-title="Chcesz własny sklep online?" data-popup-message="Uruchom sklep bez programowania." data-popup-link="generator-sklepu.html">
+            <span class="cta-eyebrow">Nowy sklep</span>
+            <h3>Otwórz sklep</h3>
+            <p>Startuj w kilka minut i zbuduj markę premium.</p>
+            <span class="link-arrow">Startuj teraz →</span>
+          </a>
+          <a class="cta-tile" href="#kalkulatory" data-popup-trigger data-popup-title="Policz swój zysk w 15 sekund" data-popup-link="#kalkulatory">
+            <span class="cta-eyebrow">Szybki wynik</span>
+            <h3>Policz marżę</h3>
+            <p>Sprawdź, jak wygląda Twoja marża i zysk.</p>
+            <span class="link-arrow">Przejdź do kalkulatora →</span>
+          </a>
+          <a class="cta-tile" href="#kalkulatory">
+            <span class="cta-eyebrow">Finanse</span>
+            <h3>Oblicz zysk</h3>
+            <p>Zobacz ile zarabiasz miesięcznie na sprzedaży.</p>
+            <span class="link-arrow">Wylicz wynik →</span>
+          </a>
+          <a class="cta-tile" href="panel-sklepu.html">
+            <span class="cta-eyebrow">Demo panelu</span>
+            <h3>Zobacz demo panelu</h3>
+            <p>Wejdź do panelu i zobacz jak zarządzasz sklepem.</p>
+            <span class="link-arrow">Otwórz panel →</span>
+          </a>
+          <a class="cta-tile" href="generator-sklepu.html">
+            <span class="cta-eyebrow">Asortyment</span>
+            <h3>Dodaj produkty</h3>
+            <p>Wybierz ilość produktów i przygotuj start.</p>
+            <span class="link-arrow">Uzupełnij produkty →</span>
+          </a>
+          <a class="cta-tile" href="#kalkulatory" data-popup-trigger data-popup-title="Dobierz plan dla swojego sklepu" data-popup-link="#kalkulatory">
+            <span class="cta-eyebrow">Pakiet</span>
+            <h3>Dobierz plan</h3>
+            <p>Zobacz który plan pasuje do Twojej skali.</p>
+            <span class="link-arrow">Wybierz plan →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="calculator-section" id="kalkulatory">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">Kalkulatory</span>
+          <h2>Policz marżę, zysk i tempo sprzedaży</h2>
+          <p>Wpisz dane, zobacz wynik natychmiast i przejdź do działania.</p>
+        </div>
+        <div class="calculator-grid">
+          <article class="calculator-card" data-calc="margin">
+            <h3>Kalkulator marży</h3>
+            <div class="calculator-fields">
+              <label>
+                Cena sprzedaży (zł)
+                <input type="number" min="0" step="1" value="199" data-calc-input="price">
+              </label>
+              <label>
+                Koszt produktu (zł)
+                <input type="number" min="0" step="1" value="120" data-calc-input="cost">
+              </label>
+            </div>
+            <div class="calculator-result">
+              <span>Marża</span>
+              <strong data-calc-output="margin">0%</strong>
+              <small data-calc-output="profit">Zysk: 0 zł / szt.</small>
+            </div>
+          </article>
+          <article class="calculator-card" data-calc="profit">
+            <h3>Kalkulator zysku</h3>
+            <div class="calculator-fields">
+              <label>
+                Cena sprzedaży (zł)
+                <input type="number" min="0" step="1" value="199" data-calc-input="price">
+              </label>
+              <label>
+                Koszt produktu (zł)
+                <input type="number" min="0" step="1" value="120" data-calc-input="cost">
+              </label>
+              <label>
+                Ilość sprzedanych sztuk
+                <input type="number" min="0" step="1" value="40" data-calc-input="quantity">
+              </label>
+            </div>
+            <div class="calculator-result">
+              <span>Zysk całkowity</span>
+              <strong data-calc-output="total-profit">0 zł</strong>
+              <small data-calc-output="total-profit-note">Potencjał miesięczny</small>
+            </div>
+          </article>
+          <article class="calculator-card" data-calc="units">
+            <h3>Ile trzeba sprzedać?</h3>
+            <div class="calculator-fields">
+              <label>
+                Cel zysku (zł)
+                <input type="number" min="0" step="1" value="8000" data-calc-input="target">
+              </label>
+              <label>
+                Zysk na produkcie (zł)
+                <input type="number" min="0" step="1" value="80" data-calc-input="profit">
+              </label>
+            </div>
+            <div class="calculator-result">
+              <span>Potrzebna liczba sprzedaży</span>
+              <strong data-calc-output="units">0 szt.</strong>
+              <small data-calc-output="units-note">Przelicz ile musisz sprzedać</small>
+            </div>
+          </article>
+          <article class="calculator-card" data-calc="monthly">
+            <h3>Kalkulator miesięcznego zarobku</h3>
+            <div class="calculator-fields">
+              <label>
+                Dzienne zamówienia
+                <input type="number" min="0" step="1" value="12" data-calc-input="daily-orders">
+              </label>
+              <label>
+                Zysk na zamówieniu (zł)
+                <input type="number" min="0" step="1" value="80" data-calc-input="profit-per-order">
+              </label>
+            </div>
+            <div class="calculator-result">
+              <span>Zysk miesięczny</span>
+              <strong data-calc-output="monthly-profit">0 zł</strong>
+              <small data-calc-output="monthly-profit-note">Przy 30 dniach sprzedaży</small>
+            </div>
+          </article>
+          <article class="calculator-card" data-calc="plan">
+            <h3>Kalkulator planu</h3>
+            <div class="calculator-fields">
+              <label>
+                Ilość produktów
+                <input type="number" min="0" step="1" value="80" data-calc-input="products">
+              </label>
+              <label>
+                Zamówienia miesięcznie
+                <input type="number" min="0" step="1" value="120" data-calc-input="orders">
+              </label>
+            </div>
+            <div class="calculator-result">
+              <span>Rekomendowany plan</span>
+              <strong data-calc-output="plan">Basic</strong>
+              <small data-calc-output="plan-note">Skala startowa</small>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="flow-section" id="flow">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">Uproszczony flow</span>
+          <h2>Otwórz sklep krok po kroku</h2>
+          <p>Bez chaosu. Jedno kliknięcie po drugim prowadzi do gotowego sklepu.</p>
+        </div>
+        <div class="flow-grid">
+          <article class="flow-step">
+            <span class="flow-number">01</span>
+            <h3>Nazwa</h3>
+            <p>Podaj nazwę sklepu i od razu buduj markę.</p>
+          </article>
+          <article class="flow-step">
+            <span class="flow-number">02</span>
+            <h3>Logo</h3>
+            <p>Dodaj logo i pokaż profesjonalny wizerunek.</p>
+          </article>
+          <article class="flow-step">
+            <span class="flow-number">03</span>
+            <h3>Kolory</h3>
+            <p>Ustaw barwy premium i klimat Twojego sklepu.</p>
+          </article>
+          <article class="flow-step">
+            <span class="flow-number">04</span>
+            <h3>Plan</h3>
+            <p>Dobierz pakiet do skali sprzedaży.</p>
+          </article>
+          <article class="flow-step">
+            <span class="flow-number">05</span>
+            <h3>Produkty</h3>
+            <p>Dodaj produkty i przygotuj pierwszy rzut.</p>
+          </article>
+          <article class="flow-step">
+            <span class="flow-number">06</span>
+            <h3>Marża</h3>
+            <p>Ustaw marżę i policz realny zysk.</p>
+          </article>
+          <article class="flow-step">
+            <span class="flow-number">07</span>
+            <h3>Gotowe</h3>
+            <p>Uruchamiasz sklep i masz podgląd na żywo.</p>
+          </article>
+        </div>
+        <div class="cta-row flow-cta">
+          <a class="btn btn-primary" href="generator-sklepu.html">Otwórz sklep</a>
+          <a class="btn btn-secondary" href="#kalkulatory">Policz zysk</a>
+        </div>
+      </div>
+    </section>
+
     <section class="promo-section" id="oferta">
       <div class="wrap">
         <div class="section-head">
@@ -115,6 +320,19 @@
       </div>
     </section>
   </main>
+
+  <div class="popup-overlay" data-popup hidden aria-hidden="true">
+    <div class="popup-card" role="dialog" aria-modal="true" aria-live="polite">
+      <button class="popup-close" type="button" aria-label="Zamknij popup" data-popup-close>×</button>
+      <span class="popup-eyebrow">Premium start</span>
+      <h3 data-popup-title>Chcesz własny sklep online?</h3>
+      <p data-popup-message>Uruchom sklep bez programowania.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="generator-sklepu.html" data-popup-cta>Otwórz sklep</a>
+        <button class="btn btn-secondary" type="button" data-popup-close>Wróć</button>
+      </div>
+    </div>
+  </div>
 
   <footer class="footer" id="kontakt">
     <div class="wrap footer-grid">

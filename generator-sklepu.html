@@ -22,109 +22,188 @@
   <main class="wrap generator-shell">
     <section class="page-hero compact">
       <span class="eyebrow">Kreator sklepu</span>
-      <h1>Generator sklepu</h1>
-      <p class="lead">Uzupełnij dane, aby stworzyć sklep na platformie U SZEFA.</p>
+      <h1>Otwórz sklep w kilka minut</h1>
+      <p class="lead">Wybierz nazwę, logo, kolory, plan i produkty. Podgląd pojawia się od razu.</p>
     </section>
 
-    <form class="panel-card store-form" data-store-generator>
-      <div class="form-grid">
-        <label class="form-field">
-          Nazwa sklepu
-          <input type="text" name="storeName" placeholder="np. QualitetMarket Moda" required>
-        </label>
-        <label class="form-field">
-          Slug sklepu
-          <input type="text" name="storeSlug" placeholder="np. qualitat-market" required>
-          <span class="slug-preview" data-slug-preview>Adres: —</span>
-        </label>
+    <section class="flow-section">
+      <div class="section-head">
+        <span class="eyebrow">7 kroków</span>
+        <h2>Uproszczony system otwierania sklepu</h2>
+        <p>Wszystko w jednym miejscu: nazwa, logo, kolory, plan, produkty, marża i gotowe.</p>
       </div>
-
-      <div class="form-grid full">
-        <label class="form-field">
-          Opis sklepu
-          <textarea name="storeDescription" placeholder="Opisz krótko co sprzedajesz i dla kogo"></textarea>
-        </label>
+      <div class="flow-grid">
+        <article class="flow-step">
+          <span class="flow-number">01</span>
+          <h3>Nazwa sklepu</h3>
+          <p>Wpisz nazwę i ruszaj dalej.</p>
+        </article>
+        <article class="flow-step">
+          <span class="flow-number">02</span>
+          <h3>Logo</h3>
+          <p>Dodaj logo i zbuduj wizerunek.</p>
+        </article>
+        <article class="flow-step">
+          <span class="flow-number">03</span>
+          <h3>Kolory</h3>
+          <p>Ustaw barwy premium.</p>
+        </article>
+        <article class="flow-step">
+          <span class="flow-number">04</span>
+          <h3>Plan</h3>
+          <p>Dobierz pakiet do skali.</p>
+        </article>
+        <article class="flow-step">
+          <span class="flow-number">05</span>
+          <h3>Produkty</h3>
+          <p>Ustal ilość produktów na start.</p>
+        </article>
+        <article class="flow-step">
+          <span class="flow-number">06</span>
+          <h3>Marża</h3>
+          <p>Policz opłacalność.</p>
+        </article>
+        <article class="flow-step">
+          <span class="flow-number">07</span>
+          <h3>Gotowe</h3>
+          <p>Podgląd na żywo i start.</p>
+        </article>
       </div>
+    </section>
 
-      <div class="form-grid">
-        <label class="form-field">
-          Logo URL
-          <input type="url" name="storeLogo" placeholder="https://...">
-          <span class="field-hint">Podaj link do logo lub zostaw puste.</span>
-        </label>
-        <div class="form-field">
-          Podgląd logo
-          <div class="logo-preview" data-logo-preview>
-            <span>U</span>
-            <img alt="Logo sklepu">
+    <div class="generator-grid">
+      <form class="panel-card store-form" data-store-generator>
+        <div class="form-grid full">
+          <label class="form-field">
+            Nazwa sklepu
+            <input type="text" name="storeName" placeholder="np. QualitetMarket Moda" required>
+          </label>
+        </div>
+
+        <div class="form-grid">
+          <label class="form-field">
+            Logo URL
+            <input type="url" name="storeLogo" placeholder="https://...">
+            <span class="field-hint">Podaj link do logo lub zostaw puste.</span>
+          </label>
+          <div class="form-field">
+            Podgląd logo
+            <div class="logo-preview" data-logo-preview>
+              <span>U</span>
+              <img alt="Logo sklepu">
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="form-grid full">
-        <div class="form-field">
-          Kolory sklepu
-          <div class="color-grid">
-            <label class="form-field">
-              Główny
-              <input type="color" name="primaryColor" value="#35d9ff">
-            </label>
-            <label class="form-field">
-              Akcent
-              <input type="color" name="accentColor" value="#54ffb0">
-            </label>
-            <label class="form-field">
-              Tło
-              <input type="color" name="backgroundColor" value="#f5f7fb">
-            </label>
-          </div>
-          <div class="color-preview" aria-hidden="true">
-            <span class="color-chip" data-primary-chip></span>
-            <span class="color-chip" data-accent-chip></span>
-            <span class="color-chip" data-background-chip></span>
+        <div class="form-grid full">
+          <div class="form-field">
+            Kolory sklepu
+            <div class="color-grid">
+              <label class="form-field">
+                Główny
+                <input type="color" name="primaryColor" value="#35d9ff">
+              </label>
+              <label class="form-field">
+                Akcent
+                <input type="color" name="accentColor" value="#54ffb0">
+              </label>
+            </div>
+            <div class="color-preview" aria-hidden="true">
+              <span class="color-chip" data-primary-chip></span>
+              <span class="color-chip" data-accent-chip></span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="form-grid">
-        <label class="form-field">
-          Styl sklepu
-          <select name="storeTheme">
-            <option value="modern">Modern</option>
-            <option value="premium">Premium</option>
-            <option value="market">Market</option>
-          </select>
-        </label>
-        <label class="form-field">
-          Marża (%)
-          <input type="number" name="storeMargin" min="0" max="100" step="1" value="15">
-        </label>
-      </div>
+        <div class="form-grid">
+          <label class="form-field">
+            Plan
+            <select name="storePlan">
+              <option value="basic">Basic</option>
+              <option value="pro">Pro</option>
+              <option value="elite">Elite</option>
+            </select>
+          </label>
+          <label class="form-field">
+            Produkty na start
+            <input type="number" name="storeProducts" min="0" step="1" value="24">
+          </label>
+        </div>
 
-      <div class="form-grid">
-        <label class="form-field">
-          Plan
-          <select name="storePlan">
-            <option value="basic">Basic</option>
-            <option value="pro">Pro</option>
-            <option value="elite">Elite</option>
-          </select>
-        </label>
-        <label class="form-field">
-          Trial
-          <select name="storeTrial">
-            <option value="true">Tak</option>
-            <option value="false">Nie</option>
-          </select>
-        </label>
-      </div>
+        <div class="form-grid">
+          <label class="form-field">
+            Marża (%)
+            <input type="number" name="storeMargin" min="0" max="100" step="1" value="15">
+          </label>
+          <label class="form-field">
+            Wygląd sklepu
+            <select name="storeTheme">
+              <option value="modern">Modern</option>
+              <option value="premium">Premium</option>
+              <option value="market">Market</option>
+            </select>
+          </label>
+        </div>
 
-      <div class="store-actions">
-        <button class="btn btn-primary" type="submit">ZAPISZ SKLEP</button>
-        <button class="btn btn-secondary" type="button" data-store-preview>PODGLĄD SKLEPU</button>
-        <button class="btn btn-secondary" type="button" data-store-panel>OTWÓRZ PANEL</button>
-      </div>
-    </form>
+        <div class="store-actions">
+          <button class="btn btn-primary" type="submit">OTWÓRZ SKLEP</button>
+          <button class="btn btn-secondary" type="button" data-store-preview>PODGLĄD SKLEPU</button>
+          <button class="btn btn-secondary" type="button" data-store-panel>OTWÓRZ PANEL</button>
+        </div>
+      </form>
+
+      <aside class="panel-card live-preview" data-live-preview>
+        <span class="eyebrow">Podgląd na żywo</span>
+        <h2>Twoje studio sprzedaży</h2>
+        <p class="hint">Podgląd aktualizuje się od razu po zmianie pola.</p>
+        <div class="live-preview-grid">
+          <div class="live-preview-card store-preview" data-preview-store>
+            <div class="preview-header">
+              <div class="preview-logo" data-preview-logo>
+                <span>U</span>
+                <img alt="Logo sklepu">
+              </div>
+              <div>
+                <strong data-preview-name>Twoja nazwa</strong>
+                <span class="preview-meta" data-preview-plan>Plan Basic</span>
+              </div>
+            </div>
+            <div class="preview-badges">
+              <span data-preview-margin>Marża: 15%</span>
+              <span data-preview-products>Produkty: 24</span>
+            </div>
+            <div class="preview-shelf">
+              <div class="preview-product"></div>
+              <div class="preview-product"></div>
+              <div class="preview-product"></div>
+            </div>
+          </div>
+
+          <div class="live-preview-card panel-preview">
+            <h3>Panel zarządzania</h3>
+            <div class="preview-metrics">
+              <div>
+                <span>Plan</span>
+                <strong data-preview-panel-plan>Basic</strong>
+              </div>
+              <div>
+                <span>Marża</span>
+                <strong data-preview-panel-margin>15%</strong>
+              </div>
+              <div>
+                <span>Produkty</span>
+                <strong data-preview-panel-products>24</strong>
+              </div>
+            </div>
+            <div class="preview-actions">
+              <span>Dodaj produkt</span>
+              <span>Promocje</span>
+              <span>Raporty</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
   </main>
 
   <script src="stores.js" defer></script>

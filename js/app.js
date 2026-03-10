@@ -16,6 +16,11 @@
     {limit: 5, days: 30}
   ];
   const DEFAULT_TRIAL_DAYS = 7;
+  const CURRENCY_FORMATTER = new Intl.NumberFormat('pl-PL', {
+    style: 'currency',
+    currency: 'PLN',
+    maximumFractionDigits: 0
+  });
 
   function bindMenu(){
     const button = document.querySelector('[data-menu-toggle]');
@@ -118,6 +123,186 @@
     }, {threshold: 0.3});
 
     boxes.forEach(box => observer.observe(box));
+  }
+
+  function formatCurrency(value){
+    return CURRENCY_FORMATTER.format(value);
+  }
+
+  function getNumericInputValue(input, fallback = 0){
+    if(!input){
+      return fallback;
+    }
+    const raw = input.value.replace(',', '.');
+    const parsed = parseFloat(raw);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function bindCalculator(card, update){
+    if(!card) return;
+    const inputs = card.querySelectorAll('input');
+    inputs.forEach(input => input.addEventListener('input', update));
+    update();
+  }
+
+  function initCalculators(){
+    const calculatorCards = document.querySelectorAll('[data-calc]');
+    if(!calculatorCards.length) return;
+
+    calculatorCards.forEach(card => {
+      const type = card.dataset.calc;
+      if(type === 'margin'){
+        bindCalculator(card, () => {
+          const price = getNumericInputValue(card.querySelector('[data-calc-input="price"]'));
+          const cost = getNumericInputValue(card.querySelector('[data-calc-input="cost"]'));
+          const profit = price - cost;
+          const margin = price > 0 ? (profit / price) * 100 : 0;
+          const marginTarget = card.querySelector('[data-calc-output="margin"]');
+          const profitTarget = card.querySelector('[data-calc-output="profit"]');
+          if(marginTarget){
+            marginTarget.textContent = `${Math.round(margin)}%`;
+          }
+          if(profitTarget){
+            profitTarget.textContent = `Zysk: ${formatCurrency(profit)} / szt.`;
+          }
+        });
+      }
+      if(type === 'profit'){
+        bindCalculator(card, () => {
+          const price = getNumericInputValue(card.querySelector('[data-calc-input="price"]'));
+          const cost = getNumericInputValue(card.querySelector('[data-calc-input="cost"]'));
+          const quantity = getNumericInputValue(card.querySelector('[data-calc-input="quantity"]'));
+          const totalProfit = (price - cost) * quantity;
+          const totalTarget = card.querySelector('[data-calc-output="total-profit"]');
+          if(totalTarget){
+            totalTarget.textContent = formatCurrency(totalProfit);
+          }
+        });
+      }
+      if(type === 'units'){
+        bindCalculator(card, () => {
+          const target = getNumericInputValue(card.querySelector('[data-calc-input="target"]'));
+          const profit = getNumericInputValue(card.querySelector('[data-calc-input="profit"]'));
+          const units = profit > 0 ? Math.ceil(target / profit) : 0;
+          const unitsTarget = card.querySelector('[data-calc-output="units"]');
+          if(unitsTarget){
+            unitsTarget.textContent = `${units} szt.`;
+          }
+        });
+      }
+      if(type === 'monthly'){
+        bindCalculator(card, () => {
+          const dailyOrders = getNumericInputValue(card.querySelector('[data-calc-input="daily-orders"]'));
+          const profitPerOrder = getNumericInputValue(card.querySelector('[data-calc-input="profit-per-order"]'));
+          const monthlyProfit = dailyOrders * profitPerOrder * 30;
+          const monthlyTarget = card.querySelector('[data-calc-output="monthly-profit"]');
+          if(monthlyTarget){
+            monthlyTarget.textContent = formatCurrency(monthlyProfit);
+          }
+        });
+      }
+      if(type === 'plan'){
+        bindCalculator(card, () => {
+          const products = getNumericInputValue(card.querySelector('[data-calc-input="products"]'));
+          const orders = getNumericInputValue(card.querySelector('[data-calc-input="orders"]'));
+          let plan = 'Basic';
+          let note = 'Skala startowa';
+          if(products >= 280 || orders >= 320){
+            plan = 'Elite';
+            note = 'Skala premium i wzrost';
+          } else if(products >= 120 || orders >= 160){
+            plan = 'Pro';
+            note = 'Rozwój sprzedaży';
+          }
+          const planTarget = card.querySelector('[data-calc-output="plan"]');
+          const noteTarget = card.querySelector('[data-calc-output="plan-note"]');
+          if(planTarget){
+            planTarget.textContent = plan;
+          }
+          if(noteTarget){
+            noteTarget.textContent = note;
+          }
+        });
+      }
+    });
+  }
+
+  function initPopups(){
+    const popup = document.querySelector('[data-popup]');
+    if(!popup) return;
+    const titleTarget = popup.querySelector('[data-popup-title]');
+    const messageTarget = popup.querySelector('[data-popup-message]');
+    const ctaTarget = popup.querySelector('[data-popup-cta]');
+    const closeButtons = popup.querySelectorAll('[data-popup-close]');
+    let timeTriggered = false;
+    let scrollTriggered = false;
+
+    function openPopup({title, message, ctaLabel, ctaLink}){
+      if(titleTarget){
+        titleTarget.textContent = title;
+      }
+      if(messageTarget){
+        messageTarget.textContent = message;
+      }
+      if(ctaTarget){
+        ctaTarget.textContent = ctaLabel || 'Otwórz sklep';
+        ctaTarget.href = ctaLink || 'generator-sklepu.html';
+      }
+      popup.hidden = false;
+      popup.classList.add('is-visible');
+      popup.setAttribute('aria-hidden', 'false');
+    }
+
+    function closePopup(){
+      popup.classList.remove('is-visible');
+      popup.hidden = true;
+      popup.setAttribute('aria-hidden', 'true');
+    }
+
+    closeButtons.forEach(button => {
+      button.addEventListener('click', closePopup);
+    });
+
+    popup.addEventListener('click', event => {
+      if(event.target === popup){
+        closePopup();
+      }
+    });
+
+    document.querySelectorAll('[data-popup-trigger]').forEach(trigger => {
+      trigger.addEventListener('click', event => {
+        event.preventDefault();
+        const title = trigger.dataset.popupTitle || 'Chcesz własny sklep online?';
+        const message = trigger.dataset.popupMessage || 'Uruchom sklep bez programowania.';
+        const link = trigger.dataset.popupLink || trigger.getAttribute('href') || 'generator-sklepu.html';
+        openPopup({title, message, ctaLink: link});
+      });
+    });
+
+    setTimeout(() => {
+      if(timeTriggered || popup.classList.contains('is-visible')){
+        return;
+      }
+      timeTriggered = true;
+      openPopup({
+        title: 'Chcesz własny sklep online?',
+        message: 'Uruchom sklep bez programowania.'
+      });
+    }, 9000);
+
+    window.addEventListener('scroll', () => {
+      if(scrollTriggered || popup.classList.contains('is-visible')){
+        return;
+      }
+      const scrollRatio = (window.scrollY + window.innerHeight) / document.documentElement.scrollHeight;
+      if(scrollRatio > 0.45){
+        scrollTriggered = true;
+        openPopup({
+          title: 'Zostało tylko kilka miejsc testowych',
+          message: 'Dobierz plan dla swojego sklepu.'
+        });
+      }
+    }, {passive: true});
   }
 
   function getStoredNumber(key, fallback = 0){
@@ -446,6 +631,8 @@
     bindMenu();
     initCounters();
     initHelperBoxes();
+    initCalculators();
+    initPopups();
     initStoreGenerator();
     initLoginForm();
     guardDashboard();
