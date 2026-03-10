@@ -146,7 +146,8 @@
     if(!settings){
       return null;
     }
-    const name = (settings.storeName || settings.niche || '').trim() || 'Mój sklep';
+    const resolvedName = (settings.storeName || settings.niche || '').trim();
+    const name = resolvedName || 'Mój sklep';
     const parsedGoal = parseFloat(settings.goal);
     const goalValue = Number.isFinite(parsedGoal) ? parsedGoal : null;
     let description = settings.storeDescription || '';
