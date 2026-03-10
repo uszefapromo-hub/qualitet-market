@@ -1146,9 +1146,15 @@
     }, 'basic');
   }
 
+  function getPlanFromUrl(){
+    const params = new URLSearchParams(window.location.search);
+    const planParam = normalizePlan(params.get('plan'));
+    return planParam && getPlanLevel(planParam) >= 0 ? planParam : '';
+  }
+
   function applyPlanRecommendation(results){
     const resolved = results || loadCalculatorResults() || {};
-    const decision = normalizeDecision(resolved.decision);
+    const decision = normalizeDecision(getPlanFromUrl() || resolved.decision);
     const label = formatPlanLabel(decision);
     document.querySelectorAll('[data-recommended-plan]').forEach(target => {
       target.textContent = label;
