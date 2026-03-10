@@ -1,1 +1,9 @@
 @import url("styles.css");
+
+body.store-shop{
+  --price-font-size:32px;
+}
+
+body.store-shop .product-card .price{
+  font-size:var(--price-font-size);
+}

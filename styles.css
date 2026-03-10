@@ -310,7 +310,6 @@ body.store-shop .badge-pill{
 
 body.store-shop .product-card .price{
   color:var(--store-primary);
-  font-size:32px;
 }
 
 body.store-shop .brand span{
