@@ -26,7 +26,7 @@
         <a href="#">Produkty</a>
         <a href="#">Reklamy</a>
         <a href="#">Kalkulacja</a>
-        <a href="#">Subskrypcja</a>
+        <a href="cennik.html">Subskrypcja</a>
         <a href="#">Ustawienia</a>
       </nav>
     </aside>
@@ -38,8 +38,12 @@
         <p class="hint">W tym miejscu zarządzasz sprzedażą, reklamami oraz ustawieniami konta.</p>
         <div class="dashboard-meta">
           <div aria-label="Status trial">
-            <span>Trial</span>
-            <strong><span data-trial-remaining>--</span> <span data-trial-label>dni pozostało</span></strong>
+            <span>Status dostępu</span>
+            <strong>
+              <span data-trial-remaining>--</span>
+              <span data-trial-label>dni pozostało</span>
+              <span data-plan-active hidden>Aktywny plan</span>
+            </strong>
           </div>
           <div aria-label="Status planu">
             <span>Plan</span>
@@ -72,6 +76,23 @@
           </div>
         </div>
         <p class="hint store-summary-helper" data-store-helper>Najpierw stwórz sklep, aby przejść dalej.</p>
+      </section>
+
+      <section class="panel-card dashboard-subscription">
+        <div class="store-summary-head">
+          <div>
+            <span class="eyebrow">Subskrypcja</span>
+            <h2>Wybierz plan dla platformy</h2>
+            <p class="hint">Aktywuj plan PRO lub ELITE, aby odblokować funkcje premium.</p>
+            <p class="hint" data-plan-status>Aktywny plan: Basic</p>
+          </div>
+          <a class="btn btn-secondary" href="cennik.html">Pełny cennik</a>
+        </div>
+        <div class="cta-row">
+          <button class="btn btn-secondary" type="button" data-plan-buy="basic">Aktywuj Basic</button>
+          <button class="btn btn-primary" type="button" data-plan-buy="pro">Kup PRO</button>
+          <button class="btn btn-primary" type="button" data-plan-buy="elite">Kup ELITE</button>
+        </div>
       </section>
 
       <section class="helper-grid dashboard-helpers">

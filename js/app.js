@@ -1,5 +1,5 @@
 (function(){
-  const STORAGE_KEYS = {
+  const BASE_STORAGE_KEYS = {
     email: 'app_user_email',
     logged: 'app_user_logged',
     usersCount: 'app_users_count',
@@ -12,6 +12,11 @@
     surveyResponses: 'app_survey_responses',
     surveySeen: 'app_survey_seen'
   };
+  const STORAGE_KEYS = {
+    ...BASE_STORAGE_KEYS,
+    ...(window.APP_STORAGE_KEYS || {})
+  };
+  window.APP_STORAGE_KEYS = STORAGE_KEYS;
   const MS_PER_DAY = 1000 * 60 * 60 * 24;
   const SURVEY_AUTO_OPEN_DELAY = 4500;
   const SURVEY_SUCCESS_TIMEOUT = 1500;
@@ -24,6 +29,7 @@
   const TOAST_INTERVAL_REDUCED_MS = 9000;
   const TOAST_DISPLAY_MS = 4200;
   const TOAST_DISPLAY_REDUCED_MS = 3600;
+  const PLAN_PRICE_FORMATTER = new Intl.NumberFormat(DEFAULT_LOCALE);
   const SAMPLE_USER_NAMES = ['Jan', 'Anna', 'Marek', 'Ola', 'Kamil', 'Ewa', 'Tomasz', 'Klara', 'Paweł', 'Lena'];
   const ACTIVITY_TOAST_MESSAGES = [
     {title: 'Nowy użytkownik otworzył sklep', detail: 'Aktywacja ukończona'},
@@ -39,6 +45,20 @@
     {limit: 5, days: 30}
   ];
   const DEFAULT_TRIAL_DAYS = 7;
+  const PLAN_ACTIVE_LABEL = 'Aktywny plan';
+  const PLAN_CURRENT_LABEL = 'Aktualny plan';
+  const PLAN_LABELS = {
+    trial: 'Trial',
+    basic: 'Basic',
+    pro: 'PRO',
+    elite: 'ELITE'
+  };
+  const PLAN_DETAILS = {
+    basic: {price: 0},
+    pro: {price: 79},
+    elite: {price: 199}
+  };
+  window.APP_PLAN_LABELS = PLAN_LABELS;
 
   function bindMenu(){
     const button = document.querySelector('[data-menu-toggle]');
@@ -378,6 +398,11 @@
     }
   }
 
+  function getStoredPlan(){
+    const storedPlan = localStorage.getItem(STORAGE_KEYS.plan);
+    return storedPlan ? storedPlan.toLowerCase() : '';
+  }
+
   function loadStoreSettings(){
     const raw = localStorage.getItem(STORAGE_KEYS.storeSettings);
     if(!raw){
@@ -430,6 +455,35 @@
     }
   }
 
+  function formatPlanLabel(plan){
+    const normalized = (plan || '').toLowerCase();
+    return PLAN_LABELS[normalized] || PLAN_LABELS.basic;
+  }
+
+  function formatPlanPrice(value){
+    return `${PLAN_PRICE_FORMATTER.format(value)} zł`;
+  }
+
+  function getPlanCta(plan){
+    const normalized = (plan || '').toLowerCase();
+    if(normalized === 'basic'){
+      return 'Aktywuj Basic';
+    }
+    const detail = PLAN_DETAILS[normalized];
+    if(!detail){
+      return '';
+    }
+    return `Kup ${formatPlanLabel(normalized)} ${formatPlanPrice(detail.price)}`;
+  }
+
+  function resolveCurrentPlan(remaining){
+    const storedPlan = getStoredPlan();
+    if(storedPlan){
+      return storedPlan;
+    }
+    return remaining > 0 ? 'trial' : 'basic';
+  }
+
   function startTrialIfNeeded(email){
     if(localStorage.getItem(STORAGE_KEYS.trialStart)){
       return;
@@ -464,7 +518,10 @@
     }
     localStorage.setItem(STORAGE_KEYS.trialDays, `${trialDays}`);
     localStorage.setItem(STORAGE_KEYS.trialStart, new Date().toISOString());
-    localStorage.setItem(STORAGE_KEYS.plan, 'trial');
+    const existingPlan = getStoredPlan();
+    if(!existingPlan || existingPlan === 'trial'){
+      localStorage.setItem(STORAGE_KEYS.plan, 'trial');
+    }
   }
 
   function getTrialRemainingDays(){
@@ -480,7 +537,10 @@
     const elapsedDays = Math.floor((Date.now() - startDate.getTime()) / MS_PER_DAY);
     const remaining = Math.max(trialDays - elapsedDays, 0);
     if(remaining === 0){
-      localStorage.setItem(STORAGE_KEYS.plan, 'basic');
+      const storedPlan = getStoredPlan();
+      if(!storedPlan || storedPlan === 'trial'){
+        localStorage.setItem(STORAGE_KEYS.plan, 'basic');
+      }
     }
     return remaining;
   }
@@ -501,22 +561,138 @@
 
   function updateDashboardStatus(){
     const trialTargets = document.querySelectorAll('[data-trial-remaining]');
+    const trialLabels = document.querySelectorAll('[data-trial-label]');
+    const activeTargets = document.querySelectorAll('[data-plan-active]');
     const remaining = getTrialRemainingDays();
+    const plan = resolveCurrentPlan(remaining);
     if(trialTargets.length){
       trialTargets.forEach(target => {
-        target.textContent = `${remaining}`;
+        if(plan === 'trial'){
+          target.textContent = `${remaining}`;
+          target.hidden = false;
+        } else {
+          target.textContent = '';
+          target.hidden = true;
+        }
       });
     }
-    const trialLabel = document.querySelector('[data-trial-label]');
-    if(trialLabel){
-      trialLabel.textContent = getTrialLabel(remaining);
+    if(trialLabels.length){
+      trialLabels.forEach(label => {
+        if(plan === 'trial'){
+          label.textContent = getTrialLabel(remaining);
+          label.hidden = false;
+        } else {
+          label.textContent = '';
+          label.hidden = true;
+        }
+      });
+    }
+    if(activeTargets.length){
+      activeTargets.forEach(target => {
+        target.textContent = PLAN_ACTIVE_LABEL;
+        target.hidden = plan === 'trial';
+      });
     }
     const planTarget = document.querySelector('[data-user-plan]');
     if(planTarget){
-      const storedPlan = localStorage.getItem(STORAGE_KEYS.plan);
-      const plan = storedPlan || (remaining > 0 ? 'trial' : 'basic');
-      planTarget.textContent = plan === 'trial' ? 'Trial' : 'Basic';
+      planTarget.textContent = formatPlanLabel(plan);
     }
+    updatePlanStatusLabels(plan);
+    updatePlanPurchaseButtons(plan);
+  }
+
+  function updatePlanStatusLabels(plan){
+    const statusTargets = document.querySelectorAll('[data-plan-status]');
+    if(!statusTargets.length){
+      return;
+    }
+    const label = formatPlanLabel(plan);
+    statusTargets.forEach(target => {
+      target.textContent = `${PLAN_ACTIVE_LABEL}: ${label}`;
+    });
+  }
+
+  function updatePlanPurchaseButtons(plan){
+    const buttons = document.querySelectorAll('[data-plan-buy]');
+    if(!buttons.length){
+      return;
+    }
+    buttons.forEach(button => {
+      const buttonPlan = (button.dataset.planBuy || '').toLowerCase();
+      if(!button.dataset.planOriginalText){
+        button.dataset.planOriginalText = button.textContent.trim();
+      }
+      const isActive = buttonPlan && buttonPlan === plan;
+      if(isActive){
+        button.textContent = PLAN_CURRENT_LABEL;
+        button.disabled = true;
+        button.setAttribute('aria-disabled', 'true');
+      } else {
+        button.textContent = button.dataset.planOriginalText || button.textContent;
+        button.disabled = false;
+        button.removeAttribute('aria-disabled');
+      }
+    });
+  }
+
+  function updatePlanPricing(){
+    const priceTargets = document.querySelectorAll('[data-plan-price]');
+    if(priceTargets.length){
+      priceTargets.forEach(target => {
+        const plan = (target.dataset.planPrice || '').toLowerCase();
+        const detail = PLAN_DETAILS[plan];
+        if(detail){
+          target.textContent = formatPlanPrice(detail.price);
+        }
+      });
+    }
+    const buttons = document.querySelectorAll('[data-plan-buy]');
+    if(!buttons.length){
+      return;
+    }
+    buttons.forEach(button => {
+      const plan = (button.dataset.planBuy || '').toLowerCase();
+      const cta = getPlanCta(plan);
+      if(!cta){
+        return;
+      }
+      if(!button.dataset.planOriginalText){
+        button.dataset.planOriginalText = cta;
+      }
+      if(!button.disabled){
+        button.textContent = button.dataset.planOriginalText;
+      }
+    });
+  }
+
+  function handlePlanPurchase(plan){
+    const normalizedPlan = (plan || '').toLowerCase();
+    if(!normalizedPlan){
+      return;
+    }
+    localStorage.setItem(STORAGE_KEYS.plan, normalizedPlan);
+    if(normalizedPlan !== 'trial'){
+      localStorage.removeItem(STORAGE_KEYS.trialDays);
+      localStorage.removeItem(STORAGE_KEYS.trialStart);
+    }
+    updateDashboardStatus();
+  }
+
+  function initPlanPurchaseButtons(){
+    const buttons = document.querySelectorAll('[data-plan-buy]');
+    updatePlanPricing();
+    if(!buttons.length){
+      updatePlanStatusLabels(resolveCurrentPlan(getTrialRemainingDays()));
+      return;
+    }
+    const plan = resolveCurrentPlan(getTrialRemainingDays());
+    updatePlanPurchaseButtons(plan);
+    updatePlanStatusLabels(plan);
+    buttons.forEach(button => {
+      button.addEventListener('click', () => {
+        handlePlanPurchase(button.dataset.planBuy);
+      });
+    });
   }
 
   function renderDashboardStoreSummary(){
@@ -692,6 +868,7 @@
     initStoreGenerator();
     initLoginForm();
     guardDashboard();
+    initPlanPurchaseButtons();
   });
 
   window.addEventListener('pagehide', () => {

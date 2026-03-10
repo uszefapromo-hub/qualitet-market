@@ -23,21 +23,32 @@
   const MOCK_PRODUCTS_RANGE = 24;
   const MOCK_REVENUE_BASE = 12000;
   const MOCK_REVENUE_RANGE = 9000;
+  const PLAN_STORAGE_KEY = window.APP_STORAGE_KEYS.plan;
+  const PLAN_LABELS = window.APP_PLAN_LABELS || {
+    trial: 'Trial',
+    basic: 'Basic',
+    pro: 'PRO',
+    elite: 'ELITE'
+  };
   const CURRENCY_FORMATTER = new Intl.NumberFormat('pl-PL', {
     style: 'currency',
     currency: 'PLN',
     maximumFractionDigits: 0
   });
 
+  function getStoredPlan(){
+    const storedPlan = localStorage.getItem(PLAN_STORAGE_KEY);
+    return storedPlan ? storedPlan.toLowerCase() : '';
+  }
+
+  function resolvePlan(storePlan){
+    const storedPlan = getStoredPlan();
+    return storedPlan || storePlan;
+  }
+
   function formatPlan(plan){
     const value = (plan || '').toLowerCase();
-    if(value === 'pro'){
-      return 'Pro';
-    }
-    if(value === 'elite'){
-      return 'Elite';
-    }
-    return 'Basic';
+    return PLAN_LABELS[value] || PLAN_LABELS.basic;
   }
 
   function formatCurrencyPLN(value){
@@ -325,9 +336,10 @@
     }
 
     const metrics = getMockMetrics(store);
+    const plan = resolvePlan(store.plan);
     const map = {
       'store-name': store.name,
-      'store-plan': formatPlan(store.plan),
+      'store-plan': formatPlan(plan),
       'store-margin': `${store.margin}%`,
       'store-products': `${metrics.products}`,
       'store-revenue': formatCurrencyPLN(metrics.revenue)
@@ -371,10 +383,11 @@
     document.documentElement.style.setProperty('--store-accent', store.accentColor || DEFAULTS.accentColor);
     document.documentElement.style.setProperty('--store-background', store.backgroundColor || DEFAULTS.backgroundColor);
 
+    const plan = resolvePlan(store.plan);
     const map = {
       'store-name': store.name,
       'store-description': store.description || DEFAULTS.description,
-      'store-plan': `Plan: ${formatPlan(store.plan)}`,
+      'store-plan': `Plan: ${formatPlan(plan)}`,
       'store-margin': `Marża: ${store.margin}%`,
       'store-theme': `Styl: ${store.theme}`,
       'store-slug': `@${store.slug}`
