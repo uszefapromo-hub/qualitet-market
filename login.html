@@ -6,69 +6,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-page="login">
+<body data-page="login" class="auth-page">
   <header class="topbar">
     <div class="wrap topbar-inner">
       <a class="brand" href="index.html">
-        <img src="assets/images/logo-wspolne.svg" alt="U Szefa + QualitetMarket">
         <div>
-          <strong>U Szefa</strong>
-          <span>królestwo zarabiania</span>
+          <strong>UszefaQualitet</strong>
+          <span>QualitetMarket</span>
+          <span class="brand-tag">U SZEFA</span>
         </div>
       </a>
-      <nav class="nav" aria-label="Główna nawigacja">
-        <a href="index.html">Start</a>
-        <a href="login.html">Logowanie</a>
-        <a href="dashboard.html">Dashboard</a>
-      </nav>
-      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
     </div>
   </header>
 
-  <main class="wrap">
-    <section class="page-hero compact">
-      <span class="eyebrow">Dostęp</span>
-      <h1>Zaloguj się do panelu.</h1>
-      <p>Uproszczony ekran logowania pozostawiony po czyszczeniu repozytorium.</p>
-    </section>
-    <section class="dashboard-grid">
-      <article class="panel-card">
-        <h2>Logowanie</h2>
-        <form class="form-card">
-          <label>
-            Email
-            <input type="email" name="email" placeholder="email@domena.pl" autocomplete="email">
-          </label>
-          <label>
-            Hasło
-            <input type="password" name="password" placeholder="••••••••" autocomplete="current-password">
-          </label>
-          <div class="cta-row">
-            <button class="btn btn-primary" type="button">Zaloguj</button>
-            <button class="btn btn-secondary" type="button">Przypomnij hasło</button>
-          </div>
-        </form>
-      </article>
+  <main class="wrap auth-layout">
+    <section class="panel-card auth-card">
+      <h1>Logowanie</h1>
+      <form class="form-card" data-login-form>
+        <label>
+          Email
+          <input type="email" name="email" placeholder="email@domena.pl" autocomplete="email" required>
+        </label>
+        <label>
+          Hasło
+          <input type="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
+        </label>
+        <div class="cta-row auth-actions">
+          <button class="btn btn-primary" type="submit">Zaloguj</button>
+          <button class="btn btn-secondary" type="button">Utwórz konto</button>
+        </div>
+      </form>
     </section>
   </main>
-
-  <footer class="footer">
-    <div class="wrap footer-grid">
-      <div>
-        <img class="footer-logo" src="assets/images/logo-uszefa.svg" alt="U Szefa">
-        <p>U Szefa to szybki dostęp do ustawień i dashboardu.</p>
-      </div>
-      <div>
-        <h4>Szybki start</h4>
-        <a href="dashboard.html">Dashboard</a>
-        <a href="index.html">Powrót na start</a>
-      </div>
-      <div>
-        <h4>System</h4>
-        <a href="login.html">Logowanie</a>
-      </div>
-    </div>
-  </footer>
 
   <script src="js/app.js" defer></script>
 </body>
