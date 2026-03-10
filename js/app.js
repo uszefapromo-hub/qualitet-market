@@ -576,10 +576,10 @@
   }
 
   function normalizePlan(plan){
-    return normalizeParam(plan);
+    return normalizeQueryParam(plan);
   }
 
-  function normalizeParam(param) {
+  function normalizeQueryParam(param) {
     return param ? param.toString().trim().toLowerCase() : '';
   }
 
@@ -592,6 +592,10 @@
     const hasSuccessFlag = SUCCESS_STATUSES.includes(successParam);
     const hasSessionSuccess = Boolean(sessionId) && Boolean(pendingPlan);
     return hasStatusSuccess || hasSuccessFlag || hasSessionSuccess;
+  }
+
+  function getStripeSessionId(params) {
+    return params.get('session_id') || params.get('checkout_session_id');
   }
 
   function formatPlanLabel(plan){
@@ -743,9 +747,9 @@
       return;
     }
     const planParam = normalizePlan(params.get('plan'));
-    const statusParam = normalizeParam(params.get('status'));
-    const successParam = normalizeParam(params.get('success'));
-    const sessionId = params.get('session_id') || params.get('checkout_session_id');
+    const statusParam = normalizeQueryParam(params.get('status'));
+    const successParam = normalizeQueryParam(params.get('success'));
+    const sessionId = getStripeSessionId(params);
     const pendingPlan = normalizePlan(localStorage.getItem(STORAGE_KEYS.pendingPlan));
     const resolvedPlan = planParam || pendingPlan;
     const isSuccess = isCheckoutSuccess(statusParam, successParam, sessionId, pendingPlan);
