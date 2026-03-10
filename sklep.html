@@ -10,6 +10,7 @@
   <header class="topbar">
     <div class="wrap topbar-inner">
       <a class="brand" href="index.html">
+        <img src="assets/images/logo-uszefa.svg" alt="Uszefa Qualitet">
         <div>
           <strong>UszefaQualitet</strong>
           <span>QualitetMarket</span>
@@ -25,41 +26,505 @@
 
   <main class="wrap shop-shell" data-store-shop>
     <div data-store-content>
-      <section class="panel-card shop-hero">
-        <div class="shop-logo" data-logo-preview>
-          <span>U</span>
-          <img alt="Logo sklepu">
+      <section class="panel-card store-hero-banner">
+        <div class="store-hero-content">
+          <div class="shop-logo" data-logo-preview>
+            <span>U</span>
+            <img alt="Logo sklepu">
+          </div>
+          <div class="store-hero-info">
+            <span class="eyebrow" data-store-theme>Styl: modern</span>
+            <h1 data-store-name>Sklep</h1>
+            <p class="lead" data-store-description></p>
+            <p class="field-hint" data-store-slug></p>
+            <div class="shop-badges">
+              <span class="badge-pill" data-store-plan>Plan: Basic</span>
+              <span class="badge-pill" data-store-margin>Marża: 0%</span>
+              <span class="badge-pill">Dostawa 24h</span>
+            </div>
+            <div class="cta-row hero-actions">
+              <a class="btn btn-primary" href="listing.html">Odkryj kategorie</a>
+              <a class="btn btn-secondary" href="hurtownie.html">Hurtownie</a>
+              <a class="btn btn-secondary" href="cennik.html">Plan PRO / ELITE</a>
+            </div>
+            <div class="hero-metrics">
+              <div class="metric-tile">
+                <span>Aktywne oferty</span>
+                <strong>12 450</strong>
+              </div>
+              <div class="metric-tile">
+                <span>Hurtownie</span>
+                <strong>128</strong>
+              </div>
+              <div class="metric-tile">
+                <span>Nowości dziś</span>
+                <strong>340</strong>
+              </div>
+            </div>
+          </div>
         </div>
-        <div>
-          <span class="eyebrow" data-store-theme>Styl: modern</span>
-          <h1 data-store-name>Sklep</h1>
-          <p class="lead" data-store-description></p>
-          <p class="field-hint" data-store-slug></p>
-          <div class="shop-badges">
-            <span class="badge-pill" data-store-plan>Plan: Basic</span>
-            <span class="badge-pill" data-store-margin>Marża: 0%</span>
+        <div class="store-hero-visual">
+          <img src="assets/images/demo/hero-market.svg" alt="Marketplace Uszefa Qualitet">
+          <div class="hero-floating-cards">
+            <div class="floating-card">
+              <span>Top kategoria</span>
+              <strong>Elektronika</strong>
+              <p>Najwyższe marże w tym tygodniu</p>
+            </div>
+            <div class="floating-card">
+              <span>Super promocja</span>
+              <strong>-22% PRO</strong>
+              <p>Odblokuj hurtownie premium</p>
+            </div>
           </div>
         </div>
       </section>
 
-      <section class="panel-card shop-products">
-        <h2>Produkty sklepu</h2>
-        <p class="hint">Przykładowa kolekcja prezentująca styl sklepu.</p>
-        <div class="products-grid">
-          <article class="product-card">
-            <h3>Zestaw Premium</h3>
-            <p class="hint">Ekskluzywna oferta U SZEFA</p>
-            <span class="price">189 zł</span>
+      <section class="store-section store-slider" id="slider">
+        <div class="section-head">
+          <span class="eyebrow">Live slider</span>
+          <h2>Marketplace w ruchu</h2>
+          <p>Dynamiczny podgląd trendów, bestsellerów i nowości prosto z hurtowni.</p>
+        </div>
+        <div class="slider-shell">
+          <div class="slider-track">
+            <article class="slider-card">
+              <img src="assets/images/demo/product-smartphone.svg" alt="Smartfon XZ Pro">
+              <div class="slider-info">
+                <h3>Smartfon XZ Pro</h3>
+                <p>Nowa seria 5G, 256GB</p>
+                <span class="slider-meta">Marża 28% • NeoTech</span>
+              </div>
+            </article>
+            <article class="slider-card">
+              <img src="assets/images/demo/product-sofa.svg" alt="Sofa Loft Cloud">
+              <div class="slider-info">
+                <h3>Sofa Loft Cloud</h3>
+                <p>Dom i ogród w stylu premium</p>
+                <span class="slider-meta">Marża 22% • HomeHub</span>
+              </div>
+            </article>
+            <article class="slider-card">
+              <img src="assets/images/demo/product-sneakers.svg" alt="Sneakers StreetRun">
+              <div class="slider-info">
+                <h3>Sneakers StreetRun</h3>
+                <p>Moda, która się sprzedaje</p>
+                <span class="slider-meta">Marża 30% • FashionLane</span>
+              </div>
+            </article>
+            <article class="slider-card">
+              <img src="assets/images/demo/product-drill.svg" alt="Wiertarka ProBuild">
+              <div class="slider-info">
+                <h3>Wiertarka ProBuild</h3>
+                <p>Toolbox dla profesjonalistów</p>
+                <span class="slider-meta">Marża 26% • AutoFleet</span>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="store-section" id="kategorie">
+        <div class="section-head">
+          <span class="eyebrow">Kategorie z ikonami</span>
+          <h2>Otwórz nowe działy sprzedaży</h2>
+          <p>Każda kategoria to osobny świat produktów, ikon i dynamicznych kafli.</p>
+        </div>
+        <div class="category-grid">
+          <article class="category-card">
+            <div class="category-media">
+              <img class="category-image" src="assets/images/demo/category-electronics.svg" alt="Elektronika">
+              <span class="category-icon" aria-hidden="true">📱</span>
+            </div>
+            <div class="category-info">
+              <h3>Elektronika</h3>
+              <p>Smartfony, audio, smart home</p>
+            </div>
           </article>
-          <article class="product-card">
-            <h3>Pakiet Market</h3>
-            <p class="hint">Najczęściej wybierany zestaw</p>
-            <span class="price">99 zł</span>
+          <article class="category-card">
+            <div class="category-media">
+              <img class="category-image" src="assets/images/demo/category-home.svg" alt="Dom i ogród">
+              <span class="category-icon" aria-hidden="true">🏡</span>
+            </div>
+            <div class="category-info">
+              <h3>Dom i ogród</h3>
+              <p>Wyposażenie, dekoracje, outdoor</p>
+            </div>
           </article>
-          <article class="product-card">
-            <h3>Start Modern</h3>
-            <p class="hint">Lekki start dla nowych klientów</p>
-            <span class="price">59 zł</span>
+          <article class="category-card">
+            <div class="category-media">
+              <img class="category-image" src="assets/images/demo/category-fashion.svg" alt="Moda">
+              <span class="category-icon" aria-hidden="true">👗</span>
+            </div>
+            <div class="category-info">
+              <h3>Moda</h3>
+              <p>Odzież, obuwie, dodatki premium</p>
+            </div>
+          </article>
+          <article class="category-card">
+            <div class="category-media">
+              <img class="category-image" src="assets/images/demo/category-auto.svg" alt="Auto">
+              <span class="category-icon" aria-hidden="true">🚗</span>
+            </div>
+            <div class="category-info">
+              <h3>Auto</h3>
+              <p>Akcesoria, opony, detailing</p>
+            </div>
+          </article>
+          <article class="category-card">
+            <div class="category-media">
+              <img class="category-image" src="assets/images/demo/category-kids.svg" alt="Dziecko">
+              <span class="category-icon" aria-hidden="true">🧸</span>
+            </div>
+            <div class="category-info">
+              <h3>Dziecko</h3>
+              <p>Zabawki, wyprawka, edukacja</p>
+            </div>
+          </article>
+          <article class="category-card">
+            <div class="category-media">
+              <img class="category-image" src="assets/images/demo/category-beauty.svg" alt="Beauty">
+              <span class="category-icon" aria-hidden="true">💄</span>
+            </div>
+            <div class="category-info">
+              <h3>Beauty</h3>
+              <p>Kosmetyki, pielęgnacja, SPA</p>
+            </div>
+          </article>
+          <article class="category-card">
+            <div class="category-media">
+              <img class="category-image" src="assets/images/demo/category-business.svg" alt="Biznes">
+              <span class="category-icon" aria-hidden="true">💼</span>
+            </div>
+            <div class="category-info">
+              <h3>Biznes</h3>
+              <p>Biuro, fintech, B2B premium</p>
+            </div>
+          </article>
+          <article class="category-card">
+            <div class="category-media">
+              <img class="category-image" src="assets/images/demo/category-tools.svg" alt="Narzędzia">
+              <span class="category-icon" aria-hidden="true">🛠️</span>
+            </div>
+            <div class="category-info">
+              <h3>Narzędzia</h3>
+              <p>Profesjonalne zestawy i sprzęt</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="store-section" id="polecane">
+        <div class="section-head">
+          <span class="eyebrow">Polecane produkty</span>
+          <h2>Kafle bestsellerów, które sprzedają się same</h2>
+          <p>Wysokie marże, szybka rotacja, widoczny efekt wow.</p>
+        </div>
+        <div class="products-grid product-grid-large">
+          <article class="product-card product-tile" id="produkt">
+            <div class="product-media">
+              <img src="assets/images/demo/product-smartphone.svg" alt="Smartfon XZ Pro">
+              <span class="product-badge">Bestseller</span>
+            </div>
+            <div class="product-details">
+              <h3>Smartfon XZ Pro</h3>
+              <p class="hint">Ekran AMOLED 6.8", 256 GB, 5G</p>
+              <div class="product-meta">
+                <span class="price">1890 zł</span>
+                <span class="margin">Marża 28%</span>
+              </div>
+              <div class="product-supplier">
+                <img src="assets/images/demo/supplier-neotech.svg" alt="NeoTech">
+                <span>Hurtownia: NeoTech</span>
+              </div>
+              <div class="cta-row product-actions">
+                <button class="btn btn-primary" type="button">Dodaj</button>
+                <a class="btn btn-secondary" href="listing.html">Szczegóły</a>
+              </div>
+            </div>
+          </article>
+          <article class="product-card product-tile">
+            <div class="product-media">
+              <img src="assets/images/demo/product-sofa.svg" alt="Sofa Loft Cloud">
+              <span class="product-badge">Top wnętrze</span>
+            </div>
+            <div class="product-details">
+              <h3>Sofa Loft Cloud</h3>
+              <p class="hint">Tkanina premium, szybka dostawa</p>
+              <div class="product-meta">
+                <span class="price">2190 zł</span>
+                <span class="margin">Marża 22%</span>
+              </div>
+              <div class="product-supplier">
+                <img src="assets/images/demo/supplier-homehub.svg" alt="HomeHub">
+                <span>Hurtownia: HomeHub</span>
+              </div>
+              <div class="cta-row product-actions">
+                <button class="btn btn-primary" type="button">Dodaj</button>
+                <a class="btn btn-secondary" href="listing.html">Szczegóły</a>
+              </div>
+            </div>
+          </article>
+          <article class="product-card product-tile">
+            <div class="product-media">
+              <img src="assets/images/demo/product-sneakers.svg" alt="Sneakers StreetRun">
+              <span class="product-badge">Moda tygodnia</span>
+            </div>
+            <div class="product-details">
+              <h3>Sneakers StreetRun</h3>
+              <p class="hint">Limitowana edycja, 4 kolory</p>
+              <div class="product-meta">
+                <span class="price">480 zł</span>
+                <span class="margin">Marża 30%</span>
+              </div>
+              <div class="product-supplier">
+                <img src="assets/images/demo/supplier-fashionlane.svg" alt="FashionLane">
+                <span>Hurtownia: FashionLane</span>
+              </div>
+              <div class="cta-row product-actions">
+                <button class="btn btn-primary" type="button">Dodaj</button>
+                <a class="btn btn-secondary" href="listing.html">Szczegóły</a>
+              </div>
+            </div>
+          </article>
+          <article class="product-card product-tile">
+            <div class="product-media">
+              <img src="assets/images/demo/product-drill.svg" alt="Wiertarka ProBuild">
+              <span class="product-badge">PRO</span>
+            </div>
+            <div class="product-details">
+              <h3>Wiertarka ProBuild</h3>
+              <p class="hint">Zestaw narzędzi 18V + akcesoria</p>
+              <div class="product-meta">
+                <span class="price">760 zł</span>
+                <span class="margin">Marża 26%</span>
+              </div>
+              <div class="product-supplier">
+                <img src="assets/images/demo/supplier-autofleet.svg" alt="AutoFleet">
+                <span>Hurtownia: AutoFleet</span>
+              </div>
+              <div class="cta-row product-actions">
+                <button class="btn btn-primary" type="button">Dodaj</button>
+                <a class="btn btn-secondary" href="listing.html">Szczegóły</a>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="store-section" id="nowosci">
+        <div class="section-head">
+          <span class="eyebrow">Nowe produkty</span>
+          <h2>Świeże premiery z hurtowni</h2>
+          <p>Nowości przyciągające uwagę klientów marketplace.</p>
+        </div>
+        <div class="products-grid product-grid-large">
+          <article class="product-card product-tile">
+            <div class="product-media">
+              <img src="assets/images/demo/product-smartphone.svg" alt="Smartfon XZ Lite">
+              <span class="product-badge is-new">Nowość</span>
+            </div>
+            <div class="product-details">
+              <h3>Smartfon XZ Lite</h3>
+              <p class="hint">Wersja slim, idealna do promocji</p>
+              <div class="product-meta">
+                <span class="price">980 zł</span>
+                <span class="margin">Marża 25%</span>
+              </div>
+              <div class="product-supplier">
+                <img src="assets/images/demo/supplier-neotech.svg" alt="NeoTech">
+                <span>Hurtownia: NeoTech</span>
+              </div>
+              <div class="cta-row product-actions">
+                <button class="btn btn-primary" type="button">Dodaj</button>
+                <a class="btn btn-secondary" href="listing.html">Szczegóły</a>
+              </div>
+            </div>
+          </article>
+          <article class="product-card product-tile">
+            <div class="product-media">
+              <img src="assets/images/demo/product-sofa.svg" alt="Sofa Forest Comfort">
+              <span class="product-badge is-new">Nowość</span>
+            </div>
+            <div class="product-details">
+              <h3>Sofa Forest Comfort</h3>
+              <p class="hint">Modułowa, odporna na zabrudzenia</p>
+              <div class="product-meta">
+                <span class="price">2480 zł</span>
+                <span class="margin">Marża 23%</span>
+              </div>
+              <div class="product-supplier">
+                <img src="assets/images/demo/supplier-homehub.svg" alt="HomeHub">
+                <span>Hurtownia: HomeHub</span>
+              </div>
+              <div class="cta-row product-actions">
+                <button class="btn btn-primary" type="button">Dodaj</button>
+                <a class="btn btn-secondary" href="listing.html">Szczegóły</a>
+              </div>
+            </div>
+          </article>
+          <article class="product-card product-tile">
+            <div class="product-media">
+              <img src="assets/images/demo/product-sneakers.svg" alt="Sneakers FlexRun">
+              <span class="product-badge is-new">Nowość</span>
+            </div>
+            <div class="product-details">
+              <h3>Sneakers FlexRun</h3>
+              <p class="hint">Bestseller influencerów 2026</p>
+              <div class="product-meta">
+                <span class="price">520 zł</span>
+                <span class="margin">Marża 32%</span>
+              </div>
+              <div class="product-supplier">
+                <img src="assets/images/demo/supplier-fashionlane.svg" alt="FashionLane">
+                <span>Hurtownia: FashionLane</span>
+              </div>
+              <div class="cta-row product-actions">
+                <button class="btn btn-primary" type="button">Dodaj</button>
+                <a class="btn btn-secondary" href="listing.html">Szczegóły</a>
+              </div>
+            </div>
+          </article>
+          <article class="product-card product-tile">
+            <div class="product-media">
+              <img src="assets/images/demo/product-drill.svg" alt="Wiertarka Compact">
+              <span class="product-badge is-new">Nowość</span>
+            </div>
+            <div class="product-details">
+              <h3>Wiertarka Compact</h3>
+              <p class="hint">Lekka i mocna, idealna do DIY</p>
+              <div class="product-meta">
+                <span class="price">640 zł</span>
+                <span class="margin">Marża 24%</span>
+              </div>
+              <div class="product-supplier">
+                <img src="assets/images/demo/supplier-autofleet.svg" alt="AutoFleet">
+                <span>Hurtownia: AutoFleet</span>
+              </div>
+              <div class="cta-row product-actions">
+                <button class="btn btn-primary" type="button">Dodaj</button>
+                <a class="btn btn-secondary" href="listing.html">Szczegóły</a>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="store-section" id="promocje">
+        <div class="section-head">
+          <span class="eyebrow">Promocje</span>
+          <h2>Promocyjne kafle z efektem glow</h2>
+          <p>Oferta sezonowa z dynamicznym podświetleniem i CTA.</p>
+        </div>
+        <div class="promo-grid">
+          <article class="promo-card highlight">
+            <span>Promocja tygodnia</span>
+            <strong class="promo-value">-22%</strong>
+            <p>Elektronika PRO z natychmiastową dostawą.</p>
+          </article>
+          <article class="promo-card">
+            <span>Hurtownia dnia</span>
+            <strong class="promo-value">+18%</strong>
+            <p>Większa marża na dom i ogród.</p>
+          </article>
+          <article class="promo-card">
+            <span>Plan ELITE</span>
+            <strong class="promo-value">VIP</strong>
+            <p>Odblokuj intelligence i wsparcie AI.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="store-section" id="hurtownie">
+        <div class="section-head">
+          <span class="eyebrow">Hurtownie</span>
+          <h2>Topowe hurtownie w jednym miejscu</h2>
+          <p>Łącz się z liderami kategorii i buduj przewagę.</p>
+        </div>
+        <div class="supplier-grid supplier-grid-large">
+          <article class="supplier-card supplier-tile">
+            <img src="assets/images/demo/supplier-neotech.svg" alt="NeoTech">
+            <h3>NeoTech</h3>
+            <p class="hint">Elektronika i smart home premium</p>
+            <div class="supplier-meta">
+              <span>12 500 produktów</span>
+              <span>Marża do 28%</span>
+            </div>
+            <a class="btn btn-secondary" href="hurtownie.html">Zobacz hurtownię</a>
+          </article>
+          <article class="supplier-card supplier-tile">
+            <img src="assets/images/demo/supplier-homehub.svg" alt="HomeHub">
+            <h3>HomeHub</h3>
+            <p class="hint">Dom, ogród i lifestyle premium</p>
+            <div class="supplier-meta">
+              <span>8 900 produktów</span>
+              <span>Marża do 24%</span>
+            </div>
+            <a class="btn btn-secondary" href="hurtownie.html">Zobacz hurtownię</a>
+          </article>
+          <article class="supplier-card supplier-tile">
+            <img src="assets/images/demo/supplier-fashionlane.svg" alt="FashionLane">
+            <h3>FashionLane</h3>
+            <p class="hint">Moda, sneakersy, kolekcje sezonowe</p>
+            <div class="supplier-meta">
+              <span>15 200 produktów</span>
+              <span>Marża do 32%</span>
+            </div>
+            <a class="btn btn-secondary" href="hurtownie.html">Zobacz hurtownię</a>
+          </article>
+          <article class="supplier-card supplier-tile">
+            <img src="assets/images/demo/supplier-autofleet.svg" alt="AutoFleet">
+            <h3>AutoFleet</h3>
+            <p class="hint">Auto, narzędzia i detailing PRO</p>
+            <div class="supplier-meta">
+              <span>6 400 produktów</span>
+              <span>Marża do 26%</span>
+            </div>
+            <a class="btn btn-secondary" href="hurtownie.html">Zobacz hurtownię</a>
+          </article>
+        </div>
+      </section>
+
+      <section class="store-section" id="pro-elite">
+        <div class="section-head">
+          <span class="eyebrow">Banner PRO / ELITE</span>
+          <h2>Odblokuj hurtownie PRO i intelligence ELITE</h2>
+          <p>Włącz pakiety premium, aby uzyskać dostęp do największych dostawców.</p>
+        </div>
+        <div class="plan-cta-grid">
+          <article class="plan-card plan-pro">
+            <div>
+              <span class="plan-tag">PRO</span>
+              <h3>Odblokuj hurtownie PRO</h3>
+              <p>Większe marże, szybsze dostawy, więcej automatyzacji.</p>
+              <ul>
+                <li>Ekskluzywne hurtownie elektroniki</li>
+                <li>Automatyczne aktualizacje stanów</li>
+                <li>Pakiet marketingowy marketplace</li>
+              </ul>
+              <a class="btn btn-primary" href="cennik.html">Aktywuj PRO</a>
+            </div>
+            <div class="plan-visual">
+              <span>+80 hurtowni</span>
+              <strong>PRO ACCESS</strong>
+            </div>
+          </article>
+          <article class="plan-card plan-elite">
+            <div>
+              <span class="plan-tag">ELITE</span>
+              <h3>Odblokuj intelligence ELITE</h3>
+              <p>AI do prognoz sprzedaży, rekomendacje i automatyczny upsell.</p>
+              <ul>
+                <li>Predictive pricing i analityka</li>
+                <li>Automatyczne kampanie AI</li>
+                <li>Dashboard ELITE z KPI</li>
+              </ul>
+              <a class="btn btn-primary" href="cennik.html">Aktywuj ELITE</a>
+            </div>
+            <div class="plan-visual">
+              <span>AI BOOST</span>
+              <strong>ELITE</strong>
+            </div>
           </article>
         </div>
       </section>

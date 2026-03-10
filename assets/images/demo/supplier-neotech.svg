@@ -1,0 +1,6 @@
+<svg width="220" height="120" viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg">
+  <rect width="220" height="120" rx="22" fill="#0f1c33"/>
+  <circle cx="56" cy="60" r="26" fill="#35d9ff" opacity="0.9"/>
+  <circle cx="74" cy="44" r="10" fill="#54ffb0" opacity="0.9"/>
+  <text x="96" y="68" font-family="Arial, Helvetica, sans-serif" font-size="22" fill="#ffffff" font-weight="700">NeoTech</text>
+</svg>
