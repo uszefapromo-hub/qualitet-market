@@ -23,6 +23,13 @@
   const SURVEY_SUCCESS_TIMEOUT = 1500;
   const SPLASH_STORAGE_KEY = 'app_splash_seen';
   const INSTALL_BANNER_DISMISSED_KEY = 'app_install_banner_dismissed';
+  const APP_PROMO_LAST_SHOWN_KEY = 'app_promo_last_shown';
+  const APP_PROMO_INDEX_KEY = 'app_promo_index';
+  const APP_PROMO_MIN_INTERVAL = 1000 * 60 * 4;
+  const APP_PROMO_REPEAT_INTERVAL = 1000 * 60 * 7;
+  const APP_PROMO_SCROLL_TRIGGER = 260;
+  const APP_PROMO_DEFAULT_DELAY = 3800;
+  const APP_PROMO_FOCUS_DELAY = 2200;
   const DEFAULT_LOCALE = 'pl-PL';
   const DEFAULT_TEST_SLOTS = 20;
   const DEFAULT_LIVE_STEP_MIN = 1;
@@ -221,6 +228,305 @@
       deferredPrompt = null;
       hideBanner();
     });
+  }
+
+  function ensureAppPromoModal(){
+    let modal = document.querySelector('[data-app-promo-modal]');
+    if(modal){
+      return modal;
+    }
+    modal = document.createElement('div');
+    modal.className = 'app-promo-modal';
+    modal.setAttribute('data-app-promo-modal', '');
+    modal.hidden = true;
+    modal.innerHTML = `
+      <div class="app-promo-window" role="dialog" aria-modal="true" aria-labelledby="app-promo-title">
+        <button class="app-promo-close" type="button" data-app-promo-close aria-label="Zamknij okno">×</button>
+        <div class="app-promo-grid">
+          <div class="app-promo-copy">
+            <span class="eyebrow" data-app-promo-eyebrow></span>
+            <h2 id="app-promo-title" data-app-promo-title></h2>
+            <p class="hint" data-app-promo-desc></p>
+            <ul class="app-promo-list" data-app-promo-list></ul>
+            <div class="app-promo-actions">
+              <a class="btn btn-primary" href="dashboard.html">Otwórz aplikację</a>
+              <a class="btn btn-secondary" href="cennik.html">Zobacz plany</a>
+            </div>
+            <div class="app-instructions">
+              <div>
+                <strong>iPhone</strong>
+                <ul>
+                  <li>Udostępnij stronę</li>
+                  <li>Dodaj do ekranu głównego</li>
+                </ul>
+              </div>
+              <div>
+                <strong>Android</strong>
+                <ul>
+                  <li>Menu przeglądarki</li>
+                  <li>Zainstaluj aplikację</li>
+                  <li>Dodaj do ekranu głównego</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="app-promo-media">
+            <span class="app-promo-tag" data-app-promo-tag>APP</span>
+            <img src="" alt="" loading="lazy" decoding="async" data-app-promo-image>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    return modal;
+  }
+
+  function getAppPromoVariants(){
+    return [
+      {
+        eyebrow: 'Zainstaluj aplikację',
+        title: 'Zainstaluj aplikację na telefonie',
+        description: 'Otwórz platformę na telefonie i dodaj ją do ekranu głównego.',
+        points: ['Otwórz platformę na telefonie', 'Dodaj do ekranu głównego', 'Uruchamiaj jak aplikację'],
+        tag: 'App Install',
+        image: 'https://github.com/user-attachments/assets/085d1513-747e-4d49-8334-5813ae0855a7',
+        imageAlt: 'Promocja aplikacji mobilnej UszefaQualitet'
+      },
+      {
+        eyebrow: 'Mobile PRO',
+        title: 'Uruchom sklep szybciej z aplikacji',
+        description: 'Zarządzaj hurtowniami i ofertą sprzedaży bezpośrednio z telefonu.',
+        points: ['Mobilne zarządzanie hurtowniami', 'Szybkie dodawanie produktów', 'Powiadomienia o sprzedaży'],
+        tag: 'Sklep + Hurt',
+        image: 'https://github.com/user-attachments/assets/bf1aaeec-617f-4741-9bd6-f4924b362ea8',
+        imageAlt: 'Zarządzanie sklepem z telefonu'
+      },
+      {
+        eyebrow: 'Platforma PRO',
+        title: 'Wejdź do platformy PRO',
+        description: 'Aktywuj plan i działaj. Dostęp do hurtowni, CRM i modułów sprzedaży.',
+        points: ['Pełny dostęp do hurtowni', 'CRM i listing produktów', 'Wyniki sprzedaży w aplikacji'],
+        tag: 'Upgrade',
+        image: 'https://github.com/user-attachments/assets/5e136c43-153f-4e14-8136-79e0715b622d',
+        imageAlt: 'Plan PRO w platformie UszefaQualitet'
+      },
+      {
+        eyebrow: 'AI premium',
+        title: 'AI pomocnik tylko dla ELITE',
+        description: 'Asystent premium analizuje sprzedaż i podpowiada najlepsze ruchy.',
+        points: ['AI asystent sprzedaży', 'Analizy predykcyjne', 'Dostęp tylko w ELITE'],
+        tag: 'Elite AI',
+        image: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=80',
+        imageAlt: 'Zespół biznesowy planujący sprzedaż'
+      }
+    ];
+  }
+
+  function getAppPromoIndex(total){
+    let stored = 0;
+    try{
+      stored = Number.parseInt(sessionStorage.getItem(APP_PROMO_INDEX_KEY), 10);
+    } catch (_error){
+      stored = 0;
+    }
+    if(Number.isNaN(stored) || stored < 0){
+      stored = 0;
+    }
+    const next = total ? (stored + 1) % total : 0;
+    try{
+      sessionStorage.setItem(APP_PROMO_INDEX_KEY, `${next}`);
+    } catch (_error){
+    }
+    return total ? stored % total : 0;
+  }
+
+  function getAppPromoLastShown(){
+    let lastShown = 0;
+    try{
+      lastShown = Number.parseInt(sessionStorage.getItem(APP_PROMO_LAST_SHOWN_KEY), 10);
+    } catch (_error){
+      lastShown = 0;
+    }
+    return Number.isNaN(lastShown) ? 0 : lastShown;
+  }
+
+  function canShowAppPromo(){
+    const lastShown = getAppPromoLastShown();
+    return !lastShown || (Date.now() - lastShown) > APP_PROMO_MIN_INTERVAL;
+  }
+
+  function markAppPromoShown(){
+    try{
+      sessionStorage.setItem(APP_PROMO_LAST_SHOWN_KEY, `${Date.now()}`);
+    } catch (_error){
+    }
+  }
+
+  function updateAppPromoModal(modal, variant){
+    const eyebrow = modal.querySelector('[data-app-promo-eyebrow]');
+    const title = modal.querySelector('[data-app-promo-title]');
+    const desc = modal.querySelector('[data-app-promo-desc]');
+    const list = modal.querySelector('[data-app-promo-list]');
+    const tag = modal.querySelector('[data-app-promo-tag]');
+    const image = modal.querySelector('[data-app-promo-image]');
+
+    if(eyebrow){
+      eyebrow.textContent = variant.eyebrow;
+    }
+    if(title){
+      title.textContent = variant.title;
+    }
+    if(desc){
+      desc.textContent = variant.description;
+    }
+    if(list){
+      list.innerHTML = '';
+      variant.points.forEach(point => {
+        const item = document.createElement('li');
+        item.textContent = point;
+        list.appendChild(item);
+      });
+    }
+    if(tag){
+      tag.textContent = variant.tag;
+    }
+    if(image){
+      image.src = variant.image;
+      image.alt = variant.imageAlt || variant.title;
+    }
+  }
+
+  function openAppPromo({force = false} = {}){
+    const modal = ensureAppPromoModal();
+    if(!modal){
+      return false;
+    }
+    if(!force && !canShowAppPromo()){
+      return false;
+    }
+    if(document.body.classList.contains('modal-open') && modal.hidden){
+      return false;
+    }
+    const variants = getAppPromoVariants();
+    const index = getAppPromoIndex(variants.length);
+    updateAppPromoModal(modal, variants[index]);
+    modal.hidden = false;
+    document.body.classList.add('modal-open');
+    markAppPromoShown();
+    return true;
+  }
+
+  function initAppPromoModal(){
+    const modal = ensureAppPromoModal();
+    if(!modal){
+      return;
+    }
+    const closeButtons = modal.querySelectorAll('[data-app-promo-close]');
+    const closeModal = () => {
+      modal.hidden = true;
+      document.body.classList.remove('modal-open');
+    };
+    closeButtons.forEach(button => {
+      button.addEventListener('click', closeModal);
+    });
+    modal.addEventListener('click', event => {
+      if(event.target === modal){
+        closeModal();
+      }
+    });
+    document.addEventListener('keydown', event => {
+      if(event.key === 'Escape' && !modal.hidden){
+        closeModal();
+      }
+    });
+  }
+
+  function initAppInstallBar(){
+    if(!document.body){
+      return null;
+    }
+    const existing = document.querySelector('[data-app-install-bar]');
+    if(existing){
+      return existing;
+    }
+    const bar = document.createElement('div');
+    bar.className = 'app-install-bar';
+    bar.setAttribute('data-app-install-bar', '');
+    bar.innerHTML = `
+      <div class="app-install-bar__text">
+        <span class="app-install-bar__pill">Panel mobilny</span>
+        <strong>Otwórz aplikację</strong>
+        <span>Zainstaluj aplikację • Dodaj do ekranu głównego</span>
+      </div>
+      <div class="app-install-bar__actions">
+        <button class="btn btn-primary" type="button" data-app-install-open>Otwórz aplikację</button>
+        <button class="btn btn-secondary" type="button" data-app-install-open>Instrukcja instalacji</button>
+      </div>
+    `;
+    document.body.appendChild(bar);
+    document.body.classList.add('has-app-install-bar');
+    return bar;
+  }
+
+  function bindAppInstallOpeners(){
+    const buttons = document.querySelectorAll('[data-app-install-open]');
+    buttons.forEach(button => {
+      button.addEventListener('click', event => {
+        event.preventDefault();
+        openAppPromo({force: true});
+      });
+    });
+  }
+
+  function scheduleAppPromoTriggers(){
+    const page = document.body.dataset.page || '';
+    const delay = (page === 'sklep' || page === 'hurtownie') ? APP_PROMO_FOCUS_DELAY : APP_PROMO_DEFAULT_DELAY;
+    if(canShowAppPromo()){
+      window.setTimeout(() => {
+        openAppPromo();
+      }, delay);
+    }
+    let repeatIntervalId = null;
+    const startRepeatInterval = () => {
+      if(repeatIntervalId){
+        return;
+      }
+      repeatIntervalId = window.setInterval(() => {
+        openAppPromo();
+      }, APP_PROMO_REPEAT_INTERVAL);
+    };
+    const stopRepeatInterval = () => {
+      if(repeatIntervalId){
+        clearInterval(repeatIntervalId);
+        repeatIntervalId = null;
+      }
+    };
+    const handleVisibility = () => {
+      if(document.hidden){
+        stopRepeatInterval();
+      } else {
+        startRepeatInterval();
+      }
+    };
+    handleVisibility();
+    document.addEventListener('visibilitychange', handleVisibility);
+    let scrollTriggered = false;
+    window.addEventListener('scroll', () => {
+      if(scrollTriggered){
+        return;
+      }
+      if(window.scrollY > APP_PROMO_SCROLL_TRIGGER){
+        scrollTriggered = true;
+        openAppPromo();
+      }
+    }, {passive: true});
+  }
+
+  function initAppInstallExperience(){
+    initAppPromoModal();
+    initAppInstallBar();
+    bindAppInstallOpeners();
+    scheduleAppPromoTriggers();
   }
 
   function initAppSplash(){
@@ -3329,6 +3635,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     initServiceWorker();
     initInstallBanner();
+    initAppInstallExperience();
     initAppSplash();
     bindMenu();
     initBottomNav();
