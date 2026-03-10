@@ -31,6 +31,7 @@
   const TOAST_INTERVAL_REDUCED_MS = 9000;
   const TOAST_DISPLAY_MS = 4200;
   const TOAST_DISPLAY_REDUCED_MS = 3600;
+  const PROMO_MOTION_IDLE_MS = 45000;
   const SUCCESS_STATUSES = ['success', 'paid', 'true', '1', 'ok'];
   const SAMPLE_USER_NAMES = ['Jan', 'Anna', 'Marek', 'Ola', 'Kamil', 'Ewa', 'Tomasz', 'Klara', 'Paweł', 'Lena'];
   const ACTIVITY_TOAST_MESSAGES = [
@@ -447,6 +448,69 @@
     }, {threshold: 0.3});
 
     boxes.forEach(box => observer.observe(box));
+  }
+
+  function initPromoMotion(){
+    const gallery = document.querySelector('[data-promo-motion]');
+    if(!gallery){
+      return;
+    }
+    const toggle = gallery.querySelector('[data-promo-motion-toggle]');
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let idleTimeout = null;
+
+    const setPaused = paused => {
+      gallery.classList.toggle('is-paused', paused);
+      if(toggle){
+        toggle.setAttribute('aria-pressed', paused ? 'true' : 'false');
+        toggle.textContent = paused ? 'Wznów animację' : 'Zatrzymaj animację';
+      }
+    };
+
+    const scheduleIdlePause = () => {
+      if(prefersReducedMotion){
+        return;
+      }
+      if(idleTimeout){
+        clearTimeout(idleTimeout);
+      }
+      idleTimeout = window.setTimeout(() => setPaused(true), PROMO_MOTION_IDLE_MS);
+    };
+
+    if(prefersReducedMotion){
+      if(toggle){
+        toggle.disabled = true;
+        toggle.textContent = 'Animacja wyłączona';
+        toggle.setAttribute('aria-pressed', 'true');
+      }
+      gallery.classList.add('is-paused');
+      return;
+    }
+
+    scheduleIdlePause();
+
+    if(toggle){
+      toggle.addEventListener('click', () => {
+        const paused = gallery.classList.contains('is-paused');
+        setPaused(!paused);
+        if(!paused){
+          scheduleIdlePause();
+        }
+      });
+    }
+
+    ['mouseenter', 'focusin', 'pointerdown'].forEach(eventName => {
+      gallery.addEventListener(eventName, scheduleIdlePause);
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if(document.hidden){
+        setPaused(true);
+      } else {
+        setPaused(false);
+        scheduleIdlePause();
+      }
+    });
   }
 
   function initActivityToasts(){
@@ -2862,6 +2926,7 @@
     initSuppliersModule();
     initCounters();
     initHelperBoxes();
+    initPromoMotion();
     initActivityToasts();
     initSalesCalculator();
     initStoreCalculator();
