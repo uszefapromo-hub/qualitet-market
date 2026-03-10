@@ -21,6 +21,7 @@
   const LANDING_AUTO_OPEN_DELAY = 2400;
   const SURVEY_SUCCESS_TIMEOUT = 1500;
   const SPLASH_STORAGE_KEY = 'app_splash_seen';
+  const INSTALL_BANNER_DISMISSED_KEY = 'app_install_banner_dismissed';
   const DEFAULT_LOCALE = 'pl-PL';
   const DEFAULT_TEST_SLOTS = 20;
   const DEFAULT_LIVE_STEP_MIN = 1;
@@ -100,6 +101,108 @@
     }
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    });
+  }
+
+  function initInstallBanner(){
+    if(!('onbeforeinstallprompt' in window)){
+      return;
+    }
+    const supportsDisplayMode = typeof window.matchMedia === 'function';
+    const isStandalone = (supportsDisplayMode && window.matchMedia('(display-mode: standalone)').matches)
+      || window.navigator.standalone === true;
+    if(isStandalone){
+      return;
+    }
+    let dismissed = false;
+    try{
+      dismissed = sessionStorage.getItem(INSTALL_BANNER_DISMISSED_KEY) === 'true';
+    } catch (_error){
+      dismissed = false;
+    }
+    if(dismissed){
+      return;
+    }
+    let deferredPrompt = null;
+    let banner = null;
+
+    const hideBanner = (persistDismissal = false) => {
+      if(banner){
+        banner.remove();
+        banner = null;
+      }
+      if(persistDismissal){
+        try{
+          sessionStorage.setItem(INSTALL_BANNER_DISMISSED_KEY, 'true');
+        } catch (_error){
+        }
+      }
+    };
+
+    const showBanner = () => {
+      if(banner || !document.body){
+        return;
+      }
+      banner = document.createElement('div');
+      banner.className = 'install-banner';
+      banner.setAttribute('role', 'dialog');
+      banner.setAttribute('aria-live', 'polite');
+
+      const content = document.createElement('div');
+      content.className = 'install-banner__content';
+      const title = document.createElement('strong');
+      title.id = 'install-banner-title';
+      title.textContent = 'Zainstaluj aplikację';
+      banner.setAttribute('aria-labelledby', title.id);
+      const description = document.createElement('span');
+      description.textContent = 'Dodaj UszefaQualitet na ekran główny i korzystaj szybciej.';
+      content.append(title, description);
+
+      const actions = document.createElement('div');
+      actions.className = 'install-banner__actions';
+      const installButton = document.createElement('button');
+      installButton.type = 'button';
+      installButton.className = 'btn btn-primary install-banner__install';
+      installButton.textContent = 'Zainstaluj';
+      const dismissButton = document.createElement('button');
+      dismissButton.type = 'button';
+      dismissButton.className = 'btn btn-secondary install-banner__dismiss';
+      dismissButton.textContent = 'Później';
+      actions.append(installButton, dismissButton);
+
+      installButton.addEventListener('click', async () => {
+        if(!deferredPrompt){
+          return;
+        }
+        try{
+          await deferredPrompt.prompt();
+          if(deferredPrompt.userChoice){
+            await deferredPrompt.userChoice;
+          }
+        } catch (_error){
+        } finally {
+          deferredPrompt = null;
+          hideBanner(true);
+        }
+      });
+
+      dismissButton.addEventListener('click', () => {
+        hideBanner(true);
+      });
+
+      banner.append(content, actions);
+      document.body.appendChild(banner);
+    };
+
+    window.addEventListener('beforeinstallprompt', event => {
+      event.preventDefault();
+      deferredPrompt = event;
+      showBanner();
+    });
+
+    window.addEventListener('appinstalled', () => {
+      deferredPrompt = null;
+      hideBanner();
     });
   }
 
@@ -2750,6 +2853,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     initServiceWorker();
+    initInstallBanner();
     initAppSplash();
     bindMenu();
     initBottomNav();

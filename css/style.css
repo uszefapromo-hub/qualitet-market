@@ -601,6 +601,27 @@ body.modal-open{overflow:hidden}
   background:linear-gradient(90deg, rgba(255,216,77,.2), rgba(255,216,77,.9), rgba(255,216,77,.2));
   animation:splashPulse 1.6s ease infinite;
 }
+.install-banner{
+  position:fixed;
+  left:16px;
+  right:16px;
+  bottom:calc(16px + env(safe-area-inset-bottom));
+  z-index:120;
+  padding:16px;
+  border-radius:18px;
+  border:1px solid rgba(53,217,255,.45);
+  background:rgba(7,18,33,.95);
+  box-shadow:var(--shadow);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+.install-banner__content{display:flex;flex-direction:column;gap:4px}
+.install-banner__content strong{font-size:15px}
+.install-banner__content span{font-size:12px;color:var(--muted)}
+.install-banner__actions{display:flex;gap:8px;flex-wrap:wrap}
+.install-banner__actions .btn{min-height:40px}
 .bottom-nav{
   position:fixed;
   left:0;
@@ -662,5 +683,9 @@ body.modal-open{overflow:hidden}
   .color-row{align-items:flex-start}
   .auth-layout{min-height:auto;padding:30px 0 40px}
   body.has-bottom-nav{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+  body.has-bottom-nav .install-banner{bottom:calc(92px + 16px + env(safe-area-inset-bottom))}
+  .install-banner{flex-direction:column;align-items:flex-start}
+  .install-banner__actions{width:100%}
+  .install-banner__actions .btn{flex:1;justify-content:center}
   .bottom-nav{display:flex}
 }
