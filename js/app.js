@@ -4140,6 +4140,63 @@
     });
   }
 
+  function initMotionPolish(){
+    if(!('IntersectionObserver' in window)) return;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(prefersReducedMotion) return;
+
+    const revealSelectors = [
+      '.hero-side',
+      '.app-cta-section',
+      '.promo-motion-section .promo-motion-copy',
+      '.promo-motion-section .promo-motion-gallery',
+      '.promo-section .section-head',
+      '.promo-grid .promo-card',
+      '.activity-section .section-head',
+      '.activity-grid .activity-card',
+      '.activity-banner',
+      '.results-section .section-head',
+      '.results-grid .result-card',
+      '.calculator-section .section-head',
+      '.calculator-section .panel-card',
+      '.calculator-recommendation',
+      '.survey-section .section-head',
+      '.survey-section .survey-card',
+      '.footer',
+      '.pricing-grid .price-card',
+      '.supplier-grid .supplier-card',
+      '.products-grid .product-card',
+      '.page-hero',
+      '.section-head'
+    ];
+
+    const seen = new WeakSet();
+    const elements = [];
+
+    revealSelectors.forEach(selector => {
+      document.querySelectorAll(selector).forEach((el, i) => {
+        if(seen.has(el)) return;
+        seen.add(el);
+        el.classList.add('js-reveal');
+        el.style.transitionDelay = `${Math.min(i, 4) * 70}ms`;
+        elements.push(el);
+      });
+    });
+
+    if(!elements.length) return;
+
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if(entry.isIntersecting){
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, {threshold: 0.1, rootMargin: '0px 0px -30px 0px'});
+
+    elements.forEach(el => observer.observe(el));
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     initServiceWorker();
     initInstallBanner();
@@ -4168,6 +4225,7 @@
     initStoreGenerator();
     initLoginForm();
     guardDashboard();
+    initMotionPolish();
   });
 
   window.addEventListener('pagehide', () => {
