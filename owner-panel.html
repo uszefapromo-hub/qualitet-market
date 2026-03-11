@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pl">
 <head>
-  <title>Panel właściciela - HurtDetal Uszefa QUALITET</title>
+  <title>Centrum Dowodzenia — Superadmin — HurtDetal Uszefa QUALITET</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="manifest" href="manifest.json">
@@ -48,16 +48,21 @@
 
   <div class="dashboard-shell owner-shell">
     <aside class="sidebar">
-      <nav class="sidebar-nav" aria-label="Menu właściciela">
-        <a class="active" href="owner-panel.html">Panel właściciela</a>
-        <a href="dashboard.html">Dashboard</a>
-        <a href="panel-sklepu.html">Panel sklepu</a>
-        <a href="generator-sklepu.html">Generator sklepu</a>
+      <nav class="sidebar-nav owner-tab-nav" aria-label="Menu właściciela" data-owner-tab-nav>
+        <a class="active" href="#" data-owner-tab="overview">🏠 Centrum Dowodzenia</a>
+        <a href="#" data-owner-tab="users">👥 Użytkownicy</a>
+        <a href="#" data-owner-tab="stores">🏪 Sklepy</a>
+        <a href="#" data-owner-tab="products">📦 Produkty</a>
+        <a href="#" data-owner-tab="orders">🛒 Zamówienia</a>
+        <a href="#" data-owner-tab="subscriptions">💳 Subskrypcje</a>
+        <a href="#" data-owner-tab="finances">💰 Marże i Finanse</a>
+        <a href="#" data-owner-tab="referrals">🔗 System Poleceń</a>
+        <a href="#" data-owner-tab="operators">🛠 Operatorzy</a>
+        <a href="#" data-owner-tab="security">🔒 Bezpieczeństwo</a>
+        <hr class="sidebar-sep">
+        <a href="dashboard.html">Panel użytkownika</a>
         <a href="hurtownie.html">Hurtownie</a>
-        <a href="crm.html">Leady i CRM</a>
-        <a href="tasks.html">Zadania</a>
-        <a href="cennik.html">Plany i subskrypcje</a>
-        <a href="index.html">Landing</a>
+        <a href="crm.html">CRM</a>
       </nav>
     </aside>
 
@@ -71,195 +76,637 @@
           <a class="btn btn-secondary" href="login.html">Zaloguj się</a>
         </div>
       </section>
+
       <div data-owner-content>
-      <section class="panel-card dashboard-welcome">
-        <span class="eyebrow">Centrum dowodzenia</span>
-        <h1>Panel właściciela</h1>
-        <p class="hint">W jednym miejscu monitorujesz wszystkie sklepy, hurtownie i subskrypcje.</p>
-        <div class="dashboard-meta">
-          <div>
-            <span>Alerty systemowe</span>
-            <strong>Brak krytycznych zdarzeń</strong>
-          </div>
-          <div>
-            <span>Synchronizacja</span>
-            <strong>Aktualizacja 5 min temu</strong>
-          </div>
-          <div>
-            <span>Operacje dziś</span>
-            <strong>+18 importów</strong>
-          </div>
-        </div>
-      </section>
 
-      <section class="stats-grid owner-metrics">
-        <div class="stat-card">
-          <span>Użytkownicy</span>
-          <strong data-counter data-counter-format="grouped" data-owner-users>0</strong>
-        </div>
-        <div class="stat-card">
-          <span>Sklepy</span>
-          <strong data-counter data-counter-format="grouped" data-owner-stores>0</strong>
-        </div>
-        <div class="stat-card">
-          <span>Produkty</span>
-          <strong data-counter data-counter-format="grouped" data-owner-products>0</strong>
-        </div>
-        <div class="stat-card">
-          <span>Leady</span>
-          <strong data-counter data-counter-format="grouped" data-owner-leads>0</strong>
-        </div>
-        <div class="stat-card">
-          <span>Przychód (mock)</span>
-          <strong data-counter data-counter-format="currency" data-owner-revenue>0</strong>
-        </div>
-        <div class="stat-card">
-          <span>Sprzedaż (mock)</span>
-          <strong data-counter data-counter-format="grouped" data-owner-sales>0</strong>
-        </div>
-      </section>
-
-      <section class="panel-card">
-        <div class="section-head">
-          <span class="eyebrow">Subskrypcje</span>
-          <h2>Aktywne plany</h2>
-          <p class="hint">Podział aktywnych subskrypcji według planów.</p>
-        </div>
-        <div class="stats-grid owner-plan-grid">
-          <div class="stat-card">
-            <span>Basic</span>
-            <strong data-counter data-counter-format="grouped" data-owner-plan-basic>0</strong>
-          </div>
-          <div class="stat-card">
-            <span>Pro</span>
-            <strong data-counter data-counter-format="grouped" data-owner-plan-pro>0</strong>
-          </div>
-          <div class="stat-card">
-            <span>Elite</span>
-            <strong data-counter data-counter-format="grouped" data-owner-plan-elite>0</strong>
-          </div>
-        </div>
-      </section>
-
-      <section class="dashboard-grid">
-        <article class="panel-card chart-card">
-          <div class="section-head">
-            <span class="eyebrow">Rozkład planów</span>
-            <h2>Wykres subskrypcji</h2>
-          </div>
-          <div class="chart-rows">
-            <div class="chart-row">
-              <span>Basic</span>
-              <span data-plan-chart-value="basic">0 (0%)</span>
+        <!-- TAB: OVERVIEW -->
+        <div class="owner-tab-panel" data-owner-tab-panel="overview">
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Centrum dowodzenia</span>
+            <h1>Panel Superadmina</h1>
+            <p class="hint">Pełna kontrola nad platformą, finansami i operatorami w jednym miejscu.</p>
+            <div class="dashboard-meta">
+              <div>
+                <span>Alerty systemowe</span>
+                <strong>Brak krytycznych zdarzeń</strong>
+              </div>
+              <div>
+                <span>Synchronizacja</span>
+                <strong>Aktualizacja 5 min temu</strong>
+              </div>
+              <div>
+                <span>Rola</span>
+                <strong class="status-pill is-ready">Superadmin</strong>
+              </div>
             </div>
-            <div class="chart-bar"><span data-plan-chart-bar="basic"></span></div>
-            <div class="chart-row">
-              <span>Pro</span>
-              <span data-plan-chart-value="pro">0 (0%)</span>
-            </div>
-            <div class="chart-bar"><span data-plan-chart-bar="pro"></span></div>
-            <div class="chart-row">
-              <span>Elite</span>
-              <span data-plan-chart-value="elite">0 (0%)</span>
-            </div>
-            <div class="chart-bar"><span data-plan-chart-bar="elite"></span></div>
-          </div>
-        </article>
+          </section>
 
-        <article class="panel-card chart-card">
-          <div class="section-head">
-            <span class="eyebrow">Leady</span>
-            <h2>Temperatura leadów</h2>
-          </div>
-          <div class="chart-rows">
-            <div class="chart-row">
-              <span>Gorące</span>
-              <span data-lead-chart-value="hot">0 (0%)</span>
+          <section class="stats-grid owner-metrics">
+            <div class="stat-card">
+              <span>Użytkownicy</span>
+              <strong data-counter data-counter-format="grouped" data-owner-users>0</strong>
             </div>
-            <div class="chart-bar"><span data-lead-chart-bar="hot"></span></div>
-            <div class="chart-row">
-              <span>Ciepłe</span>
-              <span data-lead-chart-value="warm">0 (0%)</span>
+            <div class="stat-card">
+              <span>Sklepy</span>
+              <strong data-counter data-counter-format="grouped" data-owner-stores>0</strong>
             </div>
-            <div class="chart-bar"><span data-lead-chart-bar="warm"></span></div>
-            <div class="chart-row">
-              <span>Zimne</span>
-              <span data-lead-chart-value="cold">0 (0%)</span>
+            <div class="stat-card">
+              <span>Produkty</span>
+              <strong data-counter data-counter-format="grouped" data-owner-products>0</strong>
             </div>
-            <div class="chart-bar"><span data-lead-chart-bar="cold"></span></div>
-          </div>
-        </article>
-      </section>
+            <div class="stat-card">
+              <span>Zamówienia</span>
+              <strong data-counter data-counter-format="grouped" data-owner-orders>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Przychód platformy</span>
+              <strong data-counter data-counter-format="currency" data-owner-revenue>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Marża platformy</span>
+              <strong data-counter data-counter-format="currency" data-owner-platform-margin>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Aktywne subskrypcje</span>
+              <strong data-counter data-counter-format="grouped" data-owner-active-subs>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Poleceń</span>
+              <strong data-counter data-counter-format="grouped" data-owner-referrals-count>0</strong>
+            </div>
+          </section>
 
-      <section class="panel-card">
-        <div class="section-head">
-          <span class="eyebrow">Szybkie akcje</span>
-          <h2>Najważniejsze skróty</h2>
+          <section class="dashboard-grid">
+            <article class="panel-card">
+              <div class="section-head">
+                <span class="eyebrow">Finanse</span>
+                <h2>Przychody</h2>
+              </div>
+              <div class="stats-grid" style="grid-template-columns:1fr 1fr">
+                <div class="stat-card">
+                  <span>Dziś</span>
+                  <strong data-owner-revenue-today>—</strong>
+                </div>
+                <div class="stat-card">
+                  <span>Ten miesiąc</span>
+                  <strong data-owner-revenue-month>—</strong>
+                </div>
+              </div>
+            </article>
+            <article class="panel-card">
+              <div class="section-head">
+                <span class="eyebrow">Aktywność</span>
+                <h2>Nowe rejestracje</h2>
+              </div>
+              <div class="stats-grid" style="grid-template-columns:1fr 1fr">
+                <div class="stat-card">
+                  <span>Dziś</span>
+                  <strong data-owner-reg-today>—</strong>
+                </div>
+                <div class="stat-card">
+                  <span>Ten miesiąc</span>
+                  <strong data-owner-reg-month>—</strong>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Subskrypcje</span>
+              <h2>Aktywne plany</h2>
+            </div>
+            <div class="stats-grid owner-plan-grid">
+              <div class="stat-card">
+                <span>Basic</span>
+                <strong data-counter data-counter-format="grouped" data-owner-plan-basic>0</strong>
+              </div>
+              <div class="stat-card">
+                <span>Pro</span>
+                <strong data-counter data-counter-format="grouped" data-owner-plan-pro>0</strong>
+              </div>
+              <div class="stat-card">
+                <span>Elite</span>
+                <strong data-counter data-counter-format="grouped" data-owner-plan-elite>0</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="dashboard-grid">
+            <article class="panel-card chart-card">
+              <div class="section-head">
+                <span class="eyebrow">Rozkład planów</span>
+                <h2>Wykres subskrypcji</h2>
+              </div>
+              <div class="chart-rows">
+                <div class="chart-row"><span>Basic</span><span data-plan-chart-value="basic">0 (0%)</span></div>
+                <div class="chart-bar"><span data-plan-chart-bar="basic"></span></div>
+                <div class="chart-row"><span>Pro</span><span data-plan-chart-value="pro">0 (0%)</span></div>
+                <div class="chart-bar"><span data-plan-chart-bar="pro"></span></div>
+                <div class="chart-row"><span>Elite</span><span data-plan-chart-value="elite">0 (0%)</span></div>
+                <div class="chart-bar"><span data-plan-chart-bar="elite"></span></div>
+              </div>
+            </article>
+            <article class="panel-card chart-card">
+              <div class="section-head">
+                <span class="eyebrow">Leady</span>
+                <h2>Temperatura leadów</h2>
+              </div>
+              <div class="chart-rows">
+                <div class="chart-row"><span>Gorące</span><span data-lead-chart-value="hot">0 (0%)</span></div>
+                <div class="chart-bar"><span data-lead-chart-bar="hot"></span></div>
+                <div class="chart-row"><span>Ciepłe</span><span data-lead-chart-value="warm">0 (0%)</span></div>
+                <div class="chart-bar"><span data-lead-chart-bar="warm"></span></div>
+                <div class="chart-row"><span>Zimne</span><span data-lead-chart-value="cold">0 (0%)</span></div>
+                <div class="chart-bar"><span data-lead-chart-bar="cold"></span></div>
+              </div>
+            </article>
+          </section>
+
+          <section class="section-grid">
+            <article class="panel-card">
+              <div class="section-head"><span class="eyebrow">Ostatnie sklepy</span><h2>Nowe sklepy</h2></div>
+              <div class="list-cards" data-owner-stores-list></div>
+            </article>
+            <article class="panel-card">
+              <div class="section-head"><span class="eyebrow">Ostatnie zgłoszenia</span><h2>Nowe leady</h2></div>
+              <div class="list-cards" data-owner-leads-list></div>
+            </article>
+            <article class="panel-card">
+              <div class="section-head"><span class="eyebrow">Ostatnie produkty</span><h2>Nowe produkty</h2></div>
+              <div class="list-cards" data-owner-products-list></div>
+            </article>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-head"><span class="eyebrow">Hurtownie</span><h2>Aktywne hurtownie</h2></div>
+            <div class="list-cards" data-owner-suppliers-list></div>
+          </section>
         </div>
-        <div class="action-grid">
-          <a class="action-card" href="hurtownie.html">
-            <span>Hurtownie</span>
-            Dodaj hurtownię
-          </a>
-          <a class="action-card" href="panel-sklepu.html">
-            <span>Sklepy</span>
-            Zarządzaj sklepami
-          </a>
-          <a class="action-card" href="crm.html">
-            <span>Leady</span>
-            Zobacz leady
-          </a>
-          <a class="action-card" href="cennik.html">
-            <span>Plany</span>
-            Zarządzaj planami
-          </a>
-          <a class="action-card" href="index.html">
-            <span>Landing</span>
-            Przejdź do landing
-          </a>
-          <a class="action-card" href="generator-sklepu.html">
-            <span>Generator</span>
-            Przejdź do generatora
-          </a>
-          <a class="action-card" href="dashboard.html">
-            <span>Dashboard</span>
-            Przejdź do dashboardu
-          </a>
-        </div>
-      </section>
 
-      <section class="section-grid">
-        <article class="panel-card">
-          <div class="section-head">
-            <span class="eyebrow">Ostatnie sklepy</span>
-            <h2>Nowe sklepy</h2>
-          </div>
-          <div class="list-cards" data-owner-stores-list></div>
-        </article>
-        <article class="panel-card">
-          <div class="section-head">
-            <span class="eyebrow">Ostatnie zgłoszenia</span>
-            <h2>Nowe leady</h2>
-          </div>
-          <div class="list-cards" data-owner-leads-list></div>
-        </article>
-        <article class="panel-card">
-          <div class="section-head">
-            <span class="eyebrow">Ostatnie produkty</span>
-            <h2>Nowe produkty</h2>
-          </div>
-          <div class="list-cards" data-owner-products-list></div>
-        </article>
-      </section>
-
-      <section class="panel-card">
-        <div class="section-head">
-          <span class="eyebrow">Hurtownie</span>
-          <h2>Aktywne hurtownie</h2>
-          <p class="hint">Najważniejsze źródła produktów w sieci.</p>
+        <!-- TAB: USERS -->
+        <div class="owner-tab-panel" data-owner-tab-panel="users" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Wykaz ludzi</span>
+              <h2>Wszyscy użytkownicy platformy</h2>
+              <p class="hint">Pełna lista użytkowników, partnerów, właścicieli sklepów, operatorów i klientów.</p>
+            </div>
+            <div class="owner-toolbar">
+              <input class="owner-search" type="search" placeholder="Szukaj po nazwie, e-mail, kraju…" data-users-search aria-label="Szukaj użytkownika">
+              <select class="owner-filter" data-users-role-filter aria-label="Filtruj po roli">
+                <option value="">Wszystkie role</option>
+                <option value="superadmin">Superadmin</option>
+                <option value="operator">Operator</option>
+                <option value="partner">Partner</option>
+                <option value="client">Klient</option>
+              </select>
+              <select class="owner-filter" data-users-plan-filter aria-label="Filtruj po planie">
+                <option value="">Wszystkie plany</option>
+                <option value="elite">Elite</option>
+                <option value="pro">Pro</option>
+                <option value="basic">Basic</option>
+                <option value="trial">Trial</option>
+              </select>
+              <button class="btn btn-secondary" type="button" data-export-users>⬇ Eksport CSV</button>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table" data-users-table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nazwa</th>
+                    <th>E-mail</th>
+                    <th>Telefon</th>
+                    <th>Kraj</th>
+                    <th>Rola</th>
+                    <th>Plan</th>
+                    <th>Rejestracja</th>
+                    <th>Sprzedaże</th>
+                    <th>Obrót</th>
+                  </tr>
+                </thead>
+                <tbody data-users-tbody></tbody>
+              </table>
+            </div>
+          </section>
         </div>
-        <div class="list-cards" data-owner-suppliers-list></div>
-      </section>
+
+        <!-- TAB: STORES -->
+        <div class="owner-tab-panel" data-owner-tab-panel="stores" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Wykaz sklepów</span>
+              <h2>Wszystkie sklepy</h2>
+              <p class="hint">Pełna lista sklepów wraz ze statusem, obrotem i właścicielem.</p>
+            </div>
+            <div class="owner-toolbar">
+              <input class="owner-search" type="search" placeholder="Szukaj sklepu…" data-stores-search aria-label="Szukaj sklepu">
+              <select class="owner-filter" data-stores-status-filter aria-label="Filtruj po statusie">
+                <option value="">Wszystkie statusy</option>
+                <option value="active">Aktywny</option>
+                <option value="trial">Trial</option>
+                <option value="inactive">Nieaktywny</option>
+              </select>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table" data-stores-table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nazwa sklepu</th>
+                    <th>Właściciel</th>
+                    <th>Plan</th>
+                    <th>Produkty</th>
+                    <th>Zamówienia</th>
+                    <th>Obrót</th>
+                    <th>Status</th>
+                    <th>Dodano</th>
+                  </tr>
+                </thead>
+                <tbody data-stores-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: PRODUCTS -->
+        <div class="owner-tab-panel" data-owner-tab-panel="products" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Wykaz produktów</span>
+              <h2>Wszystkie produkty</h2>
+              <p class="hint">Produkty ze wszystkich sklepów i hurtowni w platformie.</p>
+            </div>
+            <div class="owner-toolbar">
+              <input class="owner-search" type="search" placeholder="Szukaj produktu…" data-products-search aria-label="Szukaj produktu">
+              <select class="owner-filter" data-products-supplier-filter aria-label="Filtruj po hurtowni">
+                <option value="">Wszystkie hurtownie</option>
+              </select>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table" data-products-table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nazwa produktu</th>
+                    <th>Hurtownia</th>
+                    <th>Cena zakupu</th>
+                    <th>Marża</th>
+                    <th>Cena sprzedaży</th>
+                    <th>Sprzedaże</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody data-products-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: ORDERS -->
+        <div class="owner-tab-panel" data-owner-tab-panel="orders" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Wykaz zamówień</span>
+              <h2>Wszystkie zamówienia</h2>
+              <p class="hint">Zamówienia z całej platformy, wszystkich sklepów i klientów.</p>
+            </div>
+            <div class="owner-toolbar">
+              <input class="owner-search" type="search" placeholder="Szukaj zamówienia…" data-orders-search aria-label="Szukaj zamówienia">
+              <select class="owner-filter" data-orders-status-filter aria-label="Filtruj po statusie">
+                <option value="">Wszystkie statusy</option>
+                <option value="paid">Opłacone</option>
+                <option value="pending">Oczekujące</option>
+                <option value="shipped">Wysłane</option>
+                <option value="cancelled">Anulowane</option>
+              </select>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table" data-orders-table>
+                <thead>
+                  <tr>
+                    <th>Nr zamówienia</th>
+                    <th>Sklep</th>
+                    <th>Klient</th>
+                    <th>Produkt</th>
+                    <th>Kwota</th>
+                    <th>Status</th>
+                    <th>Data</th>
+                  </tr>
+                </thead>
+                <tbody data-orders-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: SUBSCRIPTIONS -->
+        <div class="owner-tab-panel" data-owner-tab-panel="subscriptions" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Subskrypcje platformy</span>
+              <h2>Zarządzanie subskrypcjami</h2>
+              <p class="hint">Lista wszystkich planów, statusów płatności i kwot.</p>
+            </div>
+            <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
+              <div class="stat-card">
+                <span>Wszystkie</span>
+                <strong data-subs-total>0</strong>
+              </div>
+              <div class="stat-card">
+                <span>Aktywne</span>
+                <strong data-subs-active>0</strong>
+              </div>
+              <div class="stat-card">
+                <span>Trial</span>
+                <strong data-subs-trial>0</strong>
+              </div>
+              <div class="stat-card">
+                <span>Przychód MRR</span>
+                <strong data-subs-mrr>0 zł</strong>
+              </div>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table" data-subs-table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Użytkownik</th>
+                    <th>Plan</th>
+                    <th>Status</th>
+                    <th>Kwota</th>
+                    <th>Data rozpoczęcia</th>
+                  </tr>
+                </thead>
+                <tbody data-subs-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: FINANCES -->
+        <div class="owner-tab-panel" data-owner-tab-panel="finances" hidden>
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Panel finansowy</span>
+            <h2>Marże i przychody platformy</h2>
+            <p class="hint">Sprzedaż partnerów, marża platformy, prowizje i przychody.</p>
+          </section>
+
+          <section class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+            <div class="stat-card">
+              <span>Sprzedaż partnerów</span>
+              <strong data-fin-partner-sales>0 zł</strong>
+            </div>
+            <div class="stat-card">
+              <span>Marża platformy</span>
+              <strong data-fin-platform-margin>0 zł</strong>
+            </div>
+            <div class="stat-card">
+              <span>Prowizja platformy</span>
+              <strong data-fin-platform-commission>0 zł</strong>
+            </div>
+            <div class="stat-card">
+              <span>Razem przychód</span>
+              <strong data-fin-total-revenue>0 zł</strong>
+            </div>
+          </section>
+
+          <section class="dashboard-grid">
+            <article class="panel-card chart-card">
+              <div class="section-head">
+                <span class="eyebrow">Przychody dzienne</span>
+                <h2>Ostatnie 7 dni</h2>
+              </div>
+              <div class="chart-rows" data-fin-daily-chart></div>
+            </article>
+            <article class="panel-card chart-card">
+              <div class="section-head">
+                <span class="eyebrow">Przychody miesięczne</span>
+                <h2>Ostatnie 6 miesięcy</h2>
+              </div>
+              <div class="chart-rows" data-fin-monthly-chart></div>
+            </article>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Rozkład marż</span>
+              <h2>Marże wg planu</h2>
+            </div>
+            <div class="chart-rows">
+              <div class="chart-row"><span>Basic (15%)</span><span data-fin-margin-value="basic">0 zł</span></div>
+              <div class="chart-bar"><span data-fin-margin-bar="basic"></span></div>
+              <div class="chart-row"><span>Pro (25%)</span><span data-fin-margin-value="pro">0 zł</span></div>
+              <div class="chart-bar"><span data-fin-margin-bar="pro"></span></div>
+              <div class="chart-row"><span>Elite (35%)</span><span data-fin-margin-value="elite">0 zł</span></div>
+              <div class="chart-bar"><span data-fin-margin-bar="elite"></span></div>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: REFERRALS -->
+        <div class="owner-tab-panel" data-owner-tab-panel="referrals" hidden>
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">System Poleceń</span>
+            <h2>Referral — polecaj i zarabiaj</h2>
+            <p class="hint">Każdy użytkownik dostaje unikalny link polecający. Za każdą rejestrację z linku — prowizja.</p>
+          </section>
+
+          <section class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+            <div class="stat-card">
+              <span>Polecający</span>
+              <strong data-ref-total-referrers>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Poleceni użytkownicy</span>
+              <strong data-ref-total-referred>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Aktywne sklepy z polecenia</span>
+              <strong data-ref-active-stores>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Prowizje wypłacone</span>
+              <strong data-ref-commissions>0 zł</strong>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Top polecający</span>
+              <h2>Ranking poleceń</h2>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table" data-ref-table>
+                <thead>
+                  <tr>
+                    <th>Użytkownik</th>
+                    <th>Kod polecający</th>
+                    <th>Poleceni</th>
+                    <th>Aktywne sklepy</th>
+                    <th>Prowizja</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody data-ref-tbody></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Mój link</span>
+              <h2>Link polecający właściciela</h2>
+              <p class="hint">Twój unikalny link do polecania platformy.</p>
+            </div>
+            <div class="referral-link-box">
+              <input class="owner-input" type="text" readonly data-owner-referral-link aria-label="Twój link polecający">
+              <button class="btn btn-primary" type="button" data-copy-referral-link>Kopiuj link</button>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: OPERATORS -->
+        <div class="owner-tab-panel" data-owner-tab-panel="operators" hidden>
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Operatorzy systemu</span>
+            <h2>Zarządzanie operatorami</h2>
+            <p class="hint">Operatorzy wspierają procesy na całej platformie – zarządzają sklepami, użytkownikami i produktami.</p>
+          </section>
+
+          <section class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+            <div class="stat-card">
+              <span>Operatorzy aktywni</span>
+              <strong data-op-active>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Zadania otwarte</span>
+              <strong data-op-tasks-open>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Akcje dziś</span>
+              <strong data-op-actions-today>0</strong>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Lista operatorów</span>
+              <h2>Wszyscy operatorzy</h2>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table" data-operators-table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nazwa</th>
+                    <th>E-mail</th>
+                    <th>Status</th>
+                    <th>Zadania</th>
+                    <th>Aktywność</th>
+                    <th>Partnerzy</th>
+                  </tr>
+                </thead>
+                <tbody data-operators-tbody></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Ostatnie działania</span>
+              <h2>Aktywność operatorów</h2>
+            </div>
+            <div class="list-cards" data-op-activity-list></div>
+          </section>
+        </div>
+
+        <!-- TAB: SECURITY -->
+        <div class="owner-tab-panel" data-owner-tab-panel="security" hidden>
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Bezpieczeństwo</span>
+            <h2>Role i logi systemowe</h2>
+            <p class="hint">Zarządzanie rolami dostępu, logi działań operatorów i historia zmian.</p>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Role dostępu</span>
+              <h2>Hierarchia uprawnień</h2>
+            </div>
+            <div class="roles-grid">
+              <div class="role-card role-superadmin">
+                <strong>Superadmin</strong>
+                <span>Pełny dostęp do wszystkiego – tylko właściciel</span>
+                <ul>
+                  <li>Centrum dowodzenia</li>
+                  <li>Zarządzanie finansami</li>
+                  <li>Zarządzanie operatorami</li>
+                  <li>Logi systemowe</li>
+                </ul>
+              </div>
+              <div class="role-card role-operator">
+                <strong>Operator</strong>
+                <span>Ograniczony dostęp – zarządzanie przydzielonymi partnerami</span>
+                <ul>
+                  <li>Obsługa sklepów</li>
+                  <li>Obsługa użytkowników</li>
+                  <li>Kontrola produktów</li>
+                  <li>Kontrola zamówień</li>
+                </ul>
+              </div>
+              <div class="role-card role-partner">
+                <strong>Partner</strong>
+                <span>Dostęp tylko do własnego sklepu</span>
+                <ul>
+                  <li>Panel sklepu</li>
+                  <li>Własne produkty</li>
+                  <li>Własne zamówienia</li>
+                </ul>
+              </div>
+              <div class="role-card role-client">
+                <strong>Klient</strong>
+                <span>Dostęp tylko do własnego konta</span>
+                <ul>
+                  <li>Historia zakupów</li>
+                  <li>Ustawienia konta</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Logi administratora</span>
+              <h2>Historia zmian</h2>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table" data-admin-logs-table>
+                <thead>
+                  <tr>
+                    <th>Czas</th>
+                    <th>Użytkownik</th>
+                    <th>Rola</th>
+                    <th>Akcja</th>
+                    <th>Obiekt</th>
+                    <th>Szczegóły</th>
+                  </tr>
+                </thead>
+                <tbody data-admin-logs-tbody></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Logi operatorów</span>
+              <h2>Działania operatorów</h2>
+            </div>
+            <div class="list-cards" data-op-logs-list></div>
+          </section>
+        </div>
+
       </div>
     </main>
   </div>

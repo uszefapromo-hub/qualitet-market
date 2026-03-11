@@ -92,7 +92,11 @@
     products: 'products',
     subscriptions: 'subscriptions',
     suppliers: 'suppliers',
-    activeStore: 'activeStore'
+    activeStore: 'activeStore',
+    orders: 'qm_orders',
+    operators: 'qm_operators',
+    referrals: 'qm_referrals',
+    adminLogs: 'qm_admin_logs'
   };
   const PRICING_STORAGE_KEYS = {
     productsBySupplier: 'qm_products_by_supplier_v1',
@@ -1897,35 +1901,60 @@
         id: 'user_anna',
         name: 'Anna Nowak',
         email: 'anna@uszefaqualitet.pl',
+        phone: '+48 601 111 001',
+        country: 'PL',
+        role: 'partner',
         plan: 'pro',
+        sales: 5,
+        turnover: 1850,
         createdAt: '2026-02-08T07:40:00Z'
       },
       {
         id: 'user_marek',
         name: 'Marek Kowalski',
         email: 'marek@uszefaqualitet.pl',
+        phone: '+48 601 111 002',
+        country: 'PL',
+        role: 'partner',
         plan: 'basic',
+        sales: 2,
+        turnover: 320,
         createdAt: '2026-02-11T11:20:00Z'
       },
       {
         id: 'user_ola',
         name: 'Ola Zielińska',
         email: 'ola@uszefaqualitet.pl',
+        phone: '+48 601 111 003',
+        country: 'PL',
+        role: 'partner',
         plan: 'elite',
+        sales: 9,
+        turnover: 4200,
         createdAt: '2026-02-15T14:10:00Z'
       },
       {
         id: 'user_tomasz',
         name: 'Tomasz Kaczmarek',
         email: 'tomasz@uszefaqualitet.pl',
+        phone: '+48 601 111 004',
+        country: 'PL',
+        role: 'partner',
         plan: 'pro',
+        sales: 3,
+        turnover: 1370,
         createdAt: '2026-02-21T09:55:00Z'
       },
       {
         id: 'user_klaudia',
         name: 'Klaudia Nowicka',
         email: 'klaudia@uszefaqualitet.pl',
+        phone: '+48 601 111 005',
+        country: 'PL',
+        role: 'client',
         plan: 'basic',
+        sales: 0,
+        turnover: 0,
         createdAt: '2026-02-25T16:05:00Z'
       }
     ];
@@ -2008,6 +2037,207 @@
       }
     ];
 
+    const seedOrders = [
+      {
+        id: 'ord_001',
+        number: 'QM-2026-001',
+        storeId: 'store_elektronika',
+        storeName: 'Qualitet Elektronika',
+        client: 'Jan Wiśniewski',
+        clientEmail: 'jan.w@email.pl',
+        product: 'Powerbank 20000 mAh Voltix',
+        amount: 149,
+        status: 'paid',
+        createdAt: '2026-03-01T10:12:00Z'
+      },
+      {
+        id: 'ord_002',
+        number: 'QM-2026-002',
+        storeId: 'store_moda',
+        storeName: 'Qualitet Moda',
+        client: 'Maria Kowalczyk',
+        clientEmail: 'maria.k@mail.pl',
+        product: 'Kurtka Softshell Arctic',
+        amount: 239,
+        status: 'shipped',
+        createdAt: '2026-03-02T14:05:00Z'
+      },
+      {
+        id: 'ord_003',
+        number: 'QM-2026-003',
+        storeId: 'store_dom',
+        storeName: 'Dom & Lifestyle',
+        client: 'Piotr Nowak',
+        clientEmail: 'piotr.n@firma.pl',
+        product: 'Fotel bujany Nordic',
+        amount: 890,
+        status: 'pending',
+        createdAt: '2026-03-03T09:30:00Z'
+      },
+      {
+        id: 'ord_004',
+        number: 'QM-2026-004',
+        storeId: 'store_elektronika',
+        storeName: 'Qualitet Elektronika',
+        client: 'Anna Grochowska',
+        clientEmail: 'anna.g@firma.pl',
+        product: 'Dron sportowy AirFlash',
+        amount: 1050,
+        status: 'paid',
+        createdAt: '2026-03-04T11:20:00Z'
+      },
+      {
+        id: 'ord_005',
+        number: 'QM-2026-005',
+        storeId: 'store_moda',
+        storeName: 'Qualitet Moda',
+        client: 'Tomasz Kaczmarek',
+        clientEmail: 'tomasz@uszefaqualitet.pl',
+        product: 'Bluza premium StreetCloud',
+        amount: 320,
+        status: 'shipped',
+        createdAt: '2026-03-05T16:40:00Z'
+      },
+      {
+        id: 'ord_006',
+        number: 'QM-2026-006',
+        storeId: 'store_dom',
+        storeName: 'Dom & Lifestyle',
+        client: 'Kinga Brzoza',
+        clientEmail: 'kinga@atelier.pl',
+        product: 'Zestaw mebli ogrodowych Porto',
+        amount: 1690,
+        status: 'paid',
+        createdAt: '2026-03-06T08:15:00Z'
+      },
+      {
+        id: 'ord_007',
+        number: 'QM-2026-007',
+        storeId: 'store_elektronika',
+        storeName: 'Qualitet Elektronika',
+        client: 'Daniel P.',
+        clientEmail: 'daniel@startup.pl',
+        product: 'Smart gniazdko HomeLink',
+        amount: 79,
+        status: 'cancelled',
+        createdAt: '2026-03-07T12:55:00Z'
+      }
+    ];
+
+    const seedOperators = [
+      {
+        id: 'op_001',
+        name: 'Kamil Operatorski',
+        email: 'kamil.op@uszefaqualitet.pl',
+        status: 'active',
+        tasksOpen: 4,
+        activityToday: 12,
+        partners: 3,
+        lastActive: '2026-03-11T07:30:00Z'
+      },
+      {
+        id: 'op_002',
+        name: 'Ewa Zarządzająca',
+        email: 'ewa.op@uszefaqualitet.pl',
+        status: 'active',
+        tasksOpen: 2,
+        activityToday: 8,
+        partners: 2,
+        lastActive: '2026-03-11T06:50:00Z'
+      },
+      {
+        id: 'op_003',
+        name: 'Bartek Wsparcie',
+        email: 'bartek.op@uszefaqualitet.pl',
+        status: 'inactive',
+        tasksOpen: 0,
+        activityToday: 0,
+        partners: 1,
+        lastActive: '2026-03-09T14:00:00Z'
+      }
+    ];
+
+    const seedReferrals = [
+      {
+        id: 'ref_anna',
+        userId: 'user_anna',
+        userName: 'Anna Nowak',
+        refCode: 'ANNA2026',
+        referred: 2,
+        activeStores: 1,
+        commission: 79,
+        status: 'active'
+      },
+      {
+        id: 'ref_marek',
+        userId: 'user_marek',
+        userName: 'Marek Kowalski',
+        refCode: 'MAREK26',
+        referred: 1,
+        activeStores: 1,
+        commission: 29,
+        status: 'active'
+      },
+      {
+        id: 'ref_ola',
+        userId: 'user_ola',
+        userName: 'Ola Zielińska',
+        refCode: 'OLA26EL',
+        referred: 3,
+        activeStores: 2,
+        commission: 199,
+        status: 'active'
+      }
+    ];
+
+    const seedAdminLogs = [
+      {
+        id: 'log_001',
+        time: '2026-03-11T08:10:00Z',
+        user: 'uszefaqualitetpromo@gmail.com',
+        role: 'superadmin',
+        action: 'Logowanie',
+        object: 'Panel Superadmina',
+        details: 'Pomyślne logowanie'
+      },
+      {
+        id: 'log_002',
+        time: '2026-03-10T15:30:00Z',
+        user: 'kamil.op@uszefaqualitet.pl',
+        role: 'operator',
+        action: 'Edycja sklepu',
+        object: 'Qualitet Elektronika',
+        details: 'Zaktualizowano opis sklepu'
+      },
+      {
+        id: 'log_003',
+        time: '2026-03-10T12:05:00Z',
+        user: 'ewa.op@uszefaqualitet.pl',
+        role: 'operator',
+        action: 'Dodanie produktu',
+        object: 'Qualitet Moda',
+        details: 'Dodano Kurtka Softshell Arctic'
+      },
+      {
+        id: 'log_004',
+        time: '2026-03-09T09:20:00Z',
+        user: 'uszefaqualitetpromo@gmail.com',
+        role: 'superadmin',
+        action: 'Zmiana planu',
+        object: 'user_ola',
+        details: 'Upgrade do ELITE'
+      },
+      {
+        id: 'log_005',
+        time: '2026-03-08T17:45:00Z',
+        user: 'kamil.op@uszefaqualitet.pl',
+        role: 'operator',
+        action: 'Obsługa leadu',
+        object: 'Anna Grochowska',
+        details: 'Status zmieniony na: gorący'
+      }
+    ];
+
     const suppliers = ensureSeedList(OWNER_STORAGE_KEYS.suppliers, seedSuppliers);
     const stores = ensureSeedList(OWNER_STORAGE_KEYS.stores, seedStores);
     if(!localStorage.getItem(OWNER_STORAGE_KEYS.activeStore) && stores.length){
@@ -2022,6 +2252,10 @@
     const users = ensureSeedList(OWNER_STORAGE_KEYS.users, seedUsers);
     const leads = ensureSeedList(OWNER_STORAGE_KEYS.leads, seedLeads);
     const subscriptions = ensureSeedList(OWNER_STORAGE_KEYS.subscriptions, seedSubscriptions);
+    const orders = ensureSeedList(OWNER_STORAGE_KEYS.orders, seedOrders);
+    const operators = ensureSeedList(OWNER_STORAGE_KEYS.operators, seedOperators);
+    const referrals = ensureSeedList(OWNER_STORAGE_KEYS.referrals, seedReferrals);
+    const adminLogs = ensureSeedList(OWNER_STORAGE_KEYS.adminLogs, seedAdminLogs);
     resolveStoreMargin({store: stores[0], plan: stores[0] && stores[0].plan});
 
     return {
@@ -2031,7 +2265,11 @@
       products,
       productsBySupplier,
       subscriptions,
-      suppliers
+      suppliers,
+      orders,
+      operators,
+      referrals,
+      adminLogs
     };
   }
 
@@ -3311,6 +3549,48 @@
     return accessGranted;
   }
 
+  function escapeHtml(str){
+    const s = str == null ? '' : String(str);
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;');
+  }
+
+  function statusPill(status){
+    const map = {
+      active: 'pill-active',
+      paid: 'pill-paid',
+      shipped: 'pill-shipped',
+      trial: 'pill-trial',
+      pending: 'pill-pending',
+      inactive: 'pill-inactive',
+      cancelled: 'pill-cancelled',
+      superadmin: 'pill-superadmin',
+      operator: 'pill-operator',
+      partner: 'pill-partner',
+      client: 'pill-client'
+    };
+    const cls = map[status] || 'pill-pending';
+    const labels = {
+      active: 'Aktywny',
+      paid: 'Opłacone',
+      shipped: 'Wysłane',
+      trial: 'Trial',
+      pending: 'Oczekujące',
+      inactive: 'Nieaktywny',
+      cancelled: 'Anulowane',
+      superadmin: 'Superadmin',
+      operator: 'Operator',
+      partner: 'Partner',
+      client: 'Klient'
+    };
+    const label = labels[status] || escapeHtml(status);
+    return `<span class="${cls}">${label}</span>`;
+  }
+
   function initOwnerPanel(){
     if(document.body.dataset.page !== 'owner-panel'){
       return;
@@ -3318,6 +3598,7 @@
     if(!applyOwnerAccessState()){
       return;
     }
+
     const data = ensureFinalStorage();
     const users = data.users;
     const stores = data.stores;
@@ -3325,63 +3606,44 @@
     const products = data.products;
     const subscriptions = data.subscriptions;
     const suppliers = data.suppliers;
+    const orders = data.orders || [];
+    const operators = data.operators || [];
+    const referrals = data.referrals || [];
+    const adminLogs = data.adminLogs || [];
     const storeMap = new Map(stores.map(store => [store.id, store]));
+    const userMap = new Map(users.map(user => [user.id, user]));
 
-    const activeSubscriptions = subscriptions.filter(subscription => subscription.status === 'active');
-    const planCounts = {basic: 0, pro: 0, elite: 0};
-    activeSubscriptions.forEach(subscription => {
-      const normalizedPlan = normalizePlan(subscription.plan);
-      if(normalizedPlan && planCounts[normalizedPlan] !== undefined){
-        planCounts[normalizedPlan] += 1;
-      }
-    });
-    const revenue = activeSubscriptions.reduce((sum, subscription) => {
-      const amount = Number.parseFloat(subscription.amount);
-      return sum + (Number.isNaN(amount) ? 0 : amount);
-    }, 0);
-    const sales = products.length;
-
-    const counters = [
-      ['[data-owner-users]', users.length],
-      ['[data-owner-stores]', stores.length],
-      ['[data-owner-products]', products.length],
-      ['[data-owner-leads]', leads.length],
-      ['[data-owner-revenue]', Math.round(revenue)],
-      ['[data-owner-sales]', sales],
-      ['[data-owner-plan-basic]', planCounts.basic],
-      ['[data-owner-plan-pro]', planCounts.pro],
-      ['[data-owner-plan-elite]', planCounts.elite]
-    ];
-    counters.forEach(([selector, value]) => {
-      const target = document.querySelector(selector);
-      if(target){
-        target.dataset.counter = `${Math.max(0, Math.round(value))}`;
-      }
-    });
-
-    const planTargets = [
-      {selector: '[data-owner-plan-basic]', value: planCounts.basic},
-      {selector: '[data-owner-plan-pro]', value: planCounts.pro},
-      {selector: '[data-owner-plan-elite]', value: planCounts.elite}
-    ];
-    window.setTimeout(() => {
-      planTargets.forEach(({selector, value}) => {
-        const target = document.querySelector(selector);
-        if(target){
-          setCounterValue(target, value);
-        }
+    // ── Tab switching ──
+    const tabNav = document.querySelector('[data-owner-tab-nav]');
+    const tabPanels = document.querySelectorAll('[data-owner-tab-panel]');
+    function showTab(tabId){
+      tabPanels.forEach(panel => {
+        panel.hidden = panel.dataset.ownerTabPanel !== tabId;
       });
-    }, 1300);
+      if(tabNav){
+        tabNav.querySelectorAll('[data-owner-tab]').forEach(link => {
+          link.classList.toggle('active', link.dataset.ownerTab === tabId);
+        });
+      }
+    }
+    if(tabNav){
+      tabNav.addEventListener('click', event => {
+        const link = event.target.closest('[data-owner-tab]');
+        if(!link) return;
+        event.preventDefault();
+        showTab(link.dataset.ownerTab);
+      });
+    }
+    showTab('overview');
 
-    const storeList = document.querySelector('[data-owner-stores-list]');
-    const leadList = document.querySelector('[data-owner-leads-list]');
-    const productList = document.querySelector('[data-owner-products-list]');
-    const supplierList = document.querySelector('[data-owner-suppliers-list]');
+    // ── Helpers ──
+    const setText = (selector, value) => {
+      const el = document.querySelector(selector);
+      if(el) el.textContent = value;
+    };
 
     const renderList = (container, items, builder, emptyMessage) => {
-      if(!container){
-        return;
-      }
+      if(!container) return;
       container.innerHTML = '';
       if(!items.length){
         const empty = document.createElement('p');
@@ -3393,16 +3655,105 @@
       items.forEach(item => container.appendChild(builder(item)));
     };
 
+    const filterTable = (tbody, rows, filterFn) => {
+      tbody.innerHTML = '';
+      rows.filter(filterFn).forEach(row => tbody.appendChild(row));
+    };
+
+    // ── OVERVIEW: counters ──
+    const activeSubscriptions = subscriptions.filter(s => s.status === 'active');
+    const planCounts = {basic: 0, pro: 0, elite: 0};
+    activeSubscriptions.forEach(s => {
+      const p = normalizePlan(s.plan);
+      if(p && planCounts[p] !== undefined) planCounts[p] += 1;
+    });
+    const revenue = activeSubscriptions.reduce((sum, s) => {
+      const a = Number.parseFloat(s.amount);
+      return sum + (Number.isNaN(a) ? 0 : a);
+    }, 0);
+    const platformMarginRate = 0.15;
+    const platformMargin = revenue * platformMarginRate;
+
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+    const monthStr = now.toISOString().slice(0, 7);
+
+    const ordersToday = orders.filter(o => (o.createdAt || '').startsWith(todayStr));
+    const revenueToday = ordersToday.reduce((sum, o) => sum + (Number.parseFloat(o.amount) || 0), 0);
+    const ordersThisMonth = orders.filter(o => (o.createdAt || '').startsWith(monthStr));
+    const revenueMonth = ordersThisMonth.reduce((sum, o) => sum + (Number.parseFloat(o.amount) || 0), 0);
+    const regsToday = users.filter(u => (u.createdAt || '').startsWith(todayStr)).length;
+    const regsMonth = users.filter(u => (u.createdAt || '').startsWith(monthStr)).length;
+
+    const counterData = [
+      ['[data-owner-users]', users.length],
+      ['[data-owner-stores]', stores.length],
+      ['[data-owner-products]', products.length],
+      ['[data-owner-orders]', orders.length],
+      ['[data-owner-revenue]', Math.round(revenue)],
+      ['[data-owner-platform-margin]', Math.round(platformMargin)],
+      ['[data-owner-active-subs]', activeSubscriptions.length],
+      ['[data-owner-referrals-count]', referrals.reduce((s, r) => s + (r.referred || 0), 0)],
+      ['[data-owner-plan-basic]', planCounts.basic],
+      ['[data-owner-plan-pro]', planCounts.pro],
+      ['[data-owner-plan-elite]', planCounts.elite]
+    ];
+    counterData.forEach(([selector, value]) => {
+      const target = document.querySelector(selector);
+      if(target){
+        target.dataset.counter = `${Math.max(0, Math.round(value))}`;
+      }
+    });
+    window.setTimeout(() => {
+      counterData.forEach(([selector, value]) => {
+        const target = document.querySelector(selector);
+        if(target) setCounterValue(target, value);
+      });
+    }, 1300);
+
+    setText('[data-owner-revenue-today]', formatCurrency(revenueToday));
+    setText('[data-owner-revenue-month]', formatCurrency(revenueMonth));
+    setText('[data-owner-reg-today]', `${regsToday} os.`);
+    setText('[data-owner-reg-month]', `${regsMonth} os.`);
+
+    // ── OVERVIEW: charts ──
+    const updateChart = (prefix, values) => {
+      const total = Object.values(values).reduce((sum, v) => sum + v, 0) || 1;
+      Object.entries(values).forEach(([key, value]) => {
+        const percent = Math.round((value / total) * 100);
+        const bar = document.querySelector(`[data-${prefix}-chart-bar="${key}"]`);
+        const label = document.querySelector(`[data-${prefix}-chart-value="${key}"]`);
+        if(bar) bar.style.setProperty('--value', `${percent}%`);
+        if(label) label.textContent = `${value} (${percent}%)`;
+      });
+    };
+    updateChart('plan', planCounts);
+    const leadCounts = leads.reduce((acc, lead) => {
+      const status = lead.status || 'cold';
+      acc[status] = (acc[status] || 0) + 1;
+      return acc;
+    }, {hot: 0, warm: 0, cold: 0});
+    updateChart('lead', leadCounts);
+
+    // ── OVERVIEW: lists ──
+    const storeList = document.querySelector('[data-owner-stores-list]');
+    const leadList = document.querySelector('[data-owner-leads-list]');
+    const productList = document.querySelector('[data-owner-products-list]');
+    const supplierList = document.querySelector('[data-owner-suppliers-list]');
+
     const sortedStores = [...stores].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 3);
     renderList(storeList, sortedStores, store => {
       const card = document.createElement('div');
       card.className = 'list-card';
       const productCount = Array.isArray(store.products) ? store.products.length : 0;
-      card.innerHTML = `
-        <strong>${store.name}</strong>
-        <span class="hint">Plan ${formatPlanLabel(store.plan)} • ${productCount} produktów</span>
-        <small>Dodano: ${formatDate(store.createdAt)}</small>
-      `;
+      const name = document.createElement('strong');
+      name.textContent = store.name;
+      const hint = document.createElement('span');
+      hint.className = 'hint';
+      hint.textContent = `Plan ${formatPlanLabel(store.plan)} \u2022 ${productCount} produkt\u00f3w`;
+      const small = document.createElement('small');
+      small.textContent = `Dodano: ${formatDate(store.createdAt)}`;
+      card.append(name, hint, small);
       return card;
     }, 'Brak ostatnich sklepów.');
 
@@ -3416,11 +3767,14 @@
       const meta = leadStatusMeta[lead.status] || {label: 'Nowy lead', className: 'is-pending'};
       const card = document.createElement('div');
       card.className = 'list-card';
-      card.innerHTML = `
-        <strong>${lead.name}</strong>
-        <span class="status-pill ${meta.className}">${meta.label}</span>
-        <small>${lead.email} • ${lead.source}</small>
-      `;
+      const name = document.createElement('strong');
+      name.textContent = lead.name;
+      const pill = document.createElement('span');
+      pill.className = `status-pill ${meta.className}`;
+      pill.textContent = meta.label;
+      const small = document.createElement('small');
+      small.textContent = `${lead.email} \u2022 ${lead.source}`;
+      card.append(name, pill, small);
       return card;
     }, 'Brak nowych leadów.');
 
@@ -3435,11 +3789,14 @@
         settings: loadStoreSettings(),
         product
       });
-      card.innerHTML = `
-        <strong>${product.name}</strong>
-        <span class="hint">${product.category || 'Kategoria'} • ${product.supplier || 'Katalog'}</span>
-        <small>Cena: ${formatCurrency(pricing.finalPrice)}</small>
-      `;
+      const name = document.createElement('strong');
+      name.textContent = product.name;
+      const hint = document.createElement('span');
+      hint.className = 'hint';
+      hint.textContent = `${product.category || 'Kategoria'} \u2022 ${product.supplier || 'Katalog'}`;
+      const small = document.createElement('small');
+      small.textContent = `Cena: ${formatCurrency(pricing.finalPrice)}`;
+      card.append(name, hint, small);
       return card;
     }, 'Brak nowych produktów.');
 
@@ -3448,42 +3805,420 @@
       const card = document.createElement('div');
       card.className = 'list-card';
       const productCount = Array.isArray(supplier.products) ? supplier.products.length : 0;
-      card.innerHTML = `
-        <div class="supplier-meta">
-          <img src="${supplier.logo}" alt="${supplier.name}" onerror="this.src='https://placehold.co/48x48/0f1837/FFFFFF?text=${encodeURIComponent((supplier.name || 'H').slice(0, 2).toUpperCase())}'">
-          <div>
-            <strong>${supplier.name}</strong>
-            <small>${supplier.category}</small>
-          </div>
-        </div>
-        <small>${productCount} produktów w katalogu</small>
-      `;
+      const meta = document.createElement('div');
+      meta.className = 'supplier-meta';
+      const img = document.createElement('img');
+      img.src = supplier.logo || '';
+      img.alt = supplier.name || '';
+      img.onerror = function(){ this.src = `https://placehold.co/48x48/0f1837/FFFFFF?text=${encodeURIComponent((supplier.name || 'H').slice(0, 2).toUpperCase())}`; };
+      const info = document.createElement('div');
+      const nameEl = document.createElement('strong');
+      nameEl.textContent = supplier.name;
+      const cat = document.createElement('small');
+      cat.textContent = supplier.category;
+      info.append(nameEl, cat);
+      meta.append(img, info);
+      const count = document.createElement('small');
+      count.textContent = `${productCount} produktów w katalogu`;
+      card.append(meta, count);
       return card;
     }, 'Brak aktywnych hurtowni.');
 
-    const updateChart = (prefix, values) => {
-      const total = Object.values(values).reduce((sum, value) => sum + value, 0) || 1;
-      Object.entries(values).forEach(([key, value]) => {
-        const percent = Math.round((value / total) * 100);
-        const bar = document.querySelector(`[data-${prefix}-chart-bar="${key}"]`);
-        const label = document.querySelector(`[data-${prefix}-chart-value="${key}"]`);
-        if(bar){
-          bar.style.setProperty('--value', `${percent}%`);
-        }
-        if(label){
-          label.textContent = `${value} (${percent}%)`;
-        }
+    // ── USERS TAB ──
+    const usersTbody = document.querySelector('[data-users-tbody]');
+    if(usersTbody){
+      const buildUserRow = user => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="cell-mono">${escapeHtml(user.id)}</td>
+          <td><strong>${escapeHtml(user.name)}</strong></td>
+          <td>${escapeHtml(user.email)}</td>
+          <td>${escapeHtml(user.phone || '—')}</td>
+          <td>${escapeHtml(user.country || '—')}</td>
+          <td>${statusPill(user.role || 'client')}</td>
+          <td>${escapeHtml(formatPlanLabel(user.plan))}</td>
+          <td class="cell-muted">${formatDate(user.createdAt)}</td>
+          <td>${user.sales || 0}</td>
+          <td>${formatCurrency(user.turnover || 0)}</td>
+        `;
+        return tr;
+      };
+      let userRows = users.map(buildUserRow);
+      usersTbody.append(...userRows);
+
+      const usersSearch = document.querySelector('[data-users-search]');
+      const usersRoleFilter = document.querySelector('[data-users-role-filter]');
+      const usersPlanFilter = document.querySelector('[data-users-plan-filter]');
+      const applyUsersFilter = () => {
+        const q = (usersSearch ? usersSearch.value.toLowerCase() : '');
+        const role = usersRoleFilter ? usersRoleFilter.value : '';
+        const plan = usersPlanFilter ? usersPlanFilter.value : '';
+        usersTbody.innerHTML = '';
+        users.filter(u => {
+          const matchQ = !q || (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.country || '').toLowerCase().includes(q);
+          const matchRole = !role || (u.role || 'client') === role;
+          const matchPlan = !plan || normalizePlan(u.plan) === plan;
+          return matchQ && matchRole && matchPlan;
+        }).map(buildUserRow).forEach(row => usersTbody.appendChild(row));
+      };
+      if(usersSearch) usersSearch.addEventListener('input', applyUsersFilter);
+      if(usersRoleFilter) usersRoleFilter.addEventListener('change', applyUsersFilter);
+      if(usersPlanFilter) usersPlanFilter.addEventListener('change', applyUsersFilter);
+
+      const exportBtn = document.querySelector('[data-export-users]');
+      if(exportBtn){
+        exportBtn.addEventListener('click', () => {
+          const headers = ['ID','Nazwa','Email','Telefon','Kraj','Rola','Plan','Rejestracja','Sprzedaze','Obrot'];
+          const rows = users.map(u => [u.id, u.name, u.email, u.phone || '', u.country || '', u.role || 'client', u.plan, u.createdAt, u.sales || 0, u.turnover || 0]);
+          const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+          const blob = new Blob([csv], {type: 'text/csv'});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'uzytkownicy.csv';
+          a.click();
+          URL.revokeObjectURL(url);
+        });
+      }
+    }
+
+    // ── STORES TAB ──
+    const storesTbody = document.querySelector('[data-stores-tbody]');
+    if(storesTbody){
+      const buildStoreRow = store => {
+        const owner = users.find(u => store.userId ? u.id === store.userId : false);
+        const ownerName = owner ? owner.name : '—';
+        const productCount = Array.isArray(store.products) ? store.products.length : 0;
+        const storeOrders = orders.filter(o => o.storeId === store.id);
+        const storeTurnover = storeOrders.reduce((sum, o) => sum + (Number.parseFloat(o.amount) || 0), 0);
+        const storeStatus = store.trial ? 'trial' : 'active';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="cell-mono">${escapeHtml(store.id)}</td>
+          <td><strong>${escapeHtml(store.name)}</strong></td>
+          <td>${escapeHtml(ownerName)}</td>
+          <td>${escapeHtml(formatPlanLabel(store.plan))}</td>
+          <td>${productCount}</td>
+          <td>${storeOrders.length}</td>
+          <td>${formatCurrency(storeTurnover)}</td>
+          <td>${statusPill(storeStatus)}</td>
+          <td class="cell-muted">${formatDate(store.createdAt)}</td>
+        `;
+        return tr;
+      };
+      stores.map(buildStoreRow).forEach(row => storesTbody.appendChild(row));
+
+      const storesSearch = document.querySelector('[data-stores-search]');
+      const storesStatusFilter = document.querySelector('[data-stores-status-filter]');
+      const applyStoresFilter = () => {
+        const q = (storesSearch ? storesSearch.value.toLowerCase() : '');
+        const status = storesStatusFilter ? storesStatusFilter.value : '';
+        storesTbody.innerHTML = '';
+        stores.filter(s => {
+          const matchQ = !q || (s.name || '').toLowerCase().includes(q);
+          const storeStatus = s.trial ? 'trial' : 'active';
+          const matchStatus = !status || storeStatus === status || (!s.trial && status === 'active');
+          return matchQ && matchStatus;
+        }).map(buildStoreRow).forEach(row => storesTbody.appendChild(row));
+      };
+      if(storesSearch) storesSearch.addEventListener('input', applyStoresFilter);
+      if(storesStatusFilter) storesStatusFilter.addEventListener('change', applyStoresFilter);
+    }
+
+    // ── PRODUCTS TAB ──
+    const productsTbody = document.querySelector('[data-products-tbody]');
+    if(productsTbody){
+      const suppliersSet = [...new Set(products.map(p => p.supplier).filter(Boolean))];
+      const supplierFilter = document.querySelector('[data-products-supplier-filter]');
+      if(supplierFilter){
+        suppliersSet.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s;
+          opt.textContent = s;
+          supplierFilter.appendChild(opt);
+        });
+      }
+      const buildProductRow = product => {
+        const productStore = storeMap.get(product.storeId);
+        const pricing = calculateTieredPricing(product.cost || 0, {
+          userMargin: product.margin,
+          store: productStore,
+          settings: loadStoreSettings(),
+          product
+        });
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="cell-mono">${escapeHtml(product.id)}</td>
+          <td><strong>${escapeHtml(product.name)}</strong></td>
+          <td>${escapeHtml(product.supplier || '—')}</td>
+          <td>${formatCurrency(product.cost || 0)}</td>
+          <td>${pricing.userMarginPct || product.margin || 0}%</td>
+          <td>${formatCurrency(pricing.finalPrice)}</td>
+          <td>${product.sales || 0}</td>
+          <td>${statusPill('active')}</td>
+        `;
+        return tr;
+      };
+      products.map(buildProductRow).forEach(row => productsTbody.appendChild(row));
+
+      const productsSearch = document.querySelector('[data-products-search]');
+      const applyProductsFilter = () => {
+        const q = (productsSearch ? productsSearch.value.toLowerCase() : '');
+        const supplier = supplierFilter ? supplierFilter.value : '';
+        productsTbody.innerHTML = '';
+        products.filter(p => {
+          const matchQ = !q || (p.name || '').toLowerCase().includes(q);
+          const matchS = !supplier || (p.supplier || '') === supplier;
+          return matchQ && matchS;
+        }).map(buildProductRow).forEach(row => productsTbody.appendChild(row));
+      };
+      if(productsSearch) productsSearch.addEventListener('input', applyProductsFilter);
+      if(supplierFilter) supplierFilter.addEventListener('change', applyProductsFilter);
+    }
+
+    // ── ORDERS TAB ──
+    const ordersTbody = document.querySelector('[data-orders-tbody]');
+    if(ordersTbody){
+      const buildOrderRow = order => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="cell-mono">${escapeHtml(order.number || order.id)}</td>
+          <td>${escapeHtml(order.storeName || order.storeId || '—')}</td>
+          <td>${escapeHtml(order.client || '—')}</td>
+          <td>${escapeHtml(order.product || '—')}</td>
+          <td>${formatCurrency(order.amount || 0)}</td>
+          <td>${statusPill(order.status || 'pending')}</td>
+          <td class="cell-muted">${formatDate(order.createdAt)}</td>
+        `;
+        return tr;
+      };
+      orders.map(buildOrderRow).forEach(row => ordersTbody.appendChild(row));
+
+      const ordersSearch = document.querySelector('[data-orders-search]');
+      const ordersStatusFilter = document.querySelector('[data-orders-status-filter]');
+      const applyOrdersFilter = () => {
+        const q = (ordersSearch ? ordersSearch.value.toLowerCase() : '');
+        const status = ordersStatusFilter ? ordersStatusFilter.value : '';
+        ordersTbody.innerHTML = '';
+        orders.filter(o => {
+          const matchQ = !q || (o.number || '').toLowerCase().includes(q) || (o.client || '').toLowerCase().includes(q) || (o.storeName || '').toLowerCase().includes(q);
+          const matchStatus = !status || o.status === status;
+          return matchQ && matchStatus;
+        }).map(buildOrderRow).forEach(row => ordersTbody.appendChild(row));
+      };
+      if(ordersSearch) ordersSearch.addEventListener('input', applyOrdersFilter);
+      if(ordersStatusFilter) ordersStatusFilter.addEventListener('change', applyOrdersFilter);
+    }
+
+    // ── SUBSCRIPTIONS TAB ──
+    const subsTbody = document.querySelector('[data-subs-tbody]');
+    if(subsTbody){
+      const subsActive = subscriptions.filter(s => s.status === 'active').length;
+      const subsTrial = subscriptions.filter(s => s.status === 'trial').length;
+      const mrr = subscriptions.filter(s => s.status === 'active').reduce((sum, s) => sum + (Number.parseFloat(s.amount) || 0), 0);
+      setText('[data-subs-total]', subscriptions.length);
+      setText('[data-subs-active]', subsActive);
+      setText('[data-subs-trial]', subsTrial);
+      setText('[data-subs-mrr]', formatCurrency(mrr));
+
+      subscriptions.forEach(sub => {
+        const user = userMap.get(sub.userId);
+        const userName = user ? user.name : sub.userId;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="cell-mono">${escapeHtml(sub.id)}</td>
+          <td>${escapeHtml(userName)}</td>
+          <td>${escapeHtml(formatPlanLabel(sub.plan))}</td>
+          <td>${statusPill(sub.status || 'pending')}</td>
+          <td>${formatCurrency(sub.amount || 0)}</td>
+          <td class="cell-muted">${formatDate(sub.createdAt)}</td>
+        `;
+        subsTbody.appendChild(tr);
       });
-    };
+    }
 
-    updateChart('plan', planCounts);
+    // ── FINANCES TAB ──
+    const partnerSales = orders.reduce((sum, o) => sum + (Number.parseFloat(o.amount) || 0), 0);
+    const platformCommissionRate = 0.10;
+    const platformCommission = partnerSales * platformCommissionRate;
+    const totalRevenue = revenue + platformCommission;
+    setText('[data-fin-partner-sales]', formatCurrency(partnerSales));
+    setText('[data-fin-platform-margin]', formatCurrency(platformMargin));
+    setText('[data-fin-platform-commission]', formatCurrency(platformCommission));
+    setText('[data-fin-total-revenue]', formatCurrency(totalRevenue));
 
-    const leadCounts = leads.reduce((acc, lead) => {
-      const status = lead.status || 'cold';
-      acc[status] = (acc[status] || 0) + 1;
-      return acc;
-    }, {hot: 0, warm: 0, cold: 0});
-    updateChart('lead', leadCounts);
+    const dailyChartEl = document.querySelector('[data-fin-daily-chart]');
+    if(dailyChartEl){
+      const days = [];
+      for(let i = 6; i >= 0; i--){
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        days.push(d.toISOString().slice(0, 10));
+      }
+      const dailyRevenue = days.map(day => ({
+        day,
+        amount: orders.filter(o => (o.createdAt || '').startsWith(day)).reduce((sum, o) => sum + (Number.parseFloat(o.amount) || 0), 0)
+      }));
+      const maxDaily = Math.max(...dailyRevenue.map(d => d.amount), 1);
+      dailyChartEl.innerHTML = dailyRevenue.map(d => {
+        const pct = Math.round((d.amount / maxDaily) * 100);
+        const label = escapeHtml(d.day.slice(5));
+        const val = escapeHtml(formatCurrency(d.amount));
+        return `<div class="chart-row"><span>${label}</span><span>${val}</span></div><div class="chart-bar"><span style="--value:${pct}%"></span></div>`;
+      }).join('');
+    }
+
+    const monthlyChartEl = document.querySelector('[data-fin-monthly-chart]');
+    if(monthlyChartEl){
+      const months = [];
+      for(let i = 5; i >= 0; i--){
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push(d.toISOString().slice(0, 7));
+      }
+      const monthlyRevenue = months.map(m => ({
+        month: m,
+        amount: orders.filter(o => (o.createdAt || '').startsWith(m)).reduce((sum, o) => sum + (Number.parseFloat(o.amount) || 0), 0)
+      }));
+      const maxMonthly = Math.max(...monthlyRevenue.map(m => m.amount), 1);
+      monthlyChartEl.innerHTML = monthlyRevenue.map(m => {
+        const pct = Math.round((m.amount / maxMonthly) * 100);
+        const label = escapeHtml(m.month.slice(5));
+        const val = escapeHtml(formatCurrency(m.amount));
+        return `<div class="chart-row"><span>${label}</span><span>${val}</span></div><div class="chart-bar"><span style="--value:${pct}%"></span></div>`;
+      }).join('');
+    }
+
+    const marginByPlan = {basic: 0, pro: 0, elite: 0};
+    activeSubscriptions.forEach(s => {
+      const p = normalizePlan(s.plan);
+      if(p && marginByPlan[p] !== undefined){
+        const rate = PLAN_DEFAULT_MARGINS[p] / 100;
+        const a = Number.parseFloat(s.amount) || 0;
+        marginByPlan[p] += a * rate;
+      }
+    });
+    const totalMargin = Object.values(marginByPlan).reduce((s, v) => s + v, 0) || 1;
+    Object.entries(marginByPlan).forEach(([key, value]) => {
+      const pct = Math.round((value / totalMargin) * 100);
+      const bar = document.querySelector(`[data-fin-margin-bar="${key}"]`);
+      const label = document.querySelector(`[data-fin-margin-value="${key}"]`);
+      if(bar) bar.style.setProperty('--value', `${pct}%`);
+      if(label) label.textContent = formatCurrency(value);
+    });
+
+    // ── REFERRALS TAB ──
+    const totalReferred = referrals.reduce((s, r) => s + (r.referred || 0), 0);
+    const totalActiveStores = referrals.reduce((s, r) => s + (r.activeStores || 0), 0);
+    const totalCommission = referrals.reduce((s, r) => s + (r.commission || 0), 0);
+    setText('[data-ref-total-referrers]', referrals.length);
+    setText('[data-ref-total-referred]', totalReferred);
+    setText('[data-ref-active-stores]', totalActiveStores);
+    setText('[data-ref-commissions]', formatCurrency(totalCommission));
+
+    const refTbody = document.querySelector('[data-ref-tbody]');
+    if(refTbody){
+      referrals.forEach(ref => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${escapeHtml(ref.userName)}</strong></td>
+          <td class="cell-mono">${escapeHtml(ref.refCode || '')}</td>
+          <td>${ref.referred || 0}</td>
+          <td>${ref.activeStores || 0}</td>
+          <td>${formatCurrency(ref.commission || 0)}</td>
+          <td>${statusPill(ref.status || 'active')}</td>
+        `;
+        refTbody.appendChild(tr);
+      });
+    }
+
+    const ownerRefLink = document.querySelector('[data-owner-referral-link]');
+    if(ownerRefLink){
+      const baseUrl = window.location.origin + window.location.pathname.replace('owner-panel.html', 'index.html');
+      ownerRefLink.value = `${baseUrl}?ref=OWNER2026`;
+    }
+    const copyRefBtn = document.querySelector('[data-copy-referral-link]');
+    if(copyRefBtn && ownerRefLink){
+      copyRefBtn.addEventListener('click', () => {
+        ownerRefLink.select();
+        try {
+          document.execCommand('copy');
+          copyRefBtn.textContent = 'Skopiowano!';
+          window.setTimeout(() => { copyRefBtn.textContent = 'Kopiuj link'; }, 2000);
+        } catch(_e){/* ignore */}
+      });
+    }
+
+    // ── OPERATORS TAB ──
+    const totalOpTasksOpen = operators.reduce((s, o) => s + (o.tasksOpen || 0), 0);
+    const totalOpActionsToday = operators.reduce((s, o) => s + (o.activityToday || 0), 0);
+    const activeOperators = operators.filter(o => o.status === 'active').length;
+    setText('[data-op-active]', activeOperators);
+    setText('[data-op-tasks-open]', totalOpTasksOpen);
+    setText('[data-op-actions-today]', totalOpActionsToday);
+
+    const operatorsTbody = document.querySelector('[data-operators-tbody]');
+    if(operatorsTbody){
+      operators.forEach(op => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="cell-mono">${escapeHtml(op.id)}</td>
+          <td><strong>${escapeHtml(op.name)}</strong></td>
+          <td>${escapeHtml(op.email)}</td>
+          <td>${statusPill(op.status || 'inactive')}</td>
+          <td>${op.tasksOpen || 0}</td>
+          <td class="cell-muted">${formatDate(op.lastActive)}</td>
+          <td>${op.partners || 0}</td>
+        `;
+        operatorsTbody.appendChild(tr);
+      });
+    }
+
+    const opActivityList = document.querySelector('[data-op-activity-list]');
+    renderList(opActivityList, adminLogs.filter(l => l.role === 'operator').slice(0, 5), log => {
+      const card = document.createElement('div');
+      card.className = 'list-card';
+      const name = document.createElement('strong');
+      name.textContent = log.user;
+      const action = document.createElement('span');
+      action.className = 'hint';
+      action.textContent = `${log.action} — ${log.object}`;
+      const time = document.createElement('small');
+      time.textContent = formatDate(log.time);
+      card.append(name, action, time);
+      return card;
+    }, 'Brak działań operatorów.');
+
+    // ── SECURITY TAB ──
+    const adminLogsTbody = document.querySelector('[data-admin-logs-tbody]');
+    if(adminLogsTbody){
+      adminLogs.forEach(log => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="cell-muted">${formatDate(log.time)}</td>
+          <td>${escapeHtml(log.user)}</td>
+          <td>${statusPill(log.role || 'client')}</td>
+          <td>${escapeHtml(log.action)}</td>
+          <td>${escapeHtml(log.object || '—')}</td>
+          <td class="cell-muted">${escapeHtml(log.details || '—')}</td>
+        `;
+        adminLogsTbody.appendChild(tr);
+      });
+    }
+
+    const opLogsList = document.querySelector('[data-op-logs-list]');
+    renderList(opLogsList, adminLogs.slice(0, 5), log => {
+      const card = document.createElement('div');
+      card.className = 'list-card';
+      const name = document.createElement('strong');
+      name.textContent = `${log.action} — ${log.object}`;
+      const detail = document.createElement('span');
+      detail.className = 'hint';
+      detail.textContent = `${log.user} (${log.role})`;
+      const time = document.createElement('small');
+      time.textContent = formatDate(log.time);
+      card.append(name, detail, time);
+      return card;
+    }, 'Brak logów.');
   }
 
   function initSuppliersModule(){

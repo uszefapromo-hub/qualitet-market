@@ -4,3 +4,58 @@ body{
   background-color:var(--bg);
   color:var(--text);
 }
+
+/* ── Owner tab navigation ── */
+.sidebar-sep{border:none;border-top:1px solid var(--stroke);margin:10px 0}
+.owner-tab-panel[hidden]{display:none}
+
+/* ── Owner toolbar (search + filters) ── */
+.owner-toolbar{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;align-items:center}
+.owner-search{flex:1 1 200px;padding:10px 14px;border-radius:12px;border:1px solid var(--stroke);background:var(--card);color:var(--text);font-size:14px}
+.owner-filter{padding:10px 14px;border-radius:12px;border:1px solid var(--stroke);background:var(--card);color:var(--text);font-size:14px}
+.owner-input{flex:1 1 240px;padding:10px 14px;border-radius:12px;border:1px solid var(--stroke);background:var(--card);color:var(--text);font-size:14px}
+.owner-search:focus,.owner-filter:focus,.owner-input:focus{outline:2px solid var(--accent-cyan,#35d9ff);outline-offset:1px}
+
+/* ── Owner table ── */
+.owner-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.owner-table{width:100%;border-collapse:collapse;font-size:13px}
+.owner-table th,.owner-table td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--stroke)}
+.owner-table th{color:var(--muted);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.owner-table td{color:var(--text)}
+.owner-table tbody tr:hover{background:rgba(148,163,184,.07)}
+.owner-table .cell-muted{color:var(--muted);font-size:12px}
+.owner-table .cell-mono{font-family:monospace;font-size:12px}
+
+/* ── Status pills inside tables ── */
+.pill-active{display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;background:rgba(84,255,176,.18);border:1px solid rgba(84,255,176,.4);color:#d9ffe9}
+.pill-trial{display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;background:rgba(255,216,77,.18);border:1px solid rgba(255,216,77,.4);color:#fff1b6}
+.pill-inactive,.pill-cancelled{display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;background:rgba(255,79,79,.15);border:1px solid rgba(255,79,79,.35);color:#ffd5d5}
+.pill-pending{display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;background:rgba(148,163,184,.2);border:1px solid var(--stroke);color:var(--muted)}
+.pill-paid,.pill-shipped{display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;background:rgba(84,255,176,.18);border:1px solid rgba(84,255,176,.4);color:#d9ffe9}
+.pill-superadmin{display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;background:rgba(255,79,216,.18);border:1px solid rgba(255,79,216,.4);color:#ffd6f3}
+.pill-operator{display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;background:rgba(56,217,255,.18);border:1px solid rgba(56,217,255,.35);color:#d8f6ff}
+.pill-partner{display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;background:rgba(158,119,255,.18);border:1px solid rgba(158,119,255,.35);color:#e8d9ff}
+.pill-client{display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;background:rgba(148,163,184,.2);border:1px solid var(--stroke);color:var(--muted)}
+
+/* ── Roles grid (security tab) ── */
+.roles-grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.role-card{padding:18px;border-radius:18px;border:1px solid var(--stroke);background:rgba(255,255,255,.04)}
+.role-card strong{display:block;font-size:16px;margin-bottom:4px}
+.role-card>span{display:block;font-size:13px;color:var(--muted);margin-bottom:10px}
+.role-card ul{padding-left:18px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;gap:4px}
+.role-superadmin{border-color:rgba(255,79,216,.35);background:rgba(255,79,216,.07)}
+.role-operator{border-color:rgba(56,217,255,.3);background:rgba(56,217,255,.06)}
+.role-partner{border-color:rgba(158,119,255,.3);background:rgba(158,119,255,.06)}
+.role-client{border-color:var(--stroke)}
+
+/* ── Referral link box ── */
+.referral-link-box{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+/* ── Responsive ── */
+@media(max-width:900px){
+  .owner-toolbar{flex-direction:column;align-items:stretch}
+  .owner-search,.owner-filter,.owner-input{width:100%}
+}
+@media(max-width:700px){
+  .roles-grid{grid-template-columns:1fr}
+}
