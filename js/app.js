@@ -5916,15 +5916,15 @@
     }
 
     const seedTasks = [
-      {id:'task_001',title:'Zaktualizować opisy produktów w kategorii Elektronika',priority:'high',assignee:'Anna K.',dueLabel:'jutro',status:'open',createdAt:'2026-03-10T10:00:00Z',closedAt:null},
-      {id:'task_002',title:'Przesłać zdjęcia nowej kolekcji zimowej',priority:'med',assignee:'Marek N.',dueLabel:'3 dni',status:'open',createdAt:'2026-03-10T10:30:00Z',closedAt:null},
-      {id:'task_003',title:'Skonfigurować kampanię Black Friday',priority:'high',assignee:'Tomasz Z.',dueLabel:'5 dni',status:'open',createdAt:'2026-03-10T11:00:00Z',closedAt:null},
-      {id:'task_004',title:'Integracja nowej hurtowni FashionLane',priority:'high',assignee:'Katarzyna W.',dueLabel:'dziś',status:'in_progress',createdAt:'2026-03-09T09:00:00Z',closedAt:null},
-      {id:'task_005',title:'Aktualizacja cennika sezonowego Q4',priority:'med',assignee:'Piotr L.',dueLabel:'2 dni',status:'in_progress',createdAt:'2026-03-09T10:00:00Z',closedAt:null},
-      {id:'task_006',title:'Przegląd i optymalizacja marż w sklepie',priority:'low',assignee:'Anna K.',dueLabel:'tydzień',status:'in_progress',createdAt:'2026-03-09T11:00:00Z',closedAt:null},
-      {id:'task_007',title:'Wdrożenie modułu CRM dla partnerów',priority:'high',assignee:'Agata K.',dueLabel:null,status:'done',createdAt:'2026-03-05T09:00:00Z',closedAt:null},
-      {id:'task_008',title:'Konfiguracja automatu powiadomień',priority:'med',assignee:'Marek N.',dueLabel:null,status:'done',createdAt:'2026-03-05T10:00:00Z',closedAt:null},
-      {id:'task_009',title:'Analiza sprzedaży Q3 — raport miesięczny',priority:'med',assignee:'Tomasz Z.',dueLabel:null,status:'done',createdAt:'2026-03-06T09:00:00Z',closedAt:null}
+      {id:'task_001',title:'Zaktualizować opisy produktów w kategorii Elektronika',description:'Przejrzeć i zaktualizować opisy wszystkich produktów w kategorii Elektronika — poprawić tytuły SEO, dodać bullet-pointy z cechami, uzupełnić parametry techniczne.',priority:'high',assignee:'Anna K.',dueLabel:'jutro',status:'open',createdAt:'2026-03-10T10:00:00Z',closedAt:null},
+      {id:'task_002',title:'Przesłać zdjęcia nowej kolekcji zimowej',description:'Zrobić i wgrać zdjęcia produktowe nowej kolekcji zimowej: kurtki, swetry, akcesoria. Format: JPEG 1200×1200, białe tło.',priority:'med',assignee:'Marek N.',dueLabel:'3 dni',status:'open',createdAt:'2026-03-10T10:30:00Z',closedAt:null},
+      {id:'task_003',title:'Skonfigurować kampanię Black Friday',description:'Przygotować banner główny, listę produktów promocyjnych i kody rabatowe na Black Friday. Sprawdzić zgodność ze Stripe.',priority:'high',assignee:'Tomasz Z.',dueLabel:'5 dni',status:'open',createdAt:'2026-03-10T11:00:00Z',closedAt:null},
+      {id:'task_004',title:'Integracja nowej hurtowni FashionLane',description:'Podpiąć API hurtowni FashionLane: import produktów, synchronizacja stanów magazynowych, mapowanie kategorii.',priority:'high',assignee:'Katarzyna W.',dueLabel:'dziś',status:'in_progress',createdAt:'2026-03-09T09:00:00Z',closedAt:null},
+      {id:'task_005',title:'Aktualizacja cennika sezonowego Q4',description:'Zaktualizować marże i ceny detaliczne dla Q4 zgodnie z nową polityką cenową. Uwzględnić koszty logistyki.',priority:'med',assignee:'Piotr L.',dueLabel:'2 dni',status:'in_progress',createdAt:'2026-03-09T10:00:00Z',closedAt:null},
+      {id:'task_006',title:'Przegląd i optymalizacja marż w sklepie',description:'Przeanalizować marże na wszystkich kategoriach, zidentyfikować produkty poniżej progu opłacalności i zaproponować korektę.',priority:'low',assignee:'Anna K.',dueLabel:'tydzień',status:'in_progress',createdAt:'2026-03-09T11:00:00Z',closedAt:null},
+      {id:'task_007',title:'Wdrożenie modułu CRM dla partnerów',description:'',priority:'high',assignee:'Agata K.',dueLabel:null,status:'done',createdAt:'2026-03-05T09:00:00Z',closedAt:null},
+      {id:'task_008',title:'Konfiguracja automatu powiadomień',description:'',priority:'med',assignee:'Marek N.',dueLabel:null,status:'done',createdAt:'2026-03-05T10:00:00Z',closedAt:null},
+      {id:'task_009',title:'Analiza sprzedaży Q3 — raport miesięczny',description:'',priority:'med',assignee:'Tomasz Z.',dueLabel:null,status:'done',createdAt:'2026-03-06T09:00:00Z',closedAt:null}
     ];
 
     let tasks = getStoredList(OWNER_STORAGE_KEYS.tasks);
@@ -5978,6 +5978,7 @@
       const actionBtn = getActionButton(task);
       const dueHtml = task.dueLabel ? `<span>${escapeHtml(task.dueLabel)}</span>` : '';
       const closedClass = task.status === 'closed' ? ' is-closed' : '';
+      const descHtml = task.description ? `<p class="task-desc">${escapeHtml(task.description)}</p>` : '';
       return `
         <div class="task-item${closedClass}" data-task-id="${escapeHtml(task.id)}">
           <div class="task-header">
@@ -5985,6 +5986,7 @@
             <span class="${priorityCls}">${priorityLabel}</span>
           </div>
           <p class="task-title">${escapeHtml(task.title)}</p>
+          ${descHtml}
           <div class="task-meta">
             <span>${escapeHtml(task.assignee)}</span>
             ${dueHtml}
@@ -6122,9 +6124,13 @@
           const data = new FormData(form);
           const title = (data.get('title') || '').trim();
           if(!title) return;
+          const newId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+            ? crypto.randomUUID()
+            : `task_${Date.now()}`;
           const newTask = {
-            id: `task_${Date.now()}`,
+            id: newId,
             title,
+            description: (data.get('description') || '').trim(),
             priority: data.get('priority') || 'med',
             assignee: (data.get('assignee') || '').trim() || 'Nieprzypisane',
             dueLabel: (data.get('dueLabel') || '').trim() || null,

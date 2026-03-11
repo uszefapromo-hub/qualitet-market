@@ -1139,6 +1139,16 @@ body.store-shop .shop-contact h2{
   line-height:1.4;
   margin:0;
 }
+.task-desc{
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.5;
+  margin:0;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
 .task-meta{
   display:flex;
   align-items:center;
@@ -1210,11 +1220,12 @@ body.store-shop .shop-contact h2{
 }
 .task-modal-form{display:grid;gap:12px;margin-top:4px}
 .task-modal-form label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted)}
-.task-modal-form input,.task-modal-form select{
+.task-modal-form input,.task-modal-form select,.task-modal-form textarea{
   background:rgba(255,255,255,.06);border:1px solid var(--stroke);
   color:#fff;border-radius:10px;padding:10px 12px;font-size:14px;
 }
-.task-modal-form input::placeholder{color:var(--muted)}
+.task-modal-form textarea{resize:vertical;min-height:72px;font-family:inherit}
+.task-modal-form input::placeholder,.task-modal-form textarea::placeholder{color:var(--muted)}
 .task-modal-form .cta-row{margin-top:6px}
 .task-feedback{
   position:fixed;bottom:80px;right:20px;z-index:200;
