@@ -1707,6 +1707,96 @@ body[data-page="index"] .topbar-cta{background:linear-gradient(135deg,#7c3aed,#9
 body.billing-yearly [data-yearly-price]{display:inline}
 body.billing-yearly [data-monthly-price]{display:none}
 
+/* ── Platform Map ── */
+.platform-map-section{
+  padding:60px 0 40px;
+}
+.platform-map-grid{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  margin-bottom:28px;
+}
+.platform-map-card{
+  display:flex;
+  align-items:flex-start;
+  gap:14px;
+  padding:14px 16px;
+  border-radius:16px;
+  border:1px solid transparent;
+  text-decoration:none;
+  color:var(--text);
+  transition:background .18s ease, border-color .18s ease;
+}
+.platform-map-card:hover{
+  background:var(--card);
+  border-color:var(--stroke);
+}
+.platform-map-icon{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:40px;
+  height:40px;
+  font-size:20px;
+  border-radius:12px;
+  background:rgba(255,255,255,.07);
+  border:1px solid var(--stroke);
+  flex-shrink:0;
+}
+.platform-map-body{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+  min-width:0;
+}
+.platform-map-body strong{
+  font-size:15px;
+  font-weight:700;
+}
+.platform-map-body p{
+  margin:0;
+  font-size:13px;
+  color:var(--muted);
+  line-height:1.5;
+}
+.platform-map-badge{
+  display:inline-block;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.8px;
+  text-transform:uppercase;
+  padding:2px 8px;
+  border-radius:999px;
+  margin-bottom:2px;
+  width:fit-content;
+}
+.badge-free{
+  background:rgba(34,197,94,.15);
+  border:1px solid rgba(34,197,94,.35);
+  color:#86efac;
+}
+.badge-basic{
+  background:rgba(245,158,11,.14);
+  border:1px solid rgba(245,158,11,.35);
+  color:#fcd34d;
+}
+.badge-pro{
+  background:rgba(158,119,255,.18);
+  border:1px solid rgba(158,119,255,.4);
+  color:#c4b5fd;
+}
+.badge-elite{
+  background:rgba(56,189,248,.14);
+  border:1px solid rgba(56,189,248,.35);
+  color:#7dd3fc;
+}
+.platform-map-cta{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
 /* ── Responsive tweaks ── */
 @media(max-width:900px){
   .hero-new-grid{grid-template-columns:1fr;gap:32px}
