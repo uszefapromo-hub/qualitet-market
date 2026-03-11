@@ -75,6 +75,8 @@
   };
   const OWNER_EMAIL = 'uszefaqualitetpromo@gmail.com';
   const OWNER_EMAIL_NORMALIZED = OWNER_EMAIL.trim().toLowerCase();
+  const OWNER_PHONE = '+48600000000';
+  const OWNER_PHONE_NORMALIZED = OWNER_PHONE.replace(/\s+/g, '');
   const PRICE_LINKS = {
     basic: 'https://buy.stripe.com/28E4gz3qP0er3AL2P0ak000',
     pro: 'https://buy.stripe.com/aFa5kD9PdgdpgnxdtEak001',
@@ -96,7 +98,8 @@
     orders: 'qm_orders',
     operators: 'qm_operators',
     referrals: 'qm_referrals',
-    adminLogs: 'qm_admin_logs'
+    adminLogs: 'qm_admin_logs',
+    supplierApps: 'qm_supplier_applications'
   };
   const PRICING_STORAGE_KEYS = {
     productsBySupplier: 'qm_products_by_supplier_v1',
@@ -4308,6 +4311,408 @@
       card.append(name, detail, time);
       return card;
     }, 'Brak logów.');
+
+    // ── QUICK NAV TILES (overview) ──
+    const quickNavBtns = document.querySelectorAll('[data-owner-tab-trigger]');
+    quickNavBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabId = btn.dataset.ownerTabTrigger;
+        if(tabId){
+          showTab(tabId);
+        }
+      });
+    });
+
+    // ── PARTNERS TAB ──
+    const partnerUsers = users.filter(u => (u.role || '') === 'partner');
+    const partnersTbody = document.querySelector('[data-partners-tbody]');
+    const partnersSearch = document.querySelector('[data-partners-search]');
+    const partnersPlanFilter = document.querySelector('[data-partners-plan-filter]');
+
+    function renderPartnersTable(list){
+      if(!partnersTbody){
+        return;
+      }
+      partnersTbody.innerHTML = '';
+      if(!list.length){
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="8" style="text-align:center;color:var(--muted);padding:24px">Brak partnerów.</td>';
+        partnersTbody.appendChild(tr);
+        return;
+      }
+      list.forEach(u => {
+        const userStores = stores.filter(s => s.userId === u.id);
+        const userSales = userStores.reduce((s, st) => s + (st.sales || 0), 0);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="cell-mono">${escapeHtml(u.id)}</td>
+          <td><strong>${escapeHtml(u.name)}</strong></td>
+          <td>${escapeHtml(u.email)}</td>
+          <td>${statusPill(normalizePlan(u.plan) || 'basic')}</td>
+          <td>${userStores.length}</td>
+          <td>${formatCurrency(userSales)}</td>
+          <td>${statusPill(u.status || 'active')}</td>
+          <td class="cell-muted">${formatDate(u.createdAt)}</td>
+        `;
+        partnersTbody.appendChild(tr);
+      });
+    }
+    renderPartnersTable(partnerUsers);
+
+    function filterPartners(){
+      const query = partnersSearch ? partnersSearch.value.trim().toLowerCase() : '';
+      const plan = partnersPlanFilter ? partnersPlanFilter.value : '';
+      let list = partnerUsers;
+      if(query){
+        list = list.filter(u => (u.name + u.email).toLowerCase().includes(query));
+      }
+      if(plan){
+        list = list.filter(u => normalizePlan(u.plan) === plan);
+      }
+      renderPartnersTable(list);
+    }
+    if(partnersSearch){
+      partnersSearch.addEventListener('input', filterPartners);
+    }
+    if(partnersPlanFilter){
+      partnersPlanFilter.addEventListener('change', filterPartners);
+    }
+
+    // ── WAREHOUSES TAB ──
+    const warehousesTbody = document.querySelector('[data-warehouses-tbody]');
+    const warehousesSearch = document.querySelector('[data-warehouses-search]');
+
+    function renderWarehousesTable(list){
+      if(!warehousesTbody){
+        return;
+      }
+      warehousesTbody.innerHTML = '';
+      if(!list.length){
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Brak hurtowni.</td>';
+        warehousesTbody.appendChild(tr);
+        return;
+      }
+      list.forEach(s => {
+        const country = s.country || 'Globalnie';
+        const prodCount = Array.isArray(s.products) ? s.products.length : (s.productCount || 0);
+        const mode = s.mode === 'hurt' ? 'Hurtownia' : 'Dropshipping';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="cell-mono">${escapeHtml(s.id)}</td>
+          <td><strong>${escapeHtml(s.name)}</strong></td>
+          <td>${escapeHtml(country)}</td>
+          <td>${prodCount}</td>
+          <td>${escapeHtml(mode)}</td>
+          <td>${statusPill(s.status || 'active')}</td>
+        `;
+        warehousesTbody.appendChild(tr);
+      });
+    }
+    renderWarehousesTable(suppliers);
+
+    if(warehousesSearch){
+      warehousesSearch.addEventListener('input', () => {
+        const q = warehousesSearch.value.trim().toLowerCase();
+        renderWarehousesTable(q ? suppliers.filter(s => (s.name + (s.country || '')).toLowerCase().includes(q)) : suppliers);
+      });
+    }
+
+    // ── SUPPLIER APPS TAB ──
+    const supplierApps = getStoredList(OWNER_STORAGE_KEYS.supplierApps);
+    const pendingApps = supplierApps.filter(a => a.status === 'pending');
+    const acceptedApps = supplierApps.filter(a => a.status === 'accepted');
+    setText('[data-supplier-apps-total]', supplierApps.length);
+    setText('[data-supplier-apps-pending]', pendingApps.length);
+    setText('[data-supplier-apps-accepted]', acceptedApps.length);
+
+    const supplierAppsTbody = document.querySelector('[data-supplier-apps-tbody]');
+    const supplierAppsSearch = document.querySelector('[data-supplier-apps-search]');
+    const supplierAppsStatusFilter = document.querySelector('[data-supplier-apps-status-filter]');
+
+    function renderSupplierAppsTable(list){
+      if(!supplierAppsTbody){
+        return;
+      }
+      supplierAppsTbody.innerHTML = '';
+      if(!list.length){
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="9" style="text-align:center;color:var(--muted);padding:24px">Brak zgłoszeń dostawców. <a href="zostan-dostawca.html" style="color:var(--accent-cyan,#35d9ff)">Strona formularzowa</a></td>';
+        supplierAppsTbody.appendChild(tr);
+        return;
+      }
+      list.forEach((app, idx) => {
+        const dropshipLabel = [
+          app.dropshipping ? 'Dropshipping' : '',
+          app.wholesale ? 'Hurt' : '',
+          app.whitelabel ? 'White-label' : '',
+          app.api ? 'API' : ''
+        ].filter(Boolean).join(', ') || '—';
+        const pillMap = {pending: 'pill-pending', accepted: 'pill-accepted', rejected: 'pill-rejected'};
+        const pill = `<span class="${pillMap[app.status] || 'pill-pending'}">${app.status === 'accepted' ? 'Zaakceptowane' : app.status === 'rejected' ? 'Odrzucone' : 'Oczekujące'}</span>`;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="cell-muted">${formatDate(app.submittedAt)}</td>
+          <td><strong>${escapeHtml(app.companyName)}</strong></td>
+          <td>${escapeHtml(app.email)}</td>
+          <td>${escapeHtml(app.phone)}</td>
+          <td>${escapeHtml(app.country)}</td>
+          <td>${escapeHtml(app.productTypes)}</td>
+          <td>${escapeHtml(dropshipLabel)}</td>
+          <td>${pill}</td>
+          <td class="cell-mono">
+            ${app.status === 'pending' ? `<button class="btn btn-secondary" style="font-size:12px;padding:4px 10px" data-accept-app="${idx}">Akceptuj</button> <button class="btn" style="font-size:12px;padding:4px 10px;background:rgba(255,79,79,.15);border-color:rgba(255,79,79,.4);color:#ffd5d5" data-reject-app="${idx}">Odrzuć</button>` : '—'}
+          </td>
+        `;
+        supplierAppsTbody.appendChild(tr);
+      });
+    }
+    renderSupplierAppsTable(supplierApps);
+
+    function filterSupplierApps(){
+      const q = supplierAppsSearch ? supplierAppsSearch.value.trim().toLowerCase() : '';
+      const st = supplierAppsStatusFilter ? supplierAppsStatusFilter.value : '';
+      let list = supplierApps;
+      if(q){
+        list = list.filter(a => (a.companyName + a.email).toLowerCase().includes(q));
+      }
+      if(st){
+        list = list.filter(a => a.status === st);
+      }
+      renderSupplierAppsTable(list);
+    }
+    if(supplierAppsSearch){
+      supplierAppsSearch.addEventListener('input', filterSupplierApps);
+    }
+    if(supplierAppsStatusFilter){
+      supplierAppsStatusFilter.addEventListener('change', filterSupplierApps);
+    }
+    if(supplierAppsTbody){
+      supplierAppsTbody.addEventListener('click', event => {
+        const acceptBtn = event.target.closest('[data-accept-app]');
+        const rejectBtn = event.target.closest('[data-reject-app]');
+        if(acceptBtn){
+          const idx = Number(acceptBtn.dataset.acceptApp);
+          if(!Number.isNaN(idx) && supplierApps[idx]){
+            supplierApps[idx].status = 'accepted';
+            saveStoredList(OWNER_STORAGE_KEYS.supplierApps, supplierApps);
+            filterSupplierApps();
+            setText('[data-supplier-apps-pending]', supplierApps.filter(a => a.status === 'pending').length);
+            setText('[data-supplier-apps-accepted]', supplierApps.filter(a => a.status === 'accepted').length);
+          }
+        }
+        if(rejectBtn){
+          const idx = Number(rejectBtn.dataset.rejectApp);
+          if(!Number.isNaN(idx) && supplierApps[idx]){
+            supplierApps[idx].status = 'rejected';
+            saveStoredList(OWNER_STORAGE_KEYS.supplierApps, supplierApps);
+            filterSupplierApps();
+            setText('[data-supplier-apps-pending]', supplierApps.filter(a => a.status === 'pending').length);
+          }
+        }
+      });
+    }
+
+    // ── RANKING TAB ──
+    const rankingTbody = document.querySelector('[data-ranking-tbody]');
+    if(rankingTbody){
+      const rankData = users
+        .filter(u => (u.role || '') === 'partner' || (u.sales || 0) > 0)
+        .map(u => {
+          const userStores = stores.filter(s => s.userId === u.id);
+          const totalOrders = userStores.reduce((s, st) => s + (st.orders || 0), 0);
+          const totalSales = userStores.reduce((s, st) => s + (st.sales || 0), 0);
+          const commission = Math.round(totalSales * PLATFORM_MARGIN_PCT / 100);
+          return {...u, totalOrders, totalSales, commission, storeNames: userStores.map(s => s.name).join(', ')};
+        })
+        .sort((a, b) => b.totalSales - a.totalSales);
+
+      if(!rankData.length){
+        rankingTbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px">Brak danych rankingowych.</td></tr>';
+      } else {
+        rankData.forEach((u, i) => {
+          const pos = i + 1;
+          const medalClass = pos <= 3 ? `rank-medal rank-${pos}` : '';
+          const medal = medalClass ? `<span class="${medalClass}">${pos}</span>` : pos;
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="text-align:center">${medal}</td>
+            <td><strong>${escapeHtml(u.name)}</strong><br><small class="cell-muted">${escapeHtml(u.email)}</small></td>
+            <td>${escapeHtml(u.storeNames || '—')}</td>
+            <td>${statusPill(normalizePlan(u.plan) || 'basic')}</td>
+            <td>${u.totalOrders}</td>
+            <td>${formatCurrency(u.totalSales)}</td>
+            <td>${formatCurrency(u.commission)}</td>
+            <td>${statusPill(u.status || 'active')}</td>
+          `;
+          rankingTbody.appendChild(tr);
+        });
+      }
+    }
+
+    // ── REPORTS TAB ──
+    const totalRevenue = orders.reduce((s, o) => s + (o.total || 0), 0);
+    const totalPlatformMargin = Math.round(totalRevenue * PLATFORM_MARGIN_PCT / 100);
+    const activePartners = users.filter(u => (u.role || '') === 'partner' && u.status === 'active').length;
+    setText('[data-report-total-revenue]', formatCurrency(totalRevenue));
+    setText('[data-report-platform-margin]', formatCurrency(totalPlatformMargin));
+    setText('[data-report-total-orders]', orders.length);
+    setText('[data-report-active-partners]', activePartners);
+
+    // Subscription revenue by plan
+    const subRevenue = {basic: 0, pro: 0, elite: 0};
+    const subCounts = {basic: 0, pro: 0, elite: 0};
+    subscriptions.forEach(sub => {
+      const plan = normalizePlan(sub.plan);
+      if(plan && subRevenue[plan] !== undefined){
+        subRevenue[plan] += (sub.amount || 0);
+        subCounts[plan] += 1;
+      }
+    });
+    const subTotal = Object.values(subRevenue).reduce((s, v) => s + v, 0) || 1;
+    ['basic', 'pro', 'elite'].forEach(p => {
+      setText(`[data-report-sub-${p}]`, `${formatCurrency(subRevenue[p])} (${subCounts[p]} sub.)`);
+      const bar = document.querySelector(`[data-report-sub-${p}-bar]`);
+      if(bar){
+        bar.style.width = `${Math.round(subRevenue[p] / subTotal * 100)}%`;
+        bar.style.background = p === 'elite' ? '#9e77ff' : p === 'pro' ? '#35d9ff' : '#54ffb0';
+        bar.style.display = 'block';
+        bar.style.height = '8px';
+        bar.style.borderRadius = '4px';
+      }
+    });
+
+    // Export buttons
+    document.querySelectorAll('[data-export-report]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const type = btn.dataset.exportReport;
+        let rows, headers;
+        if(type === 'orders'){
+          headers = ['ID', 'Użytkownik', 'Sklep', 'Produkt', 'Kwota', 'Data', 'Status'];
+          rows = orders.map(o => [o.id, o.userName || '', o.storeName || '', o.product || '', o.total || 0, o.date || '', o.status || '']);
+        } else if(type === 'users'){
+          headers = ['ID', 'Imię', 'Email', 'Rola', 'Plan', 'Status', 'Kraj', 'Data'];
+          rows = users.map(u => [u.id, u.name, u.email, u.role || '', u.plan || '', u.status || '', u.country || '', u.createdAt || '']);
+        } else {
+          headers = ['Typ', 'Kwota', 'Basic', 'Pro', 'Elite'];
+          rows = [['Subskrypcje', subTotal, subRevenue.basic, subRevenue.pro, subRevenue.elite],
+                  ['Przychód platform', totalRevenue, totalPlatformMargin, '', '']];
+        }
+        const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${type}_raport_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    });
+
+    // ── PAYMENTS TAB ──
+    const paymentRows = subscriptions.map(sub => ({
+      date: sub.createdAt || sub.date || '',
+      user: sub.userName || sub.user || '',
+      plan: normalizePlan(sub.plan) || 'basic',
+      amount: sub.amount || 0,
+      type: 'Subskrypcja',
+      status: sub.status || 'paid'
+    }));
+    const totalPayments = paymentRows.reduce((s, p) => s + p.amount, 0);
+    const pendingPayments = paymentRows.filter(p => p.status === 'pending').reduce((s, p) => s + p.amount, 0);
+    const overduePayments = paymentRows.filter(p => p.status === 'overdue').reduce((s, p) => s + p.amount, 0);
+    setText('[data-payments-total]', formatCurrency(totalPayments));
+    setText('[data-payments-pending]', formatCurrency(pendingPayments));
+    setText('[data-payments-overdue]', formatCurrency(overduePayments));
+
+    const paymentsTbody = document.querySelector('[data-payments-tbody]');
+    const paymentsSearch = document.querySelector('[data-payments-search]');
+    const paymentsStatusFilter = document.querySelector('[data-payments-status-filter]');
+
+    function renderPaymentsTable(list){
+      if(!paymentsTbody){
+        return;
+      }
+      paymentsTbody.innerHTML = '';
+      if(!list.length){
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Brak płatności.</td>';
+        paymentsTbody.appendChild(tr);
+        return;
+      }
+      list.forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="cell-muted">${formatDate(p.date)}</td>
+          <td>${escapeHtml(p.user)}</td>
+          <td>${statusPill(p.plan)}</td>
+          <td><strong>${formatCurrency(p.amount)}</strong></td>
+          <td>${escapeHtml(p.type)}</td>
+          <td>${statusPill(p.status)}</td>
+        `;
+        paymentsTbody.appendChild(tr);
+      });
+    }
+    renderPaymentsTable(paymentRows);
+
+    function filterPayments(){
+      const q = paymentsSearch ? paymentsSearch.value.trim().toLowerCase() : '';
+      const st = paymentsStatusFilter ? paymentsStatusFilter.value : '';
+      let list = paymentRows;
+      if(q){
+        list = list.filter(p => p.user.toLowerCase().includes(q));
+      }
+      if(st){
+        list = list.filter(p => p.status === st);
+      }
+      renderPaymentsTable(list);
+    }
+    if(paymentsSearch){
+      paymentsSearch.addEventListener('input', filterPayments);
+    }
+    if(paymentsStatusFilter){
+      paymentsStatusFilter.addEventListener('change', filterPayments);
+    }
+
+    // ── SETTINGS TAB ──
+    const settingsForm = document.querySelector('[data-platform-settings-form]');
+    const settingsSaved = document.querySelector('[data-settings-saved]');
+    const PLATFORM_SETTINGS_KEY = 'qm_platform_settings';
+    if(settingsForm){
+      // Load saved settings
+      try {
+        const saved = JSON.parse(localStorage.getItem(PLATFORM_SETTINGS_KEY) || '{}');
+        Object.entries(saved).forEach(([k, v]) => {
+          const el = settingsForm.elements[k];
+          if(el){
+            el.value = v;
+          }
+        });
+      } catch(_e){/* ignore */}
+      settingsForm.addEventListener('submit', event => {
+        event.preventDefault();
+        const formData = new FormData(settingsForm);
+        const settings = {};
+        formData.forEach((v, k) => { settings[k] = v; });
+        localStorage.setItem(PLATFORM_SETTINGS_KEY, JSON.stringify(settings));
+        if(settingsSaved){
+          settingsSaved.hidden = false;
+          window.setTimeout(() => { settingsSaved.hidden = true; }, 2500);
+        }
+        // Log the change
+        const logsForSave = getStoredList(OWNER_STORAGE_KEYS.adminLogs);
+        logsForSave.unshift({
+          id: `log_settings_${Date.now()}`,
+          time: new Date().toISOString(),
+          user: 'Superadmin',
+          role: 'superadmin',
+          action: 'Zmiana ustawień platformy',
+          object: 'settings',
+          details: `Zaktualizowano ${Object.keys(settings).length} parametrów`
+        });
+        saveStoredList(OWNER_STORAGE_KEYS.adminLogs, logsForSave);
+      });
+    }
   }
 
   function initSuppliersModule(){
@@ -5065,6 +5470,178 @@
     }
   }
 
+  // ── SMS Login for owner ──
+  function initSmsOwnerLogin(){
+    if(document.body.dataset.page !== 'login'){
+      return;
+    }
+
+    // Auth tab switching
+    const authTabBtns = document.querySelectorAll('[data-auth-tab]');
+    const authTabPanels = document.querySelectorAll('.auth-tab-panel');
+    authTabBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.authTab;
+        authTabBtns.forEach(b => {
+          b.classList.toggle('active', b.dataset.authTab === target);
+          b.setAttribute('aria-selected', b.dataset.authTab === target ? 'true' : 'false');
+        });
+        authTabPanels.forEach(panel => {
+          panel.hidden = panel.id !== `auth-panel-${target}`;
+        });
+      });
+    });
+
+    const phoneForm = document.querySelector('[data-sms-phone-form]');
+    const codeForm = document.querySelector('[data-sms-code-form]');
+    const stepPhone = document.querySelector('[data-sms-step="phone"]');
+    const stepCode = document.querySelector('[data-sms-step="code"]');
+    const backBtn = document.querySelector('[data-sms-back]');
+    const phoneError = document.querySelector('[data-sms-phone-error]');
+    const codeError = document.querySelector('[data-sms-code-error]');
+    const codeHint = document.querySelector('[data-sms-code-hint]');
+
+    if(!phoneForm || !codeForm){
+      return;
+    }
+
+    let pendingCode = '';
+
+    function normalizePhone(p){
+      return (p || '').replace(/\s+/g, '').replace(/[^\d+]/g, '');
+    }
+
+    phoneForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const phoneInput = phoneForm.querySelector('input[name="phone"]');
+      const phone = normalizePhone(phoneInput ? phoneInput.value : '');
+      const ownerNorm = normalizePhone(OWNER_PHONE_NORMALIZED);
+      if(phone !== ownerNorm){
+        if(phoneError){
+          phoneError.textContent = 'Numer telefonu nie jest powiązany z kontem właściciela.';
+          phoneError.hidden = false;
+        }
+        return;
+      }
+      if(phoneError){
+        phoneError.hidden = true;
+      }
+      // Generate a 6-digit demo code
+      pendingCode = String(Math.floor(100000 + Math.random() * 900000));
+      if(stepPhone){
+        stepPhone.hidden = true;
+      }
+      if(stepCode){
+        stepCode.hidden = false;
+      }
+      if(codeHint){
+        codeHint.textContent = `Tryb demo — Twój kod SMS: ${pendingCode}`;
+      }
+    });
+
+    if(backBtn){
+      backBtn.addEventListener('click', () => {
+        if(stepCode){
+          stepCode.hidden = true;
+        }
+        if(stepPhone){
+          stepPhone.hidden = false;
+        }
+        if(codeError){
+          codeError.hidden = true;
+        }
+        pendingCode = '';
+      });
+    }
+
+    codeForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const codeInput = codeForm.querySelector('input[name="code"]');
+      const code = codeInput ? codeInput.value.trim() : '';
+      if(code !== pendingCode){
+        if(codeError){
+          codeError.textContent = 'Nieprawidłowy kod SMS. Sprawdź i spróbuj ponownie.';
+          codeError.hidden = false;
+        }
+        return;
+      }
+      if(codeError){
+        codeError.hidden = true;
+      }
+      // Grant superadmin access
+      localStorage.setItem(STORAGE_KEYS.email, OWNER_EMAIL);
+      localStorage.setItem(STORAGE_KEYS.role, 'superadmin');
+      localStorage.setItem(STORAGE_KEYS.logged, 'true');
+      // Log the login
+      const logs = getStoredList(OWNER_STORAGE_KEYS.adminLogs);
+      logs.unshift({
+        id: `log_sms_${Date.now()}`,
+        time: new Date().toISOString(),
+        user: 'Superadmin',
+        role: 'superadmin',
+        action: 'Logowanie SMS',
+        object: 'owner-panel',
+        details: 'Pomyślne logowanie przez numer telefonu i kod SMS'
+      });
+      saveStoredList(OWNER_STORAGE_KEYS.adminLogs, logs);
+      window.location.href = 'owner-panel.html';
+    });
+  }
+
+  // ── Supplier application form (zostan-dostawca.html) ──
+  function initSupplierApplicationForm(){
+    if(document.body.dataset.page !== 'zostan-dostawca'){
+      return;
+    }
+    const form = document.querySelector('[data-supplier-app-form]');
+    const formWrap = document.querySelector('[data-supplier-app-form-wrap]');
+    const success = document.querySelector('[data-supplier-app-success]');
+    const errorEl = document.querySelector('[data-supplier-app-error]');
+    if(!form){
+      return;
+    }
+
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const data = new FormData(form);
+      const app = {
+        id: `sapp_${Date.now()}`,
+        submittedAt: new Date().toISOString(),
+        status: 'pending',
+        companyName: (data.get('companyName') || '').trim(),
+        email: (data.get('email') || '').trim(),
+        phone: (data.get('phone') || '').trim(),
+        country: data.get('country') || '',
+        productTypes: (data.get('productTypes') || '').trim(),
+        websiteUrl: (data.get('websiteUrl') || '').trim(),
+        dropshipping: data.get('dropshipping') === '1',
+        wholesale: data.get('wholesale') === '1',
+        whitelabel: data.get('whitelabel') === '1',
+        api: data.get('api') === '1',
+        notes: (data.get('notes') || '').trim()
+      };
+      if(!app.companyName || !app.email || !app.phone || !app.country || !app.productTypes){
+        if(errorEl){
+          errorEl.textContent = 'Proszę wypełnić wszystkie wymagane pola.';
+          errorEl.hidden = false;
+        }
+        return;
+      }
+      if(errorEl){
+        errorEl.hidden = true;
+      }
+      const apps = getStoredList(OWNER_STORAGE_KEYS.supplierApps);
+      apps.unshift(app);
+      saveStoredList(OWNER_STORAGE_KEYS.supplierApps, apps);
+      if(formWrap){
+        formWrap.hidden = true;
+      }
+      if(success){
+        success.hidden = false;
+      }
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     initServiceWorker();
     initInstallBanner();
@@ -5095,6 +5672,8 @@
     initLoginForm();
     guardDashboard();
     initSuperadminLink();
+    initSmsOwnerLogin();
+    initSupplierApplicationForm();
     initMotionPolish();
   });
 

@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Zostań dostawcą — HurtDetal Uszefa QUALITET</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body data-page="zostan-dostawca" class="has-bottom-nav">
+  <div class="app-splash" data-app-splash>
+    <div class="app-splash-card">
+      <div class="app-splash-logo">
+        <img src="assets/icons/icon-192.svg" alt="UszefaQualitet">
+      </div>
+      <div class="app-splash-title">
+        <strong>UszefaQualitet</strong>
+        <span>QualitetMarket</span>
+      </div>
+      <div class="app-splash-loader"></div>
+    </div>
+  </div>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>UszefaQualitet</strong>
+          <span>QualitetMarket</span>
+          <span class="brand-tag">U SZEFA</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Główna nawigacja">
+        <a href="index.html">Start</a>
+        <a href="hurtownie.html">Hurtownie</a>
+        <a href="cennik.html">Cennik</a>
+      </nav>
+      <a class="btn btn-primary topbar-cta" href="generator-sklepu.html">Załóż Sklep</a>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <main class="wrap" style="max-width:760px;padding-top:40px;padding-bottom:60px">
+
+    <div class="supplier-app-success panel-card" data-supplier-app-success hidden style="text-align:center;padding:40px">
+      <span style="font-size:56px;display:block;margin-bottom:16px">✅</span>
+      <span class="eyebrow">Zgłoszenie wysłane</span>
+      <h1>Dziękujemy za zainteresowanie!</h1>
+      <p class="hint">Twoje zgłoszenie zostało przesłane do administratora platformy. Skontaktujemy się z Tobą w ciągu 2–5 dni roboczych.</p>
+      <div class="cta-row" style="justify-content:center;margin-top:24px">
+        <a class="btn btn-primary" href="index.html">Strona główna</a>
+        <a class="btn btn-secondary" href="hurtownie.html">Przeglądaj hurtownie</a>
+      </div>
+    </div>
+
+    <div data-supplier-app-form-wrap>
+      <section class="panel-card" style="margin-bottom:24px">
+        <span class="eyebrow">Dla producentów i hurtowni</span>
+        <h1 style="margin:8px 0 8px">Zostań dostawcą na platformie</h1>
+        <p class="hint">Dołącz do naszej sieci hurtowni i dostawców. Udostępnij swoje produkty tysiącom sprzedawców korzystających z platformy UszefaQualitet.</p>
+        <div class="stats-grid stats-g3" style="margin-top:20px">
+          <div class="stat-card"><span>Aktywnych sklepów</span><strong>1200+</strong></div>
+          <div class="stat-card"><span>Aktywnych produktów</span><strong>850k+</strong></div>
+          <div class="stat-card"><span>Krajów dostawy</span><strong>30+</strong></div>
+        </div>
+      </section>
+
+      <section class="panel-card">
+        <div class="section-head">
+          <span class="eyebrow">Formularz zgłoszeniowy</span>
+          <h2>Dane firmy</h2>
+          <p class="hint">Wszystkie pola oznaczone * są wymagane.</p>
+        </div>
+        <form class="form-card" data-supplier-app-form style="display:flex;flex-direction:column;gap:16px">
+          <div class="owner-toolbar">
+            <label class="form-field">
+              Nazwa firmy *
+              <input class="owner-input" type="text" name="companyName" placeholder="np. Firma Handlowa XYZ Sp. z o.o." required autocomplete="organization">
+            </label>
+            <label class="form-field">
+              Adres email *
+              <input class="owner-input" type="email" name="email" placeholder="kontakt@firma.pl" required autocomplete="email">
+            </label>
+          </div>
+          <div class="owner-toolbar">
+            <label class="form-field">
+              Telefon kontaktowy *
+              <input class="owner-input" type="tel" name="phone" placeholder="+48 600 000 000" required autocomplete="tel">
+            </label>
+            <label class="form-field">
+              Kraj *
+              <select class="owner-filter" name="country" required>
+                <option value="">Wybierz kraj…</option>
+                <option value="PL">🇵🇱 Polska</option>
+                <option value="DE">🇩🇪 Niemcy</option>
+                <option value="GB">🇬🇧 Wielka Brytania</option>
+                <option value="FR">🇫🇷 Francja</option>
+                <option value="IT">🇮🇹 Włochy</option>
+                <option value="ES">🇪🇸 Hiszpania</option>
+                <option value="NL">🇳🇱 Holandia</option>
+                <option value="CZ">🇨🇿 Czechy</option>
+                <option value="SK">🇸🇰 Słowacja</option>
+                <option value="HU">🇭🇺 Węgry</option>
+                <option value="RO">🇷🇴 Rumunia</option>
+                <option value="CN">🇨🇳 Chiny</option>
+                <option value="US">🇺🇸 USA</option>
+                <option value="OTHER">🌍 Inne</option>
+              </select>
+            </label>
+          </div>
+          <label class="form-field">
+            Rodzaj oferowanych produktów *
+            <input class="owner-input" type="text" name="productTypes" placeholder="np. Elektronika, odzież, zabawki, kosmetyki…" required>
+          </label>
+          <label class="form-field">
+            Link do strony firmowej lub katalogu produktów
+            <input class="owner-input" type="url" name="websiteUrl" placeholder="https://www.firma.pl lub link do katalogu PDF">
+          </label>
+          <fieldset style="border:1px solid var(--stroke);border-radius:14px;padding:16px">
+            <legend style="padding:0 8px;font-size:14px;font-weight:600;color:var(--muted)">Forma współpracy (zaznacz wszystkie pasujące)</legend>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px">
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
+                <input type="checkbox" name="dropshipping" value="1"> Dropshipping
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
+                <input type="checkbox" name="wholesale" value="1"> Sprzedaż hurtowa
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
+                <input type="checkbox" name="whitelabel" value="1"> White label
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
+                <input type="checkbox" name="api" value="1"> Integracja API
+              </label>
+            </div>
+          </fieldset>
+          <label class="form-field">
+            Dodatkowe informacje (opcjonalnie)
+            <textarea class="owner-input" name="notes" rows="4" placeholder="Minimalne zamówienie, czas realizacji, specjalne warunki współpracy…" style="resize:vertical"></textarea>
+          </label>
+          <p class="hint" data-supplier-app-error hidden style="color:#ff7272"></p>
+          <div class="cta-row">
+            <button class="btn btn-primary" type="submit">Wyślij zgłoszenie</button>
+            <a class="btn btn-secondary" href="index.html">Anuluj</a>
+          </div>
+        </form>
+      </section>
+    </div>
+
+  </main>
+
+  <footer class="wrap panel-footer">
+    <div class="panel-footer-inner">
+      <span>© 2025 UszefaQualitet &mdash; Platforma dropshipping</span>
+      <div class="panel-footer-links">
+        <a href="index.html">Start</a>
+        <a href="cennik.html">Cennik</a>
+        <a href="hurtownie.html">Hurtownie</a>
+      </div>
+    </div>
+  </footer>
+
+  <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
+    <a href="index.html" rel="nofollow noreferrer" data-nav="index">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 11.5L12 4l9 7.5"></path>
+        <path d="M5 10.5V20h14v-9.5"></path>
+      </svg>
+      <span>Start</span>
+    </a>
+    <a href="sklep.html" rel="nofollow noreferrer" data-nav="sklep">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 9h18l-1.5 11H4.5L3 9z"></path>
+        <path d="M7 9V7a5 5 0 0 1 10 0v2"></path>
+      </svg>
+      <span>Sklep</span>
+    </a>
+    <a href="hurtownie.html" rel="nofollow noreferrer" data-nav="hurtownie">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="7" width="7" height="10" rx="1.4"></rect>
+        <rect x="14" y="7" width="7" height="10" rx="1.4"></rect>
+        <path d="M6.5 7V5.5a1.5 1.5 0 0 1 3 0V7"></path>
+      </svg>
+      <span>Hurtownie</span>
+    </a>
+    <a href="dashboard.html" rel="nofollow noreferrer" data-nav="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="14" width="7" height="7" rx="1.2"></rect>
+        <rect x="3" y="14" width="7" height="7" rx="1.2"></rect>
+      </svg>
+      <span>Panel</span>
+    </a>
+    <a href="login.html" rel="nofollow noreferrer" data-nav="login">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4 20c2-3.5 6-5 8-5s6 1.5 8 5"></path>
+      </svg>
+      <span>Konto</span>
+    </a>
+  </nav>
+
+  <script src="js/app.js" defer></script>
+</body>
+</html>

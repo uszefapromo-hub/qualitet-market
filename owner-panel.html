@@ -51,17 +51,24 @@
       <nav class="sidebar-nav owner-tab-nav" aria-label="Menu właściciela" data-owner-tab-nav>
         <a class="active" href="#" data-owner-tab="overview">🏠 Centrum Dowodzenia</a>
         <a href="#" data-owner-tab="users">👥 Użytkownicy</a>
+        <a href="#" data-owner-tab="partners">🤝 Partnerzy</a>
         <a href="#" data-owner-tab="stores">🏪 Sklepy</a>
         <a href="#" data-owner-tab="products">📦 Produkty</a>
+        <a href="#" data-owner-tab="warehouses">🏭 Hurtownie</a>
+        <a href="#" data-owner-tab="supplier-apps">📋 Zgłoszenia dostawców</a>
         <a href="#" data-owner-tab="orders">🛒 Zamówienia</a>
         <a href="#" data-owner-tab="subscriptions">💳 Subskrypcje</a>
-        <a href="#" data-owner-tab="finances">💰 Marże i Finanse</a>
-        <a href="#" data-owner-tab="referrals">🔗 System Poleceń</a>
+        <a href="#" data-owner-tab="finances">💰 Marże i Prowizje</a>
+        <a href="#" data-owner-tab="referrals">🔗 Polecenia</a>
+        <a href="#" data-owner-tab="ranking">🏆 Ranking</a>
         <a href="#" data-owner-tab="operators">🛠 Operatorzy</a>
+        <a href="#" data-owner-tab="reports">📊 Raporty</a>
+        <a href="#" data-owner-tab="payments">💵 Płatności</a>
+        <a href="#" data-owner-tab="settings">⚙️ Ustawienia</a>
         <a href="#" data-owner-tab="security">🔒 Bezpieczeństwo</a>
         <hr class="sidebar-sep">
         <a href="dashboard.html">Panel użytkownika</a>
-        <a href="hurtownie.html">Hurtownie</a>
+        <a href="zostan-dostawca.html">Zostań dostawcą</a>
         <a href="crm.html">CRM</a>
       </nav>
     </aside>
@@ -98,6 +105,64 @@
                 <span>Rola</span>
                 <strong class="status-pill is-ready">Superadmin</strong>
               </div>
+            </div>
+          </section>
+
+          <!-- QUICK NAVIGATION TILES -->
+          <section class="panel-card owner-quick-nav-section">
+            <div class="section-head">
+              <span class="eyebrow">Szybka nawigacja</span>
+              <h2>Moduły platformy</h2>
+            </div>
+            <div class="owner-quick-nav">
+              <button class="owner-tile" data-owner-tab-trigger="users">
+                <span class="tile-icon">👥</span><span class="tile-label">Użytkownicy</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="partners">
+                <span class="tile-icon">🤝</span><span class="tile-label">Partnerzy</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="stores">
+                <span class="tile-icon">🏪</span><span class="tile-label">Sklepy</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="products">
+                <span class="tile-icon">📦</span><span class="tile-label">Produkty</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="warehouses">
+                <span class="tile-icon">🏭</span><span class="tile-label">Hurtownie</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="supplier-apps">
+                <span class="tile-icon">📋</span><span class="tile-label">Zgłoszenia dostawców</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="orders">
+                <span class="tile-icon">🛒</span><span class="tile-label">Zamówienia</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="subscriptions">
+                <span class="tile-icon">💳</span><span class="tile-label">Subskrypcje</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="finances">
+                <span class="tile-icon">💰</span><span class="tile-label">Marże i Prowizje</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="referrals">
+                <span class="tile-icon">🔗</span><span class="tile-label">Polecenia</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="ranking">
+                <span class="tile-icon">🏆</span><span class="tile-label">Ranking</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="operators">
+                <span class="tile-icon">🛠</span><span class="tile-label">Operatorzy</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="reports">
+                <span class="tile-icon">📊</span><span class="tile-label">Raporty</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="payments">
+                <span class="tile-icon">💵</span><span class="tile-label">Płatności</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="settings">
+                <span class="tile-icon">⚙️</span><span class="tile-label">Ustawienia</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="security">
+                <span class="tile-icon">🔒</span><span class="tile-label">Bezpieczeństwo</span>
+              </button>
             </div>
           </section>
 
@@ -704,6 +769,301 @@
               <h2>Działania operatorów</h2>
             </div>
             <div class="list-cards" data-op-logs-list></div>
+          </section>
+        </div>
+
+        <!-- TAB: PARTNERS -->
+        <div class="owner-tab-panel" data-owner-tab-panel="partners" hidden>
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Partnerzy</span>
+            <h2>Wykaz partnerów platformy</h2>
+            <p class="hint">Lista wszystkich partnerów posiadających aktywne sklepy na platformie.</p>
+          </section>
+          <section class="panel-card">
+            <div class="owner-toolbar">
+              <input class="owner-search" type="search" placeholder="Szukaj po nazwie, email…" data-partners-search aria-label="Szukaj partnera">
+              <select class="owner-filter" data-partners-plan-filter aria-label="Filtruj po planie">
+                <option value="">Wszystkie plany</option>
+                <option value="basic">Basic</option>
+                <option value="pro">Pro</option>
+                <option value="elite">Elite</option>
+              </select>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nazwa</th>
+                    <th>Email</th>
+                    <th>Plan</th>
+                    <th>Sklepy</th>
+                    <th>Sprzedaż</th>
+                    <th>Status</th>
+                    <th>Data dołączenia</th>
+                  </tr>
+                </thead>
+                <tbody data-partners-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: WAREHOUSES -->
+        <div class="owner-tab-panel" data-owner-tab-panel="warehouses" hidden>
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Hurtownie</span>
+            <h2>Wykaz hurtowni i dostawców</h2>
+            <p class="hint">Wszystkie hurtownie zintegrowane z platformą.</p>
+          </section>
+          <section class="panel-card">
+            <div class="owner-toolbar">
+              <input class="owner-search" type="search" placeholder="Szukaj po nazwie, kraju…" data-warehouses-search aria-label="Szukaj hurtowni">
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nazwa</th>
+                    <th>Kraj</th>
+                    <th>Produkty</th>
+                    <th>Typ</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody data-warehouses-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: SUPPLIER APPLICATIONS -->
+        <div class="owner-tab-panel" data-owner-tab-panel="supplier-apps" hidden>
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Zgłoszenia dostawców</span>
+            <h2>Formularze od producentów i hurtowni</h2>
+            <p class="hint">Zarządzaj zgłoszeniami firm zainteresowanych współpracą jako dostawcy.</p>
+          </section>
+          <section class="panel-card">
+            <div class="stats-grid stats-g3">
+              <div class="stat-card"><span>Wszystkie zgłoszenia</span><strong data-supplier-apps-total>0</strong></div>
+              <div class="stat-card"><span>Oczekujące</span><strong data-supplier-apps-pending>0</strong></div>
+              <div class="stat-card"><span>Zaakceptowane</span><strong data-supplier-apps-accepted>0</strong></div>
+            </div>
+          </section>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Lista zgłoszeń</span>
+              <h2>Wszystkie wnioski</h2>
+            </div>
+            <div class="owner-toolbar">
+              <input class="owner-search" type="search" placeholder="Szukaj po nazwie firmy, email…" data-supplier-apps-search aria-label="Szukaj zgłoszenia">
+              <select class="owner-filter" data-supplier-apps-status-filter aria-label="Filtruj po statusie">
+                <option value="">Wszystkie statusy</option>
+                <option value="pending">Oczekujące</option>
+                <option value="accepted">Zaakceptowane</option>
+                <option value="rejected">Odrzucone</option>
+              </select>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Firma</th>
+                    <th>Email</th>
+                    <th>Telefon</th>
+                    <th>Kraj</th>
+                    <th>Produkty</th>
+                    <th>Dropshipping</th>
+                    <th>Status</th>
+                    <th>Akcje</th>
+                  </tr>
+                </thead>
+                <tbody data-supplier-apps-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: RANKING -->
+        <div class="owner-tab-panel" data-owner-tab-panel="ranking" hidden>
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Ranking</span>
+            <h2>Ranking sprzedawców</h2>
+            <p class="hint">Najlepsi partnerzy platformy według obrotu i liczby zamówień.</p>
+          </section>
+          <section class="panel-card">
+            <div class="owner-table-wrap">
+              <table class="owner-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Partner</th>
+                    <th>Sklep</th>
+                    <th>Plan</th>
+                    <th>Zamówienia</th>
+                    <th>Obrót</th>
+                    <th>Prowizja</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody data-ranking-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: REPORTS -->
+        <div class="owner-tab-panel" data-owner-tab-panel="reports" hidden>
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Raporty</span>
+            <h2>Raporty finansowe i platformy</h2>
+            <p class="hint">Zestawienia przychodów, kosztów, aktywności i wzrostu platformy.</p>
+          </section>
+          <section class="stats-grid stats-g4">
+            <div class="stat-card"><span>Przychód całkowity</span><strong data-report-total-revenue>—</strong></div>
+            <div class="stat-card"><span>Marża platformy</span><strong data-report-platform-margin>—</strong></div>
+            <div class="stat-card"><span>Zamówienia łącznie</span><strong data-report-total-orders>—</strong></div>
+            <div class="stat-card"><span>Aktywni partnerzy</span><strong data-report-active-partners>—</strong></div>
+          </section>
+          <section class="dashboard-grid">
+            <article class="panel-card">
+              <div class="section-head"><span class="eyebrow">Przychody</span><h2>Zestawienie miesięczne</h2></div>
+              <div class="chart-rows" data-report-revenue-chart></div>
+            </article>
+            <article class="panel-card">
+              <div class="section-head"><span class="eyebrow">Subskrypcje</span><h2>Przychody z planów</h2></div>
+              <div class="chart-rows">
+                <div class="chart-row"><span>Basic</span><span data-report-sub-basic>—</span></div>
+                <div class="chart-bar"><span data-report-sub-basic-bar style="width:0%"></span></div>
+                <div class="chart-row"><span>Pro</span><span data-report-sub-pro>—</span></div>
+                <div class="chart-bar"><span data-report-sub-pro-bar style="width:0%"></span></div>
+                <div class="chart-row"><span>Elite</span><span data-report-sub-elite>—</span></div>
+                <div class="chart-bar"><span data-report-sub-elite-bar style="width:0%"></span></div>
+              </div>
+            </article>
+          </section>
+          <section class="panel-card">
+            <div class="section-head"><span class="eyebrow">Eksport danych</span><h2>Pobierz raport</h2></div>
+            <div class="cta-row">
+              <button class="btn btn-secondary" data-export-report="orders">Eksportuj zamówienia (CSV)</button>
+              <button class="btn btn-secondary" data-export-report="users">Eksportuj użytkowników (CSV)</button>
+              <button class="btn btn-secondary" data-export-report="finances">Eksportuj finanse (CSV)</button>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: PAYMENTS -->
+        <div class="owner-tab-panel" data-owner-tab-panel="payments" hidden>
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Płatności</span>
+            <h2>Centrum płatności platformy</h2>
+            <p class="hint">Historia płatności za subskrypcje, prowizje i rozliczenia z partnerami.</p>
+          </section>
+          <section class="stats-grid stats-g3">
+            <div class="stat-card"><span>Wpłaty łącznie</span><strong data-payments-total>—</strong></div>
+            <div class="stat-card"><span>Oczekujące</span><strong data-payments-pending>—</strong></div>
+            <div class="stat-card"><span>Zaległe</span><strong data-payments-overdue>—</strong></div>
+          </section>
+          <section class="panel-card">
+            <div class="section-head"><span class="eyebrow">Historia płatności</span><h2>Wszystkie transakcje</h2></div>
+            <div class="owner-toolbar">
+              <input class="owner-search" type="search" placeholder="Szukaj po nazwie, ID…" data-payments-search aria-label="Szukaj płatności">
+              <select class="owner-filter" data-payments-status-filter aria-label="Filtruj status">
+                <option value="">Wszystkie statusy</option>
+                <option value="paid">Opłacone</option>
+                <option value="pending">Oczekujące</option>
+                <option value="overdue">Zaległe</option>
+              </select>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Użytkownik</th>
+                    <th>Plan</th>
+                    <th>Kwota</th>
+                    <th>Typ</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody data-payments-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: SETTINGS -->
+        <div class="owner-tab-panel" data-owner-tab-panel="settings" hidden>
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Ustawienia platformy</span>
+            <h2>Konfiguracja systemu</h2>
+            <p class="hint">Zarządzaj ustawieniami platformy, marżami domyślnymi, prowizjami i integracjami.</p>
+          </section>
+          <section class="panel-card">
+            <div class="section-head"><span class="eyebrow">Finanse</span><h2>Domyślne marże i prowizje</h2></div>
+            <form class="form-card" data-platform-settings-form>
+              <div class="owner-toolbar">
+                <label class="form-field">
+                  Domyślna marża platformy (%)
+                  <input class="owner-input" type="number" name="defaultMargin" min="0" max="100" step="1" value="15">
+                </label>
+                <label class="form-field">
+                  Prowizja od zamówienia (%)
+                  <input class="owner-input" type="number" name="orderCommission" min="0" max="50" step="0.5" value="5">
+                </label>
+                <label class="form-field">
+                  Prowizja od polecenia (%)
+                  <input class="owner-input" type="number" name="referralCommission" min="0" max="30" step="0.5" value="10">
+                </label>
+              </div>
+              <div class="section-head" style="margin-top:16px"><span class="eyebrow">Platforma</span><h2>Podstawowe ustawienia</h2></div>
+              <div class="owner-toolbar">
+                <label class="form-field">
+                  Nazwa platformy
+                  <input class="owner-input" type="text" name="platformName" value="UszefaQualitet">
+                </label>
+                <label class="form-field">
+                  Email kontaktowy
+                  <input class="owner-input" type="email" name="contactEmail" value="uszefaqualitetpromo@gmail.com">
+                </label>
+                <label class="form-field">
+                  Tryb rejestracji
+                  <select class="owner-filter" name="registrationMode">
+                    <option value="open">Otwarty</option>
+                    <option value="invite">Tylko zaproszenia</option>
+                    <option value="closed">Zamknięty</option>
+                  </select>
+                </label>
+              </div>
+              <div class="cta-row" style="margin-top:16px">
+                <button class="btn btn-primary" type="submit">Zapisz ustawienia</button>
+                <span class="hint" data-settings-saved hidden>✅ Zapisano!</span>
+              </div>
+            </form>
+          </section>
+          <section class="panel-card">
+            <div class="section-head"><span class="eyebrow">Integracje</span><h2>Systemy zewnętrzne</h2></div>
+            <div class="roles-grid">
+              <div class="role-card">
+                <strong>SMS API</strong>
+                <span>Logowanie właściciela przez numer telefonu i kod SMS</span>
+                <ul><li>Włączone</li><li>Kod ważny 10 minut</li></ul>
+              </div>
+              <div class="role-card">
+                <strong>Płatności online</strong>
+                <span>Stripe / Przelewy24 — subskrypcje i prowizje</span>
+                <ul><li>Konfiguracja w toku</li></ul>
+              </div>
+              <div class="role-card">
+                <strong>Dostawcy</strong>
+                <span>AliExpress, CJ, EPROLO, VidaXL, Spocket…</span>
+                <ul><li>10 aktywnych integracji</li></ul>
+              </div>
+            </div>
           </section>
         </div>
 
