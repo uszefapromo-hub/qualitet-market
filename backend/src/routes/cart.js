@@ -309,40 +309,6 @@ router.put(
   }
 );
 
-// ─── DELETE /api/cart/items/:productId – remove item ─────────────────────────
-
-router.delete(
-  '/items/:productId',
-  authenticate,
-  [
-    param('productId').isUUID(),
-    body('store_id').isUUID(),
-  ],
-  validate,
-  async (req, res) => {
-    const { store_id } = req.body;
-    const { productId } = req.params;
-
-    try {
-      const cartResult = await db.query(
-        `SELECT id FROM carts WHERE user_id = $1 AND store_id = $2 AND status = 'active' LIMIT 1`,
-        [req.user.id, store_id]
-      );
-      const cart = cartResult.rows[0];
-      if (!cart) return res.status(404).json({ error: 'Koszyk nie znaleziony' });
-
-      await db.query('DELETE FROM cart_items WHERE cart_id = $1 AND product_id = $2', [cart.id, productId]);
-      await db.query('UPDATE carts SET updated_at = NOW() WHERE id = $1', [cart.id]);
-
-      const updatedCart = await cartWithItems(cart.id);
-      return res.json(updatedCart);
-    } catch (err) {
-      console.error('delete cart item error:', err.message);
-      return res.status(500).json({ error: 'Błąd serwera' });
-    }
-  }
-);
-
 // ─── DELETE /api/cart – clear cart ────────────────────────────────────────────
 
 router.delete(

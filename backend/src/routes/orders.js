@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { auditLog } = require('../helpers/audit');
 
 const router = express.Router();
 
@@ -156,6 +157,14 @@ router.post(
 
       const newOrder = await db.query('SELECT * FROM orders WHERE id = $1', [createdOrderId]);
       const newItems = await db.query('SELECT * FROM order_items WHERE order_id = $1', [createdOrderId]);
+      auditLog({
+        actorUserId: req.user.id,
+        action: 'order.created',
+        resource: 'order',
+        resourceId: createdOrderId,
+        payload: { store_id, total: newOrder.rows[0].total },
+        ipAddress: req.ip,
+      });
       return res.status(201).json({ ...newOrder.rows[0], items: newItems.rows });
     } catch (err) {
       console.error('create order error:', err.message);

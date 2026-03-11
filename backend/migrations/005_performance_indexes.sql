@@ -65,12 +65,13 @@ CREATE INDEX IF NOT EXISTS idx_payments_status
   ON payments (status);
 
 -- ─── audit_logs – entity lookups ─────────────────────────────────────────────
+-- Column names match 002_extended_schema.sql: resource, resource_id, user_id
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity
-  ON audit_logs (entity_type, entity_id);
+  ON audit_logs (resource, resource_id);
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_actor
-  ON audit_logs (actor_user_id);
+  ON audit_logs (user_id);
 
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created
   ON audit_logs (created_at DESC);

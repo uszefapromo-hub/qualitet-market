@@ -30,9 +30,18 @@ router.get('/', async (req, res) => {
 
     const result = await db.query(
       `SELECT sp.id, sp.store_id, sp.product_id, sp.active, sp.sort_order, sp.created_at,
+              sp.price_override, sp.margin_override, sp.margin_type,
               p.name, p.sku, p.description, p.category, p.image_url, p.stock,
-              COALESCE(sp.price_override, p.selling_price) AS price,
-              COALESCE(sp.margin_override, p.margin) AS margin
+              p.price_gross, p.selling_price AS base_selling_price,
+              COALESCE(sp.margin_override, p.margin) AS margin,
+              CASE
+                WHEN sp.price_override IS NOT NULL THEN sp.price_override
+                WHEN sp.margin_override IS NOT NULL AND sp.margin_type = 'fixed'
+                  THEN p.price_gross + sp.margin_override
+                WHEN sp.margin_override IS NOT NULL
+                  THEN p.price_gross * (1 + sp.margin_override / 100)
+                ELSE p.selling_price
+              END AS price
        FROM shop_products sp
        JOIN products p ON sp.product_id = p.id
        WHERE sp.store_id = $1 AND sp.active = true

@@ -18,6 +18,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { auditLog } = require('../helpers/audit');
 
 const router = express.Router();
 
@@ -160,8 +161,15 @@ router.get(
                 sp.custom_title, sp.custom_description, sp.margin_type,
                 sp.price_override, sp.margin_override, sp.created_at, sp.updated_at,
                 p.name, p.sku, p.description, p.category, p.image_url, p.stock,
-                p.selling_price AS base_price, p.margin AS base_margin,
-                COALESCE(sp.price_override, p.selling_price) AS price
+                p.price_gross, p.selling_price AS base_price, p.margin AS base_margin,
+                CASE
+                  WHEN sp.price_override IS NOT NULL THEN sp.price_override
+                  WHEN sp.margin_override IS NOT NULL AND sp.margin_type = 'fixed'
+                    THEN p.price_gross + sp.margin_override
+                  WHEN sp.margin_override IS NOT NULL
+                    THEN p.price_gross * (1 + sp.margin_override / 100)
+                  ELSE p.selling_price
+                END AS price
          FROM shop_products sp
          JOIN products p ON sp.product_id = p.id
          WHERE sp.store_id = $1
@@ -241,6 +249,14 @@ router.post(
         [id, store_id, product_id, custom_title, custom_description, margin_type,
          margin_override, price_override, active, sort_order]
       );
+      auditLog({
+        actorUserId: req.user.id,
+        action: 'shop_product.created',
+        resource: 'shop_product',
+        resourceId: result.rows[0].id,
+        payload: { store_id, product_id },
+        ipAddress: req.ip,
+      });
       return res.status(201).json(result.rows[0]);
     } catch (err) {
       console.error('my store add product error:', err.message);
@@ -311,6 +327,13 @@ router.patch(
           req.params.id,
         ]
       );
+      auditLog({
+        actorUserId: req.user.id,
+        action: 'shop_product.updated',
+        resource: 'shop_product',
+        resourceId: req.params.id,
+        ipAddress: req.ip,
+      });
       return res.json(result.rows[0]);
     } catch (err) {
       console.error('my store update product error:', err.message);
@@ -343,6 +366,13 @@ router.delete(
       }
 
       await db.query('DELETE FROM shop_products WHERE id = $1', [req.params.id]);
+      auditLog({
+        actorUserId: req.user.id,
+        action: 'shop_product.deleted',
+        resource: 'shop_product',
+        resourceId: req.params.id,
+        ipAddress: req.ip,
+      });
       return res.json({ message: 'Produkt usunięty ze sklepu' });
     } catch (err) {
       console.error('my store delete product error:', err.message);
