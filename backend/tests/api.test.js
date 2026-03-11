@@ -1361,3 +1361,289 @@ describe('DELETE /api/my/store/products/:id', () => {
   });
 });
 
+// ─── Auth routes (POST /api/auth/register, /login, GET /api/auth/me) ──────────
+
+describe('POST /api/auth/register', () => {
+  it('rejects invalid email', async () => {
+    const res = await request(app).post('/api/auth/register').send({
+      email: 'not-an-email',
+      password: 'Password123!',
+      name: 'Test',
+    });
+    expect(res.status).toBe(422);
+  });
+
+  it('registers with default seller role and returns next_step', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })                // SELECT – no duplicate
+      .mockResolvedValueOnce({ rows: [] });               // INSERT
+
+    const res = await request(app).post('/api/auth/register').send({
+      email: 'newseller@test.pl',
+      password: 'Password123!',
+      name: 'New Seller',
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.token).toBeDefined();
+    expect(res.body.next_step).toBe('create_shop');
+  });
+
+  it('rejects duplicate email with 409', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: 'existing' }] });
+    const res = await request(app).post('/api/auth/register').send({
+      email: 'seller@test.pl',
+      password: 'Password123!',
+      name: 'Dup',
+    });
+    expect(res.status).toBe(409);
+  });
+});
+
+describe('POST /api/auth/login', () => {
+  it('returns 401 for wrong credentials', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).post('/api/auth/login').send({ email: 'nobody@test.pl', password: 'x' });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns token for correct credentials', async () => {
+    const hash = await bcrypt.hash('Password123!', 12);
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SELLER_ID, email: 'seller@test.pl', password_hash: hash, name: 'Seller', role: 'seller', plan: 'basic' }],
+    });
+
+    const res = await request(app).post('/api/auth/login').send({ email: 'seller@test.pl', password: 'Password123!' });
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBeDefined();
+  });
+});
+
+describe('GET /api/auth/me', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/auth/me');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns user profile when authenticated', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SELLER_ID, email: 'seller@test.pl', name: 'Seller', role: 'seller', plan: 'basic' }],
+    });
+
+    const res = await request(app)
+      .get('/api/auth/me')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.email).toBe('seller@test.pl');
+  });
+});
+
+// ─── POST /api/shops – create a new shop ──────────────────────────────────────
+
+describe('POST /api/shops', () => {
+  it('requires seller role', async () => {
+    const res = await request(app).post('/api/shops').send({ name: 'Sklep', slug: 'sklep' });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects duplicate slug with 409', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: 'existing' }] }); // slug taken
+    const res = await request(app)
+      .post('/api/shops')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ name: 'Sklep', slug: 'moj-sklep' });
+    expect(res.status).toBe(409);
+  });
+
+  it('creates shop with default 30% margin and next_step', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })  // slug free
+      .mockResolvedValueOnce({ rows: [{ id: 'new-shop-id', name: 'Nowy Sklep', slug: 'nowy-sklep', margin: 30, status: 'active' }] });
+
+    const res = await request(app)
+      .post('/api/shops')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ name: 'Nowy Sklep', slug: 'nowy-sklep' });
+    expect(res.status).toBe(201);
+    expect(res.body.next_step).toBe('add_products');
+    expect(res.body.margin).toBe(30);
+  });
+});
+
+// ─── PATCH /api/my/store – update seller's store ──────────────────────────────
+
+describe('PATCH /api/my/store', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).patch('/api/my/store').send({ name: 'Updated' });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 when seller has no store', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // no store found
+    const res = await request(app)
+      .patch('/api/my/store')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ name: 'Updated' });
+    expect(res.status).toBe(404);
+  });
+
+  it('updates store fields successfully', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] })  // find store
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID, name: 'Updated Store', margin: 25 }] }); // UPDATE
+
+    const res = await request(app)
+      .patch('/api/my/store')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ name: 'Updated Store', margin: 25 });
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe('Updated Store');
+  });
+});
+
+// ─── GET /api/admin/dashboard ─────────────────────────────────────────────────
+
+describe('GET /api/admin/dashboard', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .get('/api/admin/dashboard')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns dashboard metrics as admin', async () => {
+    // Mock all 12 parallel queries
+    for (let i = 0; i < 12; i++) {
+      db.query.mockResolvedValueOnce({ rows: [{ count: '5', avg: '99.50', revenue: '497.50' }] });
+    }
+
+    const res = await request(app)
+      .get('/api/admin/dashboard')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('sellers');
+    expect(res.body).toHaveProperty('customers');
+    expect(res.body).toHaveProperty('products');
+    expect(res.body).toHaveProperty('revenue');
+  });
+});
+
+// ─── GET /api/admin/shops ─────────────────────────────────────────────────────
+
+describe('GET /api/admin/shops', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .get('/api/admin/shops')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns shops list as admin', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID, name: 'Mój Sklep', status: 'active' }] });
+
+    const res = await request(app)
+      .get('/api/admin/shops')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('shops');
+  });
+});
+
+// ─── POST /api/cart (shop_product_id-based) ───────────────────────────────────
+
+describe('POST /api/cart (shop_product_id)', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post('/api/cart')
+      .send({ shop_product_id: SHOP_PROD_ID, quantity: 1 });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects missing shop_product_id', async () => {
+    const res = await request(app)
+      .post('/api/cart')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ quantity: 1 });
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 404 for inactive or missing shop product', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // shop product not found
+    const res = await request(app)
+      .post('/api/cart')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ shop_product_id: SHOP_PROD_ID, quantity: 1 });
+    expect(res.status).toBe(404);
+  });
+
+  it('adds item to cart via shop_product_id', async () => {
+    const CART_ID = 'c0000000-0000-4000-8000-000000000001';
+    const ITEM_ID = 'c0000000-0000-4000-8000-000000000002';
+
+    db.query
+      // resolve shop product
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true, effective_price: 141.45, stock: 10, name: 'Fotel' }] })
+      // getOrCreateCart – existing
+      .mockResolvedValueOnce({ rows: [{ id: CART_ID, user_id: SELLER_ID, store_id: STORE_ID, status: 'active' }] })
+      // check existing item – none
+      .mockResolvedValueOnce({ rows: [] })
+      // insert item
+      .mockResolvedValueOnce({ rows: [{ id: ITEM_ID }] })
+      // touch cart
+      .mockResolvedValueOnce({ rows: [] })
+      // cartWithItems – cart
+      .mockResolvedValueOnce({ rows: [{ id: CART_ID, user_id: SELLER_ID, store_id: STORE_ID, status: 'active' }] })
+      // cartWithItems – items
+      .mockResolvedValueOnce({ rows: [{ id: ITEM_ID, cart_id: CART_ID, product_id: PRODUCT_ID, quantity: 1, unit_price: 141.45, name: 'Fotel', image_url: null }] });
+
+    const res = await request(app)
+      .post('/api/cart')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ shop_product_id: SHOP_PROD_ID, quantity: 1 });
+    expect(res.status).toBe(201);
+    expect(res.body.items).toHaveLength(1);
+  });
+});
+
+// ─── DELETE /api/cart/items/:itemId ───────────────────────────────────────────
+
+describe('DELETE /api/cart/items/:itemId', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).delete(`/api/cart/items/a0000000-0000-4000-8000-000000000099`);
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 for unknown item', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // item not found
+    const res = await request(app)
+      .delete(`/api/cart/items/a0000000-0000-4000-8000-000000000099`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('removes item and returns updated cart', async () => {
+    const CART_ID = 'c0000000-0000-4000-8000-000000000001';
+    const ITEM_ID = 'c0000000-0000-4000-8000-000000000002';
+
+    db.query
+      // find item
+      .mockResolvedValueOnce({ rows: [{ id: ITEM_ID, cart_id: CART_ID }] })
+      // delete item
+      .mockResolvedValueOnce({ rows: [] })
+      // touch cart
+      .mockResolvedValueOnce({ rows: [] })
+      // cartWithItems – cart
+      .mockResolvedValueOnce({ rows: [{ id: CART_ID, user_id: SELLER_ID, store_id: STORE_ID, status: 'active' }] })
+      // cartWithItems – items (now empty)
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .delete(`/api/cart/items/${ITEM_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.items).toHaveLength(0);
+  });
+});
+
+

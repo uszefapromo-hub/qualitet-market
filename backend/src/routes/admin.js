@@ -9,7 +9,69 @@ const { validate } = require('../middleware/validate');
 
 const router = express.Router();
 
-// ─── GET /api/admin/stats – platform dashboard statistics ─────────────────────
+// ─── GET /api/admin/dashboard – comprehensive platform metrics ────────────────
+
+router.get('/dashboard', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+  try {
+    const [
+      // sellers
+      totalSellersResult,
+      activeShopsResult,
+      shopsWithProductsResult,
+      shopsWithOrdersResult,
+      // customers / orders
+      totalOrdersResult,
+      totalCustomersResult,
+      avgOrderResult,
+      todayOrdersResult,
+      monthOrdersResult,
+      // products
+      globalProductsResult,
+      activeShopProductsResult,
+      // revenue
+      revenueResult,
+    ] = await Promise.all([
+      db.query(`SELECT COUNT(*) FROM users WHERE role = 'seller'`),
+      db.query(`SELECT COUNT(*) FROM stores WHERE status = 'active'`),
+      db.query(`SELECT COUNT(DISTINCT store_id) FROM shop_products WHERE active = true`),
+      db.query(`SELECT COUNT(DISTINCT store_id) FROM orders`),
+      db.query(`SELECT COUNT(*) FROM orders`),
+      db.query(`SELECT COUNT(DISTINCT buyer_id) FROM orders`),
+      db.query(`SELECT COALESCE(AVG(total), 0) AS avg FROM orders WHERE status != 'cancelled'`),
+      db.query(`SELECT COUNT(*) FROM orders WHERE created_at >= CURRENT_DATE`),
+      db.query(`SELECT COUNT(*) FROM orders WHERE created_at >= date_trunc('month', NOW())`),
+      db.query(`SELECT COUNT(*) FROM products`),
+      db.query(`SELECT COUNT(*) FROM shop_products WHERE active = true`),
+      db.query(`SELECT COALESCE(SUM(total), 0) AS revenue FROM orders WHERE status != 'cancelled'`),
+    ]);
+
+    return res.json({
+      sellers: {
+        total_registrations:       parseInt(totalSellersResult.rows[0].count, 10),
+        active_shops:              parseInt(activeShopsResult.rows[0].count, 10),
+        shops_with_products:       parseInt(shopsWithProductsResult.rows[0].count, 10),
+        shops_with_orders:         parseInt(shopsWithOrdersResult.rows[0].count, 10),
+      },
+      customers: {
+        total_orders:              parseInt(totalOrdersResult.rows[0].count, 10),
+        total_customers:           parseInt(totalCustomersResult.rows[0].count, 10),
+        avg_order_value:           parseFloat(parseFloat(avgOrderResult.rows[0].avg).toFixed(2)),
+        orders_today:              parseInt(todayOrdersResult.rows[0].count, 10),
+        orders_this_month:         parseInt(monthOrdersResult.rows[0].count, 10),
+      },
+      products: {
+        global_products:           parseInt(globalProductsResult.rows[0].count, 10),
+        active_shop_products:      parseInt(activeShopProductsResult.rows[0].count, 10),
+      },
+      revenue:                     parseFloat(revenueResult.rows[0].revenue),
+    });
+  } catch (err) {
+    console.error('admin dashboard error:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// ─── GET /api/admin/stats – legacy alias for dashboard ───────────────────────
 
 router.get('/stats', authenticate, requireRole('owner', 'admin'), async (req, res) => {
   try {
@@ -184,6 +246,84 @@ router.get('/stores', authenticate, requireRole('owner', 'admin'), async (req, r
     return res.json({ total, page, limit, stores: result.rows });
   } catch (err) {
     console.error('admin list stores error:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// ─── GET /api/admin/shops – alias for /api/admin/stores ───────────────────────
+
+router.get('/shops', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+  const page   = Math.max(1, parseInt(req.query.page   || '1',  10));
+  const limit  = Math.min(100, parseInt(req.query.limit  || '20', 10));
+  const offset = (page - 1) * limit;
+  const status = req.query.status || null;
+  const search = req.query.search || null;
+
+  try {
+    const conditions = [];
+    const params = [];
+    let idx = 1;
+
+    if (status) { conditions.push(`s.status = $${idx++}`); params.push(status); }
+    if (search) {
+      conditions.push(`(s.name ILIKE $${idx} OR s.slug ILIKE $${idx})`);
+      params.push(`%${search}%`);
+      idx++;
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countResult = await db.query(`SELECT COUNT(*) FROM stores s ${where}`, params);
+    const total = parseInt(countResult.rows[0].count, 10);
+
+    const result = await db.query(
+      `SELECT s.*, u.email AS owner_email, u.name AS owner_name
+       FROM stores s
+       LEFT JOIN users u ON s.owner_id = u.id
+       ${where}
+       ORDER BY s.created_at DESC
+       LIMIT $${idx} OFFSET $${idx + 1}`,
+      [...params, limit, offset]
+    );
+    return res.json({ total, page, limit, shops: result.rows });
+  } catch (err) {
+    console.error('admin list shops error:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// ─── GET /api/admin/suppliers – all suppliers (paginated) ────────────────────
+
+router.get('/suppliers', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+  const page   = Math.max(1, parseInt(req.query.page   || '1',  10));
+  const limit  = Math.min(100, parseInt(req.query.limit  || '20', 10));
+  const offset = (page - 1) * limit;
+  const search = req.query.search || null;
+
+  try {
+    const conditions = [];
+    const params = [];
+    let idx = 1;
+
+    if (search) {
+      conditions.push(`name ILIKE $${idx++}`);
+      params.push(`%${search}%`);
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countResult = await db.query(`SELECT COUNT(*) FROM suppliers ${where}`, params);
+    const total = parseInt(countResult.rows[0].count, 10);
+
+    const result = await db.query(
+      `SELECT * FROM suppliers ${where}
+       ORDER BY name ASC
+       LIMIT $${idx} OFFSET $${idx + 1}`,
+      [...params, limit, offset]
+    );
+    return res.json({ total, page, limit, suppliers: result.rows });
+  } catch (err) {
+    console.error('admin list suppliers error:', err.message);
     return res.status(500).json({ error: 'Błąd serwera' });
   }
 });

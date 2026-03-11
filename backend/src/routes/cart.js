@@ -71,7 +71,110 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-// ─── POST /api/cart/items – add item to cart ───────────────────────────────────
+// ─── POST /api/cart – add item by shop_product_id (simplified cart flow) ──────
+// This is the primary cart endpoint for the customer purchase flow.
+// It accepts a shop_product_id instead of a raw product_id.
+
+router.post(
+  '/',
+  authenticate,
+  [
+    body('shop_product_id').isUUID(),
+    body('quantity').isInt({ min: 1 }),
+  ],
+  validate,
+  async (req, res) => {
+    const { shop_product_id, quantity } = req.body;
+
+    try {
+      // Resolve shop product to get store, product, and effective price
+      const spResult = await db.query(
+        `SELECT sp.id, sp.store_id, sp.product_id, sp.active,
+                COALESCE(sp.price_override, p.selling_price) AS effective_price,
+                p.stock, p.name
+         FROM shop_products sp
+         JOIN products p ON sp.product_id = p.id
+         WHERE sp.id = $1 AND sp.active = true`,
+        [shop_product_id]
+      );
+      const sp = spResult.rows[0];
+      if (!sp) {
+        return res.status(404).json({ error: 'Produkt nie znaleziony' });
+      }
+
+      if (sp.stock < quantity) {
+        return res.status(422).json({ error: `Niewystarczający stan magazynowy: ${sp.name}` });
+      }
+
+      const cart = await getOrCreateCart(req.user.id, sp.store_id);
+
+      // Upsert cart item
+      const existing = await db.query(
+        'SELECT id, quantity FROM cart_items WHERE cart_id = $1 AND product_id = $2',
+        [cart.id, sp.product_id]
+      );
+
+      if (existing.rows[0]) {
+        const newQty = existing.rows[0].quantity + quantity;
+        if (sp.stock < newQty) {
+          return res.status(422).json({ error: `Niewystarczający stan magazynowy: ${sp.name}` });
+        }
+        await db.query(
+          'UPDATE cart_items SET quantity = $1, updated_at = NOW() WHERE id = $2',
+          [newQty, existing.rows[0].id]
+        );
+      } else {
+        const itemId = uuidv4();
+        await db.query(
+          `INSERT INTO cart_items (id, cart_id, product_id, quantity, unit_price, created_at)
+           VALUES ($1, $2, $3, $4, $5, NOW())`,
+          [itemId, cart.id, sp.product_id, quantity, sp.effective_price]
+        );
+      }
+
+      await db.query('UPDATE carts SET updated_at = NOW() WHERE id = $1', [cart.id]);
+      const updatedCart = await cartWithItems(cart.id);
+      return res.status(201).json(updatedCart);
+    } catch (err) {
+      console.error('post cart error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── DELETE /api/cart/:itemId – remove a specific cart item by item UUID ──────
+
+router.delete(
+  '/items/:itemId',
+  authenticate,
+  [param('itemId').isUUID()],
+  validate,
+  async (req, res) => {
+    const { itemId } = req.params;
+
+    try {
+      // Ensure the item belongs to the authenticated user
+      const itemResult = await db.query(
+        `SELECT ci.id, ci.cart_id
+         FROM cart_items ci
+         JOIN carts c ON ci.cart_id = c.id
+         WHERE ci.id = $1 AND c.user_id = $2 AND c.status = 'active'`,
+        [itemId, req.user.id]
+      );
+      const item = itemResult.rows[0];
+      if (!item) return res.status(404).json({ error: 'Element koszyka nie znaleziony' });
+
+      await db.query('DELETE FROM cart_items WHERE id = $1', [item.id]);
+      await db.query('UPDATE carts SET updated_at = NOW() WHERE id = $1', [item.cart_id]);
+
+      const updatedCart = await cartWithItems(item.cart_id);
+      return res.json(updatedCart);
+    } catch (err) {
+      console.error('delete cart item error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
 
 router.post(
   '/items',
