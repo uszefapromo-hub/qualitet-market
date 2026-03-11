@@ -1,0 +1,383 @@
+/**
+ * HurtDetalUszefaQUALITET – Frontend API client
+ *
+ * Thin wrapper over the backend REST API.  Provides the same conceptual
+ * operations that the frontend currently satisfies through localStorage so
+ * that pages can migrate one function at a time without a big-bang rewrite.
+ *
+ * Token storage:  localStorage key  `qm_token`
+ * User cache:     localStorage key  `qm_user`
+ *
+ * Usage (as ES module or classic <script>):
+ *   import { Auth, Products, Cart, Orders, Stores, Categories, Subscriptions, Admin } from './api.js';
+ *   // or access window.QMApi.Auth, window.QMApi.Cart, …
+ */
+
+(function (root, factory) {
+  /* UMD shim – works as ES module import and as a plain <script> tag */
+  if (typeof define === 'function' && define.amd) {
+    define([], factory);
+  } else if (typeof module === 'object' && module.exports) {
+    module.exports = factory();
+  } else {
+    root.QMApi = factory();
+  }
+}(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  // ─── Configuration ────────────────────────────────────────────────────────────
+
+  // Set window.QM_API_BASE before loading this script to point at your backend.
+  // Example: <script>window.QM_API_BASE = 'https://api.uszefaqualitet.pl/api';</script>
+  const API_BASE = (typeof window !== 'undefined' && window.QM_API_BASE)
+    || 'http://localhost:3000/api';
+
+  // Health endpoint lives one level above /api.
+  // Override via window.QM_HEALTH_URL if your deployment differs.
+  const HEALTH_URL = (typeof window !== 'undefined' && window.QM_HEALTH_URL)
+    || API_BASE.replace(/\/api\/?$/, '') + '/health';
+
+  const TOKEN_KEY = 'qm_token';
+  const USER_KEY  = 'qm_user';
+
+  // ─── Low-level helpers ────────────────────────────────────────────────────────
+
+  function getToken() {
+    try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
+  }
+
+  function setToken(token) {
+    try { localStorage.setItem(TOKEN_KEY, token); } catch { /* noop */ }
+  }
+
+  function removeToken() {
+    try {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+    } catch { /* noop */ }
+  }
+
+  function saveUser(user) {
+    try { localStorage.setItem(USER_KEY, JSON.stringify(user)); } catch { /* noop */ }
+  }
+
+  function getCachedUser() {
+    try { return JSON.parse(localStorage.getItem(USER_KEY) || 'null'); } catch { return null; }
+  }
+
+  /**
+   * Core fetch wrapper.
+   * @param {string} path     - relative path, e.g. '/users/login'
+   * @param {object} options  - fetch options override
+   * @returns {Promise<any>}  - parsed JSON body
+   * @throws  {Error}         - with `.status` and parsed `.body` attached
+   */
+  async function request(path, options = {}) {
+    const token = getToken();
+    const headers = Object.assign(
+      { 'Content-Type': 'application/json' },
+      token ? { Authorization: `Bearer ${token}` } : {},
+      options.headers || {}
+    );
+
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+    });
+
+    let body;
+    const ct = res.headers.get('content-type') || '';
+    body = ct.includes('application/json') ? await res.json() : await res.text();
+
+    if (!res.ok) {
+      const err = new Error(
+        (body && body.error) || (body && body.message) || `HTTP ${res.status}`
+      );
+      err.status = res.status;
+      err.body   = body;
+      throw err;
+    }
+    return body;
+  }
+
+  function get(path, params) {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return request(path + qs);
+  }
+
+  function post(path, data)   { return request(path, { method: 'POST',   body: JSON.stringify(data) }); }
+  function put(path, data)    { return request(path, { method: 'PUT',    body: JSON.stringify(data) }); }
+  function patch(path, data)  { return request(path, { method: 'PATCH',  body: JSON.stringify(data) }); }
+  function del(path, data)    { return request(path, { method: 'DELETE', body: data ? JSON.stringify(data) : undefined }); }
+
+  // ─── Auth / Users ─────────────────────────────────────────────────────────────
+
+  const Auth = {
+    /**
+     * Register a new account.
+     * @returns {{ token: string, user: object }}
+     */
+    register(email, password, name, role = 'buyer') {
+      return post('/users/register', { email, password, name, role }).then((data) => {
+        setToken(data.token);
+        saveUser(data.user);
+        return data;
+      });
+    },
+
+    /**
+     * Log in.
+     * @returns {{ token: string, user: object }}
+     */
+    login(email, password) {
+      return post('/users/login', { email, password }).then((data) => {
+        setToken(data.token);
+        saveUser(data.user);
+        return data;
+      });
+    },
+
+    /** Log out (clears local token & user cache). */
+    logout() {
+      removeToken();
+    },
+
+    /** Returns cached user or null. */
+    currentUser() {
+      return getCachedUser();
+    },
+
+    /** Fetch fresh profile from API. */
+    me() {
+      return get('/users/me').then((user) => { saveUser(user); return user; });
+    },
+
+    updateProfile(data) {
+      return put('/users/me', data).then((user) => { saveUser(user); return user; });
+    },
+
+    changePassword(currentPassword, newPassword) {
+      return put('/users/me/password', { currentPassword, newPassword });
+    },
+
+    isLoggedIn() {
+      return Boolean(getToken());
+    },
+  };
+
+  // ─── Stores ───────────────────────────────────────────────────────────────────
+
+  const Stores = {
+    list(params)          { return get('/stores', params); },
+    get(id)               { return get(`/stores/${id}`); },
+    create(data)          { return post('/stores', data); },
+    update(id, data)      { return put(`/stores/${id}`, data); },
+    remove(id)            { return del(`/stores/${id}`); },
+  };
+
+  // ─── Products (central catalogue) ────────────────────────────────────────────
+
+  const Products = {
+    /**
+     * List products.
+     * @param {{ store_id?, category?, search?, page?, limit? }} params
+     */
+    list(params)          { return get('/products', params); },
+    get(id)               { return get(`/products/${id}`); },
+    create(data)          { return post('/products', data); },
+    update(id, data)      { return put(`/products/${id}`, data); },
+    remove(id)            { return del(`/products/${id}`); },
+  };
+
+  // ─── Shop products (seller's store ← central catalogue) ──────────────────────
+
+  const ShopProducts = {
+    /**
+     * Get products listed in a store.
+     * @param {string} storeId
+     * @param {{ page?, limit? }} params
+     */
+    list(storeId, params) { return get('/shop-products', { store_id: storeId, ...params }); },
+    add(data)             { return post('/shop-products', data); },
+    update(id, data)      { return put(`/shop-products/${id}`, data); },
+    remove(id)            { return del(`/shop-products/${id}`); },
+  };
+
+  // ─── Categories ───────────────────────────────────────────────────────────────
+
+  const Categories = {
+    list()                { return get('/categories'); },
+    get(id)               { return get(`/categories/${id}`); },
+    create(data)          { return post('/categories', data); },
+    update(id, data)      { return put(`/categories/${id}`, data); },
+    remove(id)            { return del(`/categories/${id}`); },
+  };
+
+  // ─── Cart ─────────────────────────────────────────────────────────────────────
+
+  const Cart = {
+    /**
+     * Fetch active cart for a given store.
+     * @param {string} storeId
+     */
+    get(storeId)               { return get('/cart', { store_id: storeId }); },
+
+    /**
+     * Add an item (or increase qty) to the cart.
+     * @param {string} storeId
+     * @param {string} productId
+     * @param {number} quantity
+     */
+    addItem(storeId, productId, quantity = 1) {
+      return post('/cart/items', { store_id: storeId, product_id: productId, quantity });
+    },
+
+    /**
+     * Set a specific quantity (0 removes the item).
+     */
+    setItem(storeId, productId, quantity) {
+      return put(`/cart/items/${productId}`, { store_id: storeId, quantity });
+    },
+
+    removeItem(storeId, productId) {
+      return del(`/cart/items/${productId}`, { store_id: storeId });
+    },
+
+    clear(storeId) {
+      return del('/cart', { store_id: storeId });
+    },
+  };
+
+  // ─── Orders ───────────────────────────────────────────────────────────────────
+
+  const Orders = {
+    /**
+     * List orders (own orders for buyers/sellers, all for admins).
+     * @param {{ page?, limit? }} params
+     */
+    list(params)               { return get('/orders', params); },
+    get(id)                    { return get(`/orders/${id}`); },
+
+    /**
+     * Place a new order.
+     * @param {{ store_id, items: [{product_id, quantity}], shipping_address, notes? }} data
+     */
+    create(data)               { return post('/orders', data); },
+
+    /**
+     * Update order status (store owner / admin).
+     * @param {string} id
+     * @param {'pending'|'confirmed'|'shipped'|'delivered'|'cancelled'} status
+     */
+    updateStatus(id, status)   { return patch(`/orders/${id}/status`, { status }); },
+  };
+
+  // ─── Payments ─────────────────────────────────────────────────────────────────
+
+  const Payments = {
+    list(params)               { return get('/payments', params); },
+    get(id)                    { return get(`/payments/${id}`); },
+
+    /**
+     * Record a new payment intent.
+     * @param {{ order_id, amount, method: 'transfer'|'card'|'blik'|'p24', external_ref? }} data
+     */
+    create(data)               { return post('/payments', data); },
+
+    /** Update payment status (admin only). */
+    updateStatus(id, status, externalRef) {
+      return put(`/payments/${id}/status`, { status, external_ref: externalRef });
+    },
+  };
+
+  // ─── Subscriptions ────────────────────────────────────────────────────────────
+
+  const Subscriptions = {
+    list()                     { return get('/subscriptions'); },
+    active()                   { return get('/subscriptions/active'); },
+
+    /**
+     * Purchase / upgrade a plan.
+     * @param {'trial'|'basic'|'pro'|'elite'} plan
+     * @param {{ payment_reference?, duration_days? }} opts
+     */
+    create(plan, opts = {})    { return post('/subscriptions', { plan, ...opts }); },
+    cancel(id)                 { return del(`/subscriptions/${id}`); },
+  };
+
+  // ─── Suppliers ────────────────────────────────────────────────────────────────
+
+  const Suppliers = {
+    list()                     { return get('/suppliers'); },
+    get(id)                    { return get(`/suppliers/${id}`); },
+    create(data)               { return post('/suppliers', data); },
+    update(id, data)           { return put(`/suppliers/${id}`, data); },
+
+    /**
+     * Import products from a CSV/XML file.
+     * @param {string} supplierId
+     * @param {string} storeId
+     * @param {File}   file  – browser File object
+     */
+    importFile(supplierId, storeId, file) {
+      const token = getToken();
+      const form  = new FormData();
+      form.append('store_id', storeId);
+      form.append('file', file);
+      return fetch(`${API_BASE}/suppliers/${supplierId}/import`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      }).then(async (res) => {
+        const body = await res.json();
+        if (!res.ok) {
+          const err = new Error(body.error || `HTTP ${res.status}`);
+          err.status = res.status;
+          err.body   = body;
+          throw err;
+        }
+        return body;
+      });
+    },
+
+    /** Sync products from supplier's API endpoint. */
+    sync(supplierId, storeId) {
+      return post(`/suppliers/${supplierId}/sync`, { store_id: storeId });
+    },
+  };
+
+  // ─── Admin ────────────────────────────────────────────────────────────────────
+
+  const Admin = {
+    stats()                    { return get('/admin/stats'); },
+    users(params)              { return get('/admin/users', params); },
+    orders(params)             { return get('/admin/orders', params); },
+    stores(params)             { return get('/admin/stores', params); },
+    auditLogs(params)          { return get('/admin/audit-logs', params); },
+  };
+
+  // ─── Health ───────────────────────────────────────────────────────────────────
+
+  function health() {
+    return fetch(HEALTH_URL).then((r) => r.json());
+  }
+
+  // ─── Public API surface ───────────────────────────────────────────────────────
+
+  return {
+    Auth,
+    Stores,
+    Products,
+    ShopProducts,
+    Categories,
+    Cart,
+    Orders,
+    Payments,
+    Subscriptions,
+    Suppliers,
+    Admin,
+    health,
+    /** Expose for advanced use cases. */
+    _request: request,
+  };
+}));
