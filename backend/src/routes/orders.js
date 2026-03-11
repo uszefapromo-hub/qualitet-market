@@ -133,7 +133,7 @@ router.post(
           `INSERT INTO orders
              (id, store_id, store_owner_id, buyer_id, status, subtotal, platform_fee, total,
               shipping_address, notes, created_at)
-           VALUES ($1,$2,$3,$4,'pending',$5,$6,$7,$8,$9,NOW())`,
+           VALUES ($1,$2,$3,$4,'created',$5,$6,$7,$8,$9,NOW())`,
           [orderId, store_id, store.owner_id, req.user.id, subtotal.toFixed(2), platformFee, total, shipping_address, notes]
         );
 
@@ -171,7 +171,7 @@ router.patch(
   authenticate,
   [
     param('id').isUUID(),
-    body('status').isIn(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']),
+    body('status').isIn(['created', 'pending', 'paid', 'processing', 'confirmed', 'shipped', 'delivered', 'cancelled']),
   ],
   validate,
   async (req, res) => {
