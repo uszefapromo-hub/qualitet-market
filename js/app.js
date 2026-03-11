@@ -3068,6 +3068,25 @@
     }
   }
 
+  function initBillingToggle(){
+    const buttons = document.querySelectorAll('[data-billing]');
+    if(!buttons.length) return;
+    const announcer = document.getElementById('billing-announcer');
+    buttons.forEach(function(btn){
+      btn.addEventListener('click', function(){
+        buttons.forEach(function(b){ b.classList.remove('is-active'); });
+        btn.classList.add('is-active');
+        const isYearly = btn.dataset.billing === 'yearly';
+        document.body.classList.toggle('billing-yearly', isYearly);
+        if(announcer){
+          announcer.textContent = isYearly
+            ? 'Ceny roczne aktywne – oszczędzasz 20%'
+            : 'Ceny miesięczne aktywne';
+        }
+      });
+    });
+  }
+
   function initPricingSelector(){
     const buttons = document.querySelectorAll('[data-plan-checkout]');
     if(buttons.length){
@@ -4220,6 +4239,7 @@
     initSurveyModal();
     initPlanCheckoutReturn();
     initPricingSelector();
+    initBillingToggle();
     applyPlanRecommendation();
     initPlanGates();
     initStoreGenerator();
