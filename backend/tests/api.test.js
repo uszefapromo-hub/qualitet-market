@@ -714,7 +714,8 @@ describe('POST /api/cart/items', () => {
   });
 
   it('returns 404 when product not in store', async () => {
-    db.query.mockResolvedValueOnce({ rows: [] }); // product not found
+    db.query.mockResolvedValueOnce({ rows: [] }); // direct product not found
+    db.query.mockResolvedValueOnce({ rows: [] }); // shop_products fallback also empty
 
     const res = await request(app)
       .post('/api/cart/items')
