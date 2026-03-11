@@ -100,7 +100,8 @@
     referrals: 'qm_referrals',
     adminLogs: 'qm_admin_logs',
     supplierApps: 'qm_supplier_applications',
-    salesLinks: 'qm_sales_links'
+    salesLinks: 'qm_sales_links',
+    tasks: 'qm_tasks'
   };
   const SALES_LINK_TOKEN_SESSION_KEY = 'qm_sales_link_token';
   const PRICING_STORAGE_KEYS = {
@@ -5909,6 +5910,259 @@
     });
   }
 
+  function initTasksModule(){
+    if(document.body.dataset.page !== 'tasks'){
+      return;
+    }
+
+    const seedTasks = [
+      {id:'task_001',title:'Zaktualizować opisy produktów w kategorii Elektronika',priority:'high',assignee:'Anna K.',dueLabel:'jutro',status:'open',createdAt:'2026-03-10T10:00:00Z',closedAt:null},
+      {id:'task_002',title:'Przesłać zdjęcia nowej kolekcji zimowej',priority:'med',assignee:'Marek N.',dueLabel:'3 dni',status:'open',createdAt:'2026-03-10T10:30:00Z',closedAt:null},
+      {id:'task_003',title:'Skonfigurować kampanię Black Friday',priority:'high',assignee:'Tomasz Z.',dueLabel:'5 dni',status:'open',createdAt:'2026-03-10T11:00:00Z',closedAt:null},
+      {id:'task_004',title:'Integracja nowej hurtowni FashionLane',priority:'high',assignee:'Katarzyna W.',dueLabel:'dziś',status:'in_progress',createdAt:'2026-03-09T09:00:00Z',closedAt:null},
+      {id:'task_005',title:'Aktualizacja cennika sezonowego Q4',priority:'med',assignee:'Piotr L.',dueLabel:'2 dni',status:'in_progress',createdAt:'2026-03-09T10:00:00Z',closedAt:null},
+      {id:'task_006',title:'Przegląd i optymalizacja marż w sklepie',priority:'low',assignee:'Anna K.',dueLabel:'tydzień',status:'in_progress',createdAt:'2026-03-09T11:00:00Z',closedAt:null},
+      {id:'task_007',title:'Wdrożenie modułu CRM dla partnerów',priority:'high',assignee:'Agata K.',dueLabel:null,status:'done',createdAt:'2026-03-05T09:00:00Z',closedAt:null},
+      {id:'task_008',title:'Konfiguracja automatu powiadomień',priority:'med',assignee:'Marek N.',dueLabel:null,status:'done',createdAt:'2026-03-05T10:00:00Z',closedAt:null},
+      {id:'task_009',title:'Analiza sprzedaży Q3 — raport miesięczny',priority:'med',assignee:'Tomasz Z.',dueLabel:null,status:'done',createdAt:'2026-03-06T09:00:00Z',closedAt:null}
+    ];
+
+    let tasks = getStoredList(OWNER_STORAGE_KEYS.tasks);
+    if(!tasks || !tasks.length){
+      tasks = seedTasks.map(t => Object.assign({}, t));
+      saveStoredList(OWNER_STORAGE_KEYS.tasks, tasks);
+    }
+
+    const board = document.querySelector('[data-tasks-board]');
+    if(!board){
+      return;
+    }
+
+    function getPriorityClass(priority){
+      if(priority === 'high') return 'task-priority-high';
+      if(priority === 'med') return 'task-priority-med';
+      return 'task-priority-low';
+    }
+
+    function getPriorityLabel(priority){
+      if(priority === 'high') return '↑ Wysoki';
+      if(priority === 'med') return '→ Średni';
+      return '↓ Niski';
+    }
+
+    function getStatusBadge(status){
+      if(status === 'open') return '<span class="status-open">OPEN</span>';
+      if(status === 'in_progress') return '<span class="status-in-progress">IN PROGRESS</span>';
+      if(status === 'done') return '<span class="status-done">✓ DONE</span>';
+      if(status === 'closed') return '<span class="status-draft">✕ Zamknięte</span>';
+      return '';
+    }
+
+    function getActionButton(task){
+      if(task.status === 'open'){
+        return `<button class="btn-task btn-task-start" data-task-action="start" data-task-id="${escapeHtml(task.id)}">Rozpocznij</button>`;
+      }
+      if(task.status === 'in_progress'){
+        return `<button class="btn-task btn-task-complete" data-task-action="complete" data-task-id="${escapeHtml(task.id)}">Ukończ</button>`;
+      }
+      if(task.status === 'done'){
+        return `<button class="btn-task btn-task-close" data-task-action="close" data-task-id="${escapeHtml(task.id)}">Zamknij zadanie</button>`;
+      }
+      return '';
+    }
+
+    function renderTaskCard(task){
+      const priorityCls = getPriorityClass(task.priority);
+      const priorityLabel = getPriorityLabel(task.priority);
+      const statusBadge = getStatusBadge(task.status);
+      const actionBtn = getActionButton(task);
+      const dueHtml = task.dueLabel ? `<span>${escapeHtml(task.dueLabel)}</span>` : '';
+      const closedClass = task.status === 'closed' ? ' is-closed' : '';
+      return `
+        <div class="task-item${closedClass}" data-task-id="${escapeHtml(task.id)}">
+          <div class="task-header">
+            ${statusBadge}
+            <span class="${priorityCls}">${priorityLabel}</span>
+          </div>
+          <p class="task-title">${escapeHtml(task.title)}</p>
+          <div class="task-meta">
+            <span>${escapeHtml(task.assignee)}</span>
+            ${dueHtml}
+          </div>
+          ${actionBtn ? `<div class="task-action-row">${actionBtn}</div>` : ''}
+        </div>`;
+    }
+
+    function updateTaskStats(){
+      const nonClosed = tasks.filter(t => t.status !== 'closed');
+      const doneTasks = tasks.filter(t => t.status === 'done');
+      const inProgressTasks = tasks.filter(t => t.status === 'in_progress');
+      const today = new Date().toISOString().slice(0, 10);
+      const closedToday = tasks.filter(t => t.status === 'closed' && t.closedAt && t.closedAt.startsWith(today)).length;
+      const totalEl = document.querySelector('[data-tasks-total]');
+      const doneEl = document.querySelector('[data-tasks-done-today]');
+      const inProgressEl = document.querySelector('[data-tasks-in-progress]');
+      if(totalEl) totalEl.textContent = nonClosed.length;
+      if(doneEl) doneEl.textContent = doneTasks.length + closedToday;
+      if(inProgressEl) inProgressEl.textContent = inProgressTasks.length;
+    }
+
+    function renderBoard(){
+      const open = tasks.filter(t => t.status === 'open');
+      const inProgress = tasks.filter(t => t.status === 'in_progress');
+      const done = tasks.filter(t => t.status === 'done');
+      const openCol = `
+        <div class="task-column" data-column="open">
+          <div class="task-column-head">
+            <h3>Do zrobienia</h3>
+            <span class="status-open status-col-badge">OPEN</span>
+            <span class="task-count">${open.length}</span>
+            <button class="task-add-btn" data-task-add="open" aria-label="Dodaj zadanie" title="Dodaj zadanie">+</button>
+          </div>
+          ${open.map(renderTaskCard).join('')}
+        </div>`;
+      const inProgressCol = `
+        <div class="task-column" data-column="in_progress">
+          <div class="task-column-head">
+            <h3>W realizacji</h3>
+            <span class="status-in-progress status-col-badge">IN PROGRESS</span>
+            <span class="task-count">${inProgress.length}</span>
+            <button class="task-add-btn" data-task-add="in_progress" aria-label="Dodaj zadanie" title="Dodaj zadanie">+</button>
+          </div>
+          ${inProgress.map(renderTaskCard).join('')}
+        </div>`;
+      const doneCol = `
+        <div class="task-column" data-column="done">
+          <div class="task-column-head">
+            <h3>Ukończone</h3>
+            <span class="status-done status-col-badge">DONE</span>
+            <span class="task-count">${done.length}</span>
+          </div>
+          ${done.map(renderTaskCard).join('')}
+        </div>`;
+      board.innerHTML = openCol + inProgressCol + doneCol;
+      updateTaskStats();
+    }
+
+    function showTaskFeedback(title, detail){
+      let el = document.querySelector('[data-task-feedback]');
+      if(!el){
+        el = document.createElement('div');
+        el.className = 'task-feedback';
+        el.setAttribute('data-task-feedback', '');
+        const strong = document.createElement('strong');
+        const span = document.createElement('span');
+        el.append(strong, span);
+        document.body.appendChild(el);
+      }
+      const strong = el.querySelector('strong');
+      const span = el.querySelector('span');
+      if(strong) strong.textContent = title;
+      if(span) span.textContent = detail || '';
+      el.classList.remove('is-visible');
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => el.classList.add('is-visible'));
+      });
+      clearTimeout(el._hideTimer);
+      el._hideTimer = setTimeout(() => {
+        el.classList.remove('is-visible');
+      }, 2800);
+    }
+
+    function handleTaskAction(action, taskId){
+      const idx = tasks.findIndex(t => t.id === taskId);
+      if(idx === -1) return;
+      if(action === 'start'){
+        tasks[idx].status = 'in_progress';
+        showTaskFeedback('Zadanie uruchomione', 'Status: IN PROGRESS');
+      } else if(action === 'complete'){
+        tasks[idx].status = 'done';
+        showTaskFeedback('Zadanie ukończone', 'Status: DONE');
+      } else if(action === 'close'){
+        tasks[idx].status = 'closed';
+        tasks[idx].closedAt = new Date().toISOString();
+        showTaskFeedback('✓ Zadanie zamknięte', 'Issue closed');
+      }
+      saveStoredList(OWNER_STORAGE_KEYS.tasks, tasks);
+      renderBoard();
+    }
+
+    function openNewTaskModal(defaultStatus){
+      const modal = document.querySelector('[data-task-modal]');
+      if(!modal) return;
+      const statusInput = modal.querySelector('[name="status"]');
+      if(statusInput) statusInput.value = defaultStatus || 'open';
+      modal.hidden = false;
+      document.body.classList.add('modal-open');
+      const titleInput = modal.querySelector('[name="title"]');
+      if(titleInput) titleInput.focus();
+    }
+
+    function closeTaskModal(){
+      const modal = document.querySelector('[data-task-modal]');
+      if(modal) modal.hidden = true;
+      document.body.classList.remove('modal-open');
+    }
+
+    function initTaskModal(){
+      const modal = document.querySelector('[data-task-modal]');
+      if(!modal) return;
+      const form = modal.querySelector('[data-task-form]');
+      const closeBtns = modal.querySelectorAll('[data-task-modal-close]');
+      closeBtns.forEach(btn => btn.addEventListener('click', closeTaskModal));
+      modal.addEventListener('click', e => {
+        if(e.target === modal) closeTaskModal();
+      });
+      document.addEventListener('keydown', e => {
+        if(e.key === 'Escape' && !modal.hidden) closeTaskModal();
+      });
+      if(form){
+        form.addEventListener('submit', e => {
+          e.preventDefault();
+          const data = new FormData(form);
+          const title = (data.get('title') || '').trim();
+          if(!title) return;
+          const newTask = {
+            id: `task_${Date.now()}`,
+            title,
+            priority: data.get('priority') || 'med',
+            assignee: (data.get('assignee') || '').trim() || 'Nieprzypisane',
+            dueLabel: (data.get('dueLabel') || '').trim() || null,
+            status: data.get('status') || 'open',
+            createdAt: new Date().toISOString(),
+            closedAt: null
+          };
+          tasks.unshift(newTask);
+          saveStoredList(OWNER_STORAGE_KEYS.tasks, tasks);
+          form.reset();
+          closeTaskModal();
+          renderBoard();
+          showTaskFeedback('Nowe zadanie dodane', 'Status: OPEN');
+        });
+      }
+    }
+
+    board.addEventListener('click', e => {
+      const actionBtn = e.target.closest('[data-task-action]');
+      if(actionBtn){
+        const action = actionBtn.dataset.taskAction;
+        const taskId = actionBtn.dataset.taskId;
+        if(action && taskId) handleTaskAction(action, taskId);
+        return;
+      }
+      const addBtn = e.target.closest('[data-task-add]');
+      if(addBtn) openNewTaskModal(addBtn.dataset.taskAdd);
+    });
+
+    const newTaskBtn = document.querySelector('[data-task-new-btn]');
+    if(newTaskBtn){
+      newTaskBtn.addEventListener('click', () => openNewTaskModal('open'));
+    }
+
+    initTaskModal();
+    renderBoard();
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     initServiceWorker();
     initInstallBanner();
@@ -5944,6 +6198,7 @@
     initSmsOwnerLogin();
     initSupplierApplicationForm();
     initMotionPolish();
+    initTasksModule();
   });
 
   window.addEventListener('pagehide', () => {
