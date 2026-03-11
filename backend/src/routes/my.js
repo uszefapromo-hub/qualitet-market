@@ -4,6 +4,7 @@
  * "My" routes – user-facing endpoints for the currently authenticated user.
  *
  * GET    /api/my/orders                – buyer's order history
+ * GET    /api/my/store                 – seller's primary store
  * GET    /api/my/store/products        – list my store's shop products
  * POST   /api/my/store/products        – add a product to my store
  * PATCH  /api/my/store/products/:id   – update a shop product in my store
@@ -48,6 +49,29 @@ router.get('/orders', authenticate, async (req, res) => {
     return res.status(500).json({ error: 'Błąd serwera' });
   }
 });
+
+// ─── GET /api/my/store – seller's primary store ───────────────────────────────
+
+router.get(
+  '/store',
+  authenticate,
+  requireRole('seller', 'owner', 'admin'),
+  async (req, res) => {
+    try {
+      const result = await db.query(
+        'SELECT * FROM stores WHERE owner_id = $1 ORDER BY created_at ASC LIMIT 1',
+        [req.user.id]
+      );
+      if (!result.rows[0]) {
+        return res.status(404).json({ error: 'Nie masz jeszcze sklepu' });
+      }
+      return res.json(result.rows[0]);
+    } catch (err) {
+      console.error('my store error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
 
 // ─── GET /api/my/store/products – list my store's shop products ────────────────
 

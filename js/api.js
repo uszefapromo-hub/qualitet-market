@@ -180,10 +180,14 @@
   const Products = {
     /**
      * List products.
-     * @param {{ store_id?, category?, search?, page?, limit? }} params
+     * @param {{ store_id?, category?, search?, is_central?, status?, page?, limit? }} params
      */
     list(params)          { return get('/products', params); },
     get(id)               { return get(`/products/${id}`); },
+    /**
+     * Create a product.
+     * Omit store_id (or pass is_central: true) to create a platform central-catalog product.
+     */
     create(data)          { return post('/products', data); },
     update(id, data)      { return put(`/products/${id}`, data); },
     remove(id)            { return del(`/products/${id}`); },
@@ -351,9 +355,39 @@
   const Admin = {
     stats()                    { return get('/admin/stats'); },
     users(params)              { return get('/admin/users', params); },
+    /** Update user role / plan / name. */
+    updateUser(id, data)       { return patch(`/admin/users/${id}`, data); },
+    /** Delete a user (admin/owner only). */
+    deleteUser(id)             { return del(`/admin/users/${id}`); },
     orders(params)             { return get('/admin/orders', params); },
     stores(params)             { return get('/admin/stores', params); },
+    /** Change store status: 'active' | 'inactive' | 'suspended' | 'pending'. */
+    updateStoreStatus(id, status) { return patch(`/admin/stores/${id}/status`, { status }); },
+    products(params)           { return get('/admin/products', params); },
+    /** Change product status: 'draft' | 'pending' | 'active' | 'archived'. */
+    updateProductStatus(id, status) { return patch(`/admin/products/${id}/status`, { status }); },
     auditLogs(params)          { return get('/admin/audit-logs', params); },
+  };
+
+  // ─── My Store (seller convenience) ──────────────────────────────────────────
+
+  const MyStore = {
+    /** Get the seller's primary store. */
+    get()                      { return get('/my/store'); },
+    /** Get the seller's order history (as buyer). */
+    orders(params)             { return get('/my/orders', params); },
+    /**
+     * List shop products for a seller's store.
+     * @param {string} storeId – required; a seller may own multiple stores
+     * @param {{ page?, limit? }} params
+     */
+    products(storeId, params)  { return get('/my/store/products', { store_id: storeId, ...params }); },
+    /** Add a product to seller's store. */
+    addProduct(data)           { return post('/my/store/products', data); },
+    /** Update a shop product in seller's store. */
+    updateProduct(id, data)    { return patch(`/my/store/products/${id}`, data); },
+    /** Remove a product from seller's store. */
+    removeProduct(id)          { return del(`/my/store/products/${id}`); },
   };
 
   // ─── Health ───────────────────────────────────────────────────────────────────
@@ -376,6 +410,7 @@
     Subscriptions,
     Suppliers,
     Admin,
+    MyStore,
     health,
     /** Expose for advanced use cases. */
     _request: request,
