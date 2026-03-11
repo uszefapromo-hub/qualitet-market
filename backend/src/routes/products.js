@@ -11,13 +11,17 @@ const { validate } = require('../middleware/validate');
 const router = express.Router();
 
 // ─── List products ─────────────────────────────────────────────────────────────
-// Public endpoint – anyone can browse products for a given store.
+// Public endpoint – browse products.
+// ?store_id   → products for a specific store (legacy store-scoped products)
+// ?central=1  → central catalogue products only (is_central = true)
+// If neither is provided, returns all products.
 
 router.get('/', async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page || '1', 10));
   const limit = Math.min(100, parseInt(req.query.limit || '20', 10));
   const offset = (page - 1) * limit;
   const storeId = req.query.store_id || null;
+  const central = req.query.central === '1' || req.query.central === 'true';
   const category = req.query.category || null;
   const search = req.query.search || null;
 
@@ -27,6 +31,7 @@ router.get('/', async (req, res) => {
     let idx = 1;
 
     if (storeId) { conditions.push(`store_id = $${idx++}`); params.push(storeId); }
+    if (central) { conditions.push(`is_central = true`); }
     if (category) { conditions.push(`category = $${idx++}`); params.push(category); }
     if (search) {
       conditions.push(`(name ILIKE $${idx} OR description ILIKE $${idx})`);
@@ -65,13 +70,15 @@ router.get('/:id', async (req, res) => {
 });
 
 // ─── Create product ────────────────────────────────────────────────────────────
+// admin/owner → can omit store_id to create a central-catalogue product (is_central = true)
+// seller      → must supply store_id (store-scoped product, legacy model)
 
 router.post(
   '/',
   authenticate,
   requireRole('seller', 'owner', 'admin'),
   [
-    body('store_id').isUUID(),
+    body('store_id').optional().isUUID(),
     body('name').trim().notEmpty(),
     body('sku').optional().trim(),
     body('price_net').isFloat({ min: 0 }),
@@ -85,7 +92,7 @@ router.post(
   validate,
   async (req, res) => {
     const {
-      store_id,
+      store_id = null,
       name,
       sku = null,
       price_net,
@@ -97,19 +104,34 @@ router.post(
       supplier_id = null,
     } = req.body;
 
-    try {
-      // Verify store ownership
-      const storeResult = await db.query('SELECT owner_id, margin FROM stores WHERE id = $1', [store_id]);
-      const store = storeResult.rows[0];
-      if (!store) return res.status(404).json({ error: 'Sklep nie znaleziony' });
+    const isAdmin = ['owner', 'admin'].includes(req.user.role);
 
-      const isAdmin = ['owner', 'admin'].includes(req.user.role);
-      if (!isAdmin && store.owner_id !== req.user.id) {
-        return res.status(403).json({ error: 'Brak uprawnień do tego sklepu' });
+    // Sellers must always supply a store_id
+    if (!isAdmin && !store_id) {
+      return res.status(422).json({ error: 'Sprzedawcy muszą podać store_id' });
+    }
+
+    try {
+      let margin = parseFloat(process.env.PLATFORM_MARGIN_DEFAULT || '15');
+      let resolvedStoreId = store_id;
+      let isCentral = false;
+
+      if (store_id) {
+        // Verify store ownership
+        const storeResult = await db.query('SELECT owner_id, margin FROM stores WHERE id = $1', [store_id]);
+        const store = storeResult.rows[0];
+        if (!store) return res.status(404).json({ error: 'Sklep nie znaleziony' });
+
+        if (!isAdmin && store.owner_id !== req.user.id) {
+          return res.status(403).json({ error: 'Brak uprawnień do tego sklepu' });
+        }
+        margin = store.margin || margin;
+      } else {
+        // admin/owner creating a central catalogue product
+        resolvedStoreId = null;
+        isCentral = true;
       }
 
-      // Apply store margin to compute selling price
-      const margin = store.margin || parseFloat(process.env.PLATFORM_MARGIN_DEFAULT || '15');
       const price_gross = parseFloat(price_net) * (1 + parseFloat(tax_rate) / 100);
       const selling_price = price_gross * (1 + margin / 100);
 
@@ -117,12 +139,12 @@ router.post(
       const result = await db.query(
         `INSERT INTO products
            (id, store_id, supplier_id, name, sku, price_net, tax_rate, price_gross, selling_price, margin,
-            category, description, stock, image_url, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())
+            category, description, stock, image_url, is_central, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW())
          RETURNING *`,
-        [id, store_id, supplier_id, name, sku, price_net, tax_rate,
+        [id, resolvedStoreId, supplier_id, name, sku, price_net, tax_rate,
          price_gross.toFixed(2), selling_price.toFixed(2), margin,
-         category, description, stock, image_url]
+         category, description, stock, image_url, isCentral]
       );
       return res.status(201).json(result.rows[0]);
     } catch (err) {

@@ -120,6 +120,8 @@ router.put(
 );
 
 // ─── Import products from supplier (CSV or XML file upload) ───────────────────
+// Optional store_id: if omitted and user is admin/owner, products are imported
+// into the central catalogue (is_central = true).
 
 router.post(
   '/:id/import',
@@ -128,9 +130,10 @@ router.post(
   upload.single('file'),
   async (req, res) => {
     const supplierId = req.params.id;
-    const { store_id } = req.body;
+    const { store_id = null } = req.body;
+    const isAdmin = ['owner', 'admin'].includes(req.user.role);
 
-    if (!store_id) {
+    if (!store_id && !isAdmin) {
       return res.status(422).json({ error: 'Wymagany parametr: store_id' });
     }
 
@@ -139,13 +142,18 @@ router.post(
       const supplier = supplierResult.rows[0];
       if (!supplier) return res.status(404).json({ error: 'Hurtownia nie znaleziona' });
 
-      const storeResult = await db.query('SELECT owner_id, margin FROM stores WHERE id = $1', [store_id]);
-      const store = storeResult.rows[0];
-      if (!store) return res.status(404).json({ error: 'Sklep nie znaleziony' });
+      let store = null;
+      let storeMargin = parseFloat(process.env.PLATFORM_MARGIN_DEFAULT || '15');
 
-      const isAdmin = ['owner', 'admin'].includes(req.user.role);
-      if (!isAdmin && store.owner_id !== req.user.id) {
-        return res.status(403).json({ error: 'Brak uprawnień do tego sklepu' });
+      if (store_id) {
+        const storeResult = await db.query('SELECT owner_id, margin FROM stores WHERE id = $1', [store_id]);
+        store = storeResult.rows[0];
+        if (!store) return res.status(404).json({ error: 'Sklep nie znaleziony' });
+
+        if (!isAdmin && store.owner_id !== req.user.id) {
+          return res.status(403).json({ error: 'Brak uprawnień do tego sklepu' });
+        }
+        storeMargin = parseFloat(store.margin || storeMargin);
       }
 
       let rawProducts = [];
@@ -166,7 +174,6 @@ router.post(
         return res.status(422).json({ error: 'Brak pliku lub URL API dostawcy' });
       }
 
-      const storeMargin = parseFloat(store.margin || process.env.PLATFORM_MARGIN_DEFAULT || '15');
       const imported = await upsertProducts(rawProducts, store_id, supplierId, storeMargin);
 
       return res.json({ message: `Zaimportowano ${imported} produktów`, count: imported });
@@ -178,6 +185,7 @@ router.post(
 );
 
 // ─── Sync products from supplier API ──────────────────────────────────────────
+// Optional store_id: admin/owner can sync directly into the central catalogue.
 
 router.post(
   '/:id/sync',
@@ -185,9 +193,10 @@ router.post(
   requireRole('seller', 'owner', 'admin'),
   async (req, res) => {
     const supplierId = req.params.id;
-    const { store_id } = req.body;
+    const { store_id = null } = req.body;
+    const isAdmin = ['owner', 'admin'].includes(req.user.role);
 
-    if (!store_id) {
+    if (!store_id && !isAdmin) {
       return res.status(422).json({ error: 'Wymagany parametr: store_id' });
     }
 
@@ -197,17 +206,20 @@ router.post(
       if (!supplier) return res.status(404).json({ error: 'Hurtownia nie znaleziona' });
       if (!supplier.api_url) return res.status(422).json({ error: 'Hurtownia nie ma skonfigurowanego URL API' });
 
-      const storeResult = await db.query('SELECT owner_id, margin FROM stores WHERE id = $1', [store_id]);
-      const store = storeResult.rows[0];
-      if (!store) return res.status(404).json({ error: 'Sklep nie znaleziony' });
+      let storeMargin = parseFloat(process.env.PLATFORM_MARGIN_DEFAULT || '15');
 
-      const isAdmin = ['owner', 'admin'].includes(req.user.role);
-      if (!isAdmin && store.owner_id !== req.user.id) {
-        return res.status(403).json({ error: 'Brak uprawnień do tego sklepu' });
+      if (store_id) {
+        const storeResult = await db.query('SELECT owner_id, margin FROM stores WHERE id = $1', [store_id]);
+        const store = storeResult.rows[0];
+        if (!store) return res.status(404).json({ error: 'Sklep nie znaleziony' });
+
+        if (!isAdmin && store.owner_id !== req.user.id) {
+          return res.status(403).json({ error: 'Brak uprawnień do tego sklepu' });
+        }
+        storeMargin = parseFloat(store.margin || storeMargin);
       }
 
       const rawProducts = await fetchApiProducts(supplier);
-      const storeMargin = parseFloat(store.margin || process.env.PLATFORM_MARGIN_DEFAULT || '15');
       const count = await upsertProducts(rawProducts, store_id, supplierId, storeMargin);
 
       // Update last sync timestamp
@@ -303,18 +315,38 @@ async function fetchApiProducts(supplier) {
 
 async function upsertProducts(rawProducts, storeId, supplierId, storeMargin) {
   let count = 0;
+  const isCentral = !storeId;
+
   for (const raw of rawProducts) {
     if (!raw.name) continue;
     const priceGross = raw.price_net * (1 + raw.tax_rate / 100);
     const sellingPrice = priceGross * (1 + storeMargin / 100);
 
-    // Upsert by SKU + store_id when SKU available, otherwise insert
+    // Upsert by SKU when available
     if (raw.sku) {
-      const existing = await db.query(
-        'SELECT id FROM products WHERE store_id = $1 AND sku = $2',
-        [storeId, raw.sku]
-      );
+      // Build a single parameterised lookup/update regardless of central vs. store-scoped
+      const lookupParams = isCentral ? [raw.sku] : [storeId, raw.sku];
+      const lookupSql = isCentral
+        ? 'SELECT id FROM products WHERE is_central = true AND sku = $1'
+        : 'SELECT id FROM products WHERE store_id = $1 AND sku = $2';
+
+      const existing = await db.query(lookupSql, lookupParams);
       if (existing.rows.length > 0) {
+        // Common update fields ($1–$10), then dynamic WHERE params
+        const updateCommon = [
+          raw.name, raw.price_net, raw.tax_rate,
+          priceGross.toFixed(2), sellingPrice.toFixed(2),
+          storeMargin, raw.stock,
+          raw.category, raw.description, raw.image_url,
+        ];
+        const updateParams = isCentral
+          ? [...updateCommon, raw.sku]
+          : [...updateCommon, storeId, raw.sku];
+
+        const whereClause = isCentral
+          ? 'WHERE is_central = true AND sku = $11'
+          : 'WHERE store_id = $11 AND sku = $12';
+
         await db.query(
           `UPDATE products SET
              name          = $1,
@@ -328,9 +360,8 @@ async function upsertProducts(rawProducts, storeId, supplierId, storeMargin) {
              description   = COALESCE($9, description),
              image_url     = COALESCE($10, image_url),
              updated_at    = NOW()
-           WHERE store_id = $11 AND sku = $12`,
-          [raw.name, raw.price_net, raw.tax_rate, priceGross.toFixed(2), sellingPrice.toFixed(2),
-           storeMargin, raw.stock, raw.category, raw.description, raw.image_url, storeId, raw.sku]
+           ${whereClause}`,
+          updateParams
         );
         count++;
         continue;
@@ -340,11 +371,11 @@ async function upsertProducts(rawProducts, storeId, supplierId, storeMargin) {
     await db.query(
       `INSERT INTO products
          (id, store_id, supplier_id, name, sku, price_net, tax_rate, price_gross, selling_price,
-          margin, stock, category, description, image_url, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW())`,
+          margin, stock, category, description, image_url, is_central, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW())`,
       [uuidv4(), storeId, supplierId, raw.name, raw.sku || null,
        raw.price_net, raw.tax_rate, priceGross.toFixed(2), sellingPrice.toFixed(2),
-       storeMargin, raw.stock, raw.category, raw.description, raw.image_url]
+       storeMargin, raw.stock, raw.category, raw.description, raw.image_url, isCentral]
     );
     count++;
   }

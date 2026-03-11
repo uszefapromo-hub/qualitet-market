@@ -86,12 +86,34 @@ router.post(
     const { store_id, product_id, quantity } = req.body;
 
     try {
-      // Verify product exists and belongs to the store
-      const productResult = await db.query(
+      // Resolve product: first try store-scoped, then central catalogue via shop_products
+      let product = null;
+      let unitPrice = null;
+
+      const directResult = await db.query(
         'SELECT id, selling_price, stock, name FROM products WHERE id = $1 AND store_id = $2',
         [product_id, store_id]
       );
-      const product = productResult.rows[0];
+
+      if (directResult.rows[0]) {
+        product = directResult.rows[0];
+        unitPrice = product.selling_price;
+      } else {
+        // Central catalogue: product must be linked to store via shop_products
+        const spResult = await db.query(
+          `SELECT p.id, p.stock, p.name, p.selling_price,
+                  COALESCE(sp.price_override, p.selling_price) AS effective_price
+           FROM shop_products sp
+           JOIN products p ON sp.product_id = p.id
+           WHERE sp.store_id = $1 AND sp.product_id = $2 AND sp.active = true`,
+          [store_id, product_id]
+        );
+        if (spResult.rows[0]) {
+          product = spResult.rows[0];
+          unitPrice = spResult.rows[0].effective_price;
+        }
+      }
+
       if (!product) {
         return res.status(404).json({ error: 'Produkt nie znaleziony w tym sklepie' });
       }
@@ -121,7 +143,7 @@ router.post(
         await db.query(
           `INSERT INTO cart_items (id, cart_id, product_id, quantity, unit_price, created_at)
            VALUES ($1, $2, $3, $4, $5, NOW())`,
-          [itemId, cart.id, product_id, quantity, product.selling_price]
+          [itemId, cart.id, product_id, quantity, unitPrice]
         );
       }
 

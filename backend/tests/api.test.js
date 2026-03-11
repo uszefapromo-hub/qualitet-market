@@ -756,7 +756,8 @@ describe('GET /api/admin/stats', () => {
     db.query
       .mockResolvedValueOnce({ rows: [{ count: '2' }] })   // users
       .mockResolvedValueOnce({ rows: [{ count: '1' }] })   // active stores
-      .mockResolvedValueOnce({ rows: [{ count: '1' }] })   // products
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })   // products (all)
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] })   // central catalogue
       .mockResolvedValueOnce({ rows: [{ count: '1' }] })   // orders
       .mockResolvedValueOnce({ rows: [{ revenue: '141.45' }] }) // revenue
       .mockResolvedValueOnce({ rows: [{ count: '1' }] });  // pending orders
@@ -765,6 +766,7 @@ describe('GET /api/admin/stats', () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('users', 2);
     expect(res.body).toHaveProperty('orders', 1);
+    expect(res.body).toHaveProperty('central_catalogue', 0);
     expect(res.body.revenue).toBeCloseTo(141.45);
   });
 });
