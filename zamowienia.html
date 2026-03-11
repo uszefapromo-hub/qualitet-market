@@ -244,7 +244,7 @@
         <!-- Tabs -->
         <div class="ord-tabs" role="tablist">
           <button class="ord-tab is-active" role="tab" aria-selected="true"  data-tab="orders">📋 Lista zamówień</button>
-          <button class="ord-tab" role="tab" aria-selected="false" data-tab="cart">🛒 Koszyk <span id="cart-badge" class="status-badge status-new" style="display:none"></span></button>
+          <button class="ord-tab" role="tab" aria-selected="false" data-tab="cart">🛒 Koszyk <span id="cart-badge" class="status-badge status-new" aria-label="Produkty w koszyku" style="display:none"></span></button>
           <button class="ord-tab" role="tab" aria-selected="false" data-tab="checkout">💳 Checkout</button>
         </div>
 
@@ -704,16 +704,19 @@
       },
     ];
 
+    const DEMO_DAYS_SPREAD = 30;
+
     function generateDemoOrders() {
       const existing = Platform.getOrders();
-      const existingNums = new Set(existing.map(o => o.orderNumber));
+      const existingCustomers = new Set(existing.map(o => o.customer && o.customer.email).filter(Boolean));
 
       DEMO_ORDERS.forEach(demo => {
+        if (existingCustomers.has(demo.customer.email)) return;
         const items = demo.items;
         const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
         const total = subtotal + demo.shipping;
         const now = new Date();
-        const daysAgo = Math.floor(Math.random() * 30);
+        const daysAgo = Math.floor(Math.random() * DEMO_DAYS_SPREAD);
         const createdAt = new Date(now - daysAgo * 86400000).toISOString();
 
         const order = {
@@ -864,9 +867,9 @@
             <div class="cart-item-price">${fmt(item.price)} / szt.</div>
           </div>
           <div class="qty-controls">
-            <button class="qty-btn" data-qty-dec data-pid="${esc(item.productId)}" aria-label="Zmniejsz ilość">−</button>
+            <button class="qty-btn" data-qty-dec data-pid="${esc(item.productId)}" aria-label="Zmniejsz ilość: ${esc(item.name)}">−</button>
             <span class="qty-val">${item.qty}</span>
-            <button class="qty-btn" data-qty-inc data-pid="${esc(item.productId)}" aria-label="Zwiększ ilość">+</button>
+            <button class="qty-btn" data-qty-inc data-pid="${esc(item.productId)}" aria-label="Zwiększ ilość: ${esc(item.name)}">+</button>
           </div>
           <div class="cart-item-total">${fmt(item.price * item.qty)}</div>
           <button class="cart-item-remove" data-remove data-pid="${esc(item.productId)}" aria-label="Usuń produkt">✕</button>
@@ -880,14 +883,12 @@
       document.querySelectorAll('[data-qty-dec]').forEach(btn => {
         btn.addEventListener('click', () => {
           const pid = btn.dataset.pid;
-          const cart = Platform.getCart();
-          const item = cart.find(i => i.productId === pid);
+          const cartItems = Platform.getCart();
+          const item = cartItems.find(i => i.productId === pid);
           if (!item) return;
-          if (item.qty <= 1) {
-            Platform.removeFromCart(pid);
-          } else {
-            const updated = cart.map(i => i.productId === pid ? { ...i, qty: i.qty - 1 } : i);
-            localStorage.setItem(Platform._keys.cart, JSON.stringify(updated));
+          Platform.removeFromCart(pid);
+          if (item.qty > 1) {
+            Platform.addToCart({ id: pid, name: item.name, price: item.price, images: item.image ? [item.image] : [] }, item.qty - 1);
           }
           renderCart();
         });
@@ -896,9 +897,10 @@
       document.querySelectorAll('[data-qty-inc]').forEach(btn => {
         btn.addEventListener('click', () => {
           const pid = btn.dataset.pid;
-          const cart = Platform.getCart();
-          const updated = cart.map(i => i.productId === pid ? { ...i, qty: i.qty + 1 } : i);
-          localStorage.setItem(Platform._keys.cart, JSON.stringify(updated));
+          const cartItems = Platform.getCart();
+          const item = cartItems.find(i => i.productId === pid);
+          if (!item) return;
+          Platform.addToCart({ id: pid, name: item.name, price: item.price, images: item.image ? [item.image] : [] }, 1);
           renderCart();
         });
       });
@@ -1024,13 +1026,15 @@
       renderOrdersTable();
     });
 
+    const STRIPE_REDIRECT_DELAY_MS = 3000;
+
     /* ─── Stripe redirect ─────────────────────────────────────────── */
 
     document.getElementById('btn-stripe-redirect').addEventListener('click', () => {
       document.getElementById('stripe-modal').classList.add('is-open');
       setTimeout(() => {
         document.getElementById('stripe-modal').classList.remove('is-open');
-      }, 3000);
+      }, STRIPE_REDIRECT_DELAY_MS);
     });
 
     /* ─── Init ────────────────────────────────────────────────────── */
