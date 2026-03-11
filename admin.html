@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SuperAdmin Panel – Qualitet</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0f172a;
+      --surface: #1e293b;
+      --border:  #334155;
+      --accent:  #6366f1;
+      --danger:  #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --text:    #f1f5f9;
+      --muted:   #94a3b8;
+      --sidebar-w: 230px;
+    }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar-brand {
+      padding: 20px 16px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-brand strong { font-size: 1rem; color: var(--accent); display: block; }
+    .sidebar-brand span   { font-size: 0.75rem; color: var(--muted); }
+
+    .sidebar nav { padding: 8px 0; flex: 1; }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      font-size: 0.875rem;
+      color: var(--muted);
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: all .15s;
+      user-select: none;
+    }
+    .nav-item:hover    { color: var(--text); background: rgba(255,255,255,.04); }
+    .nav-item.active   { color: var(--text); border-left-color: var(--accent); background: rgba(99,102,241,.08); }
+    .nav-item .icon    { width: 18px; text-align: center; font-size: 1rem; }
+
+    .sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+    #logout-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      width: 100%;
+      margin-top: 8px;
+    }
+    #logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* ── Main area ────────────────────────────────────────────────────────── */
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 90;
+    }
+    .topbar h1 { font-size: 1.125rem; font-weight: 600; }
+    .topbar .user-badge {
+      font-size: 0.8125rem;
+      color: var(--muted);
+      background: rgba(99,102,241,.15);
+      border: 1px solid rgba(99,102,241,.3);
+      border-radius: 20px;
+      padding: 4px 12px;
+    }
+
+    /* ── Login overlay ────────────────────────────────────────────────────── */
+    #login-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+    .login-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 36px 32px;
+      width: 360px;
+    }
+    .login-card h2 { margin-bottom: 4px; font-size: 1.25rem; }
+    .login-card p  { color: var(--muted); font-size: 0.85rem; margin-bottom: 24px; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 0.8125rem; color: var(--muted); margin-bottom: 6px; }
+    .form-group input, .form-group select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 7px;
+      font-size: 0.9rem;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 16px;
+      border-radius: 7px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn-primary  { background: var(--accent); color: #fff; }
+    .btn-danger   { background: var(--danger);  color: #fff; }
+    .btn-success  { background: var(--success); color: #fff; }
+    .btn-outline  { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-full     { width: 100%; justify-content: center; }
+
+    .error-msg { color: var(--danger); font-size: 0.8125rem; margin-top: 10px; }
+
+    /* ── Content panels ───────────────────────────────────────────────────── */
+    .content { padding: 24px; flex: 1; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── Stat cards ───────────────────────────────────────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+    }
+    .stat-card .label { font-size: 0.75rem; color: var(--muted); margin-bottom: 8px; }
+    .stat-card .value { font-size: 1.75rem; font-weight: 700; }
+    .stat-card .value.green  { color: var(--success); }
+    .stat-card .value.yellow { color: var(--warning); }
+    .stat-card .value.blue   { color: var(--accent); }
+
+    /* ── Tables ───────────────────────────────────────────────────────────── */
+    .table-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .table-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .table-header h3 { font-size: 0.9375rem; font-weight: 600; }
+    .table-header .controls { display: flex; gap: 8px; align-items: center; }
+    .table-header input[type="search"] {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.8125rem;
+      width: 220px;
+    }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+    th {
+      text-align: left;
+      padding: 10px 16px;
+      color: var(--muted);
+      font-weight: 500;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td {
+      padding: 10px 16px;
+      border-bottom: 1px solid rgba(51,65,85,.5);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.02); }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+    .badge-green   { background: rgba(34,197,94,.15);  color: var(--success); }
+    .badge-yellow  { background: rgba(245,158,11,.15); color: var(--warning); }
+    .badge-red     { background: rgba(239,68,68,.15);  color: var(--danger); }
+    .badge-blue    { background: rgba(99,102,241,.15); color: var(--accent); }
+    .badge-gray    { background: rgba(148,163,184,.1); color: var(--muted); }
+
+    .action-btns { display: flex; gap: 6px; }
+    .action-btns button {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 4px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.75rem;
+    }
+    .action-btns button:hover           { color: var(--text); border-color: var(--text); }
+    .action-btns button.del:hover       { color: var(--danger); border-color: var(--danger); }
+
+    /* ── Pagination ───────────────────────────────────────────────────────── */
+    .pagination {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--border);
+      font-size: 0.8125rem;
+      color: var(--muted);
+    }
+    .pagination .pages { display: flex; gap: 6px; }
+    .pagination button {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 4px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .pagination button:hover    { color: var(--text); }
+    .pagination button.current { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .pagination button:disabled { opacity: .35; cursor: default; }
+
+    /* ── Modal ────────────────────────────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.65);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 24px;
+      width: 440px;
+      max-width: 96vw;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal h3 { margin-bottom: 16px; font-size: 1.0625rem; }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    /* ── Toast ────────────────────────────────────────────────────────────── */
+    #toast-container {
+      position: fixed;
+      bottom: 20px; right: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 9999;
+    }
+    .toast {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 18px;
+      font-size: 0.875rem;
+      min-width: 260px;
+      animation: slideIn .2s ease;
+    }
+    .toast.success { border-left: 3px solid var(--success); }
+    .toast.error   { border-left: 3px solid var(--danger); }
+    @keyframes slideIn { from { transform: translateX(60px); opacity:0 } to { transform: none; opacity:1 } }
+
+    /* ── Responsive ───────────────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); transition: transform .2s; }
+      .sidebar.open { transform: none; }
+      .main { margin-left: 0; }
+      .topbar { padding: 10px 16px; }
+      .content { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Login screen ──────────────────────────────────────────────────────── -->
+<div id="login-screen">
+  <div class="login-card">
+    <h2>🛡️ SuperAdmin</h2>
+    <p>Qualitet Platform – Panel Administracyjny</p>
+    <div class="form-group">
+      <label>E-mail</label>
+      <input type="email" id="login-email" placeholder="admin@qualitet.pl" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>Hasło</label>
+      <input type="password" id="login-password" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary btn-full" id="login-btn">Zaloguj się</button>
+    <div class="error-msg" id="login-error"></div>
+  </div>
+</div>
+
+<!-- ── Sidebar ───────────────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <strong>QualitetAdmin</strong>
+    <span>SuperAdmin Panel</span>
+  </div>
+  <nav>
+    <div class="nav-item active" data-panel="dashboard"><span class="icon">📊</span> Dashboard</div>
+    <div class="nav-item" data-panel="users"><span class="icon">👤</span> Użytkownicy</div>
+    <div class="nav-item" data-panel="shops"><span class="icon">🏪</span> Sklepy</div>
+    <div class="nav-item" data-panel="products"><span class="icon">📦</span> Produkty</div>
+    <div class="nav-item" data-panel="suppliers"><span class="icon">🏭</span> Hurtownie</div>
+    <div class="nav-item" data-panel="orders"><span class="icon">🛒</span> Zamówienia</div>
+    <div class="nav-item" data-panel="subscriptions"><span class="icon">💳</span> Subskrypcje</div>
+    <div class="nav-item" data-panel="audit"><span class="icon">🔍</span> Audyt</div>
+  </nav>
+  <div class="sidebar-footer">
+    <div id="admin-email">–</div>
+    <button id="logout-btn">Wyloguj się</button>
+  </div>
+</aside>
+
+<!-- ── Main ──────────────────────────────────────────────────────────────── -->
+<main class="main" id="main-area" style="display:none">
+  <div class="topbar">
+    <h1 id="page-title">Dashboard</h1>
+    <div class="user-badge" id="user-badge">superadmin</div>
+  </div>
+
+  <div class="content">
+
+    <!-- Dashboard -->
+    <section class="panel active" id="panel-dashboard">
+      <div class="stat-grid" id="stat-grid">
+        <div class="stat-card"><div class="label">Użytkownicy</div><div class="value blue" id="s-users">–</div></div>
+        <div class="stat-card"><div class="label">Sklepy</div><div class="value" id="s-stores">–</div></div>
+        <div class="stat-card"><div class="label">Produkty</div><div class="value" id="s-products">–</div></div>
+        <div class="stat-card"><div class="label">Zamówienia</div><div class="value" id="s-orders">–</div></div>
+        <div class="stat-card"><div class="label">Sprzedaż dziś</div><div class="value green" id="s-daily">–</div></div>
+        <div class="stat-card"><div class="label">Sprzedaż mies.</div><div class="value green" id="s-monthly">–</div></div>
+        <div class="stat-card"><div class="label">Nowe sklepy</div><div class="value yellow" id="s-new-shops">–</div></div>
+        <div class="stat-card"><div class="label">Nowi użytkownicy</div><div class="value yellow" id="s-new-users">–</div></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="table-card">
+          <div class="table-header"><h3>Ostatnie zamówienia</h3></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>ID</th><th>Sklep</th><th>Status</th><th>Kwota</th></tr></thead>
+              <tbody id="recent-orders"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><h3>Ostatnie sklepy</h3></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Nazwa</th><th>Plan</th><th>Status</th></tr></thead>
+              <tbody id="recent-shops"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Users -->
+    <section class="panel" id="panel-users">
+      <div class="table-card">
+        <div class="table-header">
+          <h3>Użytkownicy</h3>
+          <div class="controls">
+            <input type="search" id="users-search" placeholder="Szukaj e-mail / nazwa…">
+            <button class="btn btn-primary" id="users-add-btn">+ Dodaj</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>E-mail</th><th>Nazwa</th><th>Rola</th><th>Plan</th><th>Zablokowany</th><th>Data</th><th></th></tr></thead>
+            <tbody id="users-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="users-pagination"></div>
+      </div>
+    </section>
+
+    <!-- Shops -->
+    <section class="panel" id="panel-shops">
+      <div class="table-card">
+        <div class="table-header">
+          <h3>Sklepy</h3>
+          <div class="controls">
+            <select id="shops-status-filter" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:.8rem">
+              <option value="">Wszystkie statusy</option>
+              <option value="active">active</option>
+              <option value="pending">pending</option>
+              <option value="suspended">suspended</option>
+              <option value="banned">banned</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nazwa</th><th>Właściciel</th><th>Plan</th><th>Status</th><th>Produkty</th><th>Zamówienia</th><th></th></tr></thead>
+            <tbody id="shops-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="shops-pagination"></div>
+      </div>
+    </section>
+
+    <!-- Products -->
+    <section class="panel" id="panel-products">
+      <div class="table-card">
+        <div class="table-header">
+          <h3>Produkty</h3>
+          <div class="controls">
+            <input type="search" id="products-search" placeholder="Szukaj nazwy / SKU…">
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nazwa</th><th>SKU</th><th>Sklep</th><th>Typ</th><th>Cena brutto</th><th>Stan</th><th></th></tr></thead>
+            <tbody id="products-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="products-pagination"></div>
+      </div>
+    </section>
+
+    <!-- Suppliers -->
+    <section class="panel" id="panel-suppliers">
+      <div class="table-card">
+        <div class="table-header">
+          <h3>Hurtownie</h3>
+          <button class="btn btn-primary" id="suppliers-add-btn">+ Dodaj</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nazwa</th><th>Typ</th><th>Kraj</th><th>Status</th><th>Ostatnia sync.</th><th></th></tr></thead>
+            <tbody id="suppliers-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="suppliers-pagination"></div>
+      </div>
+    </section>
+
+    <!-- Orders -->
+    <section class="panel" id="panel-orders">
+      <div class="table-card">
+        <div class="table-header">
+          <h3>Zamówienia</h3>
+          <div class="controls">
+            <select id="orders-status-filter" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:.8rem">
+              <option value="">Wszystkie</option>
+              <option value="created">created</option>
+              <option value="paid">paid</option>
+              <option value="processing">processing</option>
+              <option value="shipped">shipped</option>
+              <option value="delivered">delivered</option>
+              <option value="cancelled">cancelled</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Sklep</th><th>Status</th><th>Kwota</th><th>Data</th><th></th></tr></thead>
+            <tbody id="orders-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="orders-pagination"></div>
+      </div>
+    </section>
+
+    <!-- Subscriptions -->
+    <section class="panel" id="panel-subscriptions">
+      <div class="table-card">
+        <div class="table-header"><h3>Subskrypcje</h3></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Użytkownik</th><th>Plan</th><th>Status</th><th>Ważna do</th><th></th></tr></thead>
+            <tbody id="subscriptions-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="subscriptions-pagination"></div>
+      </div>
+    </section>
+
+    <!-- Audit -->
+    <section class="panel" id="panel-audit">
+      <div class="table-card">
+        <div class="table-header">
+          <h3>Logi audytu</h3>
+          <div class="controls">
+            <input type="search" id="audit-action-filter" placeholder="Filtruj akcję…">
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Użytkownik</th><th>Akcja</th><th>Zasób</th><th>ID zasobu</th><th>IP</th><th>Data</th></tr></thead>
+            <tbody id="audit-tbody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" id="audit-pagination"></div>
+      </div>
+    </section>
+
+  </div><!-- /content -->
+</main>
+
+<!-- ── Edit user modal ───────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-user">
+  <div class="modal">
+    <h3 id="modal-user-title">Edytuj użytkownika</h3>
+    <input type="hidden" id="modal-user-id">
+    <div class="form-group"><label>Nazwa</label><input type="text" id="modal-user-name"></div>
+    <div class="form-group"><label>Rola</label>
+      <select id="modal-user-role">
+        <option>customer</option><option>seller</option><option>admin</option><option>superadmin</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Plan</label>
+      <select id="modal-user-plan">
+        <option>trial</option><option>basic</option><option>pro</option><option>elite</option>
+      </select>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="modal-user-blocked" style="width:auto">
+      <label for="modal-user-blocked" style="margin:0;cursor:pointer">Zablokowane konto</label>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" id="modal-user-cancel">Anuluj</button>
+      <button class="btn btn-primary" id="modal-user-save">Zapisz</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Edit shop modal ───────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-shop">
+  <div class="modal">
+    <h3>Edytuj sklep</h3>
+    <input type="hidden" id="modal-shop-id">
+    <div class="form-group"><label>Nazwa</label><input type="text" id="modal-shop-name"></div>
+    <div class="form-group"><label>Status</label>
+      <select id="modal-shop-status">
+        <option>pending</option><option>active</option><option>suspended</option><option>banned</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Plan</label>
+      <select id="modal-shop-plan">
+        <option>trial</option><option>basic</option><option>pro</option><option>elite</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Marża (%)</label><input type="number" id="modal-shop-margin" min="0" max="100" step="0.5"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" id="modal-shop-cancel">Anuluj</button>
+      <button class="btn btn-primary" id="modal-shop-save">Zapisz</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Change order status modal ─────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-order">
+  <div class="modal">
+    <h3>Zmień status zamówienia</h3>
+    <input type="hidden" id="modal-order-id">
+    <div class="form-group"><label>Status</label>
+      <select id="modal-order-status">
+        <option>created</option><option>paid</option><option>processing</option>
+        <option>shipped</option><option>delivered</option><option>cancelled</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" id="modal-order-cancel">Anuluj</button>
+      <button class="btn btn-primary" id="modal-order-save">Zapisz</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Add supplier modal ────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-supplier">
+  <div class="modal">
+    <h3 id="modal-supplier-title">Dodaj hurtownię</h3>
+    <input type="hidden" id="modal-supplier-id">
+    <div class="form-group"><label>Nazwa</label><input type="text" id="modal-supplier-name"></div>
+    <div class="form-group"><label>Typ integracji</label>
+      <select id="modal-supplier-type">
+        <option value="manual">manual</option><option value="api">api</option>
+        <option value="xml">xml</option><option value="csv">csv</option>
+      </select>
+    </div>
+    <div class="form-group"><label>URL API / pliku</label><input type="url" id="modal-supplier-url" placeholder="https://…"></div>
+    <div class="form-group"><label>Kraj</label><input type="text" id="modal-supplier-country" placeholder="PL"></div>
+    <div class="form-group"><label>Marża (%)</label><input type="number" id="modal-supplier-margin" min="0" max="100" step="0.5" value="0"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" id="modal-supplier-cancel">Anuluj</button>
+      <button class="btn btn-primary" id="modal-supplier-save">Zapisz</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Subscription plan modal ───────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-subscription">
+  <div class="modal">
+    <h3>Zmień plan subskrypcji</h3>
+    <input type="hidden" id="modal-sub-id">
+    <div class="form-group"><label>Plan</label>
+      <select id="modal-sub-plan">
+        <option>trial</option><option>basic</option><option>pro</option><option>elite</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Status</label>
+      <select id="modal-sub-status">
+        <option>active</option><option>cancelled</option><option>expired</option><option>superseded</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" id="modal-sub-cancel">Anuluj</button>
+      <button class="btn btn-primary" id="modal-sub-save">Zapisz</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Add user modal ────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-add-user">
+  <div class="modal">
+    <h3>Dodaj użytkownika</h3>
+    <div class="form-group"><label>E-mail</label><input type="email" id="add-user-email"></div>
+    <div class="form-group"><label>Nazwa</label><input type="text" id="add-user-name"></div>
+    <div class="form-group"><label>Hasło (min. 8 znaków)</label><input type="password" id="add-user-password"></div>
+    <div class="form-group"><label>Rola</label>
+      <select id="add-user-role">
+        <option>customer</option><option>seller</option><option>admin</option><option>superadmin</option>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" id="modal-add-user-cancel">Anuluj</button>
+      <button class="btn btn-primary" id="modal-add-user-save">Dodaj</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="js/admin.js"></script>
+</body>
+</html>
