@@ -1150,6 +1150,81 @@ body.store-shop .shop-contact h2{
 .task-priority-high{color:#f87171;font-weight:700}
 .task-priority-med{color:#fbbf24;font-weight:700}
 .task-priority-low{color:var(--muted);font-weight:600}
+.status-open{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:999px;
+  background:rgba(56,189,248,.14);border:1px solid rgba(56,189,248,.35);
+  color:#7dd3fc;font-size:12px;font-weight:700;
+}
+.status-in-progress{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 10px;border-radius:999px;
+  background:rgba(251,191,36,.14);border:1px solid rgba(251,191,36,.35);
+  color:#fde047;font-size:12px;font-weight:700;
+}
+.task-header{
+  display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:wrap;
+}
+.task-action-row{
+  margin-top:4px;display:flex;gap:6px;flex-wrap:wrap;
+}
+.btn-task{
+  display:inline-flex;align-items:center;justify-content:center;
+  height:32px;padding:0 12px;border-radius:10px;font-size:12px;font-weight:700;
+  border:1px solid rgba(148,163,184,.28);background:rgba(148,163,184,.1);
+  color:var(--text);cursor:pointer;transition:background .18s ease;
+}
+.btn-task:hover{background:rgba(148,163,184,.2)}
+.btn-task-start{border-color:rgba(56,189,248,.4);color:#7dd3fc;background:rgba(56,189,248,.08)}
+.btn-task-start:hover{background:rgba(56,189,248,.18)}
+.btn-task-complete{border-color:rgba(250,204,21,.4);color:#fde047;background:rgba(250,204,21,.08)}
+.btn-task-complete:hover{background:rgba(250,204,21,.18)}
+.btn-task-close{border-color:rgba(34,197,94,.4);color:#86efac;background:rgba(34,197,94,.08)}
+.btn-task-close:hover{background:rgba(34,197,94,.18)}
+.task-item.is-closed{opacity:.45;pointer-events:none}
+.task-add-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:26px;height:26px;border-radius:8px;
+  border:1px solid var(--stroke);background:rgba(148,163,184,.1);
+  color:var(--muted);cursor:pointer;font-size:18px;line-height:1;
+  transition:background .18s ease;flex-shrink:0;
+}
+.task-add-btn:hover{background:rgba(148,163,184,.2)}
+.task-modal{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  padding:24px;background:rgba(4,8,20,.72);z-index:120;
+}
+.task-modal[hidden]{display:none}
+.task-modal-window{
+  position:relative;width:min(520px,100%);border-radius:24px;
+  border:1px solid var(--stroke);background:rgba(7,18,33,.94);
+  padding:24px;box-shadow:var(--shadow);
+}
+.task-modal-window h3{margin:0 0 16px;font-size:18px}
+.task-modal-close{
+  position:absolute;top:16px;right:16px;width:36px;height:36px;
+  border-radius:12px;border:1px solid var(--stroke);
+  background:rgba(255,255,255,.08);color:#fff;font-size:20px;
+  line-height:1;cursor:pointer;
+}
+.task-modal-form{display:grid;gap:12px;margin-top:4px}
+.task-modal-form label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted)}
+.task-modal-form input,.task-modal-form select{
+  background:rgba(255,255,255,.06);border:1px solid var(--stroke);
+  color:#fff;border-radius:10px;padding:10px 12px;font-size:14px;
+}
+.task-modal-form input::placeholder{color:var(--muted)}
+.task-modal-form .cta-row{margin-top:6px}
+.task-feedback{
+  position:fixed;bottom:80px;right:20px;z-index:200;
+  padding:14px 16px;border-radius:16px;
+  border:1px solid rgba(53,217,255,.35);background:rgba(7,18,33,.95);
+  box-shadow:var(--shadow);max-width:280px;pointer-events:none;
+  opacity:0;transform:translateY(12px);transition:opacity .35s ease,transform .35s ease;
+}
+.task-feedback.is-visible{opacity:1;transform:translateY(0)}
+.task-feedback strong{display:block;font-size:14px}
+.task-feedback span{display:block;color:var(--muted);font-size:12px;margin-top:4px}
 
 /* ── Marketplace product grid ── */
 .market-grid{

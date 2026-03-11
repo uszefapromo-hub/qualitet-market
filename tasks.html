@@ -61,15 +61,15 @@
     <section class="wrap stats-grid module-stats">
       <div class="stat-card">
         <span>Wszystkie zadania</span>
-        <strong>47</strong>
+        <strong data-tasks-total>47</strong>
       </div>
       <div class="stat-card">
-        <span>Ukończone dziś</span>
-        <strong>8</strong>
+        <span>Ukończone / zamknięte</span>
+        <strong data-tasks-done-today>8</strong>
       </div>
       <div class="stat-card">
         <span>W realizacji</span>
-        <strong>14</strong>
+        <strong data-tasks-in-progress>14</strong>
       </div>
       <div class="stat-card">
         <span>Zaległe</span>
@@ -83,95 +83,12 @@
           <span class="eyebrow">Zarządzanie zadaniami</span>
           <h2>Tablica zadań</h2>
           <p class="hint">Ślij, przypisuj i monitoruj postęp zadań operacyjnych sklepu.</p>
+          <div class="cta-row" style="margin-top:14px">
+            <button class="btn btn-primary" type="button" data-task-new-btn style="min-height:40px;padding:0 16px;font-size:14px">+ Nowe zadanie</button>
+          </div>
         </div>
-        <div class="task-board">
-          <div class="task-column">
-            <div class="task-column-head">
-              <h3>Do zrobienia</h3>
-              <span class="task-count">5</span>
-            </div>
-            <div class="task-item">
-              <p class="task-title">Zaktualizować opisy produktów w kategorii Elektronika</p>
-              <div class="task-meta">
-                <span class="task-priority-high">↑ Wysoki</span>
-                <span>Anna K.</span>
-                <span>jutro</span>
-              </div>
-            </div>
-            <div class="task-item">
-              <p class="task-title">Przesłać zdjęcia nowej kolekcji zimowej</p>
-              <div class="task-meta">
-                <span class="task-priority-med">→ Średni</span>
-                <span>Marek N.</span>
-                <span>3 dni</span>
-              </div>
-            </div>
-            <div class="task-item">
-              <p class="task-title">Skonfigurować kampanię Black Friday</p>
-              <div class="task-meta">
-                <span class="task-priority-high">↑ Wysoki</span>
-                <span>Tomasz Z.</span>
-                <span>5 dni</span>
-              </div>
-            </div>
-          </div>
-          <div class="task-column">
-            <div class="task-column-head">
-              <h3>W realizacji</h3>
-              <span class="task-count">4</span>
-            </div>
-            <div class="task-item">
-              <p class="task-title">Integracja nowej hurtowni FashionLane</p>
-              <div class="task-meta">
-                <span class="task-priority-high">↑ Wysoki</span>
-                <span>Katarzyna W.</span>
-                <span>dziś</span>
-              </div>
-            </div>
-            <div class="task-item">
-              <p class="task-title">Aktualizacja cennika sezonowego Q4</p>
-              <div class="task-meta">
-                <span class="task-priority-med">→ Średni</span>
-                <span>Piotr L.</span>
-                <span>2 dni</span>
-              </div>
-            </div>
-            <div class="task-item">
-              <p class="task-title">Przegląd i optymalizacja marż w sklepie</p>
-              <div class="task-meta">
-                <span class="task-priority-low">↓ Niski</span>
-                <span>Anna K.</span>
-                <span>tydzień</span>
-              </div>
-            </div>
-          </div>
-          <div class="task-column">
-            <div class="task-column-head">
-              <h3>Ukończone</h3>
-              <span class="task-count">5</span>
-            </div>
-            <div class="task-item">
-              <p class="task-title">Wdrożenie modułu CRM dla partnerów</p>
-              <div class="task-meta">
-                <span class="status-done">✓ Gotowe</span>
-                <span>Agata K.</span>
-              </div>
-            </div>
-            <div class="task-item">
-              <p class="task-title">Konfiguracja automatu powiadomień</p>
-              <div class="task-meta">
-                <span class="status-done">✓ Gotowe</span>
-                <span>Marek N.</span>
-              </div>
-            </div>
-            <div class="task-item">
-              <p class="task-title">Analiza sprzedaży Q3 — raport miesięczny</p>
-              <div class="task-meta">
-                <span class="status-done">✓ Gotowe</span>
-                <span>Tomasz Z.</span>
-              </div>
-            </div>
-          </div>
+        <div class="task-board" data-tasks-board>
+          <!-- Rendered dynamically by initTasksModule() -->
         </div>
       </div>
     </section>
@@ -245,5 +162,39 @@
   </nav>
 
   <script src="js/app.js" defer></script>
+
+  <div class="task-modal" data-task-modal hidden role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
+    <div class="task-modal-window">
+      <button class="task-modal-close" data-task-modal-close type="button" aria-label="Zamknij">×</button>
+      <h3 id="task-modal-title">Nowe zadanie</h3>
+      <form class="task-modal-form" data-task-form>
+        <input type="hidden" name="status" value="open">
+        <label>
+          Tytuł zadania *
+          <input type="text" name="title" placeholder="Opisz zadanie…" required maxlength="200">
+        </label>
+        <label>
+          Priorytet
+          <select name="priority">
+            <option value="high">↑ Wysoki</option>
+            <option value="med" selected>→ Średni</option>
+            <option value="low">↓ Niski</option>
+          </select>
+        </label>
+        <label>
+          Przypisany
+          <input type="text" name="assignee" placeholder="np. Anna K." maxlength="80">
+        </label>
+        <label>
+          Termin (etykieta)
+          <input type="text" name="dueLabel" placeholder="np. jutro, 3 dni, piątek" maxlength="40">
+        </label>
+        <div class="cta-row">
+          <button class="btn btn-primary" type="submit" style="min-height:42px;padding:0 20px;font-size:14px">Dodaj zadanie</button>
+          <button class="btn btn-secondary" type="button" data-task-modal-close style="min-height:42px;padding:0 16px;font-size:14px">Anuluj</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </body>
 </html>
