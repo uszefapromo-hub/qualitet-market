@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Koszyk — QualitetMarket</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .cart-shell{max-width:900px;margin:0 auto;padding-bottom:60px}
+    .cart-grid{display:grid;gap:24px;grid-template-columns:1fr 360px;align-items:start;margin-top:28px}
+    .cart-items-card{border:1px solid var(--stroke);background:var(--card);border-radius:24px;padding:24px;box-shadow:var(--shadow)}
+    .cart-item{display:flex;gap:14px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--stroke)}
+    .cart-item:last-child{border-bottom:none;padding-bottom:0}
+    .cart-item-img{width:64px;height:64px;border-radius:12px;background:rgba(148,163,184,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:28px;overflow:hidden}
+    .cart-item-img img{width:100%;height:100%;object-fit:contain}
+    .cart-item-info{flex:1;min-width:0}
+    .cart-item-name{font-weight:700;font-size:15px;margin:0 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cart-item-price{font-size:14px;color:var(--muted)}
+    .cart-item-controls{display:flex;align-items:center;gap:8px;margin-top:10px}
+    .qty-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--stroke);background:rgba(148,163,184,.12);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+    .qty-btn:hover{background:rgba(148,163,184,.22)}
+    .qty-value{min-width:28px;text-align:center;font-weight:700;font-size:15px}
+    .cart-item-remove{margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;font-size:20px;padding:4px 8px;border-radius:8px;line-height:1}
+    .cart-item-remove:hover{color:#ff4f4f;background:rgba(255,79,79,.1)}
+    .cart-item-subtotal{font-weight:800;font-size:16px;text-align:right;white-space:nowrap;flex-shrink:0;padding-top:4px}
+
+    .cart-empty{text-align:center;padding:60px 20px}
+    .cart-empty-icon{font-size:60px;margin-bottom:16px}
+    .cart-empty h2{font-size:24px;margin:0 0 10px}
+    .cart-empty p{color:var(--muted);margin:0 0 24px}
+
+    .checkout-card{border:1px solid var(--stroke);background:var(--card);border-radius:24px;padding:24px;box-shadow:var(--shadow);position:sticky;top:calc(var(--topbar-height,90px) + 16px)}
+    .checkout-card h2{margin:0 0 18px;font-size:20px}
+    .checkout-row{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--stroke);font-size:14px}
+    .checkout-row:last-of-type{border-bottom:none}
+    .checkout-row.total{font-weight:800;font-size:18px;padding-top:14px;border-top:1px solid var(--stroke);border-bottom:none}
+    .checkout-form{margin-top:18px;display:flex;flex-direction:column;gap:12px}
+    .checkout-field{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:600;color:var(--text)}
+    .checkout-field input,.checkout-field textarea{padding:10px 14px;border-radius:12px;border:1px solid var(--stroke);background:rgba(15,23,42,.7);color:var(--text);font-size:14px;font-family:inherit}
+    .checkout-field input:focus,.checkout-field textarea:focus{outline:2px solid #35d9ff;outline-offset:1px}
+    .checkout-field textarea{resize:vertical;min-height:72px}
+    .btn-checkout{width:100%;min-height:52px;border-radius:16px;border:0;cursor:pointer;font-weight:800;font-size:16px;background:linear-gradient(135deg,#0ea5e9,#16a34a);color:#fff;box-shadow:0 8px 28px rgba(14,165,233,.35);margin-top:6px;transition:transform .15s,box-shadow .15s}
+    .btn-checkout:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(14,165,233,.45)}
+    .btn-checkout:disabled{opacity:.6;cursor:not-allowed;transform:none}
+
+    .order-success{text-align:center;padding:40px 20px}
+    .order-success-icon{font-size:64px;margin-bottom:16px}
+    .order-success h2{font-size:28px;margin:0 0 10px}
+    .order-success p{color:var(--muted);margin:0 0 6px}
+    .order-number{font-weight:800;font-size:18px;color:#35d9ff;margin:12px 0 24px}
+
+    .cart-header{display:flex;align-items:center;gap:16px;margin-bottom:4px}
+    .cart-header h1{font-size:clamp(26px,4vw,40px);margin:0}
+    .cart-back{color:var(--muted);font-size:14px;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+    .cart-back:hover{color:#fff}
+    .cart-count-label{color:var(--muted);font-size:15px}
+
+    @media(max-width:760px){
+      .cart-grid{grid-template-columns:1fr}
+      .checkout-card{position:static}
+    }
+    @media(max-width:480px){
+      .cart-item{flex-wrap:wrap}
+      .cart-item-subtotal{flex-basis:100%;text-align:left}
+    }
+  </style>
+</head>
+<body data-page="koszyk" class="has-bottom-nav">
+  <div class="app-splash" data-app-splash>
+    <div class="app-splash-card">
+      <div class="app-splash-logo">
+        <img src="assets/icons/icon-192.svg" alt="QualitetMarket">
+      </div>
+      <div class="app-splash-title">
+        <strong>QualitetMarket</strong>
+        <span>Koszyk zakupowy</span>
+      </div>
+      <div class="app-splash-loader"></div>
+    </div>
+  </div>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>QualitetMarket</strong>
+          <span>Platforma dropshipping</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Główna nawigacja">
+        <a href="sklep.html">Sklep</a>
+        <a href="hurtownie.html">Hurtownie</a>
+        <a href="zarabiaj.html">Sprzedawaj</a>
+        <a href="cennik.html">Cennik</a>
+      </nav>
+      <a class="btn btn-primary topbar-cta" href="koszyk.html" style="position:relative">
+        🛒 Koszyk
+        <span data-cart-badge style="position:absolute;top:-6px;right:-6px;background:#ff4fd8;color:#fff;border-radius:999px;font-size:11px;font-weight:800;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 4px" hidden>0</span>
+      </a>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <main class="wrap cart-shell">
+
+    <!-- Success state -->
+    <div class="panel-card order-success" data-order-success hidden>
+      <div class="order-success-icon">✅</div>
+      <div class="eyebrow">Zamówienie przyjęte</div>
+      <h2>Dziękujemy za zakup!</h2>
+      <p class="order-number" data-order-number></p>
+      <p>Potwierdzenie zostanie wysłane na podany adres e-mail.</p>
+      <p style="color:var(--muted);font-size:14px;margin-top:6px">Czas realizacji zamówienia: <strong style="color:#fff">24–72h</strong></p>
+      <div class="cta-row" style="justify-content:center;margin-top:24px">
+        <a class="btn btn-primary" href="sklep.html">Kontynuuj zakupy</a>
+        <a class="btn btn-secondary" href="index.html">Strona główna</a>
+      </div>
+    </div>
+
+    <!-- Cart content -->
+    <div data-cart-content>
+      <div class="cart-header" style="margin-top:32px">
+        <a class="cart-back" href="sklep.html">← Sklep</a>
+        <h1>Koszyk</h1>
+        <span class="cart-count-label" data-cart-count-label></span>
+      </div>
+
+      <!-- Empty cart -->
+      <div class="cart-empty" data-cart-empty hidden>
+        <div class="cart-empty-icon">🛒</div>
+        <h2>Twój koszyk jest pusty</h2>
+        <p>Dodaj produkty ze sklepu, aby złożyć zamówienie.</p>
+        <a class="btn btn-primary" href="sklep.html">Przejdź do sklepu</a>
+      </div>
+
+      <!-- Cart with items -->
+      <div class="cart-grid" data-cart-filled>
+        <div class="cart-items-card">
+          <div data-cart-items-list></div>
+        </div>
+
+        <div class="checkout-card">
+          <h2>Podsumowanie</h2>
+          <div data-cart-summary>
+            <div class="checkout-row"><span>Produkty</span><span data-summary-count>—</span></div>
+            <div class="checkout-row total"><span>Razem</span><span data-summary-total>—</span></div>
+          </div>
+
+          <form class="checkout-form" data-checkout-form novalidate>
+            <div class="checkout-field">
+              <label for="chk-name">Imię i nazwisko *</label>
+              <input id="chk-name" name="name" type="text" placeholder="Jan Kowalski" required autocomplete="name">
+            </div>
+            <div class="checkout-field">
+              <label for="chk-email">Adres e-mail *</label>
+              <input id="chk-email" name="email" type="email" placeholder="jan@przykład.pl" required autocomplete="email">
+            </div>
+            <div class="checkout-field">
+              <label for="chk-phone">Telefon</label>
+              <input id="chk-phone" name="phone" type="tel" placeholder="+48 000 000 000" autocomplete="tel">
+            </div>
+            <div class="checkout-field">
+              <label for="chk-address">Adres dostawy *</label>
+              <textarea id="chk-address" name="address" placeholder="ul. Przykładowa 1, 00-001 Warszawa" required autocomplete="street-address"></textarea>
+            </div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.5">
+              Składając zamówienie akceptujesz <a href="#" style="color:#35d9ff">regulamin</a> i <a href="#" style="color:#35d9ff">politykę prywatności</a>.
+            </div>
+            <button class="btn-checkout" type="submit" data-checkout-btn>Złóż zamówienie</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
+    <a href="index.html" rel="nofollow noreferrer" data-nav="index">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 11.5L12 4l9 7.5"></path>
+        <path d="M5 10.5V20h14v-9.5"></path>
+      </svg>
+      <span>Start</span>
+    </a>
+    <a href="sklep.html" rel="nofollow noreferrer" data-nav="sklep">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 9h18l-1.5 11H4.5L3 9z"></path>
+        <path d="M7 9V7a5 5 0 0 1 10 0v2"></path>
+      </svg>
+      <span>Sklep</span>
+    </a>
+    <a href="koszyk.html" rel="nofollow noreferrer" data-nav="koszyk" style="position:relative">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="9" cy="21" r="1"></circle>
+        <circle cx="20" cy="21" r="1"></circle>
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+      </svg>
+      <span data-cart-badge style="position:absolute;top:2px;right:14px;background:#ff4fd8;color:#fff;border-radius:999px;font-size:10px;font-weight:800;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px" hidden>0</span>
+      <span>Koszyk</span>
+    </a>
+    <a href="dashboard.html" rel="nofollow noreferrer" data-nav="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="14" width="7" height="7" rx="1.2"></rect>
+        <rect x="3" y="14" width="7" height="7" rx="1.2"></rect>
+      </svg>
+      <span>Panel</span>
+    </a>
+    <a href="login.html" rel="nofollow noreferrer" data-nav="login">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4 20c2-3.5 6-5 8-5s6 1.5 8 5"></path>
+      </svg>
+      <span>Konto</span>
+    </a>
+  </nav>
+
+  <script src="js/app.js" defer></script>
+  <script src="js/cart.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      var cart = window.QMCart;
+      if(!cart){ return; }
+
+      var successEl = document.querySelector('[data-order-success]');
+      var contentEl = document.querySelector('[data-cart-content]');
+      var emptyEl = document.querySelector('[data-cart-empty]');
+      var filledEl = document.querySelector('[data-cart-filled]');
+      var listEl = document.querySelector('[data-cart-items-list]');
+      var countLabel = document.querySelector('[data-cart-count-label]');
+      var summaryCount = document.querySelector('[data-summary-count]');
+      var summaryTotal = document.querySelector('[data-summary-total]');
+      var form = document.querySelector('[data-checkout-form]');
+      var submitBtn = document.querySelector('[data-checkout-btn]');
+
+      function render(){
+        var items = cart.getCart();
+        var count = cart.getCartCount(items);
+        var total = cart.getCartTotal(items);
+
+        if(countLabel){ countLabel.textContent = count > 0 ? count + ' ' + (count === 1 ? 'produkt' : count < 5 ? 'produkty' : 'produktów') : ''; }
+        if(summaryCount){ summaryCount.textContent = count + ' szt.'; }
+        if(summaryTotal){ summaryTotal.textContent = cart.formatPrice(total); }
+
+        if(count === 0){
+          if(emptyEl) emptyEl.hidden = false;
+          if(filledEl) filledEl.hidden = true;
+          return;
+        }
+        if(emptyEl) emptyEl.hidden = true;
+        if(filledEl) filledEl.hidden = false;
+
+        if(!listEl) return;
+        listEl.innerHTML = '';
+        items.forEach(function(item){
+          var subtotal = (Number(item.price) || 0) * (Number(item.qty) || 1);
+          var div = document.createElement('div');
+          div.className = 'cart-item';
+          div.innerHTML =
+            '<div class="cart-item-img">' +
+              (item.img ? '<img src="' + item.img + '" alt="' + escapeHtml(item.name) + '">' : '<span>📦</span>') +
+            '</div>' +
+            '<div class="cart-item-info">' +
+              '<p class="cart-item-name">' + escapeHtml(item.name) + '</p>' +
+              '<p class="cart-item-price">' + cart.formatPrice(item.price) + ' / szt.</p>' +
+              '<div class="cart-item-controls">' +
+                '<button class="qty-btn" type="button" data-qty-dec data-id="' + escapeHtml(item.id) + '" aria-label="Zmniejsz ilość">−</button>' +
+                '<span class="qty-value">' + (Number(item.qty) || 1) + '</span>' +
+                '<button class="qty-btn" type="button" data-qty-inc data-id="' + escapeHtml(item.id) + '" aria-label="Zwiększ ilość">+</button>' +
+              '</div>' +
+            '</div>' +
+            '<strong class="cart-item-subtotal">' + cart.formatPrice(subtotal) + '</strong>' +
+            '<button class="cart-item-remove" type="button" data-remove data-id="' + escapeHtml(item.id) + '" aria-label="Usuń z koszyka">×</button>';
+          listEl.appendChild(div);
+        });
+      }
+
+      function escapeHtml(str){
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
+
+      if(listEl){
+        listEl.addEventListener('click', function(e){
+          var decBtn = e.target.closest('[data-qty-dec]');
+          var incBtn = e.target.closest('[data-qty-inc]');
+          var remBtn = e.target.closest('[data-remove]');
+          if(decBtn){
+            var id = decBtn.dataset.id;
+            var items = cart.getCart();
+            var item = items.filter(function(i){ return i.id === id; })[0];
+            if(item && (Number(item.qty) || 1) <= 1){
+              cart.removeFromCart(id);
+            } else if(item){
+              cart.updateQty(id, (Number(item.qty) || 1) - 1);
+            }
+            render();
+          } else if(incBtn){
+            var id = incBtn.dataset.id;
+            var items = cart.getCart();
+            var item = items.filter(function(i){ return i.id === id; })[0];
+            if(item){ cart.updateQty(id, (Number(item.qty) || 1) + 1); }
+            render();
+          } else if(remBtn){
+            cart.removeFromCart(remBtn.dataset.id);
+            render();
+          }
+        });
+      }
+
+      if(form){
+        form.addEventListener('submit', function(e){
+          e.preventDefault();
+          var items = cart.getCart();
+          if(!items.length) return;
+          if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Składam zamówienie...'; }
+          var fd = new FormData(form);
+          var formData = {
+            name: fd.get('name') || '',
+            email: fd.get('email') || '',
+            phone: fd.get('phone') || '',
+            address: fd.get('address') || ''
+          };
+          var order = cart.saveOrder(formData, items);
+          cart.clearCart();
+          setTimeout(function(){
+            var numEl = document.querySelector('[data-order-number]');
+            if(numEl){ numEl.textContent = 'Numer zamówienia: ' + order.number; }
+            if(contentEl) contentEl.hidden = true;
+            if(successEl) successEl.hidden = false;
+            window.scrollTo({top: 0, behavior: 'smooth'});
+          }, 600);
+        });
+      }
+
+      render();
+    });
+  </script>
+</body>
+</html>

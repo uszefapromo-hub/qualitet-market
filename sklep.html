@@ -37,6 +37,10 @@
         </div>
       </a>
       <div class="cta-row">
+        <a class="btn btn-secondary" href="koszyk.html" style="position:relative">
+          🛒 Koszyk
+          <span data-cart-badge style="position:absolute;top:-6px;right:-6px;background:#ff4fd8;color:#fff;border-radius:999px;font-size:11px;font-weight:800;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 4px" hidden>0</span>
+        </a>
         <a class="btn btn-secondary" href="panel-sklepu.html">Panel sklepu</a>
         <a class="btn btn-primary" href="generator-sklepu.html">Ustawienia sklepu</a>
       </div>
@@ -375,7 +379,7 @@
                 <span>Hurtownia: NeoTech</span>
               </div>
               <div class="cta-row product-actions">
-                <button class="btn btn-primary" type="button">Dodaj</button>
+                <button class="btn btn-primary" type="button" data-add-to-cart data-product-id="demo_smartphone_xz_lite" data-product-name="Smartfon XZ Lite" data-product-price="980" data-product-img="assets/images/demo/product-smartphone.svg">Dodaj</button>
                 <a class="btn btn-secondary" href="listing.html">Szczegóły</a>
               </div>
             </div>
@@ -396,7 +400,7 @@
                 <span>Hurtownia: HomeHub</span>
               </div>
               <div class="cta-row product-actions">
-                <button class="btn btn-primary" type="button">Dodaj</button>
+                <button class="btn btn-primary" type="button" data-add-to-cart data-product-id="demo_sofa_forest_comfort" data-product-name="Sofa Forest Comfort" data-product-price="2480" data-product-img="assets/images/demo/product-sofa.svg">Dodaj</button>
                 <a class="btn btn-secondary" href="listing.html">Szczegóły</a>
               </div>
             </div>
@@ -417,7 +421,7 @@
                 <span>Hurtownia: FashionLane</span>
               </div>
               <div class="cta-row product-actions">
-                <button class="btn btn-primary" type="button">Dodaj</button>
+                <button class="btn btn-primary" type="button" data-add-to-cart data-product-id="demo_sneakers_flexrun" data-product-name="Sneakers FlexRun" data-product-price="520" data-product-img="assets/images/demo/product-sneakers.svg">Dodaj</button>
                 <a class="btn btn-secondary" href="listing.html">Szczegóły</a>
               </div>
             </div>
@@ -438,7 +442,7 @@
                 <span>Hurtownia: AutoFleet</span>
               </div>
               <div class="cta-row product-actions">
-                <button class="btn btn-primary" type="button">Dodaj</button>
+                <button class="btn btn-primary" type="button" data-add-to-cart data-product-id="demo_wiertarka_compact" data-product-name="Wiertarka Compact" data-product-price="640" data-product-img="assets/images/demo/product-drill.svg">Dodaj</button>
                 <a class="btn btn-secondary" href="listing.html">Szczegóły</a>
               </div>
             </div>
@@ -683,13 +687,14 @@
       </svg>
       <span>Sklep</span>
     </a>
-    <a href="hurtownie.html" rel="nofollow noreferrer" data-nav="hurtownie">
+    <a href="koszyk.html" rel="nofollow noreferrer" data-nav="koszyk" style="position:relative">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <rect x="3" y="7" width="7" height="10" rx="1.4"></rect>
-        <rect x="14" y="7" width="7" height="10" rx="1.4"></rect>
-        <path d="M6.5 7V5.5a1.5 1.5 0 0 1 3 0V7"></path>
+        <circle cx="9" cy="21" r="1"></circle>
+        <circle cx="20" cy="21" r="1"></circle>
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
       </svg>
-      <span>Hurtownie</span>
+      <span data-cart-badge style="position:absolute;top:2px;right:14px;background:#ff4fd8;color:#fff;border-radius:999px;font-size:10px;font-weight:800;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px" hidden>0</span>
+      <span>Koszyk</span>
     </a>
     <a href="dashboard.html" rel="nofollow noreferrer" data-nav="dashboard">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -712,5 +717,6 @@
   <script src="js/app.js" defer></script>
   <script src="stores.js" defer></script>
   <script src="shop.js" defer></script>
+  <script src="js/cart.js" defer></script>
 </body>
 </html>

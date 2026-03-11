@@ -12,6 +12,10 @@
   <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    .dual-audience-grid{display:grid;gap:20px;grid-template-columns:1fr 1fr}
+    @media(max-width:640px){.dual-audience-grid{grid-template-columns:1fr}}
+  </style>
 </head>
 <body data-page="index" class="has-bottom-nav">
   <div class="app-splash" data-app-splash>
@@ -170,6 +174,49 @@
           </div>
         </div>
 
+      </div>
+    </section>
+
+    <!-- ══════════════ DLA SPRZEDAWCÓW I KLIENTÓW ══════════════ -->
+    <section class="wrap" id="dla-kogo" style="padding:40px 0 20px">
+      <div class="section-head centered" style="margin-bottom:24px">
+        <span class="eyebrow">Platforma dwustronna</span>
+        <h2>Dla sprzedawców <span class="text-muted-heading">i klientów</span></h2>
+        <p class="lead" style="max-width:600px;margin:10px auto 0">Otwórz swój sklep dropshipping lub po prostu kup produkty z najlepszych hurtowni — bez pośredników.</p>
+      </div>
+      <div class="dual-audience-grid">
+        <article style="border:1px solid var(--stroke);background:linear-gradient(160deg,rgba(56,189,248,.14),rgba(34,197,94,.08));border-radius:28px;padding:32px;box-shadow:var(--shadow)">
+          <div style="font-size:48px;margin-bottom:14px">🏪</div>
+          <span class="eyebrow">Dla sprzedawców</span>
+          <h3 style="font-size:clamp(20px,3vw,30px);margin:12px 0 10px">Otwórz sklep online w 5 minut</h3>
+          <p style="color:var(--muted);margin:0 0 14px;line-height:1.6">Twórz własny sklep pod swoją marką. Wybieraj produkty z setek hurtowni. Zarabiaj na marży bez pakowania ani wysyłki.</p>
+          <ul style="color:var(--muted);padding-left:18px;margin:0 0 22px;display:flex;flex-direction:column;gap:6px;font-size:14px">
+            <li>✅ Sklep pod własnym logo</li>
+            <li>✅ Tysiące produktów gotowych do sprzedaży</li>
+            <li>✅ Automatyczna obsługa zamówień</li>
+            <li>✅ 7 dni trial za darmo</li>
+          </ul>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <a class="btn btn-primary" href="generator-sklepu.html">Załóż sklep za darmo</a>
+            <a class="btn btn-secondary" href="zarabiaj.html">Dowiedz się więcej</a>
+          </div>
+        </article>
+        <article style="border:1px solid var(--stroke);background:linear-gradient(160deg,rgba(255,79,216,.12),rgba(250,204,21,.08));border-radius:28px;padding:32px;box-shadow:var(--shadow)">
+          <div style="font-size:48px;margin-bottom:14px">🛒</div>
+          <span class="eyebrow">Dla kupujących</span>
+          <h3 style="font-size:clamp(20px,3vw,30px);margin:12px 0 10px">Tysiące produktów w jednym miejscu</h3>
+          <p style="color:var(--muted);margin:0 0 14px;line-height:1.6">Przeglądaj oferty od sprawdzonych dostawców. Szybka dostawa, uczciwe ceny, prosta realizacja zamówień bezpośrednio na twoją skrzynkę.</p>
+          <ul style="color:var(--muted);padding-left:18px;margin:0 0 22px;display:flex;flex-direction:column;gap:6px;font-size:14px">
+            <li>🔥 Elektronika, moda, dom, sport i więcej</li>
+            <li>🔥 Dostawa 24–72h</li>
+            <li>🔥 Bezpieczne zamówienia</li>
+            <li>🔥 Brak rejestracji wymagana</li>
+          </ul>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <a class="btn btn-primary" href="sklep.html">Przejdź do sklepu</a>
+            <a class="btn btn-secondary" href="koszyk.html">Mój koszyk 🛒</a>
+          </div>
+        </article>
       </div>
     </section>
 
@@ -892,5 +939,6 @@
   </nav>
 
   <script src="js/app.js" defer></script>
+  <script src="js/cart.js" defer></script>
 </body>
 </html>
