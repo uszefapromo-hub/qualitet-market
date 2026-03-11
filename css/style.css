@@ -2214,3 +2214,196 @@ html,body{max-width:100vw;overflow-x:hidden}
   .brand strong{font-size:15px}
   .brand span:not(.brand-tag){display:none}
 }
+
+/* ══════════════════════════════════════════════════════════
+   ZARABIAJ.HTML — Earn with us page
+   ══════════════════════════════════════════════════════════ */
+
+/* Hero */
+.earn-hero{padding:80px 0 60px;background:linear-gradient(135deg,rgba(15,23,42,1) 0%,rgba(30,15,60,0.8) 100%)}
+.earn-hero-inner{display:grid;grid-template-columns:1fr auto;gap:40px;align-items:center}
+.earn-hero-copy h1{font-size:clamp(28px,5vw,52px);line-height:1.15;font-weight:900;margin:10px 0 16px}
+.earn-hero-stats{display:flex;gap:24px;margin-top:24px;flex-wrap:wrap}
+.earn-stat{display:flex;flex-direction:column;gap:2px}
+.earn-stat strong{font-size:24px;font-weight:800;color:#38d9ff}
+.earn-stat span{font-size:13px;color:var(--muted)}
+.earn-hero-visual{flex-shrink:0}
+.earn-visual-card{
+  background:linear-gradient(135deg,rgba(56,217,255,.12),rgba(158,119,255,.12));
+  border:1px solid rgba(56,217,255,.3);border-radius:22px;padding:28px 32px;text-align:center;
+}
+.earn-visual-icon{font-size:36px;display:block;margin-bottom:8px}
+.earn-visual-card strong{display:block;font-size:14px;color:var(--muted);margin-bottom:4px}
+.earn-visual-amount{font-size:36px;font-weight:900;color:#38d9ff;margin:8px 0}
+.earn-visual-card span{font-size:12px;color:var(--muted)}
+
+/* How steps */
+.earn-how{padding:80px 0;background:rgba(255,255,255,.015)}
+.section-head-center{text-align:center;margin-bottom:48px}
+.section-head-center h2{font-size:clamp(24px,4vw,40px);font-weight:800;margin:8px 0}
+.section-head-center .lead{color:var(--muted);max-width:560px;margin:0 auto}
+.how-steps{display:flex;align-items:flex-start;gap:0;flex-wrap:wrap;justify-content:center}
+.how-step{
+  flex:1;min-width:160px;max-width:220px;text-align:center;padding:0 12px;
+}
+.how-step-arrow{font-size:24px;color:var(--muted);align-self:center;padding:0 8px}
+.how-step-num{
+  width:32px;height:32px;border-radius:50%;
+  background:rgba(56,217,255,.15);border:2px solid rgba(56,217,255,.4);
+  color:#38d9ff;font-weight:800;font-size:14px;
+  display:flex;align-items:center;justify-content:center;margin:0 auto 12px;
+}
+.how-step-icon{font-size:36px;margin-bottom:10px}
+.how-step h3{font-size:16px;font-weight:700;margin:0 0 8px}
+.how-step p{font-size:13px;color:var(--muted);line-height:1.5}
+
+/* Earn sections */
+.earn-section{padding:70px 0}
+.earn-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+.earn-grid-reverse{direction:rtl}
+.earn-grid-reverse>*{direction:ltr}
+.earn-content h2{font-size:clamp(22px,3.5vw,36px);font-weight:800;margin:8px 0 16px}
+.earn-list{list-style:none;padding:0;display:flex;flex-direction:column;gap:14px;margin:0 0 24px}
+.earn-list li{display:flex;align-items:flex-start;gap:12px}
+.earn-list-icon{
+  width:22px;height:22px;border-radius:50%;flex-shrink:0;margin-top:2px;
+  background:rgba(84,255,176,.15);border:1px solid rgba(84,255,176,.4);
+  color:#54ffb0;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;
+}
+.earn-list li>div strong{display:block;font-size:14px;font-weight:700;margin-bottom:2px}
+.earn-list li>div span{font-size:13px;color:var(--muted)}
+
+.earn-steps-visual{display:flex;flex-direction:column;gap:10px}
+.earn-step-card{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 18px;border-radius:14px;border:1px solid var(--stroke);
+  background:rgba(255,255,255,.03);
+}
+.earn-step-card.active{border-color:rgba(56,217,255,.4);background:rgba(56,217,255,.06)}
+.earn-step-card>span:first-child{font-size:24px}
+.earn-step-card strong{font-size:14px;font-weight:700;flex:1}
+.earn-step-tag{
+  font-size:11px;padding:2px 8px;border-radius:99px;
+  background:rgba(84,255,176,.12);color:#b2ffe0;border:1px solid rgba(84,255,176,.3);
+}
+
+/* Dropshipping diagram */
+.earn-drop{background:rgba(255,255,255,.015)}
+.dropship-diagram{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  position:relative;
+}
+.drop-node{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:16px 24px;border-radius:16px;border:1px solid var(--stroke);
+  background:rgba(255,255,255,.04);text-align:center;min-width:160px;
+}
+.drop-node>span:first-child{font-size:28px}
+.drop-node strong{font-size:14px;font-weight:700}
+.drop-node>span:last-child{font-size:12px;color:var(--muted)}
+.drop-node-dostawca{border-color:rgba(56,217,255,.35);background:rgba(56,217,255,.06)}
+.drop-node-platform{border-color:rgba(158,119,255,.35);background:rgba(158,119,255,.06)}
+.drop-node-klient{border-color:rgba(84,255,176,.35);background:rgba(84,255,176,.06)}
+.drop-arrow{font-size:22px;color:var(--muted);padding:4px 0}
+.drop-you{
+  margin-top:12px;padding:12px 24px;border-radius:14px;
+  background:rgba(255,216,77,.12);border:1px solid rgba(255,216,77,.35);
+  display:flex;align-items:center;gap:10px;
+}
+.drop-you>span{font-size:24px}
+.drop-you strong{font-size:14px;font-weight:700;color:#ffd84d}
+
+/* Earnings calculator */
+.earn-calculator-section{padding:80px 0;background:rgba(255,255,255,.015)}
+.earn-calc-card{
+  max-width:760px;margin:0 auto;
+  background:var(--card);border:1px solid var(--stroke);border-radius:24px;padding:36px;
+}
+.earn-calc-inputs{display:flex;flex-direction:column;gap:20px;margin-bottom:28px}
+.earn-calc-group{}
+.earn-calc-label{display:block;font-size:14px;font-weight:600;margin-bottom:8px}
+.earn-calc-input{
+  width:100%;-webkit-appearance:none;appearance:none;
+  height:6px;border-radius:3px;background:rgba(255,255,255,.15);outline:none;cursor:pointer;
+}
+.earn-calc-input::-webkit-slider-thumb{
+  -webkit-appearance:none;width:20px;height:20px;border-radius:50%;
+  background:#38d9ff;border:2px solid rgba(255,255,255,.3);cursor:pointer;
+}
+.earn-calc-value-row{display:flex;gap:8px;margin-top:6px;font-size:14px}
+.earn-calc-value-row span:first-child{font-weight:700;color:#38d9ff;font-size:18px}
+.earn-calc-results{
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;
+}
+.earn-calc-result{
+  padding:18px;border-radius:16px;border:1px solid var(--stroke);
+  background:rgba(255,255,255,.03);text-align:center;
+}
+.earn-calc-result span{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+.earn-calc-result strong{font-size:20px;font-weight:800}
+.earn-calc-result-main{
+  border-color:rgba(56,217,255,.4);background:rgba(56,217,255,.07);
+}
+.earn-calc-result-main strong{font-size:26px;color:#38d9ff}
+.earn-calc-disclaimer{font-size:12px;color:var(--muted);text-align:center}
+
+/* Referral section */
+.earn-referral{padding:70px 0}
+.earn-referral-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:8px;
+}
+.earn-referral-card{
+  padding:28px;border-radius:20px;border:1px solid var(--stroke);
+  background:rgba(255,255,255,.03);text-align:center;
+}
+.earn-referral-icon{font-size:40px;display:block;margin-bottom:12px}
+.earn-referral-card h3{font-size:18px;font-weight:700;margin:0 0 8px}
+.earn-referral-card p{font-size:14px;color:var(--muted);line-height:1.5}
+
+/* Plans */
+.earn-plans-section{padding:80px 0;background:rgba(255,255,255,.015)}
+.earn-plans-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:8px;
+}
+.earn-plan-card{
+  padding:32px 28px;border-radius:22px;border:1px solid var(--stroke);
+  background:rgba(255,255,255,.03);display:flex;flex-direction:column;gap:12px;
+  position:relative;
+}
+.earn-plan-featured{
+  border-color:rgba(56,217,255,.45);background:rgba(56,217,255,.06);
+}
+.earn-plan-badge{
+  position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+  padding:4px 14px;border-radius:99px;font-size:12px;font-weight:700;
+  background:#38d9ff;color:#0f172a;white-space:nowrap;
+}
+.earn-plan-icon{font-size:36px}
+.earn-plan-card h3{font-size:20px;font-weight:800;margin:0}
+.earn-plan-card p{font-size:14px;color:var(--muted);line-height:1.5}
+.earn-plan-card ul{
+  padding-left:18px;color:var(--muted);font-size:14px;line-height:1.8;margin:0;flex:1;
+}
+.earn-plan-card .btn{margin-top:4px}
+
+/* CTA */
+.earn-cta{padding:80px 0;background:linear-gradient(135deg,rgba(56,217,255,.08),rgba(158,119,255,.08))}
+.earn-cta-inner{text-align:center;max-width:560px;margin:0 auto}
+.earn-cta h2{font-size:clamp(24px,4vw,40px);font-weight:900;margin:0 0 12px}
+.earn-cta p{color:var(--muted);font-size:16px;margin:0 0 28px}
+
+/* Responsive */
+@media(max-width:900px){
+  .earn-hero-inner,.earn-grid-2{grid-template-columns:1fr;gap:32px}
+  .earn-hero-visual{justify-self:center}
+  .earn-grid-reverse{direction:ltr}
+  .earn-plans-grid{grid-template-columns:1fr 1fr}
+  .earn-referral-grid{grid-template-columns:1fr}
+  .earn-calc-results{grid-template-columns:1fr}
+  .how-steps{flex-direction:column;align-items:center}
+  .how-step-arrow{transform:rotate(90deg)}
+}
+@media(max-width:640px){
+  .earn-plans-grid{grid-template-columns:1fr}
+  .earn-calc-card{padding:22px 16px}
+}

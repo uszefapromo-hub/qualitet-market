@@ -5065,6 +5065,596 @@
     }
   }
 
+  // ── Quick nav buttons in owner panel overview ──
+  function initOwnerQuickNav(){
+    if(document.body.dataset.page !== 'owner-panel') return;
+    document.addEventListener('click', event => {
+      const btn = event.target.closest('[data-owner-tab-btn]');
+      if(!btn) return;
+      const tabId = btn.dataset.ownerTabBtn;
+      const tabNav = document.querySelector('[data-owner-tab-nav]');
+      const tabPanels = document.querySelectorAll('[data-owner-tab-panel]');
+      tabPanels.forEach(panel => {
+        panel.hidden = panel.dataset.ownerTabPanel !== tabId;
+      });
+      if(tabNav){
+        tabNav.querySelectorAll('[data-owner-tab]').forEach(link => {
+          link.classList.toggle('active', link.dataset.ownerTab === tabId);
+        });
+      }
+      window.scrollTo({top: 0, behavior: 'smooth'});
+    });
+  }
+
+  // ── Owner panel ranking tab ──
+  function initOwnerRanking(){
+    if(document.body.dataset.page !== 'owner-panel') return;
+    const data = ensureFinalStorage();
+    const stores = data.stores || [];
+    const users = data.users || [];
+    const products = data.products || [];
+    const orders = data.orders || [];
+    const setText = (selector, value) => { const el = document.querySelector(selector); if(el) el.textContent = value; };
+
+    // Build seller stats from stores
+    const sellerStats = stores.map(store => {
+      const storeOrders = orders.filter(o => o.storeId === store.id);
+      const revenue = storeOrders.reduce((s, o) => s + (o.amount || 0), 0);
+      const owner = users.find(u => u.id === store.userId);
+      return {name: store.name || 'Sklep', ownerName: owner ? owner.name : '—', revenue, orders: storeOrders.length};
+    }).sort((a, b) => b.revenue - a.revenue);
+
+    setText('[data-rank-sellers-count]', sellerStats.length);
+    setText('[data-rank-stores-count]', stores.length);
+    setText('[data-rank-products-count]', Math.min(products.length, 20));
+
+    const sellersContainer = document.querySelector('[data-rank-sellers-list]');
+    if(sellersContainer){
+      sellersContainer.innerHTML = '';
+      const top = sellerStats.slice(0, 5);
+      if(!top.length){
+        sellersContainer.innerHTML = '<p class="empty">Brak danych</p>';
+      } else {
+        top.forEach((seller, i) => {
+          const posClass = i < 3 ? `pos-${i+1}` : '';
+          const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1).toString();
+          sellersContainer.insertAdjacentHTML('beforeend',
+            `<div class="ranking-item">
+              <div class="ranking-pos ${posClass}">${medal}</div>
+              <div class="ranking-info">
+                <strong>${escapeHtml(seller.ownerName)}</strong>
+                <span>${seller.orders} zamówień</span>
+              </div>
+              <div class="ranking-value">${formatCurrency(seller.revenue)}</div>
+            </div>`
+          );
+        });
+      }
+    }
+
+    const storesContainer = document.querySelector('[data-rank-stores-list]');
+    if(storesContainer){
+      storesContainer.innerHTML = '';
+      const topStores = sellerStats.slice(0, 5);
+      if(!topStores.length){
+        storesContainer.innerHTML = '<p class="empty">Brak danych</p>';
+      } else {
+        topStores.forEach((store, i) => {
+          const posClass = i < 3 ? `pos-${i+1}` : '';
+          const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1).toString();
+          storesContainer.insertAdjacentHTML('beforeend',
+            `<div class="ranking-item">
+              <div class="ranking-pos ${posClass}">${medal}</div>
+              <div class="ranking-info">
+                <strong>${escapeHtml(store.name)}</strong>
+                <span>${store.orders} zamówień</span>
+              </div>
+              <div class="ranking-value">${formatCurrency(store.revenue)}</div>
+            </div>`
+          );
+        });
+      }
+    }
+
+    const productsTbody = document.querySelector('[data-rank-products-tbody]');
+    if(productsTbody){
+      productsTbody.innerHTML = '';
+      const topProducts = products.slice(0, 10).map((p, idx) => ({
+        name: p.name || p.title || 'Produkt',
+        supplier: p.supplier || p.supplierName || '—',
+        sales: Math.max(0, (p.sales || 0) + Math.floor(Math.random() * 20)),
+        revenue: Math.round((p.price || 50) * (p.sales || Math.floor(Math.random() * 30) + 1)),
+        stores: Math.floor(Math.random() * 12) + 1,
+        idx
+      })).sort((a, b) => b.revenue - a.revenue);
+
+      topProducts.forEach((p, i) => {
+        productsTbody.insertAdjacentHTML('beforeend',
+          `<tr>
+            <td>${i+1}</td>
+            <td>${escapeHtml(p.name)}</td>
+            <td class="cell-muted">${escapeHtml(p.supplier)}</td>
+            <td>${p.sales}</td>
+            <td>${formatCurrency(p.revenue)}</td>
+            <td>${p.stores}</td>
+          </tr>`
+        );
+      });
+      if(!topProducts.length){
+        productsTbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted)">Brak danych</td></tr>';
+      }
+    }
+  }
+
+  // ── Product catalog page (katalog.html) ──
+  function initCatalogPage(){
+    if(document.body.dataset.page !== 'katalog') return;
+    const data = ensureFinalStorage();
+    const allProducts = data.products || [];
+    const suppliers = data.suppliers || [];
+
+    const CATEGORY_ICONS = {
+      moda: '👗', elektronika: '💻', dom: '🏠', sport: '⚽',
+      uroda: '💄', zabawki: '🧸', automotive: '🚗', inne: '📦'
+    };
+
+    // Enrich products with source type
+    const catalogProducts = allProducts.map((p, i) => ({
+      ...p,
+      source: p.source || (i % 3 === 0 ? 'hurtownia' : i % 3 === 1 ? 'dostawca' : 'platforma'),
+      category: p.category || 'inne',
+      buyPrice: p.price || p.buyPrice || 50,
+      suggestedMargin: p.suggestedMargin || 20,
+      sales: p.sales || 0,
+      imageUrl: p.imageUrl || null
+    }));
+
+    const grid = document.querySelector('[data-catalog-grid]');
+    const countEl = document.querySelector('[data-catalog-count]');
+    const searchInput = document.getElementById('catalog-search');
+    const sourceFilter = document.getElementById('catalog-source-filter');
+    const categoryFilter = document.getElementById('catalog-category-filter');
+    const sortSelect = document.getElementById('catalog-sort');
+
+    let currentProduct = null;
+
+    const sourceLabel = {hurtownia: '🏭 Hurtownia', dostawca: '🚚 Dostawca', platforma: '⭐ Platforma'};
+    const sourcePillClass = {hurtownia: 'pill-hurtownia', dostawca: 'pill-dostawca', platforma: 'pill-platforma'};
+
+    function renderCatalog(){
+      if(!grid) return;
+      const query = (searchInput ? searchInput.value : '').toLowerCase();
+      const src = sourceFilter ? sourceFilter.value : '';
+      const cat = categoryFilter ? categoryFilter.value : '';
+      const sortBy = sortSelect ? sortSelect.value : 'popular';
+
+      let filtered = catalogProducts.filter(p => {
+        const name = (p.name || p.title || '').toLowerCase();
+        const supplier = (p.supplier || p.supplierName || '').toLowerCase();
+        if(query && !name.includes(query) && !supplier.includes(query)) return false;
+        if(src && p.source !== src) return false;
+        if(cat && p.category !== cat) return false;
+        return true;
+      });
+
+      if(sortBy === 'popular') filtered.sort((a, b) => (b.sales || 0) - (a.sales || 0));
+      else if(sortBy === 'margin-asc') filtered.sort((a, b) => (a.suggestedMargin || 0) - (b.suggestedMargin || 0));
+      else if(sortBy === 'margin-desc') filtered.sort((a, b) => (b.suggestedMargin || 0) - (a.suggestedMargin || 0));
+      else if(sortBy === 'price-asc') filtered.sort((a, b) => (a.buyPrice || 0) - (b.buyPrice || 0));
+      else if(sortBy === 'price-desc') filtered.sort((a, b) => (b.buyPrice || 0) - (a.buyPrice || 0));
+
+      if(countEl) countEl.textContent = `${filtered.length} produktów`;
+
+      grid.innerHTML = '';
+      filtered.forEach(p => {
+        const margin = p.suggestedMargin || 20;
+        const buyPrice = p.buyPrice || 50;
+        const sellPrice = Math.round(buyPrice * (1 + margin / 100));
+        const catIcon = CATEGORY_ICONS[p.category] || '📦';
+        const pillClass = sourcePillClass[p.source] || 'pill-platforma';
+        const label = sourceLabel[p.source] || '⭐ Platforma';
+        const imgHtml = p.imageUrl
+          ? `<img class="catalog-card-img" src="${escapeHtml(p.imageUrl)}" alt="${escapeHtml(p.name || p.title || '')}" loading="lazy">`
+          : `<div class="catalog-card-img-placeholder">${catIcon}</div>`;
+        grid.insertAdjacentHTML('beforeend',
+          `<div class="catalog-card" data-product-id="${escapeHtml(String(p.id))}">
+            ${imgHtml}
+            <div class="catalog-card-body">
+              <span class="catalog-card-source ${pillClass}">${label}</span>
+              <div class="catalog-card-name">${escapeHtml(p.name || p.title || 'Produkt')}</div>
+              <div class="catalog-card-supplier">${escapeHtml(p.supplier || p.supplierName || '—')}</div>
+              <div class="catalog-card-prices">
+                <span class="catalog-card-buy">${buyPrice.toFixed(2)} zł</span>
+                <span class="catalog-card-margin">+${margin}%</span>
+              </div>
+              <div class="catalog-card-price">${sellPrice.toFixed(2)} zł</div>
+            </div>
+            <div class="catalog-card-footer">
+              <button class="btn btn-primary catalog-card-add" type="button" data-add-to-store="${escapeHtml(String(p.id))}">Dodaj do sklepu</button>
+            </div>
+          </div>`
+        );
+      });
+    }
+
+    if(searchInput) searchInput.addEventListener('input', renderCatalog);
+    if(sourceFilter) sourceFilter.addEventListener('change', renderCatalog);
+    if(categoryFilter) categoryFilter.addEventListener('change', renderCatalog);
+    if(sortSelect) sortSelect.addEventListener('change', renderCatalog);
+
+    // Open modal on "Dodaj do sklepu"
+    const modal = document.querySelector('[data-catalog-modal]');
+    const marginInput = document.querySelector('[data-margin-input]');
+    const marginPreview = document.querySelector('[data-margin-preview]');
+    const modalBuyPrice = document.querySelector('[data-modal-buy-price]');
+    const modalProfit = document.querySelector('[data-modal-profit]');
+    const modalSellPrice = document.querySelector('[data-modal-sell-price]');
+    const modalProductInfo = document.querySelector('[data-modal-product-info]');
+
+    function updateModalCalc(){
+      if(!currentProduct || !marginInput) return;
+      const margin = Math.max(1, parseInt(marginInput.value, 10) || 1);
+      const buy = currentProduct.buyPrice || 50;
+      const sell = Math.round(buy * (1 + margin / 100) * 100) / 100;
+      const profit = Math.round((sell - buy) * 100) / 100;
+      if(marginPreview) marginPreview.textContent = margin;
+      if(modalBuyPrice) modalBuyPrice.textContent = `${buy.toFixed(2)} zł`;
+      if(modalProfit) modalProfit.textContent = `${profit.toFixed(2)} zł`;
+      if(modalSellPrice) modalSellPrice.textContent = `${sell.toFixed(2)} zł`;
+    }
+
+    if(grid){
+      grid.addEventListener('click', event => {
+        const btn = event.target.closest('[data-add-to-store]');
+        if(!btn) return;
+        const id = btn.dataset.addToStore;
+        currentProduct = catalogProducts.find(p => String(p.id) === id) || null;
+        if(!currentProduct || !modal) return;
+        if(modalProductInfo && currentProduct){
+          const catIcon = CATEGORY_ICONS[currentProduct.category] || '📦';
+          modalProductInfo.innerHTML = `
+            <div style="width:56px;height:56px;border-radius:10px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0">${catIcon}</div>
+            <div>
+              <strong>${escapeHtml(currentProduct.name || currentProduct.title || 'Produkt')}</strong>
+              <span>${escapeHtml(currentProduct.supplier || currentProduct.supplierName || '—')}</span>
+            </div>
+          `;
+        }
+        if(marginInput) marginInput.value = currentProduct.suggestedMargin || 20;
+        updateModalCalc();
+        modal.hidden = false;
+        document.body.style.overflow = 'hidden';
+      });
+    }
+
+    if(marginInput) marginInput.addEventListener('input', updateModalCalc);
+
+    const closeModal = () => {
+      if(modal) modal.hidden = true;
+      document.body.style.overflow = '';
+      currentProduct = null;
+    };
+
+    document.querySelectorAll('[data-catalog-modal-close]').forEach(btn => {
+      btn.addEventListener('click', closeModal);
+    });
+    if(modal) modal.addEventListener('click', e => { if(e.target === modal) closeModal(); });
+
+    const confirmBtn = document.querySelector('[data-catalog-add-confirm]');
+    if(confirmBtn){
+      confirmBtn.addEventListener('click', () => {
+        if(!currentProduct) return;
+        const margin = Math.max(1, parseInt((marginInput ? marginInput.value : 20), 10) || 1);
+        // Save to store products list in localStorage
+        const key = 'catalog_store_products';
+        let storeProducts = [];
+        try { storeProducts = JSON.parse(localStorage.getItem(key) || '[]'); } catch(e){ storeProducts = []; }
+        const existing = storeProducts.find(sp => String(sp.id) === String(currentProduct.id));
+        if(!existing){
+          storeProducts.push({...currentProduct, userMargin: margin, addedAt: Date.now()});
+          localStorage.setItem(key, JSON.stringify(storeProducts));
+        }
+        closeModal();
+        // Show a brief success toast
+        const toast = document.createElement('div');
+        toast.className = 'toast-msg toast-success';
+        toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(84,255,176,.15);border:1px solid rgba(84,255,176,.4);color:#b2ffe0;padding:10px 20px;border-radius:12px;z-index:9999;font-size:14px;font-weight:600;white-space:nowrap';
+        toast.textContent = '✓ Produkt dodany do sklepu!';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2500);
+      });
+    }
+
+    renderCatalog();
+  }
+
+  // ── Supplier panel (dostawcy.html) ──
+  function initSupplierPanel(){
+    if(document.body.dataset.page !== 'dostawcy') return;
+    const data = ensureFinalStorage();
+    const allProducts = data.products || [];
+    const stores = data.stores || [];
+
+    // Tab switching
+    const tabNav = document.querySelector('[data-supplier-tab-nav]');
+    const tabPanels = document.querySelectorAll('[data-supplier-tab-panel]');
+
+    function showSupplierTab(tabId){
+      tabPanels.forEach(panel => {
+        panel.hidden = panel.dataset.supplierTabPanel !== tabId;
+      });
+      if(tabNav){
+        tabNav.querySelectorAll('[data-supplier-tab]').forEach(link => {
+          link.classList.toggle('active', link.dataset.supplierTab === tabId);
+        });
+      }
+    }
+
+    if(tabNav){
+      tabNav.addEventListener('click', e => {
+        const link = e.target.closest('[data-supplier-tab]');
+        if(!link) return;
+        e.preventDefault();
+        showSupplierTab(link.dataset.supplierTab);
+      });
+    }
+
+    document.addEventListener('click', e => {
+      const btn = e.target.closest('[data-supplier-tab-btn]');
+      if(!btn) return;
+      showSupplierTab(btn.dataset.supplierTabBtn);
+    });
+
+    showSupplierTab('overview');
+
+    // Overview stats (demo values from seeded data)
+    const myProducts = allProducts.slice(0, 8);
+    setText('[data-supplier-products-count]', myProducts.length);
+    setText('[data-supplier-stores-count]', Math.min(stores.length, 5));
+    setText('[data-supplier-sales]', formatCurrency(myProducts.length * 850));
+    setText('[data-supplier-orders]', myProducts.length * 12);
+    setText('[data-supplier-sales-today]', formatCurrency(Math.floor(Math.random() * 500 + 200)));
+    setText('[data-supplier-sales-month]', formatCurrency(myProducts.length * 850));
+    setText('[data-supplier-orders-month]', myProducts.length * 12);
+    if(myProducts.length){
+      setText('[data-supplier-top-product]', myProducts[0].name || myProducts[0].title || '—');
+    }
+
+    // Recent products list
+    const recentList = document.querySelector('[data-supplier-recent-products]');
+    if(recentList){
+      recentList.innerHTML = '';
+      myProducts.slice(0, 4).forEach(p => {
+        recentList.insertAdjacentHTML('beforeend',
+          `<div class="list-card-item">
+            <strong>${escapeHtml(p.name || p.title || 'Produkt')}</strong>
+            <span>${formatCurrency(p.price || p.buyPrice || 50)} — cena hurtowa</span>
+          </div>`
+        );
+      });
+      if(!myProducts.length) recentList.innerHTML = '<p class="empty">Brak produktów</p>';
+    }
+
+    // Products table
+    const productsTbody = document.querySelector('[data-supplier-products-tbody]');
+    if(productsTbody){
+      productsTbody.innerHTML = '';
+      myProducts.forEach((p, i) => {
+        const storesCount = Math.floor(Math.random() * 8) + 1;
+        const sales = Math.floor(Math.random() * 60) + 5;
+        productsTbody.insertAdjacentHTML('beforeend',
+          `<tr>
+            <td class="cell-mono">${escapeHtml(String(p.id || i+1))}</td>
+            <td>${escapeHtml(p.name || p.title || 'Produkt')}</td>
+            <td class="cell-muted">${escapeHtml(p.category || 'inne')}</td>
+            <td>${formatCurrency(p.price || p.buyPrice || 50)}</td>
+            <td>${storesCount}</td>
+            <td>${sales}</td>
+            <td><span class="pill-active">Aktywny</span></td>
+            <td><button class="btn btn-secondary" type="button" style="font-size:12px;padding:4px 10px">Edytuj</button></td>
+          </tr>`
+        );
+      });
+      if(!myProducts.length){
+        productsTbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted)">Brak produktów</td></tr>';
+      }
+    }
+
+    // Top stores table
+    const topStoresTbody = document.querySelector('[data-supplier-top-stores-tbody]');
+    if(topStoresTbody){
+      topStoresTbody.innerHTML = '';
+      stores.slice(0, 5).forEach((store, i) => {
+        const products = Math.floor(Math.random() * 6) + 1;
+        const orders = Math.floor(Math.random() * 30) + 5;
+        const revenue = Math.round(orders * 120);
+        topStoresTbody.insertAdjacentHTML('beforeend',
+          `<tr>
+            <td>${i+1}</td>
+            <td>${escapeHtml(store.name || 'Sklep')}</td>
+            <td>${products}</td>
+            <td>${orders}</td>
+            <td>${formatCurrency(revenue)}</td>
+          </tr>`
+        );
+      });
+      if(!stores.length){
+        topStoresTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Brak danych</td></tr>';
+      }
+    }
+
+    // Sales table
+    const salesTbody = document.querySelector('[data-supplier-sales-tbody]');
+    if(salesTbody){
+      salesTbody.innerHTML = '';
+      myProducts.forEach(p => {
+        const storesCount = Math.floor(Math.random() * 6) + 1;
+        const orders = Math.floor(Math.random() * 50) + 5;
+        const revenue = Math.round(orders * (p.price || 60));
+        const earning = Math.round(revenue * 0.7);
+        salesTbody.insertAdjacentHTML('beforeend',
+          `<tr>
+            <td>${escapeHtml(p.name || p.title || 'Produkt')}</td>
+            <td>${storesCount}</td>
+            <td>${orders}</td>
+            <td>${formatCurrency(revenue)}</td>
+            <td>${formatCurrency(earning)}</td>
+          </tr>`
+        );
+      });
+      if(!myProducts.length){
+        salesTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted)">Brak danych</td></tr>';
+      }
+    }
+
+    // Add product form
+    const productForm = document.querySelector('[data-supplier-product-form]');
+    const formSuccess = document.querySelector('[data-supplier-form-success]');
+    if(productForm){
+      productForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const formData = new FormData(productForm);
+        const name = (formData.get('name') || '').trim();
+        const category = formData.get('category') || 'inne';
+        const price = parseFloat(formData.get('price') || 0);
+        if(!name || !price) return;
+        // Save to localStorage as a new product
+        const newProduct = {
+          id: 'sup-' + Date.now(),
+          name,
+          category,
+          price,
+          source: 'dostawca',
+          supplier: localStorage.getItem('supplier_company') || 'Dostawca',
+          stock: parseInt(formData.get('stock') || 0, 10),
+          sku: formData.get('sku') || '',
+          shipping: formData.get('shipping') || '3-5',
+          description: formData.get('description') || '',
+          imageUrl: formData.get('imageUrl') || '',
+          createdAt: Date.now(),
+          sales: 0
+        };
+        const existingProducts = JSON.parse(localStorage.getItem('qm_products') || '[]');
+        existingProducts.unshift(newProduct);
+        localStorage.setItem('qm_products', JSON.stringify(existingProducts));
+        productForm.reset();
+        if(formSuccess) { formSuccess.hidden = false; setTimeout(() => { formSuccess.hidden = true; }, 3000); }
+      });
+    }
+
+    // Settings form
+    const settingsForm = document.querySelector('[data-supplier-settings-form]');
+    if(settingsForm){
+      // Load saved settings
+      settingsForm.querySelectorAll('[data-supplier-setting]').forEach(input => {
+        const key = input.dataset.supplierSetting;
+        const val = localStorage.getItem('supplier_' + key) || '';
+        input.value = val;
+      });
+      settingsForm.addEventListener('submit', e => {
+        e.preventDefault();
+        settingsForm.querySelectorAll('[data-supplier-setting]').forEach(input => {
+          const key = input.dataset.supplierSetting;
+          localStorage.setItem('supplier_' + key, input.value);
+        });
+        const toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(84,255,176,.15);border:1px solid rgba(84,255,176,.4);color:#b2ffe0;padding:10px 20px;border-radius:12px;z-index:9999;font-size:14px;font-weight:600;';
+        toast.textContent = '✓ Ustawienia zapisane!';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2500);
+      });
+    }
+  }
+
+  // ── Dashboard partner earnings & referral ──
+  function initPartnerEarnings(){
+    if(document.body.dataset.page !== 'dashboard') return;
+    const data = ensureFinalStorage();
+    const stores = data.stores || [];
+    const plan = (localStorage.getItem(STORAGE_KEYS.plan) || 'basic').toLowerCase();
+    const marginMap = PLAN_DEFAULT_MARGINS;
+    const margin = marginMap[plan] || 15;
+
+    // Demo earnings based on plan
+    const demoSales = plan === 'elite' ? 4800 : plan === 'pro' ? 2400 : 800;
+    const demoEarnings = Math.round(demoSales * margin / 100);
+    const demoOrders = Math.round(demoSales / 120);
+
+    const setText2 = (sel, val) => { const el = document.querySelector(sel); if(el) el.textContent = val; };
+    setText2('[data-partner-sales]', `${demoSales} zł`);
+    setText2('[data-partner-earnings]', `${demoEarnings} zł`);
+    setText2('[data-partner-margin]', `${margin}%`);
+    setText2('[data-partner-orders]', String(demoOrders));
+
+    // Referral stats (demo)
+    const referrals = data.referrals || [];
+    const myRef = referrals[0] || null;
+    setText2('[data-partner-referred]', myRef ? String(myRef.referred || 0) : '0');
+    setText2('[data-partner-ref-stores]', myRef ? String(myRef.activeStores || 0) : '0');
+    setText2('[data-partner-ref-commission]', myRef ? `${myRef.commission || 0} zł` : '0 zł');
+
+    // Referral link
+    const refLinkInput = document.querySelector('[data-partner-referral-link]');
+    if(refLinkInput){
+      const email = localStorage.getItem(STORAGE_KEYS.email) || '';
+      const code = email ? email.split('@')[0].replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 8) : 'USER';
+      const baseUrl = window.location.origin + window.location.pathname.replace('dashboard.html', 'index.html');
+      refLinkInput.value = `${baseUrl}?ref=${code}`;
+    }
+
+    const copyBtn = document.querySelector('[data-copy-partner-referral]');
+    if(copyBtn && refLinkInput){
+      copyBtn.addEventListener('click', () => {
+        const val = refLinkInput.value;
+        if(navigator.clipboard){
+          navigator.clipboard.writeText(val).then(() => {
+            const orig = copyBtn.textContent;
+            copyBtn.textContent = '✓ Skopiowano!';
+            setTimeout(() => { copyBtn.textContent = orig; }, 2000);
+          }).catch(() => {
+            refLinkInput.select();
+            document.execCommand('copy');
+          });
+        } else {
+          refLinkInput.select();
+          document.execCommand('copy');
+        }
+      });
+    }
+  }
+
+  // ── Zarabiaj.html earnings calculator ──
+  function initEarnCalculator(){
+    if(document.body.dataset.page !== 'zarabiaj') return;
+    const inputs = document.querySelectorAll('[data-earn-calc]');
+    const values = {};
+    inputs.forEach(input => {
+      values[input.dataset.earnCalc] = parseInt(input.value, 10);
+      const display = document.querySelector(`[data-earn-calc-display="${input.dataset.earnCalc}"]`);
+      if(display) display.textContent = input.value;
+      input.addEventListener('input', () => {
+        values[input.dataset.earnCalc] = parseInt(input.value, 10);
+        if(display) display.textContent = input.value;
+        updateEarnResults();
+      });
+    });
+
+    function updateEarnResults(){
+      const orders = values.orders || 10;
+      const avgPrice = values.avgPrice || 120;
+      const margin = values.margin || 20;
+      const dailyEarning = Math.round(orders * avgPrice * margin / 100);
+      const monthlyEarning = dailyEarning * 30;
+      const yearlyEarning = dailyEarning * 365;
+      const setText3 = (sel, val) => { const el = document.querySelector(sel); if(el) el.textContent = val; };
+      setText3('[data-earn-result="daily"]', `${dailyEarning.toLocaleString('pl-PL')} zł`);
+      setText3('[data-earn-result="monthly"]', `${monthlyEarning.toLocaleString('pl-PL')} zł`);
+      setText3('[data-earn-result="yearly"]', `${yearlyEarning.toLocaleString('pl-PL')} zł`);
+    }
+
+    updateEarnResults();
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     initServiceWorker();
     initInstallBanner();
@@ -5074,6 +5664,12 @@
     initBottomNav();
     ensureFinalStorage();
     initOwnerPanel();
+    initOwnerQuickNav();
+    initOwnerRanking();
+    initCatalogPage();
+    initSupplierPanel();
+    initPartnerEarnings();
+    initEarnCalculator();
     initSuppliersModule();
     initStorefrontProducts();
     initCounters();

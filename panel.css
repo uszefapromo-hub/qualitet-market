@@ -191,3 +191,211 @@ body{
 @media(max-width:360px){
   .stats-g2,.stats-g3,.stats-g4{grid-template-columns:1fr 1fr}
 }
+
+/* ══════════════════════════════════════════════════════════
+   QUICK NAV BUTTONS — Owner Panel
+   ══════════════════════════════════════════════════════════ */
+.quick-nav-grid{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:12px;
+  margin-top:8px;
+}
+.quick-nav-btn{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:8px;
+  padding:18px 12px;
+  border-radius:18px;
+  border:1px solid var(--stroke);
+  background:rgba(255,255,255,.05);
+  color:var(--text);
+  font-size:13px;
+  font-weight:600;
+  cursor:pointer;
+  transition:background .15s,border-color .15s,transform .1s;
+  text-align:center;
+  min-height:88px;
+}
+.quick-nav-btn:hover{
+  background:rgba(56,217,255,.1);
+  border-color:rgba(56,217,255,.4);
+  transform:translateY(-2px);
+}
+.quick-nav-icon{font-size:26px;line-height:1}
+@media(max-width:900px){.quick-nav-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:480px){.quick-nav-grid{grid-template-columns:repeat(2,1fr);gap:8px}.quick-nav-btn{padding:14px 8px;min-height:76px;font-size:12px}.quick-nav-icon{font-size:22px}}
+
+/* ══════════════════════════════════════════════════════════
+   RANKING LIST
+   ══════════════════════════════════════════════════════════ */
+.ranking-list{display:flex;flex-direction:column;gap:10px}
+.ranking-item{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 16px;
+  border-radius:14px;
+  border:1px solid var(--stroke);
+  background:rgba(255,255,255,.03);
+}
+.ranking-pos{
+  width:30px;height:30px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:14px;flex-shrink:0;
+  background:rgba(255,216,77,.15);color:#ffd84d;border:1px solid rgba(255,216,77,.3);
+}
+.ranking-pos.pos-1{background:rgba(255,216,77,.25);color:#ffe066;font-size:16px}
+.ranking-pos.pos-2{background:rgba(200,200,220,.2);color:#d0d0e8}
+.ranking-pos.pos-3{background:rgba(200,120,60,.2);color:#e8a07a}
+.ranking-info{flex:1;min-width:0}
+.ranking-info strong{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ranking-info span{font-size:12px;color:var(--muted)}
+.ranking-value{font-weight:700;font-size:14px;text-align:right}
+
+/* ══════════════════════════════════════════════════════════
+   CATALOG PAGE
+   ══════════════════════════════════════════════════════════ */
+.catalog-toolbar{
+  display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px;
+}
+.catalog-search-wrap{flex:1 1 220px}
+.catalog-filters{display:flex;gap:8px;flex-wrap:wrap}
+.catalog-stats-row{font-size:13px;color:var(--muted);margin-top:4px}
+.catalog-source-pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.catalog-source-pill{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 12px;border-radius:99px;font-size:12px;font-weight:600;
+  border:1px solid var(--stroke);background:rgba(255,255,255,.05);
+}
+.pill-hurtownia{border-color:rgba(56,217,255,.4);color:#a8edff;background:rgba(56,217,255,.08)}
+.pill-dostawca{border-color:rgba(84,255,176,.4);color:#b2ffe0;background:rgba(84,255,176,.08)}
+.pill-platforma{border-color:rgba(255,216,77,.4);color:#ffe8a0;background:rgba(255,216,77,.08)}
+
+.catalog-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+  gap:18px;
+  padding:0 0 40px;
+}
+.catalog-card{
+  border-radius:18px;
+  border:1px solid var(--stroke);
+  background:var(--card);
+  overflow:hidden;
+  display:flex;flex-direction:column;
+  transition:border-color .15s,box-shadow .15s;
+}
+.catalog-card:hover{border-color:rgba(56,217,255,.4);box-shadow:0 4px 24px rgba(56,217,255,.1)}
+.catalog-card-img{
+  width:100%;height:160px;object-fit:cover;background:rgba(255,255,255,.05);
+  display:block;
+}
+.catalog-card-img-placeholder{
+  width:100%;height:160px;background:rgba(255,255,255,.05);
+  display:flex;align-items:center;justify-content:center;font-size:48px;
+}
+.catalog-card-body{padding:14px 16px;flex:1;display:flex;flex-direction:column;gap:6px}
+.catalog-card-source{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;
+  align-self:flex-start;
+}
+.catalog-card-name{font-size:14px;font-weight:700;line-height:1.3}
+.catalog-card-supplier{font-size:12px;color:var(--muted)}
+.catalog-card-prices{display:flex;align-items:baseline;gap:8px;margin-top:auto}
+.catalog-card-buy{font-size:12px;color:var(--muted);text-decoration:line-through}
+.catalog-card-margin{
+  font-size:11px;font-weight:600;
+  background:rgba(84,255,176,.15);color:#b2ffe0;border:1px solid rgba(84,255,176,.3);
+  padding:2px 7px;border-radius:99px;
+}
+.catalog-card-price{font-size:16px;font-weight:800;color:var(--text)}
+.catalog-card-footer{padding:0 16px 14px}
+.catalog-card-add{width:100%;padding:10px;border-radius:12px;font-weight:600;font-size:13px}
+
+/* catalog modal */
+.modal-overlay{
+  position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;padding:16px;
+}
+.modal-overlay[hidden]{display:none}
+.modal-card{
+  width:100%;max-width:480px;
+  border-radius:22px;border:1px solid var(--stroke);
+  background:var(--card);
+  display:flex;flex-direction:column;
+  max-height:90vh;overflow-y:auto;
+}
+.modal-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 22px 16px;border-bottom:1px solid var(--stroke);
+}
+.modal-head h2{font-size:18px;margin:0}
+.modal-close{
+  width:32px;height:32px;border-radius:50%;border:1px solid var(--stroke);
+  background:rgba(255,255,255,.06);color:var(--muted);cursor:pointer;font-size:14px;
+}
+.modal-body{padding:20px 22px}
+.modal-product-info{
+  display:flex;align-items:center;gap:12px;padding:12px;
+  border-radius:14px;border:1px solid var(--stroke);background:rgba(255,255,255,.04);
+  margin-bottom:18px;
+}
+.modal-product-info img{width:56px;height:56px;object-fit:cover;border-radius:10px;background:rgba(255,255,255,.06)}
+.modal-product-info strong{display:block;font-size:14px}
+.modal-product-info span{font-size:12px;color:var(--muted)}
+.margin-calculator{}
+.form-label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.margin-input-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.margin-preview-tag{
+  padding:5px 14px;border-radius:99px;font-weight:700;font-size:14px;
+  background:rgba(84,255,176,.15);color:#b2ffe0;border:1px solid rgba(84,255,176,.3);
+  white-space:nowrap;
+}
+.margin-result-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+}
+.margin-result-grid>div{
+  background:rgba(255,255,255,.04);border-radius:12px;border:1px solid var(--stroke);
+  padding:10px 12px;text-align:center;
+}
+.margin-result-grid span{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}
+.margin-result-grid strong{font-size:15px;font-weight:700}
+.modal-footer{
+  display:flex;gap:10px;padding:14px 22px 20px;border-top:1px solid var(--stroke);
+}
+.modal-footer .btn{flex:1}
+@media(max-width:480px){
+  .margin-result-grid{grid-template-columns:1fr}
+  .modal-footer{flex-direction:column}
+}
+
+/* ══════════════════════════════════════════════════════════
+   SUPPLIER PANEL — dostawcy.html
+   ══════════════════════════════════════════════════════════ */
+.platform-structure{display:flex;flex-direction:column;align-items:center;gap:0}
+.structure-step{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 18px;border-radius:14px;border:1px solid var(--stroke);
+  background:rgba(255,255,255,.04);width:100%;
+}
+.structure-icon{font-size:26px;flex-shrink:0}
+.structure-step strong{display:block;font-size:14px}
+.structure-step span{font-size:13px;color:var(--muted)}
+.structure-arrow{font-size:20px;color:var(--muted);padding:6px 0;text-align:center}
+
+.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group textarea.owner-input{resize:vertical;min-height:80px}
+.form-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.form-success{margin-top:10px}
+@media(max-width:640px){.form-grid-2{grid-template-columns:1fr}}
+
+/* ══════════════════════════════════════════════════════════
+   PARTNER EARNINGS & REFERRAL — dashboard.html
+   ══════════════════════════════════════════════════════════ */
+.partner-stats-grid{margin-top:12px}
+.partner-earnings,.partner-referral{margin-top:0}

@@ -57,10 +57,13 @@
         <a href="#" data-owner-tab="subscriptions">💳 Subskrypcje</a>
         <a href="#" data-owner-tab="finances">💰 Marże i Finanse</a>
         <a href="#" data-owner-tab="referrals">🔗 System Poleceń</a>
+        <a href="#" data-owner-tab="ranking">🏆 Ranking</a>
         <a href="#" data-owner-tab="operators">🛠 Operatorzy</a>
         <a href="#" data-owner-tab="security">🔒 Bezpieczeństwo</a>
         <hr class="sidebar-sep">
         <a href="dashboard.html">Panel użytkownika</a>
+        <a href="katalog.html">Katalog produktów</a>
+        <a href="dostawcy.html">Dostawcy</a>
         <a href="hurtownie.html">Hurtownie</a>
         <a href="crm.html">CRM</a>
       </nav>
@@ -133,6 +136,57 @@
             <div class="stat-card">
               <span>Poleceń</span>
               <strong data-counter data-counter-format="grouped" data-owner-referrals-count>0</strong>
+            </div>
+          </section>
+
+          <!-- SZYBKIE PRZYCISKI NAWIGACJI -->
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Nawigacja</span>
+              <h2>Szybkie przyciski</h2>
+              <p class="hint">Kliknij przycisk aby przejść do wybranej sekcji.</p>
+            </div>
+            <div class="quick-nav-grid">
+              <button class="quick-nav-btn" type="button" data-owner-tab-btn="users">
+                <span class="quick-nav-icon">👥</span>
+                <span>Użytkownicy</span>
+              </button>
+              <button class="quick-nav-btn" type="button" data-owner-tab-btn="stores">
+                <span class="quick-nav-icon">🏪</span>
+                <span>Sklepy</span>
+              </button>
+              <button class="quick-nav-btn" type="button" data-owner-tab-btn="products">
+                <span class="quick-nav-icon">📦</span>
+                <span>Produkty</span>
+              </button>
+              <button class="quick-nav-btn" type="button" data-owner-tab-btn="orders">
+                <span class="quick-nav-icon">🛒</span>
+                <span>Zamówienia</span>
+              </button>
+              <button class="quick-nav-btn" type="button" data-owner-tab-btn="subscriptions">
+                <span class="quick-nav-icon">💳</span>
+                <span>Subskrypcje</span>
+              </button>
+              <button class="quick-nav-btn" type="button" data-owner-tab-btn="finances">
+                <span class="quick-nav-icon">💰</span>
+                <span>Marże</span>
+              </button>
+              <button class="quick-nav-btn" type="button" data-owner-tab-btn="ranking">
+                <span class="quick-nav-icon">🏆</span>
+                <span>Ranking</span>
+              </button>
+              <button class="quick-nav-btn" type="button" data-owner-tab-btn="operators">
+                <span class="quick-nav-icon">🛠</span>
+                <span>Operatorzy</span>
+              </button>
+              <button class="quick-nav-btn" type="button" data-owner-tab-btn="referrals">
+                <span class="quick-nav-icon">🔗</span>
+                <span>Polecenia</span>
+              </button>
+              <button class="quick-nav-btn" type="button" data-owner-tab-btn="security">
+                <span class="quick-nav-icon">🔒</span>
+                <span>Ustawienia</span>
+              </button>
             </div>
           </section>
 
@@ -563,6 +617,69 @@
             <div class="referral-link-box">
               <input class="owner-input" type="text" readonly data-owner-referral-link aria-label="Twój unikalny link polecający do kopiowania">
               <button class="btn btn-primary" type="button" data-copy-referral-link>Kopiuj link</button>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: RANKING -->
+        <div class="owner-tab-panel" data-owner-tab-panel="ranking" hidden>
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Ranking platformy</span>
+            <h2>Top sprzedawcy, sklepy i produkty</h2>
+            <p class="hint">Ranking najlepszych sprzedawców, sklepów i produktów na platformie.</p>
+          </section>
+
+          <section class="stats-grid stats-g3">
+            <div class="stat-card">
+              <span>Sprzedawców w rankingu</span>
+              <strong data-rank-sellers-count>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Sklepów aktywnych</span>
+              <strong data-rank-stores-count>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Top produktów</span>
+              <strong data-rank-products-count>0</strong>
+            </div>
+          </section>
+
+          <section class="dashboard-grid">
+            <article class="panel-card">
+              <div class="section-head">
+                <span class="eyebrow">Sprzedawcy</span>
+                <h2>🏆 Top Sprzedawcy</h2>
+              </div>
+              <div class="ranking-list" data-rank-sellers-list></div>
+            </article>
+            <article class="panel-card">
+              <div class="section-head">
+                <span class="eyebrow">Sklepy</span>
+                <h2>🏆 Top Sklepy</h2>
+              </div>
+              <div class="ranking-list" data-rank-stores-list></div>
+            </article>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Produkty</span>
+              <h2>🏆 Top Produkty</h2>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table" data-rank-products-table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Produkt</th>
+                    <th>Dostawca</th>
+                    <th>Sprzedaży</th>
+                    <th>Obrót</th>
+                    <th>Sklepy</th>
+                  </tr>
+                </thead>
+                <tbody data-rank-products-tbody></tbody>
+              </table>
             </div>
           </section>
         </div>

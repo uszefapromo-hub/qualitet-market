@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Katalog Produktów — Marketplace — HurtDetal Uszefa QUALITET</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body data-page="katalog" class="dashboard-page has-bottom-nav">
+  <div class="app-splash" data-app-splash>
+    <div class="app-splash-card">
+      <div class="app-splash-logo">
+        <img src="assets/icons/icon-192.svg" alt="UszefaQualitet">
+      </div>
+      <div class="app-splash-title">
+        <strong>UszefaQualitet</strong>
+        <span>Katalog produktów</span>
+      </div>
+      <div class="app-splash-loader"></div>
+    </div>
+  </div>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>UszefaQualitet</strong>
+          <span>QualitetMarket</span>
+          <span class="brand-tag">U SZEFA</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Główna nawigacja">
+        <a href="index.html">Start</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="katalog.html" class="active">Katalog</a>
+        <a href="cennik.html">Cennik</a>
+      </nav>
+      <a class="btn btn-primary topbar-cta" href="dashboard.html">Panel</a>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <div class="dashboard-shell">
+    <aside class="sidebar">
+      <nav class="sidebar-nav" aria-label="Menu panelu">
+        <a href="dashboard.html">Dashboard</a>
+        <a class="active" href="katalog.html">📦 Katalog produktów</a>
+        <a href="generator-sklepu.html">Mój sklep</a>
+        <a href="hurtownie.html">Hurtownie</a>
+        <a href="qualitetmarket.html">QualitetMarket</a>
+        <a href="dostawcy.html">Dostawcy</a>
+        <a href="zarabiaj.html">Zarabiaj z nami</a>
+        <a href="cennik.html">Subskrypcja</a>
+      </nav>
+    </aside>
+
+    <main class="dashboard-main">
+      <section class="panel-card dashboard-welcome">
+        <span class="eyebrow">Marketplace</span>
+        <h1>Katalog produktów</h1>
+        <p class="hint">Przeglądaj produkty hurtowni, dostawców i produkty własne platformy. Dodaj produkt do swojego sklepu jednym kliknięciem i ustaw własną marżę.</p>
+        <div class="catalog-source-pills">
+          <span class="catalog-source-pill pill-hurtownia">🏭 Hurtownie</span>
+          <span class="catalog-source-pill pill-dostawca">🚚 Dostawcy</span>
+          <span class="catalog-source-pill pill-platforma">⭐ Platforma</span>
+        </div>
+      </section>
+
+      <section class="panel-card">
+        <div class="catalog-toolbar">
+          <div class="catalog-search-wrap">
+            <input class="owner-search" type="search" id="catalog-search" placeholder="Szukaj produktu…" aria-label="Szukaj produktu w katalogu">
+          </div>
+          <div class="catalog-filters">
+            <select class="owner-filter" id="catalog-source-filter" aria-label="Filtruj po źródle">
+              <option value="">Wszystkie źródła</option>
+              <option value="hurtownia">Hurtownie</option>
+              <option value="dostawca">Dostawcy</option>
+              <option value="platforma">Platforma własna</option>
+            </select>
+            <select class="owner-filter" id="catalog-category-filter" aria-label="Filtruj po kategorii">
+              <option value="">Wszystkie kategorie</option>
+              <option value="moda">Moda i odzież</option>
+              <option value="elektronika">Elektronika</option>
+              <option value="dom">Dom i ogród</option>
+              <option value="sport">Sport i outdoor</option>
+              <option value="uroda">Uroda i zdrowie</option>
+              <option value="zabawki">Zabawki i dzieci</option>
+              <option value="automotive">Automotive</option>
+              <option value="inne">Inne</option>
+            </select>
+            <select class="owner-filter" id="catalog-sort" aria-label="Sortuj">
+              <option value="popular">Najpopularniejsze</option>
+              <option value="margin-asc">Marża rosnąco</option>
+              <option value="margin-desc">Marża malejąco</option>
+              <option value="price-asc">Cena rosnąco</option>
+              <option value="price-desc">Cena malejąco</option>
+              <option value="new">Najnowsze</option>
+            </select>
+          </div>
+        </div>
+        <div class="catalog-stats-row">
+          <span data-catalog-count>0 produktów</span>
+        </div>
+      </section>
+
+      <div class="catalog-grid" data-catalog-grid></div>
+
+      <!-- Margin modal -->
+      <div class="modal-overlay" data-catalog-modal hidden>
+        <div class="modal-card">
+          <div class="modal-head">
+            <h2>Dodaj do sklepu</h2>
+            <button class="modal-close" type="button" data-catalog-modal-close aria-label="Zamknij">✕</button>
+          </div>
+          <div class="modal-body">
+            <div class="modal-product-info" data-modal-product-info></div>
+            <div class="margin-calculator">
+              <label class="form-label" for="catalog-margin-input">Twoja marża (%)</label>
+              <div class="margin-input-row">
+                <input class="owner-input" type="number" id="catalog-margin-input" min="1" max="300" value="30" data-margin-input>
+                <span class="margin-preview-tag">+<span data-margin-preview>30</span>%</span>
+              </div>
+              <div class="margin-result-grid">
+                <div>
+                  <span>Cena zakupu</span>
+                  <strong data-modal-buy-price>—</strong>
+                </div>
+                <div>
+                  <span>Twój zarobek</span>
+                  <strong data-modal-profit>—</strong>
+                </div>
+                <div>
+                  <span>Cena sprzedaży</span>
+                  <strong data-modal-sell-price>—</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary" type="button" data-catalog-modal-close>Anuluj</button>
+            <button class="btn btn-primary" type="button" data-catalog-add-confirm>✓ Dodaj do sklepu i opublikuj</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
+    <a href="index.html" rel="nofollow noreferrer" data-nav="index">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 11.5L12 4l9 7.5"></path>
+        <path d="M5 10.5V20h14v-9.5"></path>
+      </svg>
+      <span>Start</span>
+    </a>
+    <a href="sklep.html" rel="nofollow noreferrer" data-nav="sklep">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 9h18l-1.5 11H4.5L3 9z"></path>
+        <path d="M7 9V7a5 5 0 0 1 10 0v2"></path>
+      </svg>
+      <span>Sklep</span>
+    </a>
+    <a href="katalog.html" rel="nofollow noreferrer" data-nav="katalog">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="8" height="8" rx="1.2"></rect>
+        <rect x="13" y="3" width="8" height="8" rx="1.2"></rect>
+        <rect x="3" y="13" width="8" height="8" rx="1.2"></rect>
+        <rect x="13" y="13" width="8" height="8" rx="1.2"></rect>
+      </svg>
+      <span>Katalog</span>
+    </a>
+    <a href="dashboard.html" rel="nofollow noreferrer" data-nav="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="14" width="7" height="7" rx="1.2"></rect>
+        <rect x="3" y="14" width="7" height="7" rx="1.2"></rect>
+      </svg>
+      <span>Panel</span>
+    </a>
+    <a href="login.html" rel="nofollow noreferrer" data-nav="login">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4 20c2-3.5 6-5 8-5s6 1.5 8 5"></path>
+      </svg>
+      <span>Konto</span>
+    </a>
+  </nav>
+
+  <script src="js/app.js" defer></script>
+</body>
+</html>

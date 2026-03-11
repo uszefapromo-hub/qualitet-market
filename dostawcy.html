@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Panel Dostawców — HurtDetal Uszefa QUALITET</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body data-page="dostawcy" class="dashboard-page has-bottom-nav">
+  <div class="app-splash" data-app-splash>
+    <div class="app-splash-card">
+      <div class="app-splash-logo">
+        <img src="assets/icons/icon-192.svg" alt="UszefaQualitet">
+      </div>
+      <div class="app-splash-title">
+        <strong>UszefaQualitet</strong>
+        <span>Panel Dostawców</span>
+      </div>
+      <div class="app-splash-loader"></div>
+    </div>
+  </div>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>UszefaQualitet</strong>
+          <span>QualitetMarket</span>
+          <span class="brand-tag">U SZEFA</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Główna nawigacja">
+        <a href="index.html">Start</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="dostawcy.html" class="active">Dostawcy</a>
+        <a href="cennik.html">Cennik</a>
+      </nav>
+      <a class="btn btn-primary topbar-cta" href="dashboard.html">Panel</a>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <div class="dashboard-shell">
+    <aside class="sidebar">
+      <nav class="sidebar-nav" data-supplier-tab-nav aria-label="Menu dostawcy">
+        <a class="active" href="#" data-supplier-tab="overview">🏠 Przegląd</a>
+        <a href="#" data-supplier-tab="products">📦 Moje produkty</a>
+        <a href="#" data-supplier-tab="add-product">➕ Dodaj produkt</a>
+        <a href="#" data-supplier-tab="sales">📊 Sprzedaż</a>
+        <a href="#" data-supplier-tab="settings">⚙️ Ustawienia</a>
+        <hr class="sidebar-sep">
+        <a href="dashboard.html">Panel partnera</a>
+        <a href="katalog.html">Katalog produktów</a>
+        <a href="hurtownie.html">Hurtownie</a>
+      </nav>
+    </aside>
+
+    <main class="dashboard-main">
+      <div data-supplier-content>
+
+        <!-- TAB: OVERVIEW -->
+        <div class="owner-tab-panel" data-supplier-tab-panel="overview">
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Panel Dostawcy / Producenta</span>
+            <h1>Zarządzaj swoimi produktami</h1>
+            <p class="hint">Dodawaj produkty do katalogu platformy, zarządzaj katalogiem i monitoruj sprzedaż swoich produktów przez sprzedawców.</p>
+          </section>
+
+          <section class="stats-grid stats-g4">
+            <div class="stat-card">
+              <span>Moje produkty</span>
+              <strong data-supplier-products-count>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Sklepy sprzedające</span>
+              <strong data-supplier-stores-count>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Sprzedaż (mies.)</span>
+              <strong data-supplier-sales>0 zł</strong>
+            </div>
+            <div class="stat-card">
+              <span>Zamówień</span>
+              <strong data-supplier-orders>0</strong>
+            </div>
+          </section>
+
+          <section class="dashboard-grid">
+            <article class="panel-card">
+              <div class="section-head">
+                <span class="eyebrow">Jak działamy</span>
+                <h2>Struktura platformy</h2>
+              </div>
+              <div class="platform-structure">
+                <div class="structure-step">
+                  <span class="structure-icon">🏭</span>
+                  <div>
+                    <strong>Ty jako Dostawca</strong>
+                    <span>Dodajesz produkty do katalogu platformy</span>
+                  </div>
+                </div>
+                <div class="structure-arrow">↓</div>
+                <div class="structure-step">
+                  <span class="structure-icon">🛍️</span>
+                  <div>
+                    <strong>Sprzedawcy</strong>
+                    <span>Dodają Twoje produkty do swoich sklepów i ustawiają marżę</span>
+                  </div>
+                </div>
+                <div class="structure-arrow">↓</div>
+                <div class="structure-step">
+                  <span class="structure-icon">👥</span>
+                  <div>
+                    <strong>Klienci</strong>
+                    <span>Kupują produkty w sklepach sprzedawców</span>
+                  </div>
+                </div>
+                <div class="structure-arrow">↓</div>
+                <div class="structure-step">
+                  <span class="structure-icon">💰</span>
+                  <div>
+                    <strong>Zarobek</strong>
+                    <span>Dostajesz zapłatę za każdą sprzedaną sztukę</span>
+                  </div>
+                </div>
+              </div>
+            </article>
+            <article class="panel-card">
+              <div class="section-head">
+                <span class="eyebrow">Ostatnio dodane</span>
+                <h2>Moje produkty</h2>
+              </div>
+              <div class="list-cards" data-supplier-recent-products></div>
+              <div style="margin-top:12px">
+                <a class="btn btn-primary" href="#" data-supplier-tab-btn="add-product">Dodaj nowy produkt</a>
+              </div>
+            </article>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Sprzedaż</span>
+              <h2>Top sklepy sprzedające Twoje produkty</h2>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table" data-supplier-top-stores-table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Sklep</th>
+                    <th>Produktów</th>
+                    <th>Zamówień</th>
+                    <th>Obrót</th>
+                  </tr>
+                </thead>
+                <tbody data-supplier-top-stores-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: PRODUCTS -->
+        <div class="owner-tab-panel" data-supplier-tab-panel="products" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Mój katalog</span>
+              <h2>Moje produkty w platformie</h2>
+              <p class="hint">Lista wszystkich Twoich produktów dodanych do katalogu.</p>
+            </div>
+            <div class="owner-toolbar">
+              <input class="owner-search" type="search" placeholder="Szukaj produktu…" data-supplier-products-search aria-label="Szukaj produktu">
+              <select class="owner-filter" data-supplier-category-filter aria-label="Filtruj po kategorii">
+                <option value="">Wszystkie kategorie</option>
+                <option value="moda">Moda i odzież</option>
+                <option value="elektronika">Elektronika</option>
+                <option value="dom">Dom i ogród</option>
+                <option value="sport">Sport i outdoor</option>
+                <option value="uroda">Uroda i zdrowie</option>
+                <option value="zabawki">Zabawki i dzieci</option>
+                <option value="automotive">Automotive</option>
+                <option value="inne">Inne</option>
+              </select>
+              <button class="btn btn-primary" type="button" data-supplier-tab-btn="add-product">➕ Dodaj produkt</button>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table" data-supplier-products-table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nazwa produktu</th>
+                    <th>Kategoria</th>
+                    <th>Cena hurtowa</th>
+                    <th>Sklepy</th>
+                    <th>Sprzedaż</th>
+                    <th>Status</th>
+                    <th>Akcja</th>
+                  </tr>
+                </thead>
+                <tbody data-supplier-products-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: ADD PRODUCT -->
+        <div class="owner-tab-panel" data-supplier-tab-panel="add-product" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Dodaj produkt</span>
+              <h2>Nowy produkt do katalogu</h2>
+              <p class="hint">Wypełnij formularz aby dodać produkt do katalogu platformy. Sprzedawcy będą mogli dodać go do swojego sklepu.</p>
+            </div>
+            <form class="supplier-product-form" data-supplier-product-form novalidate>
+              <div class="form-grid-2">
+                <div class="form-group">
+                  <label class="form-label" for="sp-name">Nazwa produktu *</label>
+                  <input class="owner-input" type="text" id="sp-name" name="name" placeholder="np. Koszulka premium cotton" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="sp-category">Kategoria *</label>
+                  <select class="owner-filter" id="sp-category" name="category" required>
+                    <option value="">Wybierz kategorię</option>
+                    <option value="moda">Moda i odzież</option>
+                    <option value="elektronika">Elektronika</option>
+                    <option value="dom">Dom i ogród</option>
+                    <option value="sport">Sport i outdoor</option>
+                    <option value="uroda">Uroda i zdrowie</option>
+                    <option value="zabawki">Zabawki i dzieci</option>
+                    <option value="automotive">Automotive</option>
+                    <option value="inne">Inne</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="sp-price">Cena hurtowa (zł) *</label>
+                  <input class="owner-input" type="number" id="sp-price" name="price" min="0.01" step="0.01" placeholder="49.99" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="sp-stock">Dostępność (szt.)</label>
+                  <input class="owner-input" type="number" id="sp-stock" name="stock" min="0" placeholder="100">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="sp-sku">SKU / Kod produktu</label>
+                  <input class="owner-input" type="text" id="sp-sku" name="sku" placeholder="SKU-001">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="sp-shipping">Czas realizacji</label>
+                  <select class="owner-filter" id="sp-shipping" name="shipping">
+                    <option value="1-2">1–2 dni robocze</option>
+                    <option value="3-5">3–5 dni roboczych</option>
+                    <option value="5-10">5–10 dni roboczych</option>
+                    <option value="14+">Powyżej 14 dni</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="sp-description">Opis produktu</label>
+                <textarea class="owner-input" id="sp-description" name="description" rows="4" placeholder="Opisz produkt — materiał, wymiary, zastosowanie…"></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="sp-image-url">URL zdjęcia produktu</label>
+                <input class="owner-input" type="url" id="sp-image-url" name="imageUrl" placeholder="https://example.com/product.jpg">
+              </div>
+              <div class="form-actions">
+                <button class="btn btn-primary" type="submit">✓ Dodaj do katalogu</button>
+                <button class="btn btn-secondary" type="button" data-supplier-tab-btn="products">Anuluj</button>
+              </div>
+              <div class="form-success" data-supplier-form-success hidden>
+                <span class="status-pill is-ready">✓ Produkt został dodany do katalogu!</span>
+              </div>
+            </form>
+          </section>
+        </div>
+
+        <!-- TAB: SALES -->
+        <div class="owner-tab-panel" data-supplier-tab-panel="sales" hidden>
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Monitoring sprzedaży</span>
+            <h2>Sprzedaż Twoich produktów</h2>
+            <p class="hint">Śledź jak sprzedawcy sprzedają Twoje produkty na platformie.</p>
+          </section>
+
+          <section class="stats-grid stats-g4">
+            <div class="stat-card">
+              <span>Sprzedaż dziś</span>
+              <strong data-supplier-sales-today>0 zł</strong>
+            </div>
+            <div class="stat-card">
+              <span>Sprzedaż (mies.)</span>
+              <strong data-supplier-sales-month>0 zł</strong>
+            </div>
+            <div class="stat-card">
+              <span>Zamówień (mies.)</span>
+              <strong data-supplier-orders-month>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Najlepszy produkt</span>
+              <strong data-supplier-top-product>—</strong>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Szczegóły</span>
+              <h2>Sprzedaż według produktu</h2>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table" data-supplier-sales-table>
+                <thead>
+                  <tr>
+                    <th>Produkt</th>
+                    <th>Sklepy</th>
+                    <th>Zamówień</th>
+                    <th>Obrót</th>
+                    <th>Twój zarobek</th>
+                  </tr>
+                </thead>
+                <tbody data-supplier-sales-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: SETTINGS -->
+        <div class="owner-tab-panel" data-supplier-tab-panel="settings" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Profil dostawcy</span>
+              <h2>Ustawienia konta dostawcy</h2>
+            </div>
+            <form class="supplier-settings-form" data-supplier-settings-form novalidate>
+              <div class="form-grid-2">
+                <div class="form-group">
+                  <label class="form-label" for="ss-name">Nazwa firmy</label>
+                  <input class="owner-input" type="text" id="ss-name" name="companyName" placeholder="Nazwa Twojej firmy" data-supplier-setting="companyName">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="ss-nip">NIP</label>
+                  <input class="owner-input" type="text" id="ss-nip" name="nip" placeholder="1234567890" data-supplier-setting="nip">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="ss-contact">E-mail kontaktowy</label>
+                  <input class="owner-input" type="email" id="ss-contact" name="contactEmail" placeholder="kontakt@firma.pl" data-supplier-setting="contactEmail">
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="ss-phone">Telefon</label>
+                  <input class="owner-input" type="tel" id="ss-phone" name="phone" placeholder="+48 000 000 000" data-supplier-setting="phone">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="ss-description">Opis firmy</label>
+                <textarea class="owner-input" id="ss-description" name="description" rows="3" placeholder="Opisz swoją firmę…" data-supplier-setting="description"></textarea>
+              </div>
+              <div class="form-actions">
+                <button class="btn btn-primary" type="submit">Zapisz ustawienia</button>
+              </div>
+            </form>
+          </section>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
+    <a href="index.html" rel="nofollow noreferrer" data-nav="index">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 11.5L12 4l9 7.5"></path>
+        <path d="M5 10.5V20h14v-9.5"></path>
+      </svg>
+      <span>Start</span>
+    </a>
+    <a href="sklep.html" rel="nofollow noreferrer" data-nav="sklep">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 9h18l-1.5 11H4.5L3 9z"></path>
+        <path d="M7 9V7a5 5 0 0 1 10 0v2"></path>
+      </svg>
+      <span>Sklep</span>
+    </a>
+    <a href="katalog.html" rel="nofollow noreferrer" data-nav="katalog">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="8" height="8" rx="1.2"></rect>
+        <rect x="13" y="3" width="8" height="8" rx="1.2"></rect>
+        <rect x="3" y="13" width="8" height="8" rx="1.2"></rect>
+        <rect x="13" y="13" width="8" height="8" rx="1.2"></rect>
+      </svg>
+      <span>Katalog</span>
+    </a>
+    <a href="dashboard.html" rel="nofollow noreferrer" data-nav="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="14" width="7" height="7" rx="1.2"></rect>
+        <rect x="3" y="14" width="7" height="7" rx="1.2"></rect>
+      </svg>
+      <span>Panel</span>
+    </a>
+    <a href="login.html" rel="nofollow noreferrer" data-nav="login">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4 20c2-3.5 6-5 8-5s6 1.5 8 5"></path>
+      </svg>
+      <span>Konto</span>
+    </a>
+  </nav>
+
+  <script src="js/app.js" defer></script>
+</body>
+</html>

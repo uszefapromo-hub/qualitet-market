@@ -50,12 +50,14 @@
       <nav class="sidebar-nav" aria-label="Menu panelu">
         <a class="active" href="dashboard.html">Dashboard</a>
         <a href="generator-sklepu.html">Mój sklep</a>
+        <a href="katalog.html" data-require="pro">Katalog produktów</a>
         <a href="hurtownie.html" data-require="pro">Hurtownie</a>
         <a href="qualitetmarket.html" data-require="pro">QualitetMarket</a>
         <a href="listing.html" data-require="pro">Listing</a>
         <a href="crm.html" data-require="pro">CRM</a>
         <a href="tasks.html" data-require="pro">Zadania</a>
         <a href="intelligence.html" data-require="elite">Intelligence</a>
+        <a href="zarabiaj.html">Zarabiaj z nami</a>
         <a href="cennik.html">Subskrypcja</a>
         <a href="owner-panel.html" data-superadmin-link hidden>Panel Superadmina</a>
       </nav>
@@ -123,6 +125,65 @@
           </div>
         </div>
         <p class="hint" data-platform-margin-info></p>
+      </section>
+
+      <!-- SYSTEM ZARABIANIA DLA SPRZEDAWCÓW -->
+      <section class="panel-card partner-earnings">
+        <div class="store-summary-head">
+          <div>
+            <span class="eyebrow">Zarobki sprzedawcy</span>
+            <h2>Twoja sprzedaż i zarobki</h2>
+            <p class="hint">Statystyki sprzedaży i zarobków Twojego sklepu na platformie.</p>
+          </div>
+          <a class="btn btn-secondary" href="katalog.html">Przeglądaj katalog</a>
+        </div>
+        <div class="stats-grid stats-g4 partner-stats-grid">
+          <div class="stat-card">
+            <span>Sprzedaż (mies.)</span>
+            <strong data-partner-sales>0 zł</strong>
+          </div>
+          <div class="stat-card">
+            <span>Zarobek</span>
+            <strong data-partner-earnings>0 zł</strong>
+          </div>
+          <div class="stat-card">
+            <span>Marża</span>
+            <strong data-partner-margin>0%</strong>
+          </div>
+          <div class="stat-card">
+            <span>Zamówienia</span>
+            <strong data-partner-orders>0</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- PROGRAM POLECEŃ -->
+      <section class="panel-card partner-referral">
+        <div class="store-summary-head">
+          <div>
+            <span class="eyebrow">Program poleceń</span>
+            <h2>Twój link polecający</h2>
+            <p class="hint">Polecaj platformę i zarabiaj prowizję od sprzedaży poleconych.</p>
+          </div>
+        </div>
+        <div class="stats-grid stats-g3" style="margin-bottom:16px">
+          <div class="stat-card">
+            <span>Poleceni użytkownicy</span>
+            <strong data-partner-referred>0</strong>
+          </div>
+          <div class="stat-card">
+            <span>Aktywne sklepy</span>
+            <strong data-partner-ref-stores>0</strong>
+          </div>
+          <div class="stat-card">
+            <span>Prowizje</span>
+            <strong data-partner-ref-commission>0 zł</strong>
+          </div>
+        </div>
+        <div class="referral-link-box">
+          <input class="owner-input" type="text" readonly data-partner-referral-link aria-label="Twój unikalny link polecający">
+          <button class="btn btn-primary" type="button" data-copy-partner-referral>Kopiuj link</button>
+        </div>
       </section>
 
       <section class="panel-card plan-status" data-plan-panel>
