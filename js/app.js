@@ -4551,30 +4551,30 @@
     }
 
     // ── REPORTS TAB ──
-    const totalRevenue = orders.reduce((s, o) => s + (o.total || 0), 0);
-    const totalPlatformMargin = Math.round(totalRevenue * PLATFORM_MARGIN_PCT / 100);
-    const activePartners = users.filter(u => (u.role || '') === 'partner' && u.status === 'active').length;
-    setText('[data-report-total-revenue]', formatCurrency(totalRevenue));
-    setText('[data-report-platform-margin]', formatCurrency(totalPlatformMargin));
+    const reportTotalRevenue = orders.reduce((s, o) => s + (o.total || 0), 0);
+    const reportPlatformMargin = Math.round(reportTotalRevenue * PLATFORM_MARGIN_PCT / 100);
+    const reportActivePartners = users.filter(u => (u.role || '') === 'partner' && u.status === 'active').length;
+    setText('[data-report-total-revenue]', formatCurrency(reportTotalRevenue));
+    setText('[data-report-platform-margin]', formatCurrency(reportPlatformMargin));
     setText('[data-report-total-orders]', orders.length);
-    setText('[data-report-active-partners]', activePartners);
+    setText('[data-report-active-partners]', reportActivePartners);
 
     // Subscription revenue by plan
-    const subRevenue = {basic: 0, pro: 0, elite: 0};
-    const subCounts = {basic: 0, pro: 0, elite: 0};
+    const reportSubRevenue = {basic: 0, pro: 0, elite: 0};
+    const reportSubCounts = {basic: 0, pro: 0, elite: 0};
     subscriptions.forEach(sub => {
       const plan = normalizePlan(sub.plan);
-      if(plan && subRevenue[plan] !== undefined){
-        subRevenue[plan] += (sub.amount || 0);
-        subCounts[plan] += 1;
+      if(plan && reportSubRevenue[plan] !== undefined){
+        reportSubRevenue[plan] += (sub.amount || 0);
+        reportSubCounts[plan] += 1;
       }
     });
-    const subTotal = Object.values(subRevenue).reduce((s, v) => s + v, 0) || 1;
+    const reportSubTotal = Object.values(reportSubRevenue).reduce((s, v) => s + v, 0) || 1;
     ['basic', 'pro', 'elite'].forEach(p => {
-      setText(`[data-report-sub-${p}]`, `${formatCurrency(subRevenue[p])} (${subCounts[p]} sub.)`);
+      setText(`[data-report-sub-${p}]`, `${formatCurrency(reportSubRevenue[p])} (${reportSubCounts[p]} sub.)`);
       const bar = document.querySelector(`[data-report-sub-${p}-bar]`);
       if(bar){
-        bar.style.width = `${Math.round(subRevenue[p] / subTotal * 100)}%`;
+        bar.style.width = `${Math.round(reportSubRevenue[p] / reportSubTotal * 100)}%`;
         bar.style.background = p === 'elite' ? '#9e77ff' : p === 'pro' ? '#35d9ff' : '#54ffb0';
         bar.style.display = 'block';
         bar.style.height = '8px';
@@ -4595,8 +4595,8 @@
           rows = users.map(u => [u.id, u.name, u.email, u.role || '', u.plan || '', u.status || '', u.country || '', u.createdAt || '']);
         } else {
           headers = ['Typ', 'Kwota', 'Basic', 'Pro', 'Elite'];
-          rows = [['Subskrypcje', subTotal, subRevenue.basic, subRevenue.pro, subRevenue.elite],
-                  ['Przychód platform', totalRevenue, totalPlatformMargin, '', '']];
+          rows = [['Subskrypcje', reportSubTotal, reportSubRevenue.basic, reportSubRevenue.pro, reportSubRevenue.elite],
+                  ['Przychód platformy', reportTotalRevenue, reportPlatformMargin, '', '']];
         }
         const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
         const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
@@ -5526,8 +5526,10 @@
       if(phoneError){
         phoneError.hidden = true;
       }
-      // Generate a 6-digit demo code
-      pendingCode = String(Math.floor(100000 + Math.random() * 900000));
+      // Generate a secure 6-digit demo code
+      const randomArray = new Uint32Array(1);
+      crypto.getRandomValues(randomArray);
+      pendingCode = String(100000 + (randomArray[0] % 900000));
       if(stepPhone){
         stepPhone.hidden = true;
       }
