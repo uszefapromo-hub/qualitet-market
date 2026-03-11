@@ -6,6 +6,7 @@ const { body, param } = require('express-validator');
 const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { PLAN_CONFIG } = require('./subscriptions');
 
 const router = express.Router();
 
@@ -404,9 +405,13 @@ router.get('/subscriptions', authenticate, requireRole('owner', 'admin'), async 
     const total = parseInt(countResult.rows[0].count, 10);
 
     const result = await db.query(
-      `SELECT s.*, u.email AS user_email, u.name AS user_name
+      `SELECT s.*,
+              st.name AS shop_name, st.slug AS shop_slug,
+              u.email AS owner_email, u.name AS owner_name,
+              (SELECT COUNT(*) FROM shop_products sp WHERE sp.store_id = st.id) AS product_count
        FROM subscriptions s
-       JOIN users u ON s.user_id = u.id
+       LEFT JOIN stores st ON s.shop_id = st.id
+       LEFT JOIN users u ON st.owner_id = u.id
        ${where}
        ORDER BY s.created_at DESC
        LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
@@ -418,6 +423,54 @@ router.get('/subscriptions', authenticate, requireRole('owner', 'admin'), async 
     return res.status(500).json({ error: 'Błąd serwera' });
   }
 });
+
+// ─── PATCH /api/admin/subscriptions/:id – manage a subscription ───────────────
+
+router.patch(
+  '/subscriptions/:id',
+  authenticate,
+  requireRole('owner', 'admin'),
+  [
+    param('id').isUUID(),
+    body('plan').optional().isIn(['trial', 'basic', 'pro', 'elite']),
+    body('status').optional().isIn(['active', 'cancelled', 'expired', 'superseded']),
+    body('expires_at').optional().isISO8601(),
+    body('commission_rate').optional().isFloat({ min: 0, max: 1 }),
+    body('product_limit').optional({ nullable: true }).isInt({ min: 0 }),
+  ],
+  validate,
+  async (req, res) => {
+    const { plan, status, expires_at, commission_rate, product_limit } = req.body;
+
+    let newProductLimit = product_limit !== undefined ? product_limit : null;
+    let newCommissionRate = commission_rate !== undefined ? commission_rate : null;
+
+    if (plan) {
+      if (commission_rate === undefined) newCommissionRate = PLAN_CONFIG[plan].commission_rate;
+      if (product_limit === undefined)   newProductLimit   = PLAN_CONFIG[plan].product_limit;
+    }
+
+    try {
+      const result = await db.query(
+        `UPDATE subscriptions SET
+           plan            = COALESCE($1, plan),
+           status          = COALESCE($2, status),
+           expires_at      = COALESCE($3::timestamptz, expires_at),
+           commission_rate = COALESCE($4, commission_rate),
+           product_limit   = COALESCE($5, product_limit),
+           updated_at      = NOW()
+         WHERE id = $6
+         RETURNING *`,
+        [plan || null, status || null, expires_at || null, newCommissionRate, newProductLimit, req.params.id]
+      );
+      if (!result.rows[0]) return res.status(404).json({ error: 'Subskrypcja nie znaleziona' });
+      return res.json(result.rows[0]);
+    } catch (err) {
+      console.error('admin update subscription error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
 
 // ─── GET /api/admin/catalogue – central catalogue products (paginated) ─────────
 

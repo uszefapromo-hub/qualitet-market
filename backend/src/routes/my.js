@@ -16,7 +16,7 @@ const { body, param } = require('express-validator');
 const { v4: uuidv4 } = require('uuid');
 
 const db = require('../config/database');
-const { authenticate, requireRole } = require('../middleware/auth');
+const { authenticate, requireRole, requireActiveSubscription } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 
 const router = express.Router();
@@ -196,6 +196,7 @@ router.post(
     body('sort_order').optional().isInt({ min: 0 }),
   ],
   validate,
+  requireActiveSubscription,
   async (req, res) => {
     const {
       store_id,
@@ -217,6 +218,19 @@ router.post(
       const isAdmin = ['owner', 'admin'].includes(req.user.role);
       if (!isAdmin && store.owner_id !== req.user.id) {
         return res.status(403).json({ error: 'Brak uprawnień do tego sklepu' });
+      }
+
+      // Check product limit from subscription (set by requireActiveSubscription middleware)
+      const sub = req.subscription;
+      if (sub && sub.product_limit !== null && sub.product_limit !== undefined) {
+        const countResult = await db.query(
+          'SELECT COUNT(*) FROM shop_products WHERE store_id = $1',
+          [store_id]
+        );
+        const currentCount = parseInt(countResult.rows[0].count, 10);
+        if (currentCount >= sub.product_limit) {
+          return res.status(403).json({ error: 'product_limit_reached' });
+        }
       }
 
       const productResult = await db.query('SELECT id FROM products WHERE id = $1', [product_id]);

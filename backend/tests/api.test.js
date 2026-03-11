@@ -592,20 +592,20 @@ describe('POST /api/subscriptions', () => {
     const res = await request(app)
       .post('/api/subscriptions')
       .set('Authorization', `Bearer ${sellerToken}`)
-      .send({ plan: 'diamond' });
+      .send({ shop_id: STORE_ID, plan: 'diamond' });
     expect(res.status).toBe(422);
   });
 
   it('creates a subscription', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership check
       .mockResolvedValueOnce({ rows: [] })  // deactivate old
-      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', user_id: SELLER_ID, plan: 'pro', status: 'active' }] }) // insert
-      .mockResolvedValueOnce({ rows: [] }); // update user plan
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, plan: 'pro', status: 'active' }] }); // insert
 
     const res = await request(app)
       .post('/api/subscriptions')
       .set('Authorization', `Bearer ${sellerToken}`)
-      .send({ plan: 'pro' });
+      .send({ shop_id: STORE_ID, plan: 'pro' });
     expect(res.status).toBe(201);
     expect(res.body.plan).toBe('pro');
   });
@@ -956,6 +956,7 @@ describe('POST /api/orders', () => {
 
     db.query
       .mockResolvedValueOnce({ rows: [{ id: STORE_ID, owner_id: SELLER_ID, margin: 15 }] })
+      .mockResolvedValueOnce({ rows: [{ commission_rate: 0.10 }] }) // subscription commission
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', selling_price: 141.45, stock: 10, margin: 15 }] })
       .mockResolvedValueOnce({ rows: [] }) // INSERT INTO orders
       .mockResolvedValueOnce({ rows: [] }) // INSERT INTO order_items
@@ -1246,9 +1247,11 @@ describe('POST /api/my/store/products', () => {
 
   it('adds product to my store', async () => {
     db.query
-      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })
-      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })
-      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] });
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 100, commission_rate: 0.10, status: 'active' }] }) // requireActiveSubscription
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
+      .mockResolvedValueOnce({ rows: [{ count: '5' }] })           // product count (limit check)
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })       // product exists
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] }); // insert
 
     const res = await request(app)
       .post('/api/my/store/products')
@@ -1260,9 +1263,11 @@ describe('POST /api/my/store/products', () => {
 
   it('supports custom_title and custom_description', async () => {
     db.query
-      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })
-      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })
-      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true, custom_title: 'Mój Fotel', custom_description: 'Super jakość' }] });
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 100, commission_rate: 0.10, status: 'active' }] }) // requireActiveSubscription
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
+      .mockResolvedValueOnce({ rows: [{ count: '5' }] })           // product count (limit check)
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })       // product exists
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true, custom_title: 'Mój Fotel', custom_description: 'Super jakość' }] }); // insert
 
     const res = await request(app)
       .post('/api/my/store/products')
@@ -1457,7 +1462,8 @@ describe('POST /api/shops', () => {
   it('creates shop with default 30% margin and next_step', async () => {
     db.query
       .mockResolvedValueOnce({ rows: [] })  // slug free
-      .mockResolvedValueOnce({ rows: [{ id: 'new-shop-id', name: 'Nowy Sklep', slug: 'nowy-sklep', margin: 30, status: 'active' }] });
+      .mockResolvedValueOnce({ rows: [{ id: 'new-shop-id', name: 'Nowy Sklep', slug: 'nowy-sklep', margin: 30, status: 'active' }] })
+      .mockResolvedValueOnce({ rows: [] }); // auto-create trial subscription
 
     const res = await request(app)
       .post('/api/shops')
@@ -1647,3 +1653,211 @@ describe('DELETE /api/cart/items/:itemId', () => {
 });
 
 
+
+// ─── Subscription marketplace features ───────────────────────────────────────
+
+describe('POST /api/shops – auto trial subscription', () => {
+  it('auto-creates trial subscription on shop creation', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })  // slug free
+      .mockResolvedValueOnce({ rows: [{ id: 'shop-uuid', name: 'Test Shop', slug: 'test-shop', margin: 30, status: 'active' }] })
+      .mockResolvedValueOnce({ rows: [] }); // INSERT trial subscription
+
+    const res = await request(app)
+      .post('/api/shops')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ name: 'Test Shop', slug: 'test-shop' });
+    expect(res.status).toBe(201);
+    // Third db.query call (subscription insert) was made
+    expect(db.query).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('POST /api/my/store/products – subscription checks', () => {
+  it('blocks adding product when subscription is expired', async () => {
+    // requireActiveSubscription middleware returns no active subscription
+    db.query.mockResolvedValueOnce({ rows: [] }); // no active subscription
+
+    const res = await request(app)
+      .post('/api/my/store/products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID });
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('subscription_expired');
+  });
+
+  it('blocks adding product when product_limit is reached', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 10, commission_rate: 0.15, status: 'active' }] }) // subscription
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
+      .mockResolvedValueOnce({ rows: [{ count: '10' }] });          // product count = limit
+
+    const res = await request(app)
+      .post('/api/my/store/products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID });
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('product_limit_reached');
+  });
+
+  it('allows adding product when limit is not reached', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 100, commission_rate: 0.10, status: 'active' }] }) // subscription
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
+      .mockResolvedValueOnce({ rows: [{ count: '5' }] })            // product count < limit
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })        // product exists
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] }); // insert
+
+    const res = await request(app)
+      .post('/api/my/store/products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID });
+    expect(res.status).toBe(201);
+  });
+
+  it('allows adding product when subscription has no product_limit (elite/null)', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: null, commission_rate: 0.05, status: 'active' }] }) // elite subscription
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
+      // no count query – skipped when product_limit is null
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })        // product exists
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] }); // insert
+
+    const res = await request(app)
+      .post('/api/my/store/products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID });
+    expect(res.status).toBe(201);
+  });
+});
+
+describe('POST /api/orders – commission calculation', () => {
+  it('uses subscription commission_rate for platform_commission', async () => {
+    const NEW_ORDER_ID = 'b0000000-0000-4000-8000-000000000098';
+
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID, owner_id: SELLER_ID, margin: 15 }] })
+      .mockResolvedValueOnce({ rows: [{ commission_rate: 0.07 }] }) // pro plan subscription
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', selling_price: 100.00, stock: 10, margin: 15 }] })
+      .mockResolvedValueOnce({ rows: [] }) // INSERT orders
+      .mockResolvedValueOnce({ rows: [] }) // INSERT order_items
+      .mockResolvedValueOnce({ rows: [] }) // UPDATE products stock
+      .mockResolvedValueOnce({ rows: [{ id: NEW_ORDER_ID, store_id: STORE_ID, total: 100.00, platform_commission: 7.00, seller_revenue: 93.00, status: 'created' }] })
+      .mockResolvedValueOnce({ rows: [] }); // order_items
+
+    const res = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({
+        store_id: STORE_ID,
+        items: [{ product_id: PRODUCT_ID, quantity: 1 }],
+        shipping_address: 'ul. Testowa 1, Warszawa',
+      });
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty('platform_commission', 7.00);
+    expect(res.body).toHaveProperty('seller_revenue', 93.00);
+  });
+
+  it('falls back to default commission when no subscription found', async () => {
+    const NEW_ORDER_ID = 'b0000000-0000-4000-8000-000000000097';
+
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID, owner_id: SELLER_ID, margin: 15 }] })
+      .mockResolvedValueOnce({ rows: [] }) // no active subscription
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', selling_price: 100.00, stock: 10, margin: 15 }] })
+      .mockResolvedValueOnce({ rows: [] }) // INSERT orders
+      .mockResolvedValueOnce({ rows: [] }) // INSERT order_items
+      .mockResolvedValueOnce({ rows: [] }) // UPDATE products stock
+      .mockResolvedValueOnce({ rows: [{ id: NEW_ORDER_ID, store_id: STORE_ID, total: 100.00, status: 'created' }] })
+      .mockResolvedValueOnce({ rows: [] }); // order_items
+
+    const res = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({
+        store_id: STORE_ID,
+        items: [{ product_id: PRODUCT_ID, quantity: 1 }],
+        shipping_address: 'ul. Testowa 1, Warszawa',
+      });
+    expect(res.status).toBe(201);
+  });
+});
+
+describe('GET /api/admin/subscriptions – shop-based view', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .get('/api/admin/subscriptions')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns subscriptions with shop info as admin', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, plan: 'trial', status: 'active', shop_name: 'Mój Sklep', product_count: '2', commission_rate: 0.15 }] });
+
+    const res = await request(app)
+      .get('/api/admin/subscriptions')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('subscriptions');
+    expect(res.body.subscriptions[0]).toHaveProperty('shop_name');
+    expect(res.body.subscriptions[0]).toHaveProperty('product_count');
+  });
+});
+
+describe('PATCH /api/admin/subscriptions/:id', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .patch('/api/admin/subscriptions/00000000-0000-4000-8000-000000000001')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ plan: 'pro' });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects invalid plan', async () => {
+    const res = await request(app)
+      .patch('/api/admin/subscriptions/00000000-0000-4000-8000-000000000001')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ plan: 'diamond' });
+    expect(res.status).toBe(422);
+  });
+
+  it('updates subscription plan and applies plan defaults', async () => {
+    const SUB_ID = '00000000-0000-4000-8000-000000000001';
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SUB_ID, plan: 'pro', status: 'active', commission_rate: 0.07, product_limit: 500 }],
+    });
+
+    const res = await request(app)
+      .patch(`/api/admin/subscriptions/${SUB_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ plan: 'pro' });
+    expect(res.status).toBe(200);
+    expect(res.body.plan).toBe('pro');
+  });
+
+  it('returns 404 for non-existent subscription', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .patch('/api/admin/subscriptions/00000000-0000-4000-8000-000000000099')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'cancelled' });
+    expect(res.status).toBe(404);
+  });
+
+  it('admin can override commission_rate directly', async () => {
+    const SUB_ID = '00000000-0000-4000-8000-000000000001';
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SUB_ID, plan: 'basic', status: 'active', commission_rate: 0.08, product_limit: 100 }],
+    });
+
+    const res = await request(app)
+      .patch(`/api/admin/subscriptions/${SUB_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ commission_rate: 0.08 });
+    expect(res.status).toBe(200);
+    expect(res.body.commission_rate).toBe(0.08);
+  });
+});

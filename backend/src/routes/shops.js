@@ -15,6 +15,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { PLAN_CONFIG } = require('./subscriptions');
 
 const router = express.Router();
 
@@ -53,6 +54,16 @@ router.post(
          VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', NOW())
          RETURNING *`,
         [id, req.user.id, name, slug, description, margin, plan]
+      );
+
+      // Auto-create trial subscription for the new shop
+      const trialConfig = PLAN_CONFIG['trial'];
+      const trialExpiresAt = new Date(Date.now() + trialConfig.duration_days * 24 * 60 * 60 * 1000);
+      await db.query(
+        `INSERT INTO subscriptions
+           (id, shop_id, plan, status, product_limit, commission_rate, started_at, expires_at, created_at)
+         VALUES ($1, $2, 'trial', 'active', $3, $4, NOW(), $5, NOW())`,
+        [uuidv4(), id, trialConfig.product_limit, trialConfig.commission_rate, trialExpiresAt]
       );
 
       return res.status(201).json({
