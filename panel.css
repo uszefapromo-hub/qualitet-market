@@ -257,3 +257,13 @@ body{
 .task-stats-grid{display:grid;grid-template-columns:repeat(2,1fr);margin:16px 0 20px}
 .task-stat-value{font-size:24px;font-weight:700}
 .module-board{padding:0 0 18px}
+
+/* ── API-connected orders list (dashboard.html) ── */
+.order-row{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--stroke);font-size:14px}
+.order-row:last-child{border-bottom:none}
+.order-num{font-weight:700;color:var(--text);font-family:monospace}
+.order-date{color:var(--muted)}
+.order-total{font-weight:700}
+.order-status{display:inline-flex;align-items:center;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.5px;background:rgba(255,255,255,.08);border:1px solid rgba(148,163,184,.25)}
+/* ── pwa-connect registration panel ── */
+.pwa-form-error{color:#ff7272;margin-top:10px;font-size:14px}

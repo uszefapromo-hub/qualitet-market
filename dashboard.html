@@ -221,6 +221,20 @@
         </div>
       </section>
 
+      <section class="panel-card" data-api-orders style="margin-top:24px">
+        <div class="store-summary-head">
+          <div>
+            <span class="eyebrow">Historia zakupów</span>
+            <h2>Moje zamówienia</h2>
+            <p class="hint">Ostatnie zamówienia złożone przez Twoje konto.</p>
+          </div>
+          <a class="btn btn-secondary" href="koszyk.html">Przejdź do koszyka</a>
+        </div>
+        <p class="hint" data-orders-loading style="margin-top:12px">Wczytywanie zamówień&hellip;</p>
+        <p class="hint" data-orders-empty hidden style="margin-top:12px;color:var(--muted)">Brak zamówień. <a href="sklep.html">Przejdź do sklepu</a> i złóż pierwsze zamówienie.</p>
+        <div data-orders-list style="display:flex;flex-direction:column;gap:8px;margin-top:14px"></div>
+      </section>
+
       <section class="helper-grid dashboard-helpers">
         <article class="helper-card tip" data-helper>
           <h3>TIP</h3>
@@ -294,6 +308,8 @@
     </a>
   </nav>
 
+  <script src="js/api.js" defer></script>
+  <script src="js/pwa-connect.js" defer></script>
   <script src="js/app.js" defer></script>
 </body>
 </html>
