@@ -19,6 +19,12 @@ const mockDb = {
   order_items: [],
   subscriptions: [],
   suppliers: [],
+  categories: [],
+  carts: [],
+  cart_items: [],
+  payments: [],
+  shop_products: [],
+  audit_logs: [],
 };
 
 jest.mock('../src/config/database', () => ({
@@ -164,6 +170,179 @@ function setupDbMock() {
       return { rows: [sup] };
     }
 
+    // ── categories ──
+    if (s.startsWith('select count(*)') && s.includes('from categories')) {
+      return { rows: [{ count: String(mockDb.categories.length) }] };
+    }
+    if (s.startsWith('select') && s.includes('from categories where id')) {
+      const id = params[0];
+      const row = mockDb.categories.find((c) => c.id === id);
+      return { rows: row ? [row] : [] };
+    }
+    if (s.startsWith('select') && s.includes('from categories where slug')) {
+      const slug = params[0];
+      const row = mockDb.categories.find((c) => c.slug === slug);
+      return { rows: row ? [row] : [] };
+    }
+    if (s.startsWith('select') && s.includes('from categories')) {
+      return { rows: mockDb.categories.filter((c) => c.active !== false) };
+    }
+    if (s.startsWith('insert into categories')) {
+      const cat = { id: params[0], name: params[1], slug: params[2], active: true };
+      mockDb.categories.push(cat);
+      return { rows: [cat] };
+    }
+    if (s.startsWith('delete from categories where id')) {
+      const id = params[0];
+      const idx = mockDb.categories.findIndex((c) => c.id === id);
+      if (idx !== -1) mockDb.categories.splice(idx, 1);
+      return { rows: idx !== -1 ? [{ id }] : [] };
+    }
+
+    // ── carts ──
+    if (s.startsWith('select') && s.includes('from carts where id')) {
+      const id = params[0];
+      const row = mockDb.carts.find((c) => c.id === id);
+      return { rows: row ? [row] : [] };
+    }
+    if (s.startsWith('select') && s.includes('from carts where user_id')) {
+      const userId = params[0];
+      const storeId = params[1];
+      const row = mockDb.carts.find(
+        (c) => c.user_id === userId && c.store_id === storeId && c.status === 'active'
+      );
+      return { rows: row ? [row] : [] };
+    }
+    if (s.startsWith('insert into carts')) {
+      const cart = { id: params[0], user_id: params[1], store_id: params[2], status: 'active', items: [] };
+      mockDb.carts.push(cart);
+      return { rows: [cart] };
+    }
+    if (s.startsWith('update carts set updated_at')) {
+      return { rows: [] };
+    }
+    if (s.startsWith('delete from cart_items where cart_id') && !s.includes('and product_id')) {
+      const cartId = params[0];
+      mockDb.cart_items = mockDb.cart_items.filter((i) => i.cart_id !== cartId);
+      return { rows: [] };
+    }
+    if (s.startsWith('delete from cart_items where cart_id') && s.includes('and product_id')) {
+      const [cartId, productId] = params;
+      mockDb.cart_items = mockDb.cart_items.filter(
+        (i) => !(i.cart_id === cartId && i.product_id === productId)
+      );
+      return { rows: [] };
+    }
+
+    // ── cart_items ──
+    if (s.startsWith('select') && s.includes('from cart_items') && s.includes('join products')) {
+      const cartId = params[0];
+      return {
+        rows: mockDb.cart_items
+          .filter((i) => i.cart_id === cartId)
+          .map((i) => {
+            const p = mockDb.products.find((p) => p.id === i.product_id) || {};
+            return { ...i, name: p.name || 'Produkt', image_url: null };
+          }),
+      };
+    }
+    if (s.startsWith('select') && s.includes('from cart_items where cart_id') && s.includes('and product_id')) {
+      const [cartId, productId] = params;
+      const row = mockDb.cart_items.find((i) => i.cart_id === cartId && i.product_id === productId);
+      return { rows: row ? [row] : [] };
+    }
+    if (s.startsWith('insert into cart_items')) {
+      const item = { id: params[0], cart_id: params[1], product_id: params[2], quantity: params[3], unit_price: params[4] };
+      mockDb.cart_items.push(item);
+      return { rows: [item] };
+    }
+    if (s.startsWith('update cart_items set quantity')) {
+      const [qty, itemId] = params;
+      const item = mockDb.cart_items.find((i) => i.id === itemId);
+      if (item) item.quantity = qty;
+      return { rows: item ? [item] : [] };
+    }
+
+    // ── payments ──
+    if (s.startsWith('select count(*)') && s.includes('from payments')) {
+      return { rows: [{ count: String(mockDb.payments.length) }] };
+    }
+    if (s.startsWith('select') && s.includes('from payments where id')) {
+      const id = params[0];
+      const row = mockDb.payments.find((p) => p.id === id);
+      return { rows: row ? [row] : [] };
+    }
+    if (s.startsWith('select') && s.includes('from payments')) {
+      return { rows: mockDb.payments };
+    }
+    if (s.startsWith('insert into payments')) {
+      const payment = {
+        id: params[0], order_id: params[1], user_id: params[2],
+        amount: params[3], method: params[4], status: 'pending',
+      };
+      mockDb.payments.push(payment);
+      return { rows: [payment] };
+    }
+    if (s.startsWith('update payments set')) {
+      const id = params[params.length - 1];
+      const payment = mockDb.payments.find((p) => p.id === id);
+      if (payment) payment.status = params[0];
+      return { rows: payment ? [{ ...payment, order_id: 'order-1' }] : [] };
+    }
+    if (s.startsWith('update orders set status')) {
+      return { rows: [] };
+    }
+
+    // ── admin stats ──
+    if (s.startsWith('select coalesce(sum(total)') && s.includes('from orders')) {
+      return { rows: [{ revenue: '0' }] };
+    }
+    if (s.startsWith('select count(*)') && s.includes('from orders where status')) {
+      return { rows: [{ count: '0' }] };
+    }
+    if (s.startsWith('select count(*)') && s.includes('from stores where status')) {
+      return { rows: [{ count: String(mockDb.stores.length) }] };
+    }
+
+    // ── shop_products ──
+    if (s.startsWith('select count(*)') && s.includes('from shop_products')) {
+      return { rows: [{ count: String(mockDb.shop_products.length) }] };
+    }
+    if (s.startsWith('select') && s.includes('from shop_products sp') && s.includes('join products')) {
+      return { rows: mockDb.shop_products };
+    }
+    if (s.startsWith('select') && s.includes('from shop_products') && s.includes('where sp.id')) {
+      const id = params[0];
+      const row = mockDb.shop_products.find((sp) => sp.id === id);
+      return { rows: row ? [{ ...row, owner_id: SELLER_ID }] : [] };
+    }
+    if (s.startsWith('insert into shop_products')) {
+      const sp = { id: params[0], store_id: params[1], product_id: params[2], active: true };
+      const existing = mockDb.shop_products.findIndex(
+        (x) => x.store_id === sp.store_id && x.product_id === sp.product_id
+      );
+      if (existing !== -1) {
+        mockDb.shop_products[existing] = { ...mockDb.shop_products[existing], ...sp };
+        return { rows: [mockDb.shop_products[existing]] };
+      }
+      mockDb.shop_products.push(sp);
+      return { rows: [sp] };
+    }
+    if (s.startsWith('delete from shop_products where id')) {
+      const id = params[0];
+      const idx = mockDb.shop_products.findIndex((sp) => sp.id === id);
+      if (idx !== -1) mockDb.shop_products.splice(idx, 1);
+      return { rows: [] };
+    }
+
+    // ── audit_logs ──
+    if (s.startsWith('select count(*)') && s.includes('from audit_logs')) {
+      return { rows: [{ count: String(mockDb.audit_logs.length) }] };
+    }
+    if (s.startsWith('select') && s.includes('from audit_logs')) {
+      return { rows: mockDb.audit_logs };
+    }
+
     // Catch-all
     return { rows: [] };
   });
@@ -180,8 +359,10 @@ let app;
 let sellerToken;
 let adminToken;
 const SELLER_ID = 'a0000000-0000-4000-8000-000000000001';
-const ADMIN_ID = 'a0000000-0000-4000-8000-000000000002';
-const STORE_ID = 'a0000000-0000-4000-8000-000000000003';
+const ADMIN_ID  = 'a0000000-0000-4000-8000-000000000002';
+const STORE_ID  = 'a0000000-0000-4000-8000-000000000003';
+const PRODUCT_ID = 'a0000000-0000-4000-8000-000000000004';
+const ORDER_ID  = 'a0000000-0000-4000-8000-000000000005';
 
 beforeAll(async () => {
   process.env.JWT_SECRET = 'test_secret';
@@ -193,15 +374,21 @@ beforeAll(async () => {
 
   const { signToken } = require('../src/middleware/auth');
   sellerToken = signToken({ id: SELLER_ID, email: 'seller@test.pl', role: 'seller' });
-  adminToken = signToken({ id: ADMIN_ID, email: 'admin@test.pl', role: 'owner' });
+  adminToken  = signToken({ id: ADMIN_ID,  email: 'admin@test.pl',  role: 'owner'  });
 
   // Pre-seed users
   const hash = await bcrypt.hash('Password123!', 12);
   mockDb.users.push({ id: SELLER_ID, email: 'seller@test.pl', password_hash: hash, name: 'Seller', role: 'seller', plan: 'basic' });
-  mockDb.users.push({ id: ADMIN_ID, email: 'admin@test.pl', password_hash: hash, name: 'Admin', role: 'owner', plan: 'elite' });
+  mockDb.users.push({ id: ADMIN_ID,  email: 'admin@test.pl',  password_hash: hash, name: 'Admin',  role: 'owner',  plan: 'elite' });
 
   // Pre-seed a store
   mockDb.stores.push({ id: STORE_ID, owner_id: SELLER_ID, name: 'Mój Sklep', slug: 'moj-sklep', margin: 15, plan: 'basic', status: 'active' });
+
+  // Pre-seed a product
+  mockDb.products.push({ id: PRODUCT_ID, store_id: STORE_ID, name: 'Fotel', price_net: 100, selling_price: 141.45, stock: 10, margin: 15 });
+
+  // Pre-seed an order
+  mockDb.orders.push({ id: ORDER_ID, store_id: STORE_ID, store_owner_id: SELLER_ID, buyer_id: SELLER_ID, status: 'pending', total: 141.45 });
 });
 
 afterEach(() => {
@@ -429,6 +616,246 @@ describe('POST /api/suppliers', () => {
   });
 });
 
+// ─── Categories ────────────────────────────────────────────────────────────────
+
+describe('GET /api/categories', () => {
+  it('is public and returns category list', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: 'cat-1', name: 'Meble', slug: 'meble', active: true }] });
+
+    const res = await request(app).get('/api/categories');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+});
+
+describe('POST /api/categories', () => {
+  it('requires owner/admin role', async () => {
+    const res = await request(app)
+      .post('/api/categories')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ name: 'Meble', slug: 'meble' });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects duplicate slug with 409', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: 'cat-existing' }] }); // slug exists
+
+    const res = await request(app)
+      .post('/api/categories')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Meble', slug: 'meble' });
+    expect(res.status).toBe(409);
+  });
+
+  it('creates a category as admin', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })  // slug check
+      .mockResolvedValueOnce({ rows: [{ id: 'cat-1', name: 'Meble', slug: 'meble', active: true }] });
+
+    const res = await request(app)
+      .post('/api/categories')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Meble', slug: 'meble' });
+    expect(res.status).toBe(201);
+    expect(res.body.name).toBe('Meble');
+  });
+});
+
+// ─── Cart ──────────────────────────────────────────────────────────────────────
+
+describe('GET /api/cart', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get(`/api/cart?store_id=${STORE_ID}`);
+    expect(res.status).toBe(401);
+  });
+
+  it('requires store_id param', async () => {
+    const res = await request(app).get('/api/cart').set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(422);
+  });
+
+  it('returns empty cart when none exists', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // no cart found
+
+    const res = await request(app)
+      .get(`/api/cart?store_id=${STORE_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.items).toEqual([]);
+    expect(res.body.total).toBe(0);
+  });
+});
+
+describe('POST /api/cart/items', () => {
+  it('rejects missing fields', async () => {
+    const res = await request(app)
+      .post('/api/cart/items')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID }); // missing product_id and quantity
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 404 when product not in store', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // product not found
+
+    const res = await request(app)
+      .post('/api/cart/items')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, quantity: 1 });
+    expect(res.status).toBe(404);
+  });
+
+  it('adds item to cart successfully', async () => {
+    const CART_ID = 'cart-1';
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, selling_price: 141.45, stock: 10, name: 'Fotel' }] }) // product found
+      .mockResolvedValueOnce({ rows: [{ id: CART_ID, user_id: SELLER_ID, store_id: STORE_ID, status: 'active' }] }) // get/create cart
+      .mockResolvedValueOnce({ rows: [] })  // check existing cart item
+      .mockResolvedValueOnce({ rows: [] })  // insert cart item
+      .mockResolvedValueOnce({ rows: [] })  // update cart updated_at
+      .mockResolvedValueOnce({ rows: [{ id: CART_ID, user_id: SELLER_ID, store_id: STORE_ID, status: 'active' }] }) // cartWithItems – cart
+      .mockResolvedValueOnce({ rows: [{ id: 'ci-1', cart_id: CART_ID, product_id: PRODUCT_ID, quantity: 1, unit_price: 141.45, name: 'Fotel', image_url: null }] }); // cartWithItems – items
+
+    const res = await request(app)
+      .post('/api/cart/items')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, quantity: 1 });
+    expect(res.status).toBe(201);
+    expect(res.body.items).toHaveLength(1);
+    expect(res.body.total).toBeCloseTo(141.45);
+  });
+});
+
+// ─── Admin stats ───────────────────────────────────────────────────────────────
+
+describe('GET /api/admin/stats', () => {
+  it('requires admin role', async () => {
+    const res = await request(app).get('/api/admin/stats').set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns platform stats as admin', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '2' }] })   // users
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })   // active stores
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })   // products
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })   // orders
+      .mockResolvedValueOnce({ rows: [{ revenue: '141.45' }] }) // revenue
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] });  // pending orders
+
+    const res = await request(app).get('/api/admin/stats').set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('users', 2);
+    expect(res.body).toHaveProperty('orders', 1);
+    expect(res.body.revenue).toBeCloseTo(141.45);
+  });
+});
+
+// ─── Payments ──────────────────────────────────────────────────────────────────
+
+describe('POST /api/payments', () => {
+  it('rejects missing fields', async () => {
+    const res = await request(app)
+      .post('/api/payments')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ amount: 100 }); // missing order_id and method
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 404 when order not found', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // order not found
+
+    const res = await request(app)
+      .post('/api/payments')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ order_id: ORDER_ID, amount: 141.45, method: 'blik' });
+    expect(res.status).toBe(404);
+  });
+
+  it('creates a payment record', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: ORDER_ID, buyer_id: SELLER_ID, total: 141.45 }] }) // order found
+      .mockResolvedValueOnce({ rows: [{ id: 'pay-1', order_id: ORDER_ID, user_id: SELLER_ID, amount: 141.45, method: 'blik', status: 'pending' }] }); // insert
+
+    const res = await request(app)
+      .post('/api/payments')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ order_id: ORDER_ID, amount: 141.45, method: 'blik' });
+    expect(res.status).toBe(201);
+    expect(res.body.method).toBe('blik');
+    expect(res.body.status).toBe('pending');
+  });
+});
+
+describe('PUT /api/payments/:id/status', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .put('/api/payments/pay-1/status')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ status: 'completed' });
+    expect(res.status).toBe(403);
+  });
+
+  it('updates payment status as admin', async () => {
+    const PAY_ID = 'a0000000-0000-4000-8000-000000000099';
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: PAY_ID, status: 'completed', order_id: ORDER_ID }] }) // update payment
+      .mockResolvedValueOnce({ rows: [] }); // update order status
+
+    const res = await request(app)
+      .put(`/api/payments/${PAY_ID}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'completed' });
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('completed');
+  });
+});
+
+// ─── Shop products ─────────────────────────────────────────────────────────────
+
+describe('GET /api/shop-products', () => {
+  it('requires store_id param', async () => {
+    const res = await request(app).get('/api/shop-products');
+    expect(res.status).toBe(422);
+  });
+
+  it('returns shop product list', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app).get(`/api/shop-products?store_id=${STORE_ID}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('products');
+  });
+});
+
+describe('POST /api/shop-products', () => {
+  it('requires seller role', async () => {
+    const { signToken } = require('../src/middleware/auth');
+    const buyerToken = signToken({ id: 'buyer-id', email: 'buyer@test.pl', role: 'buyer' });
+    const res = await request(app)
+      .post('/api/shop-products')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID });
+    expect(res.status).toBe(403);
+  });
+
+  it('adds product to shop', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] }) // store
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })      // product
+      .mockResolvedValueOnce({ rows: [{ id: 'sp-1', store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] }); // insert
+
+    const res = await request(app)
+      .post('/api/shop-products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID });
+    expect(res.status).toBe(201);
+    expect(res.body.store_id).toBe(STORE_ID);
+  });
+});
+
 // ─── 404 ───────────────────────────────────────────────────────────────────────
 
 describe('Unknown route', () => {
@@ -437,3 +864,4 @@ describe('Unknown route', () => {
     expect(res.status).toBe(404);
   });
 });
+
