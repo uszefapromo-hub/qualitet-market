@@ -234,6 +234,15 @@
           Termin (etykieta)
           <input type="text" name="dueLabel" placeholder="np. jutro, 3 dni, piątek" maxlength="40">
         </label>
+        <label>
+          Załącznik (zdjęcie)
+          <input type="file" name="attachment" accept="image/*" data-task-attachment-input>
+          <span class="task-upload-hint" data-task-upload-hint></span>
+        </label>
+        <div id="task-attachment-preview-wrap" class="task-attachment-preview-wrap" hidden>
+          <img id="task-attachment-preview" class="task-attachment-preview-img" src="" alt="Podgląd załącznika">
+          <button type="button" class="task-attachment-remove" data-task-attachment-remove aria-label="Usuń załącznik">×</button>
+        </div>
         <div class="cta-row">
           <button class="btn btn-primary" type="submit" style="min-height:42px;padding:0 20px;font-size:14px">Dodaj zadanie</button>
           <button class="btn btn-secondary" type="button" data-task-modal-close style="min-height:42px;padding:0 16px;font-size:14px">Anuluj</button>

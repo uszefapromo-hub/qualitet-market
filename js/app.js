@@ -5979,6 +5979,7 @@
       const dueHtml = task.dueLabel ? `<span>${escapeHtml(task.dueLabel)}</span>` : '';
       const closedClass = task.status === 'closed' ? ' is-closed' : '';
       const descHtml = task.description ? `<p class="task-desc">${escapeHtml(task.description)}</p>` : '';
+      const attachHtml = (task.attachment && /^data:image\//.test(task.attachment)) ? `<img class="task-attachment-thumb" src="${task.attachment}" alt="Załącznik" loading="lazy">` : '';
       return `
         <div class="task-item${closedClass}" data-task-id="${escapeHtml(task.id)}">
           <div class="task-header">
@@ -5987,6 +5988,7 @@
           </div>
           <p class="task-title">${escapeHtml(task.title)}</p>
           ${descHtml}
+          ${attachHtml}
           <div class="task-meta">
             <span>${escapeHtml(task.assignee)}</span>
             ${dueHtml}
@@ -6111,12 +6113,67 @@
       if(!modal) return;
       const form = modal.querySelector('[data-task-form]');
       const closeBtns = modal.querySelectorAll('[data-task-modal-close]');
-      closeBtns.forEach(btn => btn.addEventListener('click', closeTaskModal));
+
+      let pendingAttachment = null;
+
+      const MAX_ATTACHMENT_BYTES = 1 * 1024 * 1024;
+
+      function clearAttachmentPreview(){
+        pendingAttachment = null;
+        const previewWrap = modal.querySelector('[id="task-attachment-preview-wrap"]');
+        const hint = modal.querySelector('[data-task-upload-hint]');
+        const fileInput = modal.querySelector('[data-task-attachment-input]');
+        if(previewWrap) previewWrap.hidden = true;
+        if(hint) hint.textContent = '';
+        if(fileInput) fileInput.value = '';
+      }
+
+      const fileInput = form && form.querySelector('[data-task-attachment-input]');
+      if(fileInput){
+        fileInput.addEventListener('change', () => {
+          const file = fileInput.files && fileInput.files[0];
+          const hint = modal.querySelector('[data-task-upload-hint]');
+          const previewWrap = modal.querySelector('[id="task-attachment-preview-wrap"]');
+          const previewImg = modal.querySelector('[id="task-attachment-preview"]');
+          if(!file){
+            pendingAttachment = null;
+            if(previewWrap) previewWrap.hidden = true;
+            if(hint) hint.textContent = '';
+            return;
+          }
+          const MAX_BYTES = MAX_ATTACHMENT_BYTES;
+          if(file.size > MAX_BYTES){
+            if(hint){
+              hint.textContent = 'Plik jest za duży (maks. 1 MB). Wybierz mniejsze zdjęcie.';
+              hint.style.color = '#f87171';
+            }
+            fileInput.value = '';
+            pendingAttachment = null;
+            if(previewWrap) previewWrap.hidden = true;
+            return;
+          }
+          if(hint){ hint.textContent = ''; hint.style.color = ''; }
+          const reader = new FileReader();
+          reader.onload = function(ev){
+            pendingAttachment = ev.target.result;
+            if(previewImg && /^data:image\//.test(pendingAttachment)) previewImg.src = pendingAttachment;
+            if(previewWrap) previewWrap.hidden = false;
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      const removeBtn = form && form.querySelector('[data-task-attachment-remove]');
+      if(removeBtn){
+        removeBtn.addEventListener('click', clearAttachmentPreview);
+      }
+
+      closeBtns.forEach(btn => btn.addEventListener('click', () => { clearAttachmentPreview(); closeTaskModal(); }));
       modal.addEventListener('click', e => {
-        if(e.target === modal) closeTaskModal();
+        if(e.target === modal){ clearAttachmentPreview(); closeTaskModal(); }
       });
       document.addEventListener('keydown', e => {
-        if(e.key === 'Escape' && !modal.hidden) closeTaskModal();
+        if(e.key === 'Escape' && !modal.hidden){ clearAttachmentPreview(); closeTaskModal(); }
       });
       if(form){
         form.addEventListener('submit', e => {
@@ -6136,11 +6193,13 @@
             dueLabel: (data.get('dueLabel') || '').trim() || null,
             status: data.get('status') || 'open',
             createdAt: new Date().toISOString(),
-            closedAt: null
+            closedAt: null,
+            attachment: pendingAttachment || null
           };
           tasks.unshift(newTask);
           saveStoredList(OWNER_STORAGE_KEYS.tasks, tasks);
           form.reset();
+          clearAttachmentPreview();
           closeTaskModal();
           renderBoard();
           showTaskFeedback('Nowe zadanie dodane', 'Status: OPEN');

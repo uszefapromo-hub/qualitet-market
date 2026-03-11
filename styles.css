@@ -1236,6 +1236,28 @@ body.store-shop .shop-contact h2{
 .task-modal-form textarea{resize:vertical;min-height:72px;font-family:inherit}
 .task-modal-form input::placeholder,.task-modal-form textarea::placeholder{color:var(--muted)}
 .task-modal-form .cta-row{margin-top:6px}
+.task-modal-form input[type="file"]{
+  padding:6px 10px;cursor:pointer;background:rgba(255,255,255,.04);
+}
+.task-upload-hint{font-size:12px;margin-top:2px;min-height:16px;display:block}
+.task-attachment-preview-wrap{
+  position:relative;display:inline-flex;margin-top:4px;
+}
+.task-attachment-preview-img{
+  width:100%;max-height:120px;object-fit:cover;border-radius:10px;
+  border:1px solid var(--stroke);display:block;
+}
+.task-attachment-remove{
+  position:absolute;top:6px;right:6px;width:24px;height:24px;
+  border-radius:50%;border:1px solid rgba(255,255,255,.3);
+  background:rgba(4,8,20,.75);color:#fff;font-size:16px;line-height:1;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+}
+.task-attachment-remove:hover{background:rgba(248,113,113,.7)}
+.task-attachment-thumb{
+  width:100%;max-height:120px;object-fit:cover;border-radius:10px;
+  border:1px solid var(--stroke);margin-top:2px;display:block;
+}
 .task-feedback{
   position:fixed;bottom:80px;right:20px;z-index:200;
   padding:14px 16px;border-radius:16px;
