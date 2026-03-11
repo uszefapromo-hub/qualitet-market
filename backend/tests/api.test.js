@@ -358,8 +358,10 @@ function setupDbMock() {
 let app;
 let sellerToken;
 let adminToken;
+let superadminToken;
 const SELLER_ID = 'a0000000-0000-4000-8000-000000000001';
 const ADMIN_ID  = 'a0000000-0000-4000-8000-000000000002';
+const SUPERADMIN_ID = 'a0000000-0000-4000-8000-000000000009';
 const STORE_ID  = 'a0000000-0000-4000-8000-000000000003';
 const PRODUCT_ID = 'a0000000-0000-4000-8000-000000000004';
 const ORDER_ID  = 'a0000000-0000-4000-8000-000000000005';
@@ -373,13 +375,15 @@ beforeAll(async () => {
   app = require('../src/app');
 
   const { signToken } = require('../src/middleware/auth');
-  sellerToken = signToken({ id: SELLER_ID, email: 'seller@test.pl', role: 'seller' });
-  adminToken  = signToken({ id: ADMIN_ID,  email: 'admin@test.pl',  role: 'owner'  });
+  sellerToken     = signToken({ id: SELLER_ID,     email: 'seller@test.pl',     role: 'seller'     });
+  adminToken      = signToken({ id: ADMIN_ID,      email: 'admin@test.pl',      role: 'owner'      });
+  superadminToken = signToken({ id: SUPERADMIN_ID, email: 'superadmin@test.pl', role: 'superadmin' });
 
   // Pre-seed users
   const hash = await bcrypt.hash('Password123!', 12);
-  mockDb.users.push({ id: SELLER_ID, email: 'seller@test.pl', password_hash: hash, name: 'Seller', role: 'seller', plan: 'basic' });
-  mockDb.users.push({ id: ADMIN_ID,  email: 'admin@test.pl',  password_hash: hash, name: 'Admin',  role: 'owner',  plan: 'elite' });
+  mockDb.users.push({ id: SELLER_ID,     email: 'seller@test.pl',     password_hash: hash, name: 'Seller',     role: 'seller',     plan: 'basic'  });
+  mockDb.users.push({ id: ADMIN_ID,      email: 'admin@test.pl',      password_hash: hash, name: 'Admin',      role: 'owner',      plan: 'elite'  });
+  mockDb.users.push({ id: SUPERADMIN_ID, email: 'superadmin@test.pl', password_hash: hash, name: 'SuperAdmin', role: 'superadmin', plan: 'elite'  });
 
   // Pre-seed a store
   mockDb.stores.push({ id: STORE_ID, owner_id: SELLER_ID, name: 'Mój Sklep', slug: 'moj-sklep', margin: 15, plan: 'basic', status: 'active' });
@@ -726,28 +730,39 @@ describe('POST /api/cart/items', () => {
   });
 });
 
-// ─── Admin stats ───────────────────────────────────────────────────────────────
+// ─── Admin dashboard ───────────────────────────────────────────────────────────
 
-describe('GET /api/admin/stats', () => {
-  it('requires admin role', async () => {
-    const res = await request(app).get('/api/admin/stats').set('Authorization', `Bearer ${sellerToken}`);
+describe('GET /api/admin/dashboard', () => {
+  it('requires superadmin role (seller gets 403)', async () => {
+    const res = await request(app).get('/api/admin/dashboard').set('Authorization', `Bearer ${sellerToken}`);
     expect(res.status).toBe(403);
   });
 
-  it('returns platform stats as admin', async () => {
-    db.query
-      .mockResolvedValueOnce({ rows: [{ count: '2' }] })   // users
-      .mockResolvedValueOnce({ rows: [{ count: '1' }] })   // active stores
-      .mockResolvedValueOnce({ rows: [{ count: '1' }] })   // products
-      .mockResolvedValueOnce({ rows: [{ count: '1' }] })   // orders
-      .mockResolvedValueOnce({ rows: [{ revenue: '141.45' }] }) // revenue
-      .mockResolvedValueOnce({ rows: [{ count: '1' }] });  // pending orders
+  it('requires superadmin role (owner gets 403)', async () => {
+    const res = await request(app).get('/api/admin/dashboard').set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(403);
+  });
 
-    const res = await request(app).get('/api/admin/stats').set('Authorization', `Bearer ${adminToken}`);
+  it('returns platform stats as superadmin', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '2' }] })              // users
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })              // stores
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })              // products
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })              // orders
+      .mockResolvedValueOnce({ rows: [{ sales: '141.45' }] })         // daily_sales
+      .mockResolvedValueOnce({ rows: [{ sales: '141.45' }] })         // monthly_sales
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })              // new_shops
+      .mockResolvedValueOnce({ rows: [{ count: '2' }] })              // new_users
+      .mockResolvedValueOnce({ rows: [] })                            // recent_orders
+      .mockResolvedValueOnce({ rows: [] });                           // recent_shops
+
+    const res = await request(app).get('/api/admin/dashboard').set('Authorization', `Bearer ${superadminToken}`);
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('users', 2);
-    expect(res.body).toHaveProperty('orders', 1);
-    expect(res.body.revenue).toBeCloseTo(141.45);
+    expect(res.body.stats).toHaveProperty('users', 2);
+    expect(res.body.stats).toHaveProperty('orders', 1);
+    expect(res.body.stats.monthly_sales).toBeCloseTo(141.45);
+    expect(res.body).toHaveProperty('recent_orders');
+    expect(res.body).toHaveProperty('recent_shops');
   });
 });
 

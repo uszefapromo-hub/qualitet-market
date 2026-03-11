@@ -37,6 +37,17 @@ function requireRole(...roles) {
 }
 
 /**
+ * Middleware: require the requesting user to have the 'superadmin' role.
+ * Used to protect all /api/admin/* endpoints.
+ */
+function requireSuperAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'superadmin') {
+    return res.status(403).json({ error: 'Dostęp tylko dla superadmin' });
+  }
+  next();
+}
+
+/**
  * Sign and return a new JWT for the given user record.
  * @param {{ id: string, email: string, role: string }} user
  */
@@ -48,4 +59,4 @@ function signToken(user) {
   );
 }
 
-module.exports = { authenticate, requireRole, signToken };
+module.exports = { authenticate, requireRole, requireSuperAdmin, signToken };
