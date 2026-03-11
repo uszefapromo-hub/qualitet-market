@@ -44,6 +44,58 @@ router.get(
   }
 );
 
+// ─── PATCH /api/my/store – update seller's primary store ─────────────────────
+
+router.patch(
+  '/store',
+  authenticate,
+  requireRole('seller', 'owner', 'admin'),
+  [
+    body('name').optional().trim().notEmpty(),
+    body('description').optional().trim(),
+    body('logo_url').optional().isURL(),
+    body('margin').optional().isFloat({ min: 0, max: 100 }),
+  ],
+  validate,
+  async (req, res) => {
+    try {
+      const storeResult = await db.query(
+        'SELECT id FROM stores WHERE owner_id = $1 ORDER BY created_at ASC LIMIT 1',
+        [req.user.id]
+      );
+      const store = storeResult.rows[0];
+      if (!store) {
+        return res.status(404).json({ error: 'Nie masz jeszcze sklepu' });
+      }
+
+      const { name, description, logo_url, margin } = req.body;
+
+      const result = await db.query(
+        `UPDATE stores SET
+           name        = COALESCE($1, name),
+           description = COALESCE($2, description),
+           logo_url    = COALESCE($3, logo_url),
+           margin      = COALESCE($4, margin),
+           updated_at  = NOW()
+         WHERE id = $5
+         RETURNING *`,
+        [
+          name      !== undefined ? name      : null,
+          description !== undefined ? description : null,
+          logo_url  !== undefined ? logo_url  : null,
+          margin    !== undefined ? margin    : null,
+          store.id,
+        ]
+      );
+
+      return res.json(result.rows[0]);
+    } catch (err) {
+      console.error('my store update error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
 // ─── GET /api/my/orders – buyer's order history ────────────────────────────────
 
 router.get('/orders', authenticate, async (req, res) => {

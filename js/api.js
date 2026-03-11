@@ -115,10 +115,11 @@
   const Auth = {
     /**
      * Register a new account.
+     * Uses /api/auth/register (default role: seller).
      * @returns {{ token: string, user: object }}
      */
-    register(email, password, name, role = 'buyer') {
-      return post('/users/register', { email, password, name, role }).then((data) => {
+    register(email, password, name, role = 'seller') {
+      return post('/auth/register', { email, password, name, role }).then((data) => {
         setToken(data.token);
         saveUser(data.user);
         return data;
@@ -130,7 +131,7 @@
      * @returns {{ token: string, user: object }}
      */
     login(email, password) {
-      return post('/users/login', { email, password }).then((data) => {
+      return post('/auth/login', { email, password }).then((data) => {
         setToken(data.token);
         saveUser(data.user);
         return data;
@@ -149,11 +150,11 @@
 
     /** Fetch fresh profile from API. */
     me() {
-      return get('/users/me').then((user) => { saveUser(user); return user; });
+      return get('/auth/me').then((user) => { saveUser(user); return user; });
     },
 
     updateProfile(data) {
-      return put('/users/me', data).then((user) => { saveUser(user); return user; });
+      return put('/auth/me', data).then((user) => { saveUser(user); return user; });
     },
 
     changePassword(currentPassword, newPassword) {
@@ -173,6 +174,17 @@
     create(data)          { return post('/stores', data); },
     update(id, data)      { return put(`/stores/${id}`, data); },
     remove(id)            { return del(`/stores/${id}`); },
+  };
+
+  // ─── Shops (seller onboarding endpoint) ──────────────────────────────────────
+
+  const Shops = {
+    /** Create a new shop (default margin 30%). POST /api/shops */
+    create(data)          { return post('/shops', data); },
+    /** Get public shop profile by slug. GET /api/shops/:slug */
+    getBySlug(slug)       { return get(`/shops/${slug}`); },
+    /** List products of a public shop. GET /api/shops/:slug/products */
+    products(slug, params){ return get(`/shops/${slug}/products`, params); },
   };
 
   // ─── Products (central catalogue) ────────────────────────────────────────────
@@ -223,7 +235,17 @@
     get(storeId)               { return get('/cart', { store_id: storeId }); },
 
     /**
-     * Add an item (or increase qty) to the cart.
+     * Add an item by shop_product_id (primary method).
+     * POST /api/cart – customer purchase flow.
+     * @param {string} shopProductId
+     * @param {number} quantity
+     */
+    addByShopProduct(shopProductId, quantity = 1) {
+      return post('/cart', { shop_product_id: shopProductId, quantity });
+    },
+
+    /**
+     * Add an item by store_id + product_id (legacy method).
      * @param {string} storeId
      * @param {string} productId
      * @param {number} quantity
@@ -239,6 +261,17 @@
       return put(`/cart/items/${productId}`, { store_id: storeId, quantity });
     },
 
+    /**
+     * Remove a cart item by its UUID (preferred).
+     * DELETE /api/cart/items/:itemId
+     */
+    removeItemById(itemId) {
+      return del(`/cart/items/${itemId}`);
+    },
+
+    /**
+     * Remove an item by product_id (legacy).
+     */
     removeItem(storeId, productId) {
       return del(`/cart/items/${productId}`, { store_id: storeId });
     },
@@ -349,6 +382,9 @@
   // ─── Admin ────────────────────────────────────────────────────────────────────
 
   const Admin = {
+    /** Rich dashboard metrics. GET /api/admin/dashboard */
+    dashboard()                { return get('/admin/dashboard'); },
+    /** Legacy stats alias. GET /api/admin/stats */
     stats()                    { return get('/admin/stats'); },
     users(params)              { return get('/admin/users', params); },
     /** Update user role / plan / name. */
@@ -357,11 +393,16 @@
     deleteUser(id)             { return del(`/admin/users/${id}`); },
     orders(params)             { return get('/admin/orders', params); },
     stores(params)             { return get('/admin/stores', params); },
-    /** Change store status: 'active' | 'inactive' | 'suspended' | 'pending'. */
+    /** List shops (alias for stores). GET /api/admin/shops */
+    shops(params)              { return get('/admin/shops', params); },
+    /** Change shop status: 'active' | 'inactive' | 'suspended' | 'pending' | 'banned'. */
     updateStoreStatus(id, status) { return patch(`/admin/stores/${id}/status`, { status }); },
     products(params)           { return get('/admin/products', params); },
     /** Change product status: 'draft' | 'pending' | 'active' | 'archived'. */
     updateProductStatus(id, status) { return patch(`/admin/products/${id}/status`, { status }); },
+    /** List suppliers via admin endpoint. GET /api/admin/suppliers */
+    suppliers(params)          { return get('/admin/suppliers', params); },
+    subscriptions(params)      { return get('/admin/subscriptions', params); },
     auditLogs(params)          { return get('/admin/audit-logs', params); },
   };
 
@@ -370,6 +411,8 @@
   const MyStore = {
     /** Get the seller's primary store. */
     get()                      { return get('/my/store'); },
+    /** Update the seller's primary store. */
+    update(data)               { return patch('/my/store', data); },
     /** Get the seller's order history (as buyer). */
     orders(params)             { return get('/my/orders', params); },
     /**
@@ -397,6 +440,7 @@
   return {
     Auth,
     Stores,
+    Shops,
     Products,
     ShopProducts,
     Categories,

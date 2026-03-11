@@ -1,17 +1,71 @@
 'use strict';
 
 /**
- * Public shop routes – browsing stores by slug without authentication.
+ * Public and seller shop routes.
  *
- * GET /api/shops/:slug          – store profile
- * GET /api/shops/:slug/products – product listing for a store
+ * POST /api/shops                   – create a new shop (authenticated seller)
+ * GET  /api/shops/:slug             – public store profile
+ * GET  /api/shops/:slug/products    – public product listing for a store
  */
 
 const express = require('express');
+const { body } = require('express-validator');
+const { v4: uuidv4 } = require('uuid');
 
 const db = require('../config/database');
+const { authenticate, requireRole } = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
 
 const router = express.Router();
+
+// ─── POST /api/shops – create a new shop (seller onboarding) ─────────────────
+
+router.post(
+  '/',
+  authenticate,
+  requireRole('seller', 'owner', 'admin'),
+  [
+    body('name').trim().notEmpty(),
+    body('slug').trim().matches(/^[a-z0-9-]+$/i).isLength({ max: 80 }),
+    body('description').optional().trim(),
+    body('margin').optional().isFloat({ min: 0, max: 100 }),
+    body('plan').optional().isIn(['basic', 'pro', 'elite']),
+  ],
+  validate,
+  async (req, res) => {
+    const {
+      name,
+      slug,
+      description = null,
+      margin = 30,   // default 30 % margin for new shops
+      plan = 'basic',
+    } = req.body;
+
+    try {
+      const slugCheck = await db.query('SELECT id FROM stores WHERE slug = $1', [slug]);
+      if (slugCheck.rows.length > 0) {
+        return res.status(409).json({ error: 'Slug jest już zajęty' });
+      }
+
+      const id = uuidv4();
+      const result = await db.query(
+        `INSERT INTO stores (id, owner_id, name, slug, description, margin, plan, status, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', NOW())
+         RETURNING *`,
+        [id, req.user.id, name, slug, description, margin, plan]
+      );
+
+      return res.status(201).json({
+        ...result.rows[0],
+        next_step: 'add_products',
+        message: 'Sklep utworzony. Dodaj pierwsze produkty!',
+      });
+    } catch (err) {
+      console.error('create shop error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
 
 // ─── GET /api/shops/:slug – public store profile ───────────────────────────────
 
@@ -38,6 +92,8 @@ router.get('/:slug/products', async (req, res) => {
   const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
   const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
   const offset = (page - 1) * limit;
+  const search   = req.query.search   || null;
+  const category = req.query.category || null;
 
   try {
     // Resolve store by slug
@@ -48,9 +104,22 @@ router.get('/:slug/products', async (req, res) => {
     const store = storeResult.rows[0];
     if (!store) return res.status(404).json({ error: 'Sklep nie znaleziony' });
 
+    const conditions = ['sp.store_id = $1', 'sp.active = true'];
+    const params = [store.id];
+    let idx = 2;
+
+    if (category) { conditions.push(`p.category = $${idx++}`); params.push(category); }
+    if (search) {
+      conditions.push(`(p.name ILIKE $${idx} OR p.description ILIKE $${idx})`);
+      params.push(`%${search}%`);
+      idx++;
+    }
+
+    const where = `WHERE ${conditions.join(' AND ')}`;
+
     const countResult = await db.query(
-      'SELECT COUNT(*) FROM shop_products WHERE store_id = $1 AND active = true',
-      [store.id]
+      `SELECT COUNT(*) FROM shop_products sp JOIN products p ON sp.product_id = p.id ${where}`,
+      params
     );
     const total = parseInt(countResult.rows[0].count, 10);
 
@@ -63,10 +132,10 @@ router.get('/:slug/products', async (req, res) => {
               COALESCE(sp.margin_override, p.margin)         AS margin
        FROM shop_products sp
        JOIN products p ON sp.product_id = p.id
-       WHERE sp.store_id = $1 AND sp.active = true
+       ${where}
        ORDER BY sp.sort_order ASC, sp.created_at DESC
-       LIMIT $2 OFFSET $3`,
-      [store.id, limit, offset]
+       LIMIT $${idx} OFFSET $${idx + 1}`,
+      [...params, limit, offset]
     );
 
     return res.json({ total, page, limit, products: result.rows });
@@ -77,3 +146,4 @@ router.get('/:slug/products', async (req, res) => {
 });
 
 module.exports = router;
+
