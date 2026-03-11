@@ -103,7 +103,7 @@ router.post(
         }
       }
 
-      await db.transaction(async (client) => {
+      const createdOrderId = await db.transaction(async (client) => {
         const orderId = uuidv4();
         let subtotal = 0;
         const orderItems = [];
@@ -151,11 +151,11 @@ router.post(
           );
         }
 
-        req._createdOrderId = orderId;
+        return orderId;
       });
 
-      const newOrder = await db.query('SELECT * FROM orders WHERE id = $1', [req._createdOrderId]);
-      const newItems = await db.query('SELECT * FROM order_items WHERE order_id = $1', [req._createdOrderId]);
+      const newOrder = await db.query('SELECT * FROM orders WHERE id = $1', [createdOrderId]);
+      const newItems = await db.query('SELECT * FROM order_items WHERE order_id = $1', [createdOrderId]);
       return res.status(201).json({ ...newOrder.rows[0], items: newItems.rows });
     } catch (err) {
       console.error('create order error:', err.message);
