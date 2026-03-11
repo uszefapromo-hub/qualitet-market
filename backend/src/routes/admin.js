@@ -1,15 +1,20 @@
 'use strict';
 
 const express = require('express');
+const { body, param } = require('express-validator');
 
 const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { validate } = require('../middleware/validate');
 
 const router = express.Router();
 
+// All admin routes require authentication and admin/owner role
+router.use(authenticate, requireRole('owner', 'admin'));
+
 // ─── GET /api/admin/stats – platform dashboard statistics ─────────────────────
 
-router.get('/stats', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+router.get('/stats', async (req, res) => {
   try {
     const [
       usersResult,
@@ -41,23 +46,29 @@ router.get('/stats', authenticate, requireRole('owner', 'admin'), async (req, re
   }
 });
 
-// ─── GET /api/admin/users – all users (paginated) ─────────────────────────────
+// ─── GET /api/admin/users – all users (paginated, filterable by role) ─────────
 
-router.get('/users', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+router.get('/users', async (req, res) => {
   const page  = Math.max(1, parseInt(req.query.page  || '1',  10));
   const limit = Math.min(100, parseInt(req.query.limit || '20', 10));
   const offset = (page - 1) * limit;
+  const role = req.query.role || null;
 
   try {
-    const countResult = await db.query('SELECT COUNT(*) FROM users');
+    const conditions = role ? ['role = $1'] : [];
+    const params = role ? [role] : [];
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const idxLimit = params.length + 1;
+
+    const countResult = await db.query(`SELECT COUNT(*) FROM users ${where}`, params);
     const total = parseInt(countResult.rows[0].count, 10);
 
     const result = await db.query(
       `SELECT id, email, name, role, plan, trial_ends_at, created_at
-       FROM users
+       FROM users ${where}
        ORDER BY created_at DESC
-       LIMIT $1 OFFSET $2`,
-      [limit, offset]
+       LIMIT $${idxLimit} OFFSET $${idxLimit + 1}`,
+      [...params, limit, offset]
     );
     return res.json({ total, page, limit, users: result.rows });
   } catch (err) {
@@ -66,23 +77,41 @@ router.get('/users', authenticate, requireRole('owner', 'admin'), async (req, re
   }
 });
 
-// ─── GET /api/admin/orders – all orders (paginated, filterable by status) ─────
+// ─── GET /api/admin/orders – all orders (paginated, filterable) ───────────────
 
-router.get('/orders', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+router.get('/orders', async (req, res) => {
   const page   = Math.max(1, parseInt(req.query.page   || '1',  10));
   const limit  = Math.min(100, parseInt(req.query.limit  || '20', 10));
   const offset = (page - 1) * limit;
   const status = req.query.status || null;
+  const storeId = req.query.store_id || null;
 
   try {
-    const where = status ? 'WHERE status = $1' : '';
-    const params = status ? [status] : [];
+    const conditions = [];
+    const params = [];
+    let idx = 1;
 
-    const countResult = await db.query(`SELECT COUNT(*) FROM orders ${where}`, params);
+    if (status)  { conditions.push(`o.status = $${idx++}`);   params.push(status); }
+    if (storeId) { conditions.push(`o.store_id = $${idx++}`); params.push(storeId); }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countResult = await db.query(`SELECT COUNT(*) FROM orders o ${where}`, params);
     const total = parseInt(countResult.rows[0].count, 10);
 
     const result = await db.query(
-      `SELECT * FROM orders ${where} ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      `SELECT
+         o.*,
+         s.name AS shop_name,
+         s.slug AS shop_slug,
+         u.email AS buyer_email,
+         u.name  AS buyer_name
+       FROM orders o
+       JOIN stores s ON o.store_id = s.id
+       JOIN users u ON o.buyer_id = u.id
+       ${where}
+       ORDER BY o.created_at DESC
+       LIMIT $${idx} OFFSET $${idx + 1}`,
       [...params, limit, offset]
     );
     return res.json({ total, page, limit, orders: result.rows });
@@ -92,9 +121,33 @@ router.get('/orders', authenticate, requireRole('owner', 'admin'), async (req, r
   }
 });
 
+// ─── PATCH /api/admin/orders/:id/status ───────────────────────────────────────
+
+router.patch(
+  '/orders/:id/status',
+  [
+    param('id').isUUID(),
+    body('status').isIn(['pending', 'confirmed', 'shipped', 'delivered', 'cancelled']),
+  ],
+  validate,
+  async (req, res) => {
+    try {
+      const result = await db.query(
+        'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+        [req.body.status, req.params.id]
+      );
+      if (!result.rows[0]) return res.status(404).json({ error: 'Zamówienie nie znalezione' });
+      return res.json(result.rows[0]);
+    } catch (err) {
+      console.error('admin update order status error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
 // ─── GET /api/admin/stores – all stores (paginated) ───────────────────────────
 
-router.get('/stores', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+router.get('/stores', async (req, res) => {
   const page   = Math.max(1, parseInt(req.query.page   || '1',  10));
   const limit  = Math.min(100, parseInt(req.query.limit  || '20', 10));
   const offset = (page - 1) * limit;
@@ -114,20 +167,41 @@ router.get('/stores', authenticate, requireRole('owner', 'admin'), async (req, r
   }
 });
 
-// ─── GET /api/admin/audit-logs – audit log (paginated) ────────────────────────
+// ─── GET /api/admin/audit-logs – audit log (paginated, filterable) ────────────
 
-router.get('/audit-logs', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+router.get('/audit-logs', async (req, res) => {
   const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
-  const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
+  const limit  = Math.min(100, parseInt(req.query.limit || '50', 10));
   const offset = (page - 1) * limit;
+  const entityType = req.query.entity_type || null;  // maps to resource column
+  const actorId    = req.query.actor_user_id || null; // maps to user_id column
+  const action     = req.query.action || null;
 
   try {
-    const countResult = await db.query('SELECT COUNT(*) FROM audit_logs');
+    const conditions = [];
+    const params = [];
+    let idx = 1;
+
+    if (entityType) { conditions.push(`al.resource = $${idx++}`);  params.push(entityType); }
+    if (actorId)    { conditions.push(`al.user_id = $${idx++}`);   params.push(actorId); }
+    if (action)     { conditions.push(`al.action = $${idx++}`);    params.push(action); }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countResult = await db.query(`SELECT COUNT(*) FROM audit_logs al ${where}`, params);
     const total = parseInt(countResult.rows[0].count, 10);
 
     const result = await db.query(
-      'SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1 OFFSET $2',
-      [limit, offset]
+      `SELECT
+         al.*,
+         u.email AS actor_email,
+         u.name  AS actor_name
+       FROM audit_logs al
+       LEFT JOIN users u ON al.user_id = u.id
+       ${where}
+       ORDER BY al.created_at DESC
+       LIMIT $${idx} OFFSET $${idx + 1}`,
+      [...params, limit, offset]
     );
     return res.json({ total, page, limit, logs: result.rows });
   } catch (err) {

@@ -665,64 +665,38 @@ describe('POST /api/categories', () => {
 
 describe('GET /api/cart', () => {
   it('requires authentication', async () => {
-    const res = await request(app).get(`/api/cart?store_id=${STORE_ID}`);
+    const res = await request(app).get('/api/cart');
     expect(res.status).toBe(401);
   });
 
-  it('requires store_id param', async () => {
-    const res = await request(app).get('/api/cart').set('Authorization', `Bearer ${sellerToken}`);
-    expect(res.status).toBe(422);
-  });
-
-  it('returns empty cart when none exists', async () => {
+  it('returns null cart when none exists', async () => {
     db.query.mockResolvedValueOnce({ rows: [] }); // no cart found
 
     const res = await request(app)
-      .get(`/api/cart?store_id=${STORE_ID}`)
+      .get('/api/cart')
       .set('Authorization', `Bearer ${sellerToken}`);
     expect(res.status).toBe(200);
-    expect(res.body.items).toEqual([]);
-    expect(res.body.total).toBe(0);
+    expect(res.body.cart).toBeNull();
   });
 });
 
-describe('POST /api/cart/items', () => {
-  it('rejects missing fields', async () => {
+describe('POST /api/cart', () => {
+  it('rejects missing shop_product_id', async () => {
     const res = await request(app)
-      .post('/api/cart/items')
+      .post('/api/cart')
       .set('Authorization', `Bearer ${sellerToken}`)
-      .send({ store_id: STORE_ID }); // missing product_id and quantity
+      .send({ quantity: 1 }); // missing shop_product_id
     expect(res.status).toBe(422);
   });
 
-  it('returns 404 when product not in store', async () => {
-    db.query.mockResolvedValueOnce({ rows: [] }); // product not found
+  it('returns 404 when shop_product not found', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // shop_product not found
 
     const res = await request(app)
-      .post('/api/cart/items')
+      .post('/api/cart')
       .set('Authorization', `Bearer ${sellerToken}`)
-      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, quantity: 1 });
+      .send({ shop_product_id: PRODUCT_ID, quantity: 1 });
     expect(res.status).toBe(404);
-  });
-
-  it('adds item to cart successfully', async () => {
-    const CART_ID = 'cart-1';
-    db.query
-      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, selling_price: 141.45, stock: 10, name: 'Fotel' }] }) // product found
-      .mockResolvedValueOnce({ rows: [{ id: CART_ID, user_id: SELLER_ID, store_id: STORE_ID, status: 'active' }] }) // get/create cart
-      .mockResolvedValueOnce({ rows: [] })  // check existing cart item
-      .mockResolvedValueOnce({ rows: [] })  // insert cart item
-      .mockResolvedValueOnce({ rows: [] })  // update cart updated_at
-      .mockResolvedValueOnce({ rows: [{ id: CART_ID, user_id: SELLER_ID, store_id: STORE_ID, status: 'active' }] }) // cartWithItems – cart
-      .mockResolvedValueOnce({ rows: [{ id: 'ci-1', cart_id: CART_ID, product_id: PRODUCT_ID, quantity: 1, unit_price: 141.45, name: 'Fotel', image_url: null }] }); // cartWithItems – items
-
-    const res = await request(app)
-      .post('/api/cart/items')
-      .set('Authorization', `Bearer ${sellerToken}`)
-      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, quantity: 1 });
-    expect(res.status).toBe(201);
-    expect(res.body.items).toHaveLength(1);
-    expect(res.body.total).toBeCloseTo(141.45);
   });
 });
 
