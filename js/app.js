@@ -6161,6 +6161,17 @@
 
     initTaskModal();
     renderBoard();
+
+    const deepLinkId = new URLSearchParams(window.location.search).get('id');
+    if(deepLinkId){
+      const targetEl = board.querySelector(`[data-task-id="${CSS.escape(deepLinkId)}"]`);
+      if(targetEl){
+        targetEl.classList.add('task-item--focused');
+        requestAnimationFrame(() => targetEl.scrollIntoView({behavior:'smooth', block:'center'}));
+      } else {
+        showTaskFeedback('Zadanie nie znalezione', 'ID: ' + deepLinkId.slice(0, 20));
+      }
+    }
   }
 
   document.addEventListener('DOMContentLoaded', () => {

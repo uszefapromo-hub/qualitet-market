@@ -1182,6 +1182,15 @@ body.store-shop .shop-contact h2{
 .btn-task-close{border-color:rgba(34,197,94,.4);color:#86efac;background:rgba(34,197,94,.08)}
 .btn-task-close:hover{background:rgba(34,197,94,.18)}
 .task-item.is-closed{opacity:.45;pointer-events:none}
+.task-item--focused{
+  outline:2px solid rgba(56,189,248,.7);
+  box-shadow:0 0 0 4px rgba(56,189,248,.15),0 8px 24px rgba(2,6,23,.4);
+  animation:task-focus-pulse 1.4s ease 2;
+}
+@keyframes task-focus-pulse{
+  0%,100%{box-shadow:0 0 0 4px rgba(56,189,248,.15),0 8px 24px rgba(2,6,23,.4)}
+  50%{box-shadow:0 0 0 8px rgba(56,189,248,.28),0 12px 28px rgba(2,6,23,.5)}
+}
 .task-add-btn{
   display:inline-flex;align-items:center;justify-content:center;
   width:26px;height:26px;border-radius:8px;
