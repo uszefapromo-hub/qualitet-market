@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Linki sprzedażowe - HurtDetal Uszefa QUALITET</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body data-page="linki-sprzedazowe" class="feature-page has-bottom-nav">
+  <div class="app-splash" data-app-splash>
+    <div class="app-splash-card">
+      <div class="app-splash-logo">
+        <img src="assets/icons/icon-192.svg" alt="UszefaQualitet">
+      </div>
+      <div class="app-splash-title">
+        <strong>UszefaQualitet</strong>
+        <span>QualitetMarket</span>
+      </div>
+      <div class="app-splash-loader"></div>
+    </div>
+  </div>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>UszefaQualitet</strong>
+          <span>QualitetMarket</span>
+          <span class="brand-tag">U SZEFA</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Główna nawigacja">
+        <a href="index.html">Start</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="cennik.html">Cennik</a>
+      </nav>
+      <a class="btn btn-primary topbar-cta" href="dashboard.html">Panel</a>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="wrap">
+        <span class="eyebrow">Sprzedaż przez link</span>
+        <h1>Moje linki sprzedażowe</h1>
+        <p class="lead">Generuj linki do produktów, udostępniaj je i zarabiaj marżę z każdej sprzedaży — bez potrzeby posiadania sklepu.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="hurtownie.html">Przeglądaj katalog</a>
+          <a class="btn btn-secondary" href="dashboard.html">Wróć do dashboardu</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap stats-grid">
+      <div class="stat-card">
+        <span>Aktywne linki</span>
+        <strong data-sl-total-links>0</strong>
+      </div>
+      <div class="stat-card">
+        <span>Kliknięcia</span>
+        <strong data-sl-total-clicks>0</strong>
+      </div>
+      <div class="stat-card">
+        <span>Sprzedaże</span>
+        <strong data-sl-total-sales>0</strong>
+      </div>
+      <div class="stat-card">
+        <span>Łączny zarobek</span>
+        <strong data-sl-total-earnings>0 zł</strong>
+      </div>
+    </section>
+
+    <section class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Sprzedaż przez link</span>
+        <h2>Twoje linki produktów</h2>
+        <p class="hint">Każdy wygenerowany link śledzi kliknięcia i sprzedaże. Udostępniaj w mediach społecznościowych lub wysyłaj bezpośrednio do klientów.</p>
+      </div>
+
+      <div class="sales-links-list" data-sales-links-list></div>
+      <p class="empty" data-sales-links-empty hidden>Nie masz jeszcze żadnych linków sprzedażowych. Przejdź do <a href="hurtownie.html">hurtowni</a>, wybierz produkt i kliknij „Generuj link sprzedażowy".</p>
+    </section>
+
+    <section class="wrap section-grid">
+      <article class="feature-card gradient-a">
+        <h2>Jak to działa?</h2>
+        <p class="hint">Wybierz produkt w hurtowni i kliknij „Generuj link sprzedażowy". Każde zamówienie złożone przez Twój link zapisuje Twój zarobek.</p>
+      </article>
+      <article class="feature-card gradient-b">
+        <h2>Zarabiaj bez sklepu</h2>
+        <p class="hint">Udostępniaj linki w mediach społecznościowych, e-mailach i czatach. Prowizja nalicza się automatycznie.</p>
+      </article>
+      <article class="feature-card gradient-c">
+        <h2>Śledzenie wyników</h2>
+        <p class="hint">Monitoruj kliknięcia, konwersje i zarobki w czasie rzeczywistym z poziomu tego panelu.</p>
+      </article>
+    </section>
+  </main>
+
+  <footer class="wrap panel-footer">
+    <div class="panel-footer-inner">
+      <span>© 2025 UszefaQualitet &mdash; Platforma dropshipping</span>
+      <div class="panel-footer-links">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="cennik.html">Cennik</a>
+        <a href="index.html">Strona główna</a>
+      </div>
+    </div>
+  </footer>
+
+  <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
+    <a href="index.html" rel="nofollow noreferrer" data-nav="index">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 11.5L12 4l9 7.5"></path>
+        <path d="M5 10.5V20h14v-9.5"></path>
+      </svg>
+      <span>Start</span>
+    </a>
+    <a href="sklep.html" rel="nofollow noreferrer" data-nav="sklep">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 9h18l-1.5 11H4.5L3 9z"></path>
+        <path d="M7 9V7a5 5 0 0 1 10 0v2"></path>
+      </svg>
+      <span>Sklep</span>
+    </a>
+    <a href="hurtownie.html" rel="nofollow noreferrer" data-nav="hurtownie">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="7" width="7" height="10" rx="1.4"></rect>
+        <rect x="14" y="7" width="7" height="10" rx="1.4"></rect>
+        <path d="M6.5 7V5.5a1.5 1.5 0 0 1 3 0V7"></path>
+      </svg>
+      <span>Hurtownie</span>
+    </a>
+    <a href="dashboard.html" rel="nofollow noreferrer" data-nav="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="14" width="7" height="7" rx="1.2"></rect>
+        <rect x="3" y="14" width="7" height="7" rx="1.2"></rect>
+      </svg>
+      <span>Panel</span>
+    </a>
+    <a href="login.html" rel="nofollow noreferrer" data-nav="login">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4 20c2-3.5 6-5 8-5s6 1.5 8 5"></path>
+      </svg>
+      <span>Konto</span>
+    </a>
+  </nav>
+
+  <script src="js/app.js" defer></script>
+</body>
+</html>

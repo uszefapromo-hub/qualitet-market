@@ -96,8 +96,10 @@
     orders: 'qm_orders',
     operators: 'qm_operators',
     referrals: 'qm_referrals',
-    adminLogs: 'qm_admin_logs'
+    adminLogs: 'qm_admin_logs',
+    salesLinks: 'qm_sales_links'
   };
+  const SALES_LINK_TOKEN_SESSION_KEY = 'qm_sales_link_token';
   const PRICING_STORAGE_KEYS = {
     productsBySupplier: 'qm_products_by_supplier_v1',
     storeMargin: 'qm_store_margin_pct'
@@ -2938,7 +2940,230 @@
       saveProductsBySupplier(supplierCatalog);
     }
 
+    attributeSalesToLink(product, parsedAmount);
+
     return order;
+  }
+
+  function loadSalesLinks(){
+    return getStoredList(OWNER_STORAGE_KEYS.salesLinks) || [];
+  }
+
+  function saveSalesLinks(list){
+    saveStoredList(OWNER_STORAGE_KEYS.salesLinks, list);
+  }
+
+  function generateSalesLinkToken(){
+    if(typeof crypto !== 'undefined' && crypto.getRandomValues){
+      const arr = new Uint8Array(16);
+      crypto.getRandomValues(arr);
+      return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+    }
+    return Date.now().toString(36) + Math.floor(Math.random() * 0xffffff).toString(36) + Math.floor(Math.random() * 0xffffff).toString(36);
+  }
+
+  function buildSalesLinkUrl(token){
+    const base = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
+    return `${base}sklep.html?ref=${encodeURIComponent(token)}`;
+  }
+
+  function generateSalesLink(product, margin){
+    if(!product){
+      return null;
+    }
+    const existingLinks = loadSalesLinks();
+    const email = localStorage.getItem(STORAGE_KEYS.email) || '';
+    const stores = ensureStoresList();
+    const activeStore = getActiveStore(stores);
+    const storeSettings = loadStoreSettings();
+    const resolvedMargin = margin != null ? margin : resolveStoreMargin({store: activeStore, settings: storeSettings, plan: activeStore && activeStore.plan});
+    const {cost} = resolveCostAndPrice(product);
+    const pricing = calculateTieredPricing(cost, {
+      userMargin: resolvedMargin,
+      store: activeStore,
+      settings: storeSettings,
+      product
+    });
+    const existingByProduct = existingLinks.find(link => link.productId === product.id && link.email === email);
+    if(existingByProduct){
+      return {link: existingByProduct, url: buildSalesLinkUrl(existingByProduct.token), isNew: false};
+    }
+    const token = generateSalesLinkToken();
+    const newLink = {
+      id: `link_${Date.now()}_${Math.floor(Math.random() * 900 + 100)}`,
+      token,
+      productId: product.id,
+      productName: product.name || '',
+      productImage: resolveProductImage(product),
+      productCategory: product.category || '',
+      supplierName: product.supplier || '',
+      cost: pricing.cost,
+      finalPrice: pricing.finalPrice,
+      margin: pricing.userMarginPct,
+      userMarginValue: pricing.userMarginValue,
+      email,
+      storeId: (activeStore && activeStore.id) || '',
+      clicks: 0,
+      sales: 0,
+      earnings: 0,
+      createdAt: new Date().toISOString()
+    };
+    existingLinks.push(newLink);
+    saveSalesLinks(existingLinks);
+    return {link: newLink, url: buildSalesLinkUrl(token), isNew: true};
+  }
+
+  function getSalesLinkToken(){
+    try{
+      return sessionStorage.getItem(SALES_LINK_TOKEN_SESSION_KEY) || null;
+    } catch (_error){
+      return null;
+    }
+  }
+
+  function setSalesLinkToken(token){
+    try{
+      if(token){
+        sessionStorage.setItem(SALES_LINK_TOKEN_SESSION_KEY, token);
+      } else {
+        sessionStorage.removeItem(SALES_LINK_TOKEN_SESSION_KEY);
+      }
+    } catch (_error){
+    }
+  }
+
+  function trackSalesLinkClick(){
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('ref');
+    if(!token){
+      return;
+    }
+    setSalesLinkToken(token);
+    const links = loadSalesLinks();
+    const idx = links.findIndex(link => link.token === token);
+    if(idx >= 0){
+      links[idx] = {
+        ...links[idx],
+        clicks: (links[idx].clicks || 0) + 1
+      };
+      saveSalesLinks(links);
+    }
+  }
+
+  function attributeSalesToLink(product, amount){
+    const token = getSalesLinkToken();
+    if(!token){
+      return;
+    }
+    const links = loadSalesLinks();
+    const idx = links.findIndex(link => link.token === token && link.productId === (product && product.id));
+    if(idx < 0){
+      return;
+    }
+    const earning = Number.isFinite(links[idx].userMarginValue) ? links[idx].userMarginValue : 0;
+    links[idx] = {
+      ...links[idx],
+      sales: (links[idx].sales || 0) + 1,
+      earnings: roundCurrency((links[idx].earnings || 0) + earning)
+    };
+    saveSalesLinks(links);
+    setSalesLinkToken(null);
+  }
+
+  function initSalesLinksPage(){
+    if(document.body.dataset.page !== 'linki-sprzedazowe'){
+      return;
+    }
+    const logged = localStorage.getItem(STORAGE_KEYS.logged) === 'true';
+    if(!logged){
+      window.location.href = 'login.html';
+      return;
+    }
+    const email = localStorage.getItem(STORAGE_KEYS.email) || '';
+    const container = document.querySelector('[data-sales-links-list]');
+    const empty = document.querySelector('[data-sales-links-empty]');
+    const statsLinks = document.querySelector('[data-sl-total-links]');
+    const statsClicks = document.querySelector('[data-sl-total-clicks]');
+    const statsSales = document.querySelector('[data-sl-total-sales]');
+    const statsEarnings = document.querySelector('[data-sl-total-earnings]');
+
+    const renderLinks = () => {
+      const links = loadSalesLinks().filter(link => link.email === email);
+      const totalLinks = links.length;
+      const totalClicks = links.reduce((sum, l) => sum + (l.clicks || 0), 0);
+      const totalSales = links.reduce((sum, l) => sum + (l.sales || 0), 0);
+      const totalEarnings = links.reduce((sum, l) => sum + (l.earnings || 0), 0);
+
+      if(statsLinks){
+        statsLinks.textContent = totalLinks;
+      }
+      if(statsClicks){
+        statsClicks.textContent = totalClicks;
+      }
+      if(statsSales){
+        statsSales.textContent = totalSales;
+      }
+      if(statsEarnings){
+        statsEarnings.textContent = formatCurrency(totalEarnings);
+      }
+
+      if(!container){
+        return;
+      }
+      container.innerHTML = '';
+      if(!links.length){
+        if(empty){
+          empty.hidden = false;
+        }
+        return;
+      }
+      if(empty){
+        empty.hidden = true;
+      }
+      links.slice().reverse().forEach(link => {
+        const url = buildSalesLinkUrl(link.token);
+        const row = document.createElement('article');
+        row.className = 'sales-link-card panel-card';
+        row.innerHTML = `
+          <div class="sales-link-product">
+            <img class="sales-link-img" src="${escapeHtml(link.productImage || DEFAULT_PRODUCT_IMAGE)}" alt="${escapeHtml(link.productName)}">
+            <div class="sales-link-info">
+              <span class="tag">${escapeHtml(link.productCategory)}</span>
+              <strong class="sales-link-name">${escapeHtml(link.productName)}</strong>
+              <span class="hint">Hurtownia: ${escapeHtml(link.supplierName || '—')}</span>
+            </div>
+          </div>
+          <div class="sales-link-stats">
+            <div class="sales-link-stat"><span>Kliknięcia</span><strong>${link.clicks || 0}</strong></div>
+            <div class="sales-link-stat"><span>Sprzedaże</span><strong>${link.sales || 0}</strong></div>
+            <div class="sales-link-stat"><span>Zarobek</span><strong>${formatCurrency(link.earnings || 0)}</strong></div>
+            <div class="sales-link-stat"><span>Marża</span><strong>${link.margin || 0}%</strong></div>
+          </div>
+          <div class="sales-link-url-row">
+            <input class="sales-link-url-input" type="text" readonly value="${escapeHtml(url)}" aria-label="Link sprzedażowy">
+            <button class="btn btn-secondary sales-link-copy" type="button" data-copy-url="${escapeHtml(url)}">Kopiuj link</button>
+          </div>
+        `;
+        const copyBtn = row.querySelector('.sales-link-copy');
+        if(copyBtn){
+          copyBtn.addEventListener('click', () => {
+            const text = copyBtn.dataset.copyUrl;
+            if(navigator.clipboard && text){
+              navigator.clipboard.writeText(text).then(() => {
+                const original = copyBtn.textContent;
+                copyBtn.textContent = 'Skopiowano ✓';
+                setTimeout(() => {
+                  copyBtn.textContent = original;
+                }, 2000);
+              }).catch(() => {});
+            }
+          });
+        }
+        container.appendChild(row);
+      });
+    };
+
+    renderLinks();
   }
 
   function loadStoreSettings(){
@@ -3566,6 +3791,22 @@
     updateDashboardStatus();
     renderDashboardStoreSummary();
     renderDashboardMarginSummary();
+    renderDashboardSalesLinksSummary();
+  }
+
+  function renderDashboardSalesLinksSummary(){
+    const email = localStorage.getItem(STORAGE_KEYS.email) || '';
+    const links = loadSalesLinks().filter(link => link.email === email);
+    const setText = (sel, val) => {
+      const el = document.querySelector(sel);
+      if(el){
+        el.textContent = val;
+      }
+    };
+    setText('[data-sl-dash-links]', links.length);
+    setText('[data-sl-dash-clicks]', links.reduce((s, l) => s + (l.clicks || 0), 0));
+    setText('[data-sl-dash-sales]', links.reduce((s, l) => s + (l.sales || 0), 0));
+    setText('[data-sl-dash-earnings]', formatCurrency(links.reduce((s, l) => s + (l.earnings || 0), 0)));
   }
 
   function getStoredUserRole(){
@@ -4505,6 +4746,7 @@
             <div class="product-actions">
               <button class="btn btn-primary" type="button" data-add-product>Dodaj do mojego sklepu</button>
               <button class="btn btn-secondary" type="button" data-select-product>Ustaw w kalkulatorze</button>
+              <button class="btn btn-link-gen" type="button" data-gen-link>Generuj link sprzedażowy</button>
             </div>
           </div>
         `;
@@ -4549,6 +4791,29 @@
           selectButton.addEventListener('click', () => {
             selectedProduct = product;
             updateCalculator(product, marginInput ? marginInput.value : storeMargin);
+          });
+        }
+        const genLinkButton = card.querySelector('[data-gen-link]');
+        if(genLinkButton){
+          genLinkButton.addEventListener('click', () => {
+            const result = generateSalesLink(product, marginInput ? marginInput.value : storeMargin);
+            if(!result){
+              return;
+            }
+            if(navigator.clipboard){
+              navigator.clipboard.writeText(result.url).then(() => {
+                const original = genLinkButton.textContent;
+                genLinkButton.textContent = result.isNew ? 'Link wygenerowany i skopiowany ✓' : 'Link skopiowany ✓';
+                updateStatus(`Link sprzedażowy dla "${product.name}" skopiowany do schowka.`);
+                setTimeout(() => {
+                  genLinkButton.textContent = original;
+                }, 2500);
+              }).catch(() => {
+                updateStatus(`Link sprzedażowy: ${result.url}`);
+              });
+            } else {
+              updateStatus(`Link sprzedażowy: ${result.url}`);
+            }
           });
         }
         productsGrid.appendChild(card);
@@ -5073,9 +5338,11 @@
     bindMenu();
     initBottomNav();
     ensureFinalStorage();
+    trackSalesLinkClick();
     initOwnerPanel();
     initSuppliersModule();
     initStorefrontProducts();
+    initSalesLinksPage();
     initCounters();
     initHelperBoxes();
     initPromoMotion();
