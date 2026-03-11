@@ -12,6 +12,246 @@
   <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
   <link rel="stylesheet" href="panel.css">
+  <style>
+    /* ── Auth page layout ── */
+    .auth-page-wrap {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px 80px;
+      background: var(--bg, #0f172a);
+    }
+    .auth-card-new {
+      width: 100%;
+      max-width: 480px;
+      background: var(--card, #1e293b);
+      border: 1px solid var(--stroke, rgba(148,163,184,.22));
+      border-radius: 20px;
+      padding: 36px 32px 32px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.45);
+    }
+    @media (max-width: 520px) {
+      .auth-card-new { padding: 28px 20px 24px; }
+    }
+
+    /* ── Brand header ── */
+    .auth-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+      text-decoration: none;
+    }
+    .auth-brand-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .auth-brand-text strong {
+      display: block;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text, #f8fafc);
+    }
+    .auth-brand-text span {
+      font-size: 12px;
+      color: var(--muted, #94a3b8);
+    }
+
+    /* ── Tabs ── */
+    .auth-tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--bg, #0f172a);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 28px;
+    }
+    .auth-tab-btn {
+      flex: 1;
+      padding: 9px 6px;
+      border: none;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--muted, #94a3b8);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .18s, color .18s;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .auth-tab-btn.active {
+      background: var(--card, #1e293b);
+      color: var(--text, #f8fafc);
+      box-shadow: 0 1px 4px rgba(0,0,0,.3);
+    }
+
+    /* ── Tab panels ── */
+    .auth-panel { display: none; }
+    .auth-panel.active { display: block; }
+
+    /* ── Form ── */
+    .auth-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text, #f8fafc);
+      margin: 0 0 20px;
+    }
+    .auth-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .auth-field label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text, #f8fafc);
+    }
+    .auth-field input,
+    .auth-field select {
+      width: 100%;
+      min-height: 46px;
+      padding: 0 14px;
+      border-radius: 12px;
+      border: 1px solid var(--stroke, rgba(148,163,184,.22));
+      background: var(--bg, #0f172a);
+      color: var(--text, #f8fafc);
+      font-size: 15px;
+      font-family: inherit;
+      box-sizing: border-box;
+      transition: border-color .18s;
+      outline: none;
+    }
+    .auth-field input:focus,
+    .auth-field select:focus {
+      border-color: #6366f1;
+    }
+    .auth-field select option {
+      background: #1e293b;
+    }
+
+    /* ── Plan cards ── */
+    .plan-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .plan-option { position: relative; }
+    .plan-option input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .plan-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 12px 8px;
+      border: 2px solid var(--stroke, rgba(148,163,184,.22));
+      border-radius: 12px;
+      cursor: pointer;
+      transition: border-color .18s, background .18s;
+      background: var(--bg, #0f172a);
+    }
+    .plan-option input:checked + .plan-label {
+      border-color: #6366f1;
+      background: rgba(99,102,241,.08);
+    }
+    .plan-label-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text, #f8fafc);
+    }
+    .plan-label-price {
+      font-size: 12px;
+      color: var(--muted, #94a3b8);
+    }
+    .plan-label-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 20px;
+      background: #6366f1;
+      color: #fff;
+    }
+    .plan-label-badge.free { background: #22c55e; }
+    .plan-label-badge.pro  { background: #f59e0b; }
+    .plan-label-badge.elite{ background: #ec4899; }
+
+    /* ── Buttons ── */
+    .auth-submit {
+      width: 100%;
+      min-height: 48px;
+      border-radius: 12px;
+      border: none;
+      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      margin-top: 4px;
+      transition: opacity .18s, transform .12s;
+    }
+    .auth-submit:hover { opacity: .88; }
+    .auth-submit:active { transform: scale(.98); }
+
+    /* ── Messages ── */
+    .auth-error, .auth-success {
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      display: none;
+    }
+    .auth-error {
+      background: rgba(239,68,68,.12);
+      border: 1px solid rgba(239,68,68,.35);
+      color: #fca5a5;
+    }
+    .auth-success {
+      background: rgba(34,197,94,.1);
+      border: 1px solid rgba(34,197,94,.3);
+      color: #86efac;
+    }
+    .auth-error.show, .auth-success.show { display: block; }
+
+    /* ── Footer links ── */
+    .auth-links {
+      margin-top: 18px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted, #94a3b8);
+    }
+    .auth-links a {
+      color: #818cf8;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .auth-links a:hover { text-decoration: underline; }
+    .auth-links + .auth-links { margin-top: 8px; }
+
+    /* ── Divider ── */
+    .auth-divider {
+      border: none;
+      border-top: 1px solid var(--stroke, rgba(148,163,184,.22));
+      margin: 22px 0;
+    }
+  </style>
 </head>
 <body data-page="login" class="auth-page has-bottom-nav">
   <div class="app-splash" data-app-splash>
@@ -26,77 +266,137 @@
       <div class="app-splash-loader"></div>
     </div>
   </div>
-  <header class="topbar">
-    <div class="wrap topbar-inner">
-      <a class="brand" href="index.html">
-        <div>
+
+  <main class="auth-page-wrap">
+    <div class="auth-card-new">
+
+      <!-- Brand -->
+      <a class="auth-brand" href="index.html">
+        <div class="auth-brand-icon" aria-hidden="true">Q</div>
+        <div class="auth-brand-text">
           <strong>UszefaQualitet</strong>
-          <span>QualitetMarket</span>
-          <span class="brand-tag">U SZEFA</span>
+          <span>QualitetMarket · Platforma dropshipping</span>
         </div>
       </a>
-      <nav class="nav" aria-label="Główna nawigacja">
-        <a href="index.html">Start</a>
-        <a href="dashboard.html">Dashboard</a>
-        <a href="cennik.html">Cennik</a>
-      </nav>
-      <a class="btn btn-primary topbar-cta" href="dashboard.html">Panel</a>
-      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
-    </div>
-  </header>
 
-  <main class="wrap auth-layout">
-    <section class="panel-card auth-card">
-      <h1>Logowanie</h1>
-      <form class="form-card" data-login-form>
-        <label>
-          Email
-          <input type="email" name="email" placeholder="email@domena.pl" autocomplete="email" required>
-        </label>
-        <label>
-          Hasło
-          <input type="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
-        </label>
-        <div class="cta-row auth-actions">
-          <button class="btn btn-primary" type="submit">Zaloguj</button>
-          <button class="btn btn-secondary" type="button">Utwórz konto</button>
-        </div>
-      </form>
-    </section>
-    <section class="app-cta-section">
-      <div class="app-cta-box app-cta-grid">
-        <div class="app-cta-content">
-          <span class="app-cta-icon" aria-hidden="true">📱</span>
-          <span class="eyebrow">Aplikacja webowa</span>
-          <h2>Otwórz panel mobilny</h2>
-          <p class="hint">Po zalogowaniu dodaj platformę do ekranu głównego i korzystaj jak z natywnej aplikacji.</p>
-          <div class="app-cta-actions">
-            <button class="btn btn-primary" type="button" data-app-install-open>Zainstaluj aplikację</button>
-            <a class="btn btn-secondary" href="cennik.html">Sprawdź plany</a>
+      <!-- Tabs -->
+      <div class="auth-tabs" role="tablist" aria-label="Tryb autoryzacji">
+        <button class="auth-tab-btn active" role="tab" aria-selected="true"  aria-controls="panel-login"    id="tab-login"    type="button" data-tab="login">Logowanie</button>
+        <button class="auth-tab-btn"        role="tab" aria-selected="false" aria-controls="panel-register" id="tab-register" type="button" data-tab="register">Rejestracja</button>
+        <button class="auth-tab-btn"        role="tab" aria-selected="false" aria-controls="panel-reset"    id="tab-reset"    type="button" data-tab="reset">Reset hasła</button>
+      </div>
+
+      <!-- ═══ LOGIN PANEL ═══ -->
+      <div class="auth-panel active" id="panel-login" role="tabpanel" aria-labelledby="tab-login">
+        <h1 class="auth-title">Zaloguj się</h1>
+        <div class="auth-error" id="login-error" role="alert"></div>
+        <form id="login-form" novalidate>
+          <div class="auth-field">
+            <label for="login-email">Email</label>
+            <input type="email" id="login-email" name="email" placeholder="email@domena.pl" autocomplete="email" required>
           </div>
-          <div class="app-instructions">
-            <div>
-              <strong>iPhone</strong>
-              <ul>
-                <li>Udostępnij</li>
-                <li>Dodaj do ekranu głównego</li>
-              </ul>
-            </div>
-            <div>
-              <strong>Android</strong>
-              <ul>
-                <li>Menu przeglądarki</li>
-                <li>Zainstaluj aplikację</li>
-              </ul>
-            </div>
+          <div class="auth-field">
+            <label for="login-password">Hasło</label>
+            <input type="password" id="login-password" name="password" placeholder="••••••••" autocomplete="current-password" required>
           </div>
+          <button class="auth-submit" type="submit">Zaloguj się</button>
+        </form>
+        <div class="auth-links">
+          <a href="#" data-switch-tab="reset">Zapomniałeś hasła?</a>
         </div>
-        <div class="app-cta-media">
-          <img src="https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=900&q=80" alt="Biznesowy styl aplikacji UszefaQualitet" loading="lazy" decoding="async">
-          <span class="app-cta-badge">Wejdź do PRO</span>
+        <div class="auth-links">
+          Nie masz konta? <a href="#" data-switch-tab="register">Zarejestruj się</a>
         </div>
       </div>
-    </section>
+
+      <!-- ═══ REGISTER PANEL ═══ -->
+      <div class="auth-panel" id="panel-register" role="tabpanel" aria-labelledby="tab-register">
+        <h1 class="auth-title">Utwórz konto</h1>
+        <div class="auth-error"   id="reg-error"   role="alert"></div>
+        <div class="auth-success" id="reg-success" role="status"></div>
+        <form id="register-form" novalidate>
+          <div class="auth-field">
+            <label for="reg-name">Imię i nazwisko</label>
+            <input type="text" id="reg-name" name="name" placeholder="Jan Kowalski" autocomplete="name" required>
+          </div>
+          <div class="auth-field">
+            <label for="reg-email">Email</label>
+            <input type="email" id="reg-email" name="email" placeholder="email@domena.pl" autocomplete="email" required>
+          </div>
+          <div class="auth-field">
+            <label for="reg-phone">Telefon <span style="font-weight:400;color:var(--muted)">(opcjonalnie)</span></label>
+            <input type="tel" id="reg-phone" name="phone" placeholder="+48 000 000 000" autocomplete="tel">
+          </div>
+          <div class="auth-field">
+            <label for="reg-password">Hasło <span style="font-weight:400;color:var(--muted)">(min. 6 znaków)</span></label>
+            <input type="password" id="reg-password" name="password" placeholder="••••••••" autocomplete="new-password" required>
+          </div>
+          <div class="auth-field">
+            <label for="reg-password2">Potwierdź hasło</label>
+            <input type="password" id="reg-password2" name="password2" placeholder="••••••••" autocomplete="new-password" required>
+          </div>
+          <div class="auth-field">
+            <label>Wybierz plan</label>
+            <div class="plan-grid" role="radiogroup" aria-label="Plan subskrypcji">
+              <div class="plan-option">
+                <input type="radio" name="plan" id="plan-trial" value="trial" checked>
+                <label class="plan-label" for="plan-trial">
+                  <span class="plan-label-badge free">7 dni</span>
+                  <span class="plan-label-name">Trial</span>
+                  <span class="plan-label-price">Bezpłatny</span>
+                </label>
+              </div>
+              <div class="plan-option">
+                <input type="radio" name="plan" id="plan-basic" value="basic">
+                <label class="plan-label" for="plan-basic">
+                  <span class="plan-label-badge">Basic</span>
+                  <span class="plan-label-name">Basic</span>
+                  <span class="plan-label-price">99 zł/mies.</span>
+                </label>
+              </div>
+              <div class="plan-option">
+                <input type="radio" name="plan" id="plan-pro" value="pro">
+                <label class="plan-label" for="plan-pro">
+                  <span class="plan-label-badge pro">PRO</span>
+                  <span class="plan-label-name">PRO</span>
+                  <span class="plan-label-price">199 zł/mies.</span>
+                </label>
+              </div>
+              <div class="plan-option">
+                <input type="radio" name="plan" id="plan-elite" value="elite">
+                <label class="plan-label" for="plan-elite">
+                  <span class="plan-label-badge elite">ELITE</span>
+                  <span class="plan-label-name">ELITE</span>
+                  <span class="plan-label-price">499 zł/mies.</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          <button class="auth-submit" type="submit">Zarejestruj się</button>
+        </form>
+        <div class="auth-links">
+          Masz już konto? <a href="#" data-switch-tab="login">Zaloguj się</a>
+        </div>
+      </div>
+
+      <!-- ═══ RESET PANEL ═══ -->
+      <div class="auth-panel" id="panel-reset" role="tabpanel" aria-labelledby="tab-reset">
+        <h1 class="auth-title">Resetuj hasło</h1>
+        <div class="auth-error"   id="reset-error"   role="alert"></div>
+        <div class="auth-success" id="reset-success" role="status"></div>
+        <form id="reset-form" novalidate>
+          <div class="auth-field">
+            <label for="reset-email">Email</label>
+            <input type="email" id="reset-email" name="email" placeholder="email@domena.pl" autocomplete="email" required>
+          </div>
+          <button class="auth-submit" type="submit">Wyślij link resetujący</button>
+        </form>
+        <div class="auth-links">
+          <a href="#" data-switch-tab="login">← Wróć do logowania</a>
+        </div>
+      </div>
+
+    </div><!-- /.auth-card-new -->
   </main>
 
   <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
@@ -140,6 +440,185 @@
     </a>
   </nav>
 
-  <script src="js/app.js" defer></script>
+  <script src="js/app.js"></script>
+  <script src="js/platform.js"></script>
+  <script>
+  (function () {
+    const ADMIN_EMAIL = 'uszefaqualitetpromo@gmail.com';
+
+    /* ── Tab switching ── */
+    function switchTab(name) {
+      document.querySelectorAll('.auth-tab-btn').forEach(function (btn) {
+        var active = btn.dataset.tab === name;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', String(active));
+      });
+      document.querySelectorAll('.auth-panel').forEach(function (panel) {
+        panel.classList.toggle('active', panel.id === 'panel-' + name);
+      });
+    }
+
+    document.querySelectorAll('.auth-tab-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { switchTab(btn.dataset.tab); });
+    });
+
+    document.querySelectorAll('[data-switch-tab]').forEach(function (link) {
+      link.addEventListener('click', function (e) {
+        e.preventDefault();
+        switchTab(link.dataset.switchTab);
+      });
+    });
+
+    /* ── Helpers ── */
+    function showError(id, msg) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+    function clearMsg(id) {
+      var el = document.getElementById(id);
+      if (el) { el.textContent = ''; el.classList.remove('show'); }
+    }
+    function showSuccess(id, msg) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+
+    function getUsers() {
+      try { return JSON.parse(localStorage.getItem('platform_users') || '[]'); }
+      catch (e) { return []; }
+    }
+    function saveUsers(users) {
+      localStorage.setItem('platform_users', JSON.stringify(users));
+      localStorage.setItem('app_users_list', JSON.stringify(users));
+    }
+
+    /* ── LOGIN ── */
+    document.getElementById('login-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      clearMsg('login-error');
+      var email    = document.getElementById('login-email').value.trim().toLowerCase();
+      var password = document.getElementById('login-password').value;
+
+      if (!email || !password) {
+        showError('login-error', 'Wypełnij wszystkie pola.');
+        return;
+      }
+
+      /* Admin shortcut */
+      if (email === ADMIN_EMAIL) {
+        var users = getUsers();
+        var admin = users.find(function (u) { return u.email.toLowerCase() === ADMIN_EMAIL; });
+        if (!admin || admin.password === password) {
+          localStorage.setItem('app_user_logged', 'true');
+          localStorage.setItem('app_user_email', email);
+          localStorage.setItem('app_user_role', 'admin');
+          localStorage.setItem('app_user_plan', admin ? (admin.plan || 'elite') : 'elite');
+          window.location.href = 'owner-panel.html';
+          return;
+        }
+        showError('login-error', 'Nieprawidłowe hasło.');
+        return;
+      }
+
+      var users = getUsers();
+      var user = users.find(function (u) {
+        return u.email.toLowerCase() === email && u.password === password;
+      });
+
+      if (!user) {
+        showError('login-error', 'Nieprawidłowy email lub hasło.');
+        return;
+      }
+
+      localStorage.setItem('app_user_logged', 'true');
+      localStorage.setItem('app_user_email', user.email);
+      localStorage.setItem('app_user_plan', user.plan || 'trial');
+      localStorage.setItem('app_user_role', user.role || 'user');
+      window.location.href = 'dashboard.html';
+    });
+
+    /* ── REGISTER ── */
+    document.getElementById('register-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      clearMsg('reg-error');
+      clearMsg('reg-success');
+
+      var name      = document.getElementById('reg-name').value.trim();
+      var email     = document.getElementById('reg-email').value.trim().toLowerCase();
+      var phone     = document.getElementById('reg-phone').value.trim();
+      var password  = document.getElementById('reg-password').value;
+      var password2 = document.getElementById('reg-password2').value;
+      var plan      = document.querySelector('input[name="plan"]:checked').value;
+
+      if (!name || !email || !password || !password2) {
+        showError('reg-error', 'Wypełnij wszystkie wymagane pola.');
+        return;
+      }
+      if (password.length < 6) {
+        showError('reg-error', 'Hasło musi mieć co najmniej 6 znaków.');
+        return;
+      }
+      if (password !== password2) {
+        showError('reg-error', 'Hasła nie są identyczne.');
+        return;
+      }
+
+      var users = getUsers();
+      if (users.find(function (u) { return u.email.toLowerCase() === email; })) {
+        showError('reg-error', 'Konto z tym adresem email już istnieje.');
+        return;
+      }
+
+      var newUser = {
+        id:        Date.now(),
+        name:      name,
+        email:     email,
+        phone:     phone,
+        password:  password,
+        plan:      plan,
+        role:      'user',
+        createdAt: new Date().toISOString()
+      };
+
+      users.push(newUser);
+      saveUsers(users);
+
+      localStorage.setItem('app_user_logged', 'true');
+      localStorage.setItem('app_user_email', email);
+      localStorage.setItem('app_user_plan', plan);
+      localStorage.setItem('app_user_role', 'user');
+
+      showSuccess('reg-success', '✅ Konto utworzone! Email weryfikacyjny wysłany na ' + email);
+
+      setTimeout(function () {
+        window.location.href = 'dashboard.html';
+      }, 1800);
+    });
+
+    /* ── RESET ── */
+    document.getElementById('reset-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      clearMsg('reset-error');
+      clearMsg('reset-success');
+
+      var email = document.getElementById('reset-email').value.trim().toLowerCase();
+      if (!email) {
+        showError('reset-error', 'Podaj adres email.');
+        return;
+      }
+
+      showSuccess('reset-success', '📧 Link do resetowania hasła został wysłany na Twój adres email.');
+      document.getElementById('reset-form').reset();
+    });
+
+    /* ── Auto-switch tab via URL hash ── */
+    var hash = window.location.hash.replace('#', '');
+    if (hash === 'register' || hash === 'reset') { switchTab(hash); }
+  }());
+  </script>
 </body>
 </html>
