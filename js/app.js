@@ -2879,6 +2879,68 @@
     };
   }
 
+  function createOrder(product, store, options){
+    if(!product){
+      return null;
+    }
+    const orders = getStoredList(OWNER_STORAGE_KEYS.orders) || [];
+    const now = new Date().toISOString();
+    const year = new Date().getFullYear();
+    const maxSeq = orders.reduce((max, o) => {
+      const match = o.number && o.number.match(/QM-\d{4}-(\d+)/);
+      const n = match ? parseInt(match[1], 10) : 0;
+      return n > max ? n : max;
+    }, 0);
+    const seq = String(maxSeq + 1).padStart(3, '0');
+    const randomSuffix = Math.floor(Math.random() * 900 + 100);
+    const orderId = `ord_${Date.now()}_${randomSuffix}`;
+    const orderNumber = `QM-${year}-${seq}`;
+    let resolvedStore = store;
+    if(!resolvedStore){
+      const storesList = ensureStoresList();
+      resolvedStore = getActiveStore(storesList) || {};
+    }
+    const rawAmount = (options && options.amount != null) ? options.amount : (product.finalPrice != null ? product.finalPrice : product.price);
+    const parsedAmount = Number.parseFloat(rawAmount);
+    const order = {
+      id: orderId,
+      number: orderNumber,
+      storeId: resolvedStore.id || '',
+      storeName: resolvedStore.name || '',
+      client: (options && options.client) || 'Klient sklepu',
+      clientEmail: (options && options.clientEmail) || '',
+      product: product.name || '',
+      productId: product.id || '',
+      amount: Number.isFinite(parsedAmount) ? parsedAmount : 0,
+      status: 'pending',
+      createdAt: now
+    };
+    orders.push(order);
+    saveStoredList(OWNER_STORAGE_KEYS.orders, orders);
+
+    const catalog = getStoredList(OWNER_STORAGE_KEYS.products) || [];
+    const catalogIndex = catalog.findIndex(item => item.id === product.id && (item.storeId === resolvedStore.id || !item.storeId));
+    if(catalogIndex >= 0){
+      catalog[catalogIndex] = {
+        ...catalog[catalogIndex],
+        sales: (catalog[catalogIndex].sales || 0) + 1
+      };
+      saveStoredList(OWNER_STORAGE_KEYS.products, catalog);
+    }
+
+    const supplierCatalog = loadProductsBySupplier();
+    const supplierIndex = supplierCatalog.findIndex(item => item.id === product.id && (item.storeId === resolvedStore.id || !item.storeId));
+    if(supplierIndex >= 0){
+      supplierCatalog[supplierIndex] = {
+        ...supplierCatalog[supplierIndex],
+        sales: (supplierCatalog[supplierIndex].sales || 0) + 1
+      };
+      saveProductsBySupplier(supplierCatalog);
+    }
+
+    return order;
+  }
+
   function loadStoreSettings(){
     const raw = localStorage.getItem(STORAGE_KEYS.storeSettings);
     if(!raw){
@@ -4776,7 +4838,19 @@
       const addButton = document.createElement('button');
       addButton.className = 'btn btn-primary';
       addButton.type = 'button';
-      addButton.textContent = 'Dodaj';
+      addButton.textContent = 'Zamów';
+      addButton.addEventListener('click', () => {
+        const order = createOrder(product, activeStore, {amount: pricing.finalPrice});
+        if(order){
+          const original = addButton.textContent;
+          addButton.textContent = 'Zamówiono ✓';
+          addButton.disabled = true;
+          setTimeout(() => {
+            addButton.textContent = original;
+            addButton.disabled = false;
+          }, 2000);
+        }
+      });
       const detailsLink = document.createElement('a');
       detailsLink.className = 'btn btn-secondary';
       detailsLink.href = 'listing.html';
