@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Produkty - HurtDetal Uszefa QUALITET</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
+  <link rel="stylesheet" href="panel.css">
+  <style>
+    /* ── Page-specific styles ── */
+    .prod-tabs { display:flex; gap:.25rem; margin-bottom:1.5rem; border-bottom:1px solid rgba(255,255,255,.08); }
+    .prod-tab { padding:.6rem 1.25rem; cursor:pointer; border:none; background:none; color:var(--text-muted,#94a3b8); font-size:.9rem; font-weight:500; border-bottom:2px solid transparent; transition:color .18s,border-color .18s; }
+    .prod-tab.is-active { color:#fff; border-bottom-color:#3b82f6; }
+    .prod-tab-panel { display:none; }
+    .prod-tab-panel.is-active { display:block; }
+
+    .filter-bar { display:flex; gap:.75rem; flex-wrap:wrap; margin-bottom:1.25rem; align-items:flex-end; }
+    .filter-bar .filter-field { display:flex; flex-direction:column; gap:.3rem; flex:1; min-width:160px; }
+    .filter-bar .filter-field label { font-size:.78rem; color:#94a3b8; text-transform:uppercase; letter-spacing:.04em; }
+    .filter-bar input, .filter-bar select { background:#1e293b; border:1px solid rgba(255,255,255,.1); color:#fff; border-radius:.45rem; padding:.55rem .75rem; font-size:.875rem; }
+    .filter-bar input:focus, .filter-bar select:focus { outline:none; border-color:#3b82f6; }
+
+    /* product table */
+    .prod-table-wrap { overflow-x:auto; }
+    .prod-table { width:100%; border-collapse:collapse; font-size:.85rem; }
+    .prod-table th { text-align:left; padding:.6rem .8rem; color:#64748b; font-size:.75rem; text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid rgba(255,255,255,.07); white-space:nowrap; }
+    .prod-table td { padding:.65rem .8rem; border-bottom:1px solid rgba(255,255,255,.05); vertical-align:middle; }
+    .prod-table tr:last-child td { border-bottom:none; }
+    .prod-table tr:hover td { background:rgba(59,130,246,.05); }
+    .prod-img { width:44px; height:44px; object-fit:cover; border-radius:.4rem; background:#1e293b; display:block; }
+    .prod-img-ph { width:44px; height:44px; border-radius:.4rem; background:#1e293b; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0; }
+    .status-badge { display:inline-block; padding:.2rem .55rem; border-radius:99px; font-size:.72rem; font-weight:600; }
+    .status-badge.active { background:rgba(34,197,94,.15); color:#4ade80; }
+    .status-badge.inactive { background:rgba(239,68,68,.12); color:#f87171; }
+    .margin-val { color:#facc15; font-weight:600; }
+    .prod-actions { display:flex; gap:.4rem; }
+    .prod-actions button { padding:.3rem .65rem; font-size:.78rem; border-radius:.35rem; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.05); color:#e2e8f0; cursor:pointer; transition:background .15s; }
+    .prod-actions button:hover { background:rgba(255,255,255,.12); }
+    .prod-actions button.del { color:#f87171; border-color:rgba(239,68,68,.25); }
+    .prod-actions button.del:hover { background:rgba(239,68,68,.15); }
+
+    /* supplier cards */
+    .supplier-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1rem; }
+    .supplier-card { background:#1e293b; border:1px solid rgba(255,255,255,.08); border-radius:.75rem; padding:1.25rem; display:flex; flex-direction:column; gap:.75rem; }
+    .supplier-card-head { display:flex; align-items:center; gap:.75rem; }
+    .supplier-icon { font-size:2rem; width:48px; height:48px; display:flex; align-items:center; justify-content:center; background:rgba(59,130,246,.12); border-radius:.5rem; flex-shrink:0; }
+    .supplier-card h3 { margin:0; font-size:1rem; }
+    .supplier-card p { margin:0; font-size:.83rem; color:#94a3b8; }
+    .supplier-meta { display:flex; gap:1rem; font-size:.78rem; color:#64748b; }
+
+    /* modal overlay */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:1000; display:flex; align-items:center; justify-content:center; padding:1rem; opacity:0; pointer-events:none; transition:opacity .2s; }
+    .modal-overlay.is-open { opacity:1; pointer-events:all; }
+    .modal-box { background:#0f172a; border:1px solid rgba(255,255,255,.1); border-radius:1rem; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; padding:1.75rem; position:relative; transform:translateY(12px); transition:transform .2s; }
+    .modal-overlay.is-open .modal-box { transform:translateY(0); }
+    .modal-close { position:absolute; top:1rem; right:1rem; background:none; border:none; color:#94a3b8; font-size:1.4rem; cursor:pointer; line-height:1; }
+    .modal-close:hover { color:#fff; }
+    .modal-title { font-size:1.15rem; font-weight:700; margin-bottom:1.25rem; }
+
+    /* form */
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:.85rem; }
+    .form-grid .span2 { grid-column:1/-1; }
+    .form-field { display:flex; flex-direction:column; gap:.3rem; }
+    .form-field label { font-size:.78rem; color:#94a3b8; text-transform:uppercase; letter-spacing:.04em; }
+    .form-field input, .form-field select, .form-field textarea { background:#1e293b; border:1px solid rgba(255,255,255,.1); color:#fff; border-radius:.45rem; padding:.6rem .75rem; font-size:.875rem; width:100%; box-sizing:border-box; }
+    .form-field input:focus, .form-field select:focus, .form-field textarea:focus { outline:none; border-color:#3b82f6; }
+    .form-field textarea { resize:vertical; min-height:80px; }
+    .form-field .hint { font-size:.75rem; color:#64748b; }
+    .toggle-row { display:flex; align-items:center; gap:.75rem; }
+    .toggle { position:relative; display:inline-block; width:42px; height:24px; }
+    .toggle input { opacity:0; width:0; height:0; }
+    .toggle-slider { position:absolute; inset:0; background:#334155; border-radius:99px; cursor:pointer; transition:background .2s; }
+    .toggle-slider:before { content:''; position:absolute; height:18px; width:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:transform .2s; }
+    .toggle input:checked + .toggle-slider { background:#3b82f6; }
+    .toggle input:checked + .toggle-slider:before { transform:translateX(18px); }
+
+    /* import dialog */
+    .import-products-list { display:flex; flex-direction:column; gap:.6rem; max-height:320px; overflow-y:auto; margin:.75rem 0; }
+    .import-product-row { display:flex; align-items:center; gap:.75rem; background:#1e293b; border-radius:.5rem; padding:.65rem .85rem; }
+    .import-product-row label { flex:1; cursor:pointer; font-size:.88rem; }
+    .import-product-row .ipr-price { color:#facc15; font-size:.82rem; white-space:nowrap; }
+    .import-product-row input[type=checkbox] { width:16px; height:16px; accent-color:#3b82f6; flex-shrink:0; }
+
+    .empty-state { text-align:center; padding:3rem 1rem; color:#475569; }
+    .empty-state .es-icon { font-size:3rem; margin-bottom:.75rem; }
+    .empty-state p { margin:.25rem 0; }
+
+    @media(max-width:640px) {
+      .form-grid { grid-template-columns:1fr; }
+      .form-grid .span2 { grid-column:1; }
+      .filter-bar { flex-direction:column; }
+      .prod-table td:nth-child(4), .prod-table th:nth-child(4),
+      .prod-table td:nth-child(5), .prod-table th:nth-child(5) { display:none; }
+    }
+  </style>
+</head>
+<body data-page="produkty" class="feature-page has-bottom-nav">
+
+  <div class="app-splash" data-app-splash>
+    <div class="app-splash-card">
+      <div class="app-splash-logo">
+        <img src="assets/icons/icon-192.svg" alt="UszefaQualitet">
+      </div>
+      <div class="app-splash-title">
+        <strong>UszefaQualitet</strong>
+        <span>QualitetMarket</span>
+      </div>
+      <div class="app-splash-loader"></div>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>UszefaQualitet</strong>
+          <span>QualitetMarket</span>
+          <span class="brand-tag">U SZEFA</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Główna nawigacja">
+        <a href="index.html">Start</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="cennik.html">Cennik</a>
+      </nav>
+      <a class="btn btn-primary topbar-cta" href="dashboard.html">Panel</a>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <div class="wrap">
+        <span class="eyebrow">Zarządzanie asortymentem</span>
+        <h1>Produkty</h1>
+        <p class="lead">Zarządzaj katalogiem produktów, importuj z hurtowni i kontroluj marże.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="hurtownie.html">Hurtownie</a>
+          <a class="btn btn-secondary" href="dashboard.html">Wróć do dashboardu</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="wrap stats-grid" id="stats-section">
+      <div class="stat-card">
+        <span>Wszystkie produkty</span>
+        <strong id="stat-total">0</strong>
+      </div>
+      <div class="stat-card">
+        <span>Aktywne</span>
+        <strong id="stat-active">0</strong>
+      </div>
+      <div class="stat-card">
+        <span>Hurtownie</span>
+        <strong id="stat-suppliers">0</strong>
+      </div>
+      <div class="stat-card">
+        <span>Zsynchronizowane dziś</span>
+        <strong id="stat-synced">0</strong>
+      </div>
+    </section>
+
+    <!-- Main content -->
+    <section class="wrap">
+      <div class="panel-card">
+        <!-- Tabs -->
+        <div class="prod-tabs" role="tablist">
+          <button class="prod-tab is-active" role="tab" aria-selected="true"  data-tab="my-products">Moje produkty</button>
+          <button class="prod-tab"            role="tab" aria-selected="false" data-tab="import">Import z hurtowni</button>
+        </div>
+
+        <!-- ─── Tab: My Products ─── -->
+        <div class="prod-tab-panel is-active" id="panel-my-products">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.75rem;margin-bottom:1rem;">
+            <div>
+              <span class="eyebrow">Katalog</span>
+              <h2 style="margin:0">Moje produkty</h2>
+            </div>
+            <button class="btn btn-primary" id="btn-add-product" type="button">+ Dodaj produkt</button>
+          </div>
+
+          <!-- Filters -->
+          <div class="filter-bar">
+            <div class="filter-field">
+              <label for="filter-search">Szukaj</label>
+              <input id="filter-search" type="search" placeholder="Nazwa produktu…">
+            </div>
+            <div class="filter-field">
+              <label for="filter-supplier">Hurtownia</label>
+              <select id="filter-supplier">
+                <option value="">Wszystkie hurtownie</option>
+              </select>
+            </div>
+            <div class="filter-field">
+              <label for="filter-category">Kategoria</label>
+              <select id="filter-category">
+                <option value="">Wszystkie kategorie</option>
+              </select>
+            </div>
+            <div class="filter-field" style="flex:0 0 auto;min-width:unset;">
+              <label>&nbsp;</label>
+              <button class="btn btn-secondary" id="btn-clear-filters" type="button" style="white-space:nowrap;">Wyczyść</button>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="prod-table-wrap" id="products-table-wrap">
+            <table class="prod-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Nazwa / SKU</th>
+                  <th>Hurtownia</th>
+                  <th>Cena</th>
+                  <th>Koszt</th>
+                  <th>Marża</th>
+                  <th>Stan</th>
+                  <th>Status</th>
+                  <th>Akcje</th>
+                </tr>
+              </thead>
+              <tbody id="products-tbody"></tbody>
+            </table>
+            <div id="products-empty" class="empty-state" hidden>
+              <div class="es-icon">📦</div>
+              <p><strong>Brak produktów</strong></p>
+              <p>Dodaj produkt ręcznie lub importuj z hurtowni.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ─── Tab: Import ─── -->
+        <div class="prod-tab-panel" id="panel-import">
+          <div style="margin-bottom:1.25rem;">
+            <span class="eyebrow">Import</span>
+            <h2 style="margin:0">Import z hurtowni</h2>
+            <p class="hint" style="margin-top:.35rem;">Wybierz hurtownię i zaimportuj wybrane produkty do swojego katalogu.</p>
+          </div>
+          <div class="supplier-cards" id="supplier-cards-list"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ═══ Bottom nav ═══ -->
+  <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
+    <a href="index.html" rel="nofollow noreferrer" data-nav="index">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5"></path><path d="M5 10.5V20h14v-9.5"></path></svg>
+      <span>Start</span>
+    </a>
+    <a href="sklep.html" rel="nofollow noreferrer" data-nav="sklep">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9h18l-1.5 11H4.5L3 9z"></path><path d="M7 9V7a5 5 0 0 1 10 0v2"></path></svg>
+      <span>Sklep</span>
+    </a>
+    <a href="hurtownie.html" rel="nofollow noreferrer" data-nav="hurtownie">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="7" height="10" rx="1.4"></rect><rect x="14" y="7" width="7" height="10" rx="1.4"></rect><path d="M6.5 7V5.5a1.5 1.5 0 0 1 3 0V7"></path></svg>
+      <span>Hurtownie</span>
+    </a>
+    <a href="dashboard.html" rel="nofollow noreferrer" data-nav="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.2"></rect><rect x="14" y="3" width="7" height="7" rx="1.2"></rect><rect x="14" y="14" width="7" height="7" rx="1.2"></rect><rect x="3" y="14" width="7" height="7" rx="1.2"></rect></svg>
+      <span>Panel</span>
+    </a>
+    <a href="login.html" rel="nofollow noreferrer" data-nav="login">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c2-3.5 6-5 8-5s6 1.5 8 5"></path></svg>
+      <span>Konto</span>
+    </a>
+  </nav>
+
+  <!-- ═══ Product form modal ═══ -->
+  <div class="modal-overlay" id="modal-product" role="dialog" aria-modal="true" aria-labelledby="modal-product-title">
+    <div class="modal-box">
+      <button class="modal-close" id="modal-product-close" aria-label="Zamknij">×</button>
+      <div class="modal-title" id="modal-product-title">Dodaj produkt</div>
+      <form id="form-product" novalidate>
+        <div class="form-grid">
+          <div class="form-field span2">
+            <label for="fp-name">Nazwa produktu *</label>
+            <input id="fp-name" name="name" type="text" placeholder="np. Koszulka premium" required>
+          </div>
+          <div class="form-field">
+            <label for="fp-sku">SKU</label>
+            <input id="fp-sku" name="sku" type="text" placeholder="np. KOS-001">
+          </div>
+          <div class="form-field">
+            <label for="fp-category">Kategoria</label>
+            <select id="fp-category" name="category">
+              <option value="">Wybierz kategorię</option>
+              <option>Odzież i Moda</option>
+              <option>Elektronika</option>
+              <option>Dom i Ogród</option>
+              <option>Sport i Rekreacja</option>
+              <option>Zdrowie i Uroda</option>
+              <option>Zabawki i Hobby</option>
+              <option>Inne</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="fp-price">Cena sprzedaży (zł) *</label>
+            <input id="fp-price" name="price" type="number" min="0" step="0.01" placeholder="0.00" required>
+          </div>
+          <div class="form-field">
+            <label for="fp-cost">Koszt zakupu (zł)</label>
+            <input id="fp-cost" name="costPrice" type="number" min="0" step="0.01" placeholder="0.00">
+          </div>
+          <div class="form-field">
+            <label for="fp-margin">Marża (%)</label>
+            <input id="fp-margin" name="margin" type="number" min="0" step="0.1" placeholder="auto" readonly>
+            <span class="hint">Obliczana automatycznie</span>
+          </div>
+          <div class="form-field">
+            <label for="fp-stock">Stan magazynowy</label>
+            <input id="fp-stock" name="stock" type="number" min="0" step="1" placeholder="0">
+          </div>
+          <div class="form-field span2">
+            <label for="fp-image">URL zdjęcia</label>
+            <input id="fp-image" name="imageUrl" type="url" placeholder="https://…">
+          </div>
+          <div class="form-field span2">
+            <label for="fp-desc">Opis produktu</label>
+            <textarea id="fp-desc" name="description" placeholder="Krótki opis produktu…"></textarea>
+          </div>
+          <div class="form-field span2">
+            <div class="toggle-row">
+              <label class="toggle">
+                <input type="checkbox" id="fp-active" name="active" checked>
+                <span class="toggle-slider"></span>
+              </label>
+              <span>Produkt aktywny</span>
+            </div>
+          </div>
+        </div>
+        <input type="hidden" id="fp-id" name="id">
+        <input type="hidden" id="fp-supplier-id" name="supplierId">
+        <input type="hidden" id="fp-supplier-name" name="supplierName">
+        <div style="margin-top:1.25rem;display:flex;gap:.75rem;justify-content:flex-end;">
+          <button type="button" class="btn btn-secondary" id="btn-product-cancel">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="btn-product-save">Zapisz produkt</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══ Import modal ═══ -->
+  <div class="modal-overlay" id="modal-import" role="dialog" aria-modal="true" aria-labelledby="modal-import-title">
+    <div class="modal-box" style="max-width:640px;">
+      <button class="modal-close" id="modal-import-close" aria-label="Zamknij">×</button>
+      <div class="modal-title" id="modal-import-title">Importuj produkty</div>
+      <p class="hint" id="modal-import-desc"></p>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:.75rem 0 .25rem;">
+        <label style="font-size:.8rem;color:#94a3b8;cursor:pointer;">
+          <input type="checkbox" id="import-select-all" style="accent-color:#3b82f6;margin-right:.4rem;">
+          Zaznacz wszystkie
+        </label>
+        <span id="import-selected-count" style="font-size:.8rem;color:#64748b;">0 zaznaczonych</span>
+      </div>
+      <div class="import-products-list" id="import-products-list"></div>
+      <div style="display:flex;gap:.75rem;justify-content:flex-end;margin-top:1rem;">
+        <button type="button" class="btn btn-secondary" id="btn-import-cancel">Anuluj</button>
+        <button type="button" class="btn btn-primary" id="btn-import-confirm">Importuj zaznaczone</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js" defer></script>
+  <script src="stores.js" defer></script>
+  <script src="js/platform.js" defer></script>
+  <script>
+  /* ─────────────────────────────────────────────────────────────────────────
+   * Produkty page logic – runs after all deferred scripts are loaded
+   * ───────────────────────────────────────────────────────────────────────── */
+  (function () {
+    'use strict';
+
+    /* ── Demo supplier catalogue ── */
+    const DEMO_SUPPLIERS = [
+      {
+        id: 'sup-odz', name: 'Odzież i Moda', category: 'Odzież',
+        description: 'Hurtownia odzieży sezonowej – koszulki, spodnie, bluzy i akcesoria.',
+        icon: '👗', productsCount: 8, active: true, url: '#',
+        products: [
+          { sku:'ODZ-001', name:'Koszulka oversize premium', description:'Bawełna 100%, unisex', price:79.90, costPrice:32, stock:120, category:'Odzież i Moda', images:['https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&q=70'] },
+          { sku:'ODZ-002', name:'Spodnie chino slim fit', description:'Wygodne spodnie na każdą okazję', price:129.90, costPrice:55, stock:80, category:'Odzież i Moda', images:['https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=400&q=70'] },
+          { sku:'ODZ-003', name:'Bluza z kapturem unisex', description:'Polar 280g, dostępna w 10 kolorach', price:149.90, costPrice:65, stock:60, category:'Odzież i Moda', images:['https://images.unsplash.com/photo-1556821840-3a63f15732ce?w=400&q=70'] },
+          { sku:'ODZ-004', name:'Sukienka letnia maxi', description:'Wiskoza, wzory kwiatowe', price:169.90, costPrice:72, stock:45, category:'Odzież i Moda', images:['https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&q=70'] },
+          { sku:'ODZ-005', name:'Kurtka przejściowa softshell', description:'Wodoodporna, 3 kolory', price:249.90, costPrice:110, stock:35, category:'Odzież i Moda', images:['https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=400&q=70'] },
+          { sku:'ODZ-006', name:'Czapka z daszkiem premium', description:'6-panelowa, haft logo', price:59.90, costPrice:22, stock:200, category:'Odzież i Moda', images:['https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400&q=70'] },
+          { sku:'ODZ-007', name:'Skarpetki 5-pack sportowe', description:'Bawełna z elastanem, rozmiary 36-46', price:39.90, costPrice:15, stock:500, category:'Odzież i Moda', images:[] },
+          { sku:'ODZ-008', name:'Pas płócienny z klamrą', description:'Do spodni, dostępny w różnych długościach', price:29.90, costPrice:10, stock:150, category:'Odzież i Moda', images:[] },
+        ]
+      },
+      {
+        id: 'sup-elek', name: 'Elektronika', category: 'Elektronika',
+        description: 'Akcesoria elektroniczne, gadżety i urządzenia do codziennego użytku.',
+        icon: '🎧', productsCount: 8, active: true, url: '#',
+        products: [
+          { sku:'EL-001', name:'Słuchawki bezprzewodowe BT5.0', description:'ANC, 30h baterii, etui ładujące', price:199.90, costPrice:89, stock:50, category:'Elektronika', images:['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=70'] },
+          { sku:'EL-002', name:'Powerbank 20000mAh PD65W', description:'USB-C PD, 3 porty, LED indicator', price:159.90, costPrice:68, stock:80, category:'Elektronika', images:['https://images.unsplash.com/photo-1585771724684-38269d6639fd?w=400&q=70'] },
+          { sku:'EL-003', name:'Kabel USB-C do USB-C 100W', description:'2m, oplot nylonowy', price:49.90, costPrice:18, stock:300, category:'Elektronika', images:[] },
+          { sku:'EL-004', name:'Ładowarka GaN 65W kompaktowa', description:'2x USB-C + USB-A, do laptopa', price:129.90, costPrice:55, stock:65, category:'Elektronika', images:['https://images.unsplash.com/photo-1601999009162-2459e0d9c9c5?w=400&q=70'] },
+          { sku:'EL-005', name:'Głośnik Bluetooth wodoodporny IP67', description:'12h baterii, stereo TWS', price:179.90, costPrice:78, stock:40, category:'Elektronika', images:['https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=400&q=70'] },
+          { sku:'EL-006', name:'Klawiatura mechaniczna TKL RGB', description:'Switch czerwony, hot-swap', price:299.90, costPrice:135, stock:25, category:'Elektronika', images:['https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=400&q=70'] },
+          { sku:'EL-007', name:'Mysz bezprzewodowa ergonomiczna', description:'2.4GHz + BT, 3200DPI', price:119.90, costPrice:50, stock:55, category:'Elektronika', images:[] },
+          { sku:'EL-008', name:'Hub USB-C 7-w-1', description:'HDMI 4K, 3x USB-A, SD, PD100W', price:149.90, costPrice:62, stock:45, category:'Elektronika', images:['https://images.unsplash.com/photo-1625948515291-69611c9dce92?w=400&q=70'] },
+        ]
+      },
+      {
+        id: 'sup-dom', name: 'Dom i Ogród', category: 'Dom',
+        description: 'Wyposażenie domu, dekoracje, artykuły kuchenne i ogrodowe.',
+        icon: '🏠', productsCount: 8, active: true, url: '#',
+        products: [
+          { sku:'DOM-001', name:'Dyfuzor zapachowy elektryczny', description:'Ultradźwiękowy, 300ml, LED', price:99.90, costPrice:42, stock:70, category:'Dom i Ogród', images:['https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=400&q=70'] },
+          { sku:'DOM-002', name:'Organizer na biurko bambusowy', description:'5 przegródek, naturalny bambus', price:79.90, costPrice:30, stock:90, category:'Dom i Ogród', images:['https://images.unsplash.com/photo-1583947215259-38e31be8751f?w=400&q=70'] },
+          { sku:'DOM-003', name:'Zestaw noży kuchennych 5-elem.', description:'Stal 7Cr, uchwyty ergonomiczne', price:189.90, costPrice:82, stock:35, category:'Dom i Ogród', images:['https://images.unsplash.com/photo-1593618998160-e34014e67546?w=400&q=70'] },
+          { sku:'DOM-004', name:'Poduszka dekoracyjna velvet 45x45', description:'Zdejmowana poszewka, 8 kolorów', price:49.90, costPrice:18, stock:150, category:'Dom i Ogród', images:['https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400&q=70'] },
+          { sku:'DOM-005', name:'Lampka nocna LED USB dotykowa', description:'3 tryby ciepłości, ściemniacz', price:59.90, costPrice:24, stock:110, category:'Dom i Ogród', images:['https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=400&q=70'] },
+          { sku:'DOM-006', name:'Doniczka ceramiczna z podstawką', description:'18cm, glazura, 6 kolorów', price:44.90, costPrice:16, stock:200, category:'Dom i Ogród', images:['https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=400&q=70'] },
+          { sku:'DOM-007', name:'Koc sherpa dwustronny 150x200', description:'Flanela + plusz, 4 kolory', price:119.90, costPrice:50, stock:60, category:'Dom i Ogród', images:[] },
+          { sku:'DOM-008', name:'Zestaw ściereczek mikrofiber 10szt.', description:'30x30cm, chłonne', price:29.90, costPrice:10, stock:400, category:'Dom i Ogród', images:[] },
+        ]
+      },
+      {
+        id: 'sup-spo', name: 'Sport i Rekreacja', category: 'Sport',
+        description: 'Sprzęt sportowy, odzież do treningu i akcesoria outdoor.',
+        icon: '⚽', productsCount: 8, active: true, url: '#',
+        products: [
+          { sku:'SPO-001', name:'Mata do jogi antypoślizgowa 6mm', description:'NBR, 183x61cm, pasek do noszenia', price:89.90, costPrice:38, stock:80, category:'Sport i Rekreacja', images:['https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&q=70'] },
+          { sku:'SPO-002', name:'Butelka termiczna 750ml', description:'Stal nierdzewna, 24h zimno / 12h ciepło', price:79.90, costPrice:32, stock:120, category:'Sport i Rekreacja', images:['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&q=70'] },
+          { sku:'SPO-003', name:'Plecak trekkingowy 30L', description:'Wodoodporny, pas biodrowy, MOLLE', price:199.90, costPrice:88, stock:30, category:'Sport i Rekreacja', images:['https://images.unsplash.com/photo-1622260614153-03223fb72052?w=400&q=70'] },
+          { sku:'SPO-004', name:'Skakanka szybka z licznikiem', description:'Stalowa linka, łożyska, cyfrowy wyświetlacz', price:59.90, costPrice:22, stock:100, category:'Sport i Rekreacja', images:[] },
+          { sku:'SPO-005', name:'Opaska sportowa na nadgarstek', description:'Monitorowanie tętna, kroki, sen BT5.0', price:149.90, costPrice:65, stock:55, category:'Sport i Rekreacja', images:['https://images.unsplash.com/photo-1575311373937-040b8e1fd5b6?w=400&q=70'] },
+          { sku:'SPO-006', name:'Rękawice treningowe skórzane S-XL', description:'Dłoń skóra naturalna, grzbiet siatka', price:69.90, costPrice:28, stock:70, category:'Sport i Rekreacja', images:[] },
+          { sku:'SPO-007', name:'Zestaw gum oporowych 5 poziomów', description:'Lateks, worek i instrukcja', price:49.90, costPrice:18, stock:150, category:'Sport i Rekreacja', images:['https://images.unsplash.com/photo-1598289431512-b97b0917affc?w=400&q=70'] },
+          { sku:'SPO-008', name:'Kurtka do biegania wiatroodporna', description:'Odblaski 360°, kieszeń na klucze', price:179.90, costPrice:78, stock:40, category:'Sport i Rekreacja', images:['https://images.unsplash.com/photo-1515191107209-c28698631303?w=400&q=70'] },
+        ]
+      },
+    ];
+
+    /* ── Utility ── */
+    function fmt(n) {
+      return new Intl.NumberFormat('pl-PL', { style:'currency', currency:'PLN' }).format(n || 0);
+    }
+    function calcMargin(price, cost) {
+      if (!price || price <= 0) return 0;
+      return Math.round(((price - cost) / price) * 1000) / 10;
+    }
+    function esc(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function showToast(msg, type) {
+      const t = document.createElement('div');
+      t.textContent = msg;
+      Object.assign(t.style, {
+        position:'fixed', bottom:'80px', left:'50%', transform:'translateX(-50%)',
+        background: type === 'error' ? '#dc2626' : '#22c55e',
+        color:'#fff', padding:'.6rem 1.2rem', borderRadius:'.5rem',
+        fontSize:'.875rem', zIndex:'9999', fontWeight:'500',
+        boxShadow:'0 4px 20px rgba(0,0,0,.35)',
+        transition:'opacity .3s', pointerEvents:'none',
+      });
+      document.body.appendChild(t);
+      setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 320); }, 2200);
+    }
+
+    /* ── State ── */
+    let editingId = null;
+    let importSupplier = null;
+
+    /* Wait for Platform to be available (deferred scripts) */
+    function waitForPlatform(cb) {
+      if (window.Platform) { cb(); return; }
+      let tries = 0;
+      const iv = setInterval(() => {
+        if (window.Platform || ++tries > 40) { clearInterval(iv); if (window.Platform) cb(); }
+      }, 100);
+    }
+
+    waitForPlatform(init);
+
+    function init() {
+      /* Seed demo suppliers into Platform if none exist yet */
+      seedSuppliers();
+
+      /* Tab switching */
+      document.querySelectorAll('.prod-tab').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.prod-tab').forEach(b => { b.classList.remove('is-active'); b.setAttribute('aria-selected','false'); });
+          document.querySelectorAll('.prod-tab-panel').forEach(p => p.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          btn.setAttribute('aria-selected','true');
+          document.getElementById('panel-' + btn.dataset.tab).classList.add('is-active');
+        });
+      });
+
+      /* Stats */
+      refreshStats();
+
+      /* Product list */
+      renderProducts();
+      renderSupplierCards();
+
+      /* Filters */
+      document.getElementById('filter-search').addEventListener('input', renderProducts);
+      document.getElementById('filter-supplier').addEventListener('change', renderProducts);
+      document.getElementById('filter-category').addEventListener('change', renderProducts);
+      document.getElementById('btn-clear-filters').addEventListener('click', () => {
+        document.getElementById('filter-search').value = '';
+        document.getElementById('filter-supplier').value = '';
+        document.getElementById('filter-category').value = '';
+        renderProducts();
+      });
+
+      /* Add product button */
+      document.getElementById('btn-add-product').addEventListener('click', () => openProductModal(null));
+
+      /* Modal close */
+      document.getElementById('modal-product-close').addEventListener('click', closeProductModal);
+      document.getElementById('btn-product-cancel').addEventListener('click', closeProductModal);
+      document.getElementById('modal-product').addEventListener('click', e => { if (e.target === e.currentTarget) closeProductModal(); });
+
+      /* Form */
+      document.getElementById('form-product').addEventListener('submit', handleProductSave);
+      document.getElementById('fp-price').addEventListener('input', autoCalcMargin);
+      document.getElementById('fp-cost').addEventListener('input', autoCalcMargin);
+
+      /* Import modal */
+      document.getElementById('modal-import-close').addEventListener('click', closeImportModal);
+      document.getElementById('btn-import-cancel').addEventListener('click', closeImportModal);
+      document.getElementById('modal-import').addEventListener('click', e => { if (e.target === e.currentTarget) closeImportModal(); });
+      document.getElementById('btn-import-confirm').addEventListener('click', handleImportConfirm);
+      document.getElementById('import-select-all').addEventListener('change', e => {
+        document.querySelectorAll('#import-products-list input[type=checkbox]').forEach(cb => { cb.checked = e.target.checked; });
+        updateImportCount();
+      });
+    }
+
+    /* ── Seed ── */
+    function seedSuppliers() {
+      const existing = Platform.getSuppliers();
+      if (existing.length) return;
+      DEMO_SUPPLIERS.forEach(s => Platform.saveSupplier({
+        id: s.id, name: s.name, description: s.description, url: s.url,
+        active: true, productsCount: s.productsCount, category: s.category,
+      }));
+    }
+
+    /* ── Stats ── */
+    function refreshStats() {
+      const prods = Platform.getProducts();
+      const today = new Date().toDateString();
+      document.getElementById('stat-total').textContent = prods.length;
+      document.getElementById('stat-active').textContent = prods.filter(p => p.active).length;
+      const suppIds = new Set(prods.map(p => p.supplierId).filter(Boolean));
+      document.getElementById('stat-suppliers').textContent = suppIds.size;
+      document.getElementById('stat-synced').textContent = prods.filter(p => new Date(p.updatedAt).toDateString() === today).length;
+    }
+
+    /* ── Filter dropdowns ── */
+    function populateFilterDropdowns(products) {
+      const sSel = document.getElementById('filter-supplier');
+      const cSel = document.getElementById('filter-category');
+      const curS = sSel.value, curC = cSel.value;
+      const suppliers = [...new Set(products.map(p => p.supplierName).filter(Boolean))].sort();
+      const categories = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
+      sSel.innerHTML = '<option value="">Wszystkie hurtownie</option>' + suppliers.map(s => `<option ${s===curS?'selected':''}>${esc(s)}</option>`).join('');
+      cSel.innerHTML = '<option value="">Wszystkie kategorie</option>' + categories.map(c => `<option ${c===curC?'selected':''}>${esc(c)}</option>`).join('');
+    }
+
+    /* ── Product table ── */
+    function renderProducts() {
+      const all = Platform.getProducts();
+      populateFilterDropdowns(all);
+
+      const q = document.getElementById('filter-search').value.trim().toLowerCase();
+      const sup = document.getElementById('filter-supplier').value;
+      const cat = document.getElementById('filter-category').value;
+
+      const filtered = all.filter(p => {
+        if (q && !p.name.toLowerCase().includes(q) && !(p.sku||'').toLowerCase().includes(q)) return false;
+        if (sup && p.supplierName !== sup) return false;
+        if (cat && p.category !== cat) return false;
+        return true;
+      });
+
+      const tbody = document.getElementById('products-tbody');
+      const empty = document.getElementById('products-empty');
+
+      if (!filtered.length) {
+        tbody.innerHTML = '';
+        empty.hidden = false;
+        return;
+      }
+      empty.hidden = true;
+
+      tbody.innerHTML = filtered.map(p => {
+        const img = (p.images && p.images[0])
+          ? `<img class="prod-img" src="${esc(p.images[0])}" alt="${esc(p.name)}" loading="lazy">`
+          : `<div class="prod-img-ph">📦</div>`;
+        const margin = calcMargin(p.price, p.costPrice);
+        const badge = p.active
+          ? `<span class="status-badge active">Aktywny</span>`
+          : `<span class="status-badge inactive">Nieaktywny</span>`;
+        return `<tr>
+          <td>${img}</td>
+          <td><strong style="display:block;">${esc(p.name)}</strong><span style="font-size:.75rem;color:#64748b;">${esc(p.sku||'')}</span></td>
+          <td>${esc(p.supplierName||'—')}</td>
+          <td>${fmt(p.price)}</td>
+          <td>${fmt(p.costPrice)}</td>
+          <td class="margin-val">${margin}%</td>
+          <td>${p.stock ?? 0}</td>
+          <td>${badge}</td>
+          <td>
+            <div class="prod-actions">
+              <button onclick="ProdPage.editProduct('${p.id}')">Edytuj</button>
+              <button class="del" onclick="ProdPage.deleteProduct('${p.id}')">Usuń</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    /* ── Supplier cards (import tab) ── */
+    function renderSupplierCards() {
+      const container = document.getElementById('supplier-cards-list');
+      container.innerHTML = DEMO_SUPPLIERS.map(s => `
+        <div class="supplier-card">
+          <div class="supplier-card-head">
+            <div class="supplier-icon">${s.icon}</div>
+            <div>
+              <h3>${esc(s.name)}</h3>
+              <p>${esc(s.description)}</p>
+            </div>
+          </div>
+          <div class="supplier-meta">
+            <span>📦 ${s.productsCount} produktów</span>
+            <span>🏷 ${esc(s.category)}</span>
+          </div>
+          <button class="btn btn-primary" style="margin-top:.25rem;" onclick="ProdPage.openImport('${s.id}')">Importuj produkty</button>
+        </div>
+      `).join('');
+    }
+
+    /* ── Product modal ── */
+    function openProductModal(product) {
+      editingId = product ? product.id : null;
+      const form = document.getElementById('form-product');
+      form.reset();
+      document.getElementById('modal-product-title').textContent = product ? 'Edytuj produkt' : 'Dodaj produkt';
+
+      if (product) {
+        document.getElementById('fp-id').value = product.id || '';
+        document.getElementById('fp-name').value = product.name || '';
+        document.getElementById('fp-sku').value = product.sku || '';
+        document.getElementById('fp-category').value = product.category || '';
+        document.getElementById('fp-price').value = product.price || '';
+        document.getElementById('fp-cost').value = product.costPrice || '';
+        document.getElementById('fp-margin').value = calcMargin(product.price, product.costPrice);
+        document.getElementById('fp-stock').value = product.stock ?? '';
+        document.getElementById('fp-image').value = (product.images && product.images[0]) || '';
+        document.getElementById('fp-desc').value = product.description || '';
+        document.getElementById('fp-active').checked = product.active !== false;
+        document.getElementById('fp-supplier-id').value = product.supplierId || '';
+        document.getElementById('fp-supplier-name').value = product.supplierName || '';
+      }
+
+      document.getElementById('modal-product').classList.add('is-open');
+      document.getElementById('fp-name').focus();
+    }
+
+    function closeProductModal() {
+      document.getElementById('modal-product').classList.remove('is-open');
+      editingId = null;
+    }
+
+    function autoCalcMargin() {
+      const price = parseFloat(document.getElementById('fp-price').value) || 0;
+      const cost = parseFloat(document.getElementById('fp-cost').value) || 0;
+      document.getElementById('fp-margin').value = calcMargin(price, cost);
+    }
+
+    function handleProductSave(e) {
+      e.preventDefault();
+      const name = document.getElementById('fp-name').value.trim();
+      const price = parseFloat(document.getElementById('fp-price').value) || 0;
+      if (!name) { showToast('Podaj nazwę produktu.', 'error'); return; }
+      if (price <= 0) { showToast('Podaj cenę sprzedaży.', 'error'); return; }
+
+      const imageUrl = document.getElementById('fp-image').value.trim();
+      const product = {
+        id: document.getElementById('fp-id').value || undefined,
+        name,
+        sku: document.getElementById('fp-sku').value.trim(),
+        category: document.getElementById('fp-category').value,
+        price,
+        costPrice: parseFloat(document.getElementById('fp-cost').value) || 0,
+        margin: parseFloat(document.getElementById('fp-margin').value) || 0,
+        stock: parseInt(document.getElementById('fp-stock').value, 10) || 0,
+        images: imageUrl ? [imageUrl] : [],
+        description: document.getElementById('fp-desc').value.trim(),
+        active: document.getElementById('fp-active').checked,
+        supplierId: document.getElementById('fp-supplier-id').value || '',
+        supplierName: document.getElementById('fp-supplier-name').value || '',
+      };
+
+      Platform.saveProduct(product);
+      closeProductModal();
+      renderProducts();
+      refreshStats();
+      showToast(editingId ? 'Produkt zaktualizowany.' : 'Produkt dodany.', 'success');
+    }
+
+    /* ── Import modal ── */
+    function openImportModal(supplierId) {
+      importSupplier = DEMO_SUPPLIERS.find(s => s.id === supplierId);
+      if (!importSupplier) return;
+
+      document.getElementById('modal-import-title').textContent = 'Import: ' + importSupplier.name;
+      document.getElementById('modal-import-desc').textContent = importSupplier.description + ' — zaznacz produkty do importu.';
+      document.getElementById('import-select-all').checked = false;
+
+      const list = document.getElementById('import-products-list');
+      list.innerHTML = importSupplier.products.map((p, i) => `
+        <div class="import-product-row">
+          <input type="checkbox" id="imp-${i}" data-idx="${i}" onchange="ProdPage.updateImportCount()">
+          <label for="imp-${i}">
+            <strong>${esc(p.name)}</strong>
+            <span style="display:block;font-size:.78rem;color:#64748b;">${esc(p.description)} · SKU: ${esc(p.sku)}</span>
+          </label>
+          <span class="ipr-price">${fmt(p.price)}</span>
+        </div>
+      `).join('');
+
+      updateImportCount();
+      document.getElementById('modal-import').classList.add('is-open');
+    }
+
+    function closeImportModal() {
+      document.getElementById('modal-import').classList.remove('is-open');
+      importSupplier = null;
+    }
+
+    function updateImportCount() {
+      const checked = document.querySelectorAll('#import-products-list input[type=checkbox]:checked').length;
+      document.getElementById('import-selected-count').textContent = `${checked} zaznaczonych`;
+    }
+
+    function handleImportConfirm() {
+      if (!importSupplier) return;
+      const checkboxes = document.querySelectorAll('#import-products-list input[type=checkbox]:checked');
+      if (!checkboxes.length) { showToast('Zaznacz co najmniej jeden produkt.', 'error'); return; }
+
+      const toImport = [];
+      checkboxes.forEach(cb => {
+        const p = importSupplier.products[parseInt(cb.dataset.idx, 10)];
+        if (p) toImport.push({ ...p, supplierId: importSupplier.id, supplierName: importSupplier.name });
+      });
+
+      Platform.importProductsFromSupplier(importSupplier.id, toImport);
+      Platform.addNotification(`Zaimportowano ${toImport.length} produktów z hurtowni „${importSupplier.name}"`);
+      closeImportModal();
+      renderProducts();
+      refreshStats();
+
+      /* Switch to my products tab */
+      document.querySelectorAll('.prod-tab').forEach(b => { b.classList.remove('is-active'); b.setAttribute('aria-selected','false'); });
+      document.querySelectorAll('.prod-tab-panel').forEach(p => p.classList.remove('is-active'));
+      document.querySelector('[data-tab="my-products"]').classList.add('is-active');
+      document.querySelector('[data-tab="my-products"]').setAttribute('aria-selected','true');
+      document.getElementById('panel-my-products').classList.add('is-active');
+
+      showToast(`Zaimportowano ${toImport.length} produktów!`, 'success');
+    }
+
+    /* ── Global page API (used by inline onclick handlers) ── */
+    window.ProdPage = {
+      editProduct(id) {
+        const p = Platform.getProducts().find(x => x.id === id);
+        if (p) openProductModal(p);
+      },
+      deleteProduct(id) {
+        if (!confirm('Czy na pewno chcesz usunąć ten produkt?')) return;
+        Platform.deleteProduct(id);
+        renderProducts();
+        refreshStats();
+        showToast('Produkt usunięty.', 'success');
+      },
+      openImport(supplierId) {
+        openImportModal(supplierId);
+      },
+      updateImportCount,
+    };
+
+  }());
+  </script>
+</body>
+</html>
