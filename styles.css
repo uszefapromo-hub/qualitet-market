@@ -93,7 +93,7 @@
   height:42px;
   border-radius:12px;
   border:1px solid var(--stroke);
-  background:#fff;
+  background:rgba(255,255,255,.08);
 }
 
 .color-preview{
@@ -146,10 +146,16 @@
 }
 
 .metric-card{
-  border:1px solid var(--stroke);
+  border:1px solid rgba(158,119,255,.18);
   background:var(--card);
   border-radius:18px;
   padding:16px;
+  transition:transform .28s ease,box-shadow .28s ease;
+}
+
+.metric-card:hover{
+  transform:translateY(-3px);
+  box-shadow:0 12px 28px rgba(124,58,237,.18);
 }
 
 .metric-card span{
@@ -163,6 +169,10 @@
 
 .metric-card strong{
   font-size:22px;
+  background:linear-gradient(135deg,#38bdf8,#9e77ff);
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  background-clip:text;
 }
 
 .panel-actions{
@@ -197,7 +207,7 @@
   height:96px;
   border-radius:22px;
   border:1px solid var(--stroke);
-  background:#f0f2f8;
+  background:rgba(15,23,42,.65);
   display:flex;
   align-items:center;
   justify-content:center;
