@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Zarabiaj jako sprzedawca - Qualitet | Dropshipping</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── Earnings page specific styles ── */
+    .earn-hero{padding:60px 0 40px}
+    .earn-hero h1{font-size:clamp(32px,5vw,60px);line-height:1.05;margin:12px 0 18px}
+    .earn-hero .lead{font-size:18px;color:var(--muted);max-width:680px}
+
+    .earn-grid{display:grid;gap:20px;grid-template-columns:repeat(3,1fr);padding:10px 0 30px}
+    .earn-card{border:1px solid var(--stroke);background:var(--card);border-radius:24px;padding:28px;box-shadow:var(--shadow)}
+    .earn-card-icon{font-size:36px;margin-bottom:14px}
+    .earn-card h3{margin:0 0 10px;font-size:20px}
+    .earn-card p{color:var(--muted);margin:0;font-size:15px;line-height:1.6}
+
+    /* process steps */
+    .process-section{padding:30px 0 40px}
+    .process-section h2{font-size:clamp(26px,4vw,40px);margin:0 0 32px}
+    .process-steps{display:flex;flex-wrap:wrap;align-items:flex-start;gap:0}
+    .process-step{flex:1;min-width:140px;display:flex;flex-direction:column;align-items:center;text-align:center;padding:0 10px;position:relative}
+    .process-step-circle{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;border:2px solid var(--stroke);background:var(--card);box-shadow:var(--shadow);margin-bottom:12px;position:relative;z-index:1}
+    .process-step-label{font-weight:700;font-size:15px;color:#fff;margin-bottom:4px}
+    .process-step-hint{color:var(--muted);font-size:13px;line-height:1.5}
+    .process-arrow{align-self:flex-start;padding-top:20px;font-size:22px;color:var(--muted);flex:0 0 auto}
+
+    /* earnings examples */
+    .examples-section{padding:10px 0 40px}
+    .examples-section h2{font-size:clamp(24px,4vw,38px);margin:0 0 24px}
+    .examples-grid{display:grid;gap:18px;grid-template-columns:repeat(3,1fr)}
+    .example-card{border:1px solid var(--stroke);background:var(--card);border-radius:24px;padding:24px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+    .example-card .example-label{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.6px;font-weight:700}
+    .example-card .example-value{font-size:22px;font-weight:800}
+    .example-card .example-earning{font-size:34px;font-weight:800;color:var(--green)}
+    .example-card .example-earning-label{color:var(--muted);font-size:13px}
+    .example-card .example-divider{border:none;border-top:1px solid var(--stroke);margin:6px 0}
+
+    /* calculator */
+    .calc-section{padding:10px 0 50px}
+    .calc-section h2{font-size:clamp(24px,4vw,38px);margin:0 0 8px}
+    .calc-section .lead{color:var(--muted);margin:0 0 28px;font-size:15px}
+    .calc-card{border:1px solid var(--stroke);background:var(--card);border-radius:24px;padding:28px 32px;box-shadow:var(--shadow)}
+    .calc-fields{display:grid;gap:18px;grid-template-columns:repeat(2,1fr);margin-bottom:24px}
+    .calc-field label{display:block;font-weight:700;font-size:14px;color:#fff;margin-bottom:8px}
+    .calc-field input[type="range"]{width:100%;accent-color:var(--accent-green)}
+    .calc-field .range-value{display:inline-block;min-width:60px;font-weight:800;color:var(--accent-green);font-size:17px}
+    .calc-result{border-radius:18px;padding:24px;background:linear-gradient(135deg,rgba(34,197,94,.16),rgba(56,189,248,.10));border:1px solid rgba(34,197,94,.3);display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between}
+    .calc-result-main{display:flex;flex-direction:column;gap:4px}
+    .calc-result-label{color:var(--muted);font-size:14px}
+    .calc-result-value{font-size:48px;font-weight:800;color:var(--green);line-height:1}
+    .calc-result-sub{color:var(--muted);font-size:14px;margin-top:4px}
+    .calc-result-breakdown{display:flex;gap:24px;flex-wrap:wrap}
+    .calc-result-item{display:flex;flex-direction:column;gap:2px}
+    .calc-result-item span{font-size:13px;color:var(--muted)}
+    .calc-result-item strong{font-size:18px;color:#fff}
+
+    /* CTA section */
+    .earn-cta-section{padding:10px 0 60px}
+    .earn-cta-box{border:1px solid var(--stroke);background:linear-gradient(135deg,rgba(34,197,94,.12),rgba(56,189,248,.08));border-radius:28px;padding:48px 40px;text-align:center;box-shadow:var(--shadow)}
+    .earn-cta-box h2{font-size:clamp(26px,4vw,44px);margin:16px 0 14px}
+    .earn-cta-box p{color:var(--muted);font-size:17px;max-width:640px;margin:0 auto 28px}
+    .btn-earn-primary{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:0 36px;border-radius:18px;font-weight:800;font-size:18px;border:0;cursor:pointer;background:linear-gradient(135deg,var(--accent-green-dark),var(--accent-blue-dark));color:#fff;box-shadow:0 8px 32px rgba(34,197,94,.35);text-decoration:none;transition:transform .15s ease,box-shadow .15s ease}
+    .btn-earn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(34,197,94,.45)}
+
+    /* Responsive */
+    @media(max-width:900px){
+      .earn-grid{grid-template-columns:repeat(2,1fr)}
+      .examples-grid{grid-template-columns:repeat(2,1fr)}
+      .calc-fields{grid-template-columns:1fr}
+      .process-steps{gap:0}
+    }
+    @media(max-width:600px){
+      .earn-grid{grid-template-columns:1fr}
+      .examples-grid{grid-template-columns:1fr}
+      .earn-cta-box{padding:32px 20px}
+      .calc-card{padding:20px}
+      .process-arrow{display:none}
+      .process-steps{flex-direction:column;align-items:center;gap:16px}
+      .process-step{flex:0 0 auto;width:100%;max-width:280px}
+    }
+  </style>
+</head>
+<body data-page="zarabiaj" class="has-bottom-nav">
+  <div class="app-splash" data-app-splash>
+    <div class="app-splash-card">
+      <div class="app-splash-logo">
+        <img src="assets/icons/icon-192.svg" alt="Qualitet">
+      </div>
+      <div class="app-splash-title">
+        <strong>Qualitet</strong>
+        <span>Platforma dropshipping</span>
+      </div>
+      <div class="app-splash-loader"></div>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>Qualitet</strong>
+          <span>QualitetMarket</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Główna nawigacja">
+        <a href="index.html">Start</a>
+        <a href="hurtownie.html">Hurtownie</a>
+        <a href="zarabiaj.html" class="active">Zarabiaj</a>
+        <a href="cennik.html">Cennik</a>
+      </nav>
+      <a class="btn topbar-cta" href="generator-sklepu.html">Załóż Sklep</a>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ══════════════ HERO ══════════════ -->
+    <section class="earn-hero">
+      <div class="wrap">
+        <span class="eyebrow">💰 Zarabiaj jako sprzedawca</span>
+        <h1>Załóż sklep<br>i <span style="color:var(--green)">zarabiaj</span><br>od dziś</h1>
+        <p class="lead">Sprzedawaj tysiące produktów bez magazynu i inwestycji w towar. Ty ustalasz marżę — my dostarczamy produkty i obsługujemy logistykę.</p>
+        <div class="cta-row" style="margin-top:28px">
+          <a class="btn-earn-primary" href="generator-sklepu.html">Załóż sklep i zacznij zarabiać</a>
+          <a class="btn" style="background:rgba(148,163,184,.12);color:var(--text);border:1px solid rgba(148,163,184,.28);min-height:56px;padding:0 24px;border-radius:18px;font-weight:700;font-size:16px" href="#jak-to-dziala">Dowiedz się więcej</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════ JAK TO DZIAŁA ══════════════ -->
+    <section id="jak-to-dziala">
+      <div class="wrap">
+        <div class="section-head" style="margin-bottom:8px">
+          <span class="eyebrow">Model biznesowy</span>
+          <h2 style="font-size:clamp(24px,4vw,40px);margin:12px 0 8px">Jak działa sprzedaż produktów?</h2>
+          <p class="hint">Dropshipping to model, w którym sprzedajesz produkty bez posiadania magazynu. Zamawiasz od hurtowni dopiero gdy klient złoży zamówienie.</p>
+        </div>
+        <div class="earn-grid" style="margin-top:24px">
+          <div class="earn-card">
+            <div class="earn-card-icon">🏪</div>
+            <h3>Twój własny sklep</h3>
+            <p>Tworzysz sklep pod własną marką w kilka minut. Wybierasz nazwę, logo i dodajesz produkty z naszej bazy ponad 850 000 artykułów.</p>
+          </div>
+          <div class="earn-card">
+            <div class="earn-card-icon">📦</div>
+            <h3>Jak działa dropshipping?</h3>
+            <p>Klient składa zamówienie w Twoim sklepie. My automatycznie przekazujemy je do hurtowni, która pakuje i wysyła towar bezpośrednio do klienta.</p>
+          </div>
+          <div class="earn-card">
+            <div class="earn-card-icon">💵</div>
+            <h3>Jak można zarabiać?</h3>
+            <p>Zarabiasz na różnicy między ceną hurtową a ceną sprzedaży. Ty sam ustawiasz marżę — im wyższa, tym więcej zarabiasz na każdej transakcji.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════ PROCES ══════════════ -->
+    <section class="process-section">
+      <div class="wrap">
+        <span class="eyebrow">Krok po kroku</span>
+        <h2 style="margin-top:12px">Jak założyć sklep?</h2>
+        <div class="process-steps" role="list">
+
+          <div class="process-step" role="listitem">
+            <div class="process-step-circle" style="background:linear-gradient(135deg,rgba(56,189,248,.25),rgba(56,189,248,.08));border-color:rgba(56,189,248,.4)">👤</div>
+            <div class="process-step-label">Rejestracja</div>
+            <div class="process-step-hint">Zakładasz konto w&nbsp;kilka sekund</div>
+          </div>
+
+          <div class="process-arrow" aria-hidden="true">↓</div>
+
+          <div class="process-step" role="listitem">
+            <div class="process-step-circle" style="background:linear-gradient(135deg,rgba(158,119,255,.25),rgba(158,119,255,.08));border-color:rgba(158,119,255,.4)">📋</div>
+            <div class="process-step-label">Wybór produktów</div>
+            <div class="process-step-hint">Wybierasz z&nbsp;850&nbsp;000+ artykułów</div>
+          </div>
+
+          <div class="process-arrow" aria-hidden="true">↓</div>
+
+          <div class="process-step" role="listitem">
+            <div class="process-step-circle" style="background:linear-gradient(135deg,rgba(250,204,21,.25),rgba(250,204,21,.08));border-color:rgba(250,204,21,.4)">💱</div>
+            <div class="process-step-label">Ustawienie marży</div>
+            <div class="process-step-hint">Sam decydujesz ile zarabiasz</div>
+          </div>
+
+          <div class="process-arrow" aria-hidden="true">↓</div>
+
+          <div class="process-step" role="listitem">
+            <div class="process-step-circle" style="background:linear-gradient(135deg,rgba(251,146,60,.25),rgba(251,146,60,.08));border-color:rgba(251,146,60,.4)">🛒</div>
+            <div class="process-step-label">Sprzedaż</div>
+            <div class="process-step-hint">Klienci zamawiają w&nbsp;Twoim sklepie</div>
+          </div>
+
+          <div class="process-arrow" aria-hidden="true">↓</div>
+
+          <div class="process-step" role="listitem">
+            <div class="process-step-circle" style="background:linear-gradient(135deg,rgba(34,197,94,.25),rgba(34,197,94,.08));border-color:rgba(34,197,94,.5)">💰</div>
+            <div class="process-step-label">Zarobek</div>
+            <div class="process-step-hint">Pieniądze wpływają na Twoje konto</div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════ PRZYKŁADY SPRZEDAŻY ══════════════ -->
+    <section class="examples-section" id="przyklady">
+      <div class="wrap">
+        <span class="eyebrow">Przykłady sprzedaży</span>
+        <h2 style="margin-top:12px">Ile możesz zarobić?</h2>
+        <div class="examples-grid">
+
+          <div class="example-card">
+            <div class="example-label">Wariant STARTER</div>
+            <hr class="example-divider">
+            <div>
+              <div class="example-label">Sprzedaży dziennie</div>
+              <div class="example-value">5 zamówień</div>
+            </div>
+            <div>
+              <div class="example-label">Marża na zamówienie</div>
+              <div class="example-value">25 zł</div>
+            </div>
+            <div>
+              <div class="example-label">Zarobek miesięczny</div>
+              <div class="example-earning">3&nbsp;750 zł</div>
+            </div>
+          </div>
+
+          <div class="example-card" style="border-color:rgba(34,197,94,.4);background:linear-gradient(160deg,rgba(34,197,94,.1),var(--card))">
+            <div class="example-label" style="color:var(--green)">⭐ Wariant STANDARD</div>
+            <hr class="example-divider">
+            <div>
+              <div class="example-label">Sprzedaży dziennie</div>
+              <div class="example-value">10 zamówień</div>
+            </div>
+            <div>
+              <div class="example-label">Marża na zamówienie</div>
+              <div class="example-value">40 zł</div>
+            </div>
+            <div>
+              <div class="example-label">Zarobek miesięczny</div>
+              <div class="example-earning">12&nbsp;000 zł</div>
+            </div>
+          </div>
+
+          <div class="example-card">
+            <div class="example-label">Wariant PRO</div>
+            <hr class="example-divider">
+            <div>
+              <div class="example-label">Sprzedaży dziennie</div>
+              <div class="example-value">30 zamówień</div>
+            </div>
+            <div>
+              <div class="example-label">Marża na zamówienie</div>
+              <div class="example-value">60 zł</div>
+            </div>
+            <div>
+              <div class="example-label">Zarobek miesięczny</div>
+              <div class="example-earning">54&nbsp;000 zł</div>
+            </div>
+          </div>
+
+        </div>
+        <p class="hint" style="margin-top:16px;font-size:13px">* Przykładowe obliczenia. Rzeczywiste zarobki zależą od wybranych produktów, marży i skuteczności sprzedaży.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════ KALKULATOR ══════════════ -->
+    <section class="calc-section" id="kalkulator">
+      <div class="wrap">
+        <span class="eyebrow">🧮 Kalkulator zarobków</span>
+        <h2 style="margin-top:12px">Oblicz swój zarobek</h2>
+        <p class="lead">Przesuń suwaki i sprawdź, ile możesz zarobić sprzedając produkty przez Qualitet.</p>
+        <div class="calc-card">
+          <div class="calc-fields">
+            <div class="calc-field">
+              <label for="calc-sales">
+                Sprzedaży dziennie:
+                <span class="range-value" id="calc-sales-val">10</span>
+              </label>
+              <input type="range" id="calc-sales" min="1" max="100" value="10" step="1" aria-label="Liczba sprzedaży dziennie">
+            </div>
+            <div class="calc-field">
+              <label for="calc-margin">
+                Marża na zamówienie:
+                <span class="range-value" id="calc-margin-val">40</span> zł
+              </label>
+              <input type="range" id="calc-margin" min="5" max="500" value="40" step="5" aria-label="Marża na zamówienie w złotych">
+            </div>
+          </div>
+          <div class="calc-result" role="region" aria-live="polite" aria-label="Wynik kalkulatora">
+            <div class="calc-result-main">
+              <div class="calc-result-label">Zarobek miesięczny</div>
+              <div class="calc-result-value" id="calc-monthly">12&nbsp;000 zł</div>
+              <div class="calc-result-sub" id="calc-daily-label">przy 10 sprzedażach dziennie × 40 zł marży</div>
+            </div>
+            <div class="calc-result-breakdown">
+              <div class="calc-result-item">
+                <span>Dziennie</span>
+                <strong id="calc-daily">400 zł</strong>
+              </div>
+              <div class="calc-result-item">
+                <span>Tygodniowo</span>
+                <strong id="calc-weekly">2&nbsp;800 zł</strong>
+              </div>
+              <div class="calc-result-item">
+                <span>Rocznie</span>
+                <strong id="calc-yearly">146&nbsp;000 zł</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════ CTA ══════════════ -->
+    <section class="earn-cta-section">
+      <div class="wrap">
+        <div class="earn-cta-box">
+          <span style="font-size:52px" aria-hidden="true">🚀</span>
+          <h2>Gotowy, żeby zacząć zarabiać?</h2>
+          <p>Dołącz do ponad 1200 sprzedawców korzystających z platformy Qualitet. Zarejestruj się, wybierz produkty i zacznij sprzedawać już dziś.</p>
+          <a class="btn-earn-primary" href="generator-sklepu.html">Załóż sklep i zacznij zarabiać</a>
+          <div style="margin-top:20px;display:flex;gap:24px;justify-content:center;flex-wrap:wrap">
+            <span class="hint" style="display:flex;align-items:center;gap:6px"><span style="color:var(--green)">✓</span> Bez magazynu</span>
+            <span class="hint" style="display:flex;align-items:center;gap:6px"><span style="color:var(--green)">✓</span> Bez inwestycji w towar</span>
+            <span class="hint" style="display:flex;align-items:center;gap:6px"><span style="color:var(--green)">✓</span> Sam ustalasz marżę</span>
+            <span class="hint" style="display:flex;align-items:center;gap:6px"><span style="color:var(--green)">✓</span> Wsparcie 24/7</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="wrap" style="margin-top:0;padding-bottom:20px">
+    <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:16px;padding:20px 0;border-top:1px solid var(--stroke)">
+      <span style="color:var(--muted);font-size:14px">© 2025 Qualitet &mdash; Platforma dropshipping</span>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <a href="index.html" style="color:var(--muted);font-size:14px">Strona główna</a>
+        <a href="cennik.html" style="color:var(--muted);font-size:14px">Cennik</a>
+        <a href="hurtownie.html" style="color:var(--muted);font-size:14px">Hurtownie</a>
+        <a href="dashboard.html" style="color:var(--muted);font-size:14px">Dashboard</a>
+      </div>
+    </div>
+  </footer>
+
+  <div id="billing-announcer" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+
+  <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
+    <a href="index.html" rel="nofollow noreferrer" data-nav="index">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 11.5L12 4l9 7.5"></path>
+        <path d="M5 10.5V20h14v-9.5"></path>
+      </svg>
+      <span>Start</span>
+    </a>
+    <a href="zarabiaj.html" rel="nofollow noreferrer" data-nav="zarabiaj" class="is-active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="M9 12l2 2 4-4"></path>
+      </svg>
+      <span>Zarabiaj</span>
+    </a>
+    <a href="hurtownie.html" rel="nofollow noreferrer" data-nav="hurtownie">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="7" width="7" height="10" rx="1.4"></rect>
+        <rect x="14" y="7" width="7" height="10" rx="1.4"></rect>
+        <path d="M6.5 7V5.5a1.5 1.5 0 0 1 3 0V7"></path>
+      </svg>
+      <span>Hurtownie</span>
+    </a>
+    <a href="dashboard.html" rel="nofollow noreferrer" data-nav="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="14" width="7" height="7" rx="1.2"></rect>
+        <rect x="3" y="14" width="7" height="7" rx="1.2"></rect>
+      </svg>
+      <span>Panel</span>
+    </a>
+    <a href="login.html" rel="nofollow noreferrer" data-nav="login">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4 20c2-3.5 6-5 8-5s6 1.5 8 5"></path>
+      </svg>
+      <span>Konto</span>
+    </a>
+  </nav>
+
+  <script src="js/app.js" defer></script>
+  <script>
+    (function () {
+      function formatPLN(n) {
+        return n.toLocaleString('pl-PL') + ' zł';
+      }
+
+      var salesInput = document.getElementById('calc-sales');
+      var marginInput = document.getElementById('calc-margin');
+      var salesVal = document.getElementById('calc-sales-val');
+      var marginVal = document.getElementById('calc-margin-val');
+      var monthly = document.getElementById('calc-monthly');
+      var daily = document.getElementById('calc-daily');
+      var weekly = document.getElementById('calc-weekly');
+      var yearly = document.getElementById('calc-yearly');
+      var dailyLabel = document.getElementById('calc-daily-label');
+
+      function update() {
+        var sales = parseInt(salesInput.value, 10);
+        var margin = parseInt(marginInput.value, 10);
+        var perDay = sales * margin;
+        var perMonth = perDay * 30;
+        var perWeek = perDay * 7;
+        var perYear = perDay * 365;
+
+        salesVal.textContent = sales;
+        marginVal.textContent = margin;
+        monthly.textContent = formatPLN(perMonth);
+        daily.textContent = formatPLN(perDay);
+        weekly.textContent = formatPLN(perWeek);
+        yearly.textContent = formatPLN(perYear);
+        dailyLabel.textContent = 'przy ' + sales + ' ' + (sales === 1 ? 'sprzedaży' : 'sprzedażach') + ' dziennie × ' + margin + ' zł marży';
+      }
+
+      salesInput.addEventListener('input', update);
+      marginInput.addEventListener('input', update);
+      update();
+    }());
+  </script>
+</body>
+</html>
