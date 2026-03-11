@@ -221,6 +221,8 @@
     </a>
   </nav>
 
+  <script src="js/api.js" defer></script>
+  <script src="js/flow.js" defer></script>
   <script src="js/app.js" defer></script>
   <script src="js/cart.js" defer></script>
   <script>
@@ -326,16 +328,40 @@
             phone: fd.get('phone') || '',
             address: fd.get('address') || ''
           };
-          var order = cart.saveOrder(formData, items);
-          try{ sessionStorage.setItem('qm_last_order', order.number); }catch(e){}
-          setTimeout(function(){
+
+          function showSuccess(orderNum){
             cart.clearCart();
             var numEl = document.querySelector('[data-order-number]');
-            if(numEl){ numEl.textContent = 'Numer zamówienia: ' + order.number; }
+            if(numEl){ numEl.textContent = 'Numer zamówienia: ' + (orderNum || '—'); }
             if(contentEl) contentEl.hidden = true;
             if(successEl) successEl.hidden = false;
             window.scrollTo({top: 0, behavior: 'smooth'});
-          }, 400);
+            if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Złóż zamówienie'; }
+          }
+
+          function localOrder(){
+            var order = cart.saveOrder(formData, items);
+            try{ sessionStorage.setItem('qm_last_order', order.number); }catch(_){}
+            showSuccess(order.number);
+          }
+
+          // Flow 6: try API order creation first
+          if(typeof window.QM_API_CREATE_ORDER === 'function'){
+            window.QM_API_CREATE_ORDER(formData, items)
+              .then(function(apiOrder){
+                var num = apiOrder && (apiOrder.order_number || apiOrder.id || '');
+                try{ if(num) sessionStorage.setItem('qm_last_order', num); }catch(_){}
+                showSuccess(num);
+              })
+              .catch(function(){
+                // API unavailable or user not logged in – fall back
+                localOrder();
+              });
+          } else {
+            setTimeout(function(){
+              localOrder();
+            }, 400);
+          }
         });
       }
 

@@ -221,6 +221,28 @@
         </div>
       </section>
 
+      <section class="panel-card" data-api-orders-panel hidden>
+        <div class="store-summary-head">
+          <div>
+            <span class="eyebrow">Historia zamówień</span>
+            <h2>Moje zamówienia</h2>
+            <p class="hint">Zamówienia pobrane z API backendu.</p>
+          </div>
+          <a class="btn btn-secondary" href="koszyk.html">Koszyk</a>
+        </div>
+        <table class="owner-table" style="width:100%;border-collapse:collapse;font-size:14px">
+          <thead>
+            <tr>
+              <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--stroke)">Nr zamówienia</th>
+              <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--stroke)">Data</th>
+              <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--stroke)">Kwota</th>
+              <th style="text-align:left;padding:8px 12px;border-bottom:1px solid var(--stroke)">Status</th>
+            </tr>
+          </thead>
+          <tbody data-api-orders-tbody></tbody>
+        </table>
+      </section>
+
       <section class="helper-grid dashboard-helpers">
         <article class="helper-card tip" data-helper>
           <h3>TIP</h3>
@@ -294,6 +316,8 @@
     </a>
   </nav>
 
+  <script src="js/api.js" defer></script>
+  <script src="js/flow.js" defer></script>
   <script src="js/app.js" defer></script>
 </body>
 </html>
