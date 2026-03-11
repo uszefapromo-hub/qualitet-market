@@ -11,7 +11,7 @@ Node.js / Express REST API z bazą danych PostgreSQL dla platformy HurtDetalUsze
 
 ---
 
-## Szybki start
+## Szybki start (lokalny)
 
 ```bash
 # 1. Zainstaluj zależności
@@ -25,13 +25,33 @@ cp .env.example .env
 # 3. Utwórz bazę danych PostgreSQL
 createdb hurtdetal_qualitet
 
-# 4. Uruchom migracje (tworzy schemat tabel)
+# 4. Uruchom migracje (tworzy schemat tabel – uruchamia 001 i 002 automatycznie)
 npm run migrate
 
 # 5. Uruchom serwer
 npm start          # produkcja
 npm run dev        # tryb deweloperski (auto-restart)
 ```
+
+---
+
+## Docker (backend + PostgreSQL)
+
+```bash
+# Skopiuj zmienne środowiskowe
+cp .env.example .env
+
+# Uruchom stack (API na porcie 3000, PostgreSQL na porcie 5432)
+docker compose up -d
+
+# Logi
+docker compose logs -f api
+
+# Zatrzymaj
+docker compose down
+```
+
+Migracje są uruchamiane automatycznie przy starcie kontenera `api`.
 
 ---
 
@@ -120,6 +140,7 @@ Ceny są obliczane automatycznie:
 
 | Metoda | Ścieżka           | Opis                   | Auth              |
 |--------|-------------------|------------------------|-------------------|
+| GET    | `/my`             | Moje zamówienia (kupujący) | tak           |
 | GET    | `/`               | Lista zamówień         | tak               |
 | GET    | `/:id`            | Szczegóły zamówienia   | tak               |
 | POST   | `/`               | Utwórz zamówienie      | tak               |
@@ -127,17 +148,97 @@ Ceny są obliczane automatycznie:
 
 Statusy: `pending` → `confirmed` → `shipped` → `delivered` / `cancelled`
 
-#### Tworzenie zamówienia – przykład
+#### Tworzenie zamówienia z koszyka – przykład
 ```json
 POST /api/orders
 {
-  "store_id": "uuid-sklepu",
+  "cart_id": "uuid-koszyka",
+  "shipping_address": "ul. Przykładowa 1, 00-001 Warszawa"
+}
+```
+
+#### Tworzenie zamówienia bezpośrednio – przykład
+```json
+POST /api/orders
+{
   "items": [
-    { "product_id": "uuid-produktu", "quantity": 2 }
+    { "shop_product_id": "uuid-shop-produktu", "quantity": 2 }
   ],
   "shipping_address": "ul. Przykładowa 1, 00-001 Warszawa"
 }
 ```
+
+---
+
+### Kategorie `/api/categories`
+
+| Metoda | Ścieżka   | Opis                          | Auth           |
+|--------|-----------|-------------------------------|----------------|
+| GET    | `/`       | Lista kategorii (publiczny)   | nie            |
+| GET    | `/:id`    | Szczegóły kategorii           | nie            |
+| POST   | `/`       | Utwórz kategorię              | admin/owner    |
+| PUT    | `/:id`    | Aktualizuj kategorię          | admin/owner    |
+
+Query params: `parent_id` (filtrowanie po kategorii nadrzędnej)
+
+---
+
+### Produkty sklepu `/api/shops` i `/api/my/store`
+
+| Metoda | Ścieżka                       | Opis                                   | Auth               |
+|--------|-------------------------------|----------------------------------------|--------------------|
+| GET    | `/shops/:slug/products`       | Produkty sklepu (publiczny)            | nie                |
+| GET    | `/my/store/products`          | Moje produkty w sklepie                | seller             |
+| POST   | `/my/store/products`          | Dodaj produkt z katalogu do sklepu     | seller             |
+| PATCH  | `/my/store/products/:id`      | Aktualizuj listing (marża, opis, itp.) | seller/admin       |
+| DELETE | `/my/store/products/:id`      | Usuń produkt ze sklepu                 | seller/admin       |
+
+Model marketplace: sprzedawca nie tworzy produktu od zera – dodaje produkt z globalnego
+katalogu (`POST /api/products`) do swojego sklepu przez `shop_products`. Cena sprzedaży
+wyliczana jest automatycznie z ceny bazowej i marży sklepu.
+
+#### Dodanie produktu do sklepu – przykład
+```json
+POST /api/my/store/products
+{
+  "product_id": "uuid-produktu-globalnego",
+  "custom_title": "Mój tytuł (opcjonalnie)",
+  "margin_type": "percent",
+  "margin_value": 25
+}
+```
+
+---
+
+### Koszyk `/api/cart`
+
+| Metoda | Ścieżka              | Opis                           | Auth |
+|--------|----------------------|--------------------------------|------|
+| GET    | `/`                  | Pobierz aktywny koszyk         | tak  |
+| POST   | `/`                  | Dodaj produkt do koszyka       | tak  |
+| DELETE | `/items/:itemId`     | Usuń pozycję z koszyka         | tak  |
+
+#### Dodanie do koszyka – przykład
+```json
+POST /api/cart
+{
+  "shop_product_id": "uuid-produktu-sklepu",
+  "quantity": 2
+}
+```
+
+---
+
+### Panel admina `/api/admin`
+
+| Metoda | Ścieżka              | Opis                           | Auth        |
+|--------|----------------------|--------------------------------|-------------|
+| GET    | `/orders`            | Wszystkie zamówienia           | admin/owner |
+| PATCH  | `/orders/:id/status` | Zmień status zamówienia        | admin/owner |
+| GET    | `/audit-logs`        | Logi audytowe                  | admin/owner |
+| GET    | `/users`             | Lista użytkowników             | admin/owner |
+
+Query params dla `/audit-logs`: `entity_type`, `actor_user_id`, `action`, `page`, `limit`
 
 ---
 
