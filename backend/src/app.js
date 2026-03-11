@@ -13,6 +13,10 @@ const productsRouter = require('./routes/products');
 const ordersRouter = require('./routes/orders');
 const subscriptionsRouter = require('./routes/subscriptions');
 const suppliersRouter = require('./routes/suppliers');
+const categoriesRouter = require('./routes/categories');
+const shopProductsRouter = require('./routes/shop_products');
+const cartRouter = require('./routes/cart');
+const adminRouter = require('./routes/admin');
 
 const app = express();
 
@@ -71,6 +75,11 @@ app.use('/api/products', productsRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/subscriptions', subscriptionsRouter);
 app.use('/api/suppliers', suppliersRouter);
+app.use('/api/categories', categoriesRouter);
+// shop_products mounts two path groups: /api/shops/:slug/products + /api/my/store/products
+app.use('/api', shopProductsRouter);
+app.use('/api/cart', cartRouter);
+app.use('/api/admin', adminRouter);
 
 // ─── 404 ───────────────────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'Nie znaleziono zasobu' }));
