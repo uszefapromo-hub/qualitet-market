@@ -3617,13 +3617,20 @@
     const tabNav = document.querySelector('[data-owner-tab-nav]');
     const tabPanels = document.querySelectorAll('[data-owner-tab-panel]');
     function showTab(tabId){
+      let targetPanel = null;
       tabPanels.forEach(panel => {
-        panel.hidden = panel.dataset.ownerTabPanel !== tabId;
+        const isActive = panel.dataset.ownerTabPanel === tabId;
+        panel.hidden = !isActive;
+        if(isActive) targetPanel = panel;
       });
       if(tabNav){
         tabNav.querySelectorAll('[data-owner-tab]').forEach(link => {
           link.classList.toggle('active', link.dataset.ownerTab === tabId);
         });
+      }
+      if(targetPanel){
+        targetPanel.setAttribute('tabindex', '-1');
+        targetPanel.focus({preventScroll: false});
       }
     }
     if(tabNav){
@@ -3868,7 +3875,7 @@
       const exportBtn = document.querySelector('[data-export-users]');
       if(exportBtn){
         exportBtn.addEventListener('click', () => {
-          const headers = ['ID','Nazwa','Email','Telefon','Kraj','Rola','Plan','Rejestracja','Sprzedaze','Obrot'];
+          const headers = ['ID','Nazwa','Email','Telefon','Kraj','Rola','Plan','Rejestracja','Sprzeda\u017ce','Obr\u00f3t'];
           const rows = users.map(u => [u.id, u.name, u.email, u.phone || '', u.country || '', u.role || 'client', u.plan, u.createdAt, u.sales || 0, u.turnover || 0]);
           const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
           const blob = new Blob([csv], {type: 'text/csv'});
@@ -4139,12 +4146,23 @@
     const copyRefBtn = document.querySelector('[data-copy-referral-link]');
     if(copyRefBtn && ownerRefLink){
       copyRefBtn.addEventListener('click', () => {
-        ownerRefLink.select();
-        try {
-          document.execCommand('copy');
+        const linkValue = ownerRefLink.value;
+        if(navigator.clipboard && typeof navigator.clipboard.writeText === 'function'){
+          navigator.clipboard.writeText(linkValue).then(() => {
+            copyRefBtn.textContent = 'Skopiowano!';
+            window.setTimeout(() => { copyRefBtn.textContent = 'Kopiuj link'; }, 2000);
+          }).catch(() => {
+            ownerRefLink.select();
+            try { document.execCommand('copy'); } catch(_e){/* ignore */}
+            copyRefBtn.textContent = 'Skopiowano!';
+            window.setTimeout(() => { copyRefBtn.textContent = 'Kopiuj link'; }, 2000);
+          });
+        } else {
+          ownerRefLink.select();
+          try { document.execCommand('copy'); } catch(_e){/* ignore */}
           copyRefBtn.textContent = 'Skopiowano!';
           window.setTimeout(() => { copyRefBtn.textContent = 'Kopiuj link'; }, 2000);
-        } catch(_e){/* ignore */}
+        }
       });
     }
 
