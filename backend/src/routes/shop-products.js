@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { logAudit } = require('../config/audit');
 
 const router = express.Router();
 
@@ -101,6 +102,16 @@ router.post(
          RETURNING *`,
         [id, store_id, product_id, price_override, margin_override, sort_order]
       );
+
+      await logAudit({
+        userId: req.user.id,
+        action: 'shop_product.created',
+        entityType: 'shop_product',
+        entityId: result.rows[0].id,
+        payload: { store_id, product_id },
+        ip: req.ip,
+      });
+
       return res.status(201).json(result.rows[0]);
     } catch (err) {
       console.error('add shop product error:', err.message);
@@ -189,6 +200,16 @@ router.delete(
       }
 
       await db.query('DELETE FROM shop_products WHERE id = $1', [req.params.id]);
+
+      await logAudit({
+        userId: req.user.id,
+        action: 'shop_product.deleted',
+        entityType: 'shop_product',
+        entityId: req.params.id,
+        payload: null,
+        ip: req.ip,
+      });
+
       return res.json({ message: 'Produkt usunięty ze sklepu' });
     } catch (err) {
       console.error('delete shop product error:', err.message);

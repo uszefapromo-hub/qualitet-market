@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { logAudit } = require('../config/audit');
 
 const router = express.Router();
 
@@ -156,6 +157,16 @@ router.post(
 
       const newOrder = await db.query('SELECT * FROM orders WHERE id = $1', [req._createdOrderId]);
       const newItems = await db.query('SELECT * FROM order_items WHERE order_id = $1', [req._createdOrderId]);
+
+      await logAudit({
+        userId: req.user.id,
+        action: 'order.created',
+        entityType: 'order',
+        entityId: req._createdOrderId,
+        payload: { store_id, total: newOrder.rows[0].total },
+        ip: req.ip,
+      });
+
       return res.status(201).json({ ...newOrder.rows[0], items: newItems.rows });
     } catch (err) {
       console.error('create order error:', err.message);
@@ -189,6 +200,16 @@ router.patch(
         'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
         [req.body.status, req.params.id]
       );
+
+      await logAudit({
+        userId: req.user.id,
+        action: 'order.status_changed',
+        entityType: 'order',
+        entityId: req.params.id,
+        payload: { previous: order.status, new: req.body.status },
+        ip: req.ip,
+      });
+
       return res.json(result.rows[0]);
     } catch (err) {
       console.error('update order status error:', err.message);

@@ -18,6 +18,8 @@ const cartRouter = require('./routes/cart');
 const adminRouter = require('./routes/admin');
 const paymentsRouter = require('./routes/payments');
 const shopProductsRouter = require('./routes/shop-products');
+const shopsRouter = require('./routes/shops');
+const myRouter = require('./routes/my');
 
 const app = express();
 
@@ -81,6 +83,8 @@ app.use('/api/cart', cartRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/payments', paymentsRouter);
 app.use('/api/shop-products', shopProductsRouter);
+app.use('/api/shops', shopsRouter);
+app.use('/api/my', myRouter);
 
 // ─── 404 ───────────────────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'Nie znaleziono zasobu' }));

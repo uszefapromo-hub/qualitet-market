@@ -72,17 +72,15 @@ router.get('/', authenticate, async (req, res) => {
 });
 
 // ─── POST /api/cart/items – add item to cart ───────────────────────────────────
+// POST /api/cart  – convenience alias (same behaviour)
 
-router.post(
-  '/items',
-  authenticate,
-  [
-    body('store_id').isUUID(),
-    body('product_id').isUUID(),
-    body('quantity').isInt({ min: 1 }),
-  ],
-  validate,
-  async (req, res) => {
+const addItemValidators = [
+  body('store_id').isUUID(),
+  body('product_id').isUUID(),
+  body('quantity').isInt({ min: 1 }),
+];
+
+async function addItemHandler(req, res) {
     const { store_id, product_id, quantity } = req.body;
 
     try {
@@ -134,8 +132,10 @@ router.post(
       console.error('add cart item error:', err.message);
       return res.status(500).json({ error: 'Błąd serwera' });
     }
-  }
-);
+}
+
+router.post('/',      authenticate, addItemValidators, validate, addItemHandler);
+router.post('/items', authenticate, addItemValidators, validate, addItemHandler);
 
 // ─── PUT /api/cart/items/:productId – update item quantity ────────────────────
 

@@ -53,6 +53,7 @@ docker compose up --build
 |------|------|
 | `001_initial_schema.sql` | Podstawowy schemat: `users`, `subscriptions`, `suppliers`, `stores`, `products`, `orders`, `order_items` |
 | `002_extended_schema.sql` | Rozszerzony schemat marketplace: `categories`, `product_images`, `shop_products`, `carts`, `cart_items`, `payments`, `audit_logs` + kolumna `category_id` w `products` |
+| `003_marketplace_fields.sql` | Dodatkowe pola marketplace: `custom_title`, `custom_description`, `margin_type`, `margin_value`, `selling_price`, `source_snapshot` w `shop_products`; `shop_product_id` w `cart_items` |
 
 Uruchomienie wszystkich migracji:
 ```bash
@@ -84,6 +85,8 @@ backend/
 │       ├── stores.js           # /api/stores
 │       ├── products.js         # /api/products  (centralny katalog)
 │       ├── shop-products.js    # /api/shop-products (produkt w sklepie)
+│       ├── shops.js            # /api/shops  (publiczny listing po slug)
+│       ├── my.js               # /api/my     (orders + store products dla zalogowanego)
 │       ├── categories.js       # /api/categories
 │       ├── cart.js             # /api/cart
 │       ├── orders.js           # /api/orders
@@ -150,7 +153,7 @@ Query params dla `GET /`: `store_id`, `category`, `search`, `page`, `limit`
 
 ---
 
-### Produkty sklepu `/api/shop-products` – marketplace
+### Produkty sklepu `/api/shop-products` – marketplace (admin/seller API)
 
 Seller dodaje produkty z centralnego katalogu do swojego sklepu.
 
@@ -160,6 +163,27 @@ Seller dodaje produkty z centralnego katalogu do swojego sklepu.
 | POST   | `/`     | Dodaj produkt do sklepu           | seller/owner/admin |
 | PUT    | `/:id`  | Aktualizuj (cena/marża/kolejność) | właściciel/admin   |
 | DELETE | `/:id`  | Usuń produkt ze sklepu            | właściciel/admin   |
+
+---
+
+### Sklepy (publiczny) `/api/shops`
+
+| Metoda | Ścieżka              | Opis                                   | Auth |
+|--------|----------------------|----------------------------------------|------|
+| GET    | `/:slug/products`    | Produkty sklepu po slug (publiczny)    | nie  |
+
+---
+
+### Moje zasoby `/api/my`
+
+Endpointy dla zalogowanego użytkownika.
+
+| Metoda | Ścieżka              | Opis                                    | Auth |
+|--------|----------------------|-----------------------------------------|------|
+| GET    | `/orders`            | Moje zamówienia (jako kupujący)         | tak  |
+| POST   | `/store/products`    | Dodaj produkt do mojego sklepu          | tak (seller+) |
+| PATCH  | `/store/products/:id`| Aktualizuj produkt w moim sklepie       | tak (seller+) |
+| DELETE | `/store/products/:id`| Usuń produkt z mojego sklepu            | tak (seller+) |
 
 ---
 
@@ -177,13 +201,14 @@ Seller dodaje produkty z centralnego katalogu do swojego sklepu.
 
 ### Koszyk `/api/cart`
 
-| Metoda | Ścieżka              | Opis                    | Auth |
-|--------|----------------------|-------------------------|------|
-| GET    | `/`                  | Pobierz koszyk          | tak  |
-| POST   | `/items`             | Dodaj produkt do koszyka| tak  |
-| PUT    | `/items/:productId`  | Zmień ilość             | tak  |
-| DELETE | `/items/:productId`  | Usuń produkt z koszyka  | tak  |
-| DELETE | `/`                  | Wyczyść koszyk          | tak  |
+| Metoda | Ścieżka              | Opis                     | Auth |
+|--------|----------------------|--------------------------|------|
+| GET    | `/`                  | Pobierz koszyk           | tak  |
+| POST   | `/`                  | Dodaj produkt do koszyka | tak  |
+| POST   | `/items`             | Dodaj produkt (alias)    | tak  |
+| PUT    | `/items/:productId`  | Zmień ilość              | tak  |
+| DELETE | `/items/:productId`  | Usuń produkt z koszyka   | tak  |
+| DELETE | `/`                  | Wyczyść koszyk           | tak  |
 
 Params: `store_id` (wymagany dla GET, w body dla pozostałych)
 
@@ -285,7 +310,7 @@ npm test
 ```
 
 Testy używają mocków bazy danych – nie wymagają połączenia z PostgreSQL.
-42 testów pokrywa: users, stores, products, categories, cart, orders, payments, shop-products, admin stats, subscriptions, suppliers.
+62 testów pokrywa: users, stores, products, categories, cart (w tym alias POST /api/cart), orders, payments, shop-products, shops (publiczny slug), my/orders, my/store/products, admin stats, subscriptions, suppliers.
 
 ---
 
@@ -305,10 +330,13 @@ Testy używają mocków bazy danych – nie wymagają połączenia z PostgreSQL.
 | Profil użytkownika | `GET /api/users/me` | Zastąp `localStorage.getItem('qm_user')` |
 | Lista sklepów | `GET /api/stores` | `StoreManager` → API |
 | Tworzenie sklepu | `POST /api/stores` | `generator-sklepu.html` |
-| Produkty sklepu | `GET /api/shop-products?store_id=…` | Listing produktów |
-| Koszyk | `GET/POST/PUT/DELETE /api/cart` | Zastąp `localStorage` koszyk |
+| Produkty sklepu (publiczny) | `GET /api/shops/:slug/products` | Listing produktów po slug sklepu |
+| Produkty sklepu (admin/seller) | `GET /api/shop-products?store_id=…` | Panel sprzedawcy |
+| Dodaj produkt do sklepu | `POST /api/my/store/products` | Panel sprzedawcy |
+| Koszyk | `GET/POST/DELETE /api/cart` | Zastąp `localStorage` koszyk |
 | Składanie zamówień | `POST /api/orders` | `sklep.html` checkout |
-| Status zamówień | `GET /api/orders` | Panel kupującego |
+| Moje zamówienia | `GET /api/my/orders` | Panel kupującego |
+| Status zamówień | `GET /api/orders` | Panel sprzedawcy |
 | Subskrypcja | `POST /api/subscriptions` | `cennik.html` |
 | Kategorie | `GET /api/categories` | Filtry na listingu |
 | Panel admina | `GET /api/admin/stats` | `owner-panel.html` |

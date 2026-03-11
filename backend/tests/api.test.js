@@ -856,6 +856,218 @@ describe('POST /api/shop-products', () => {
   });
 });
 
+// ─── Shops (public slug-based) ─────────────────────────────────────────────────
+
+describe('GET /api/shops/:slug/products', () => {
+  it('returns 404 for unknown slug', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // store not found
+    const res = await request(app).get('/api/shops/non-existent-slug/products');
+    expect(res.status).toBe(404);
+  });
+
+  it('returns product list for active store', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID, name: 'Mój Sklep', slug: 'moj-sklep', description: '', logo_url: null, status: 'active' }] }) // store
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] }) // count
+      .mockResolvedValueOnce({ rows: [{ shop_product_id: 'sp-1', name: 'Fotel', price: '141.45', stock: 10 }] }); // products
+
+    const res = await request(app).get('/api/shops/moj-sklep/products');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('store');
+    expect(res.body).toHaveProperty('products');
+    expect(res.body.store.slug).toBe('moj-sklep');
+    expect(res.body.total).toBe(1);
+  });
+
+  it('returns 404 when store is not active', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: STORE_ID, name: 'Mój Sklep', slug: 'moj-sklep', status: 'suspended' }] });
+    const res = await request(app).get('/api/shops/moj-sklep/products');
+    expect(res.status).toBe(404);
+  });
+});
+
+// ─── My routes ─────────────────────────────────────────────────────────────────
+
+describe('GET /api/my/orders', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/my/orders');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns only the buyer orders for current user', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({ rows: [{ id: ORDER_ID, buyer_id: SELLER_ID, status: 'pending', total: 141.45 }] });
+
+    const res = await request(app)
+      .get('/api/my/orders')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('orders');
+    expect(res.body.orders).toHaveLength(1);
+  });
+
+  it('supports status filter', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .get('/api/my/orders?status=delivered')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.orders).toHaveLength(0);
+  });
+});
+
+describe('POST /api/my/store/products', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post('/api/my/store/products')
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects missing store_id', async () => {
+    const res = await request(app)
+      .post('/api/my/store/products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ product_id: PRODUCT_ID });
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 404 for unknown store', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // store not found
+    const res = await request(app)
+      .post('/api/my/store/products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID });
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 403 when user does not own the store', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: STORE_ID, owner_id: 'other-owner-id', margin: 15 }] });
+    const res = await request(app)
+      .post('/api/my/store/products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID });
+    expect(res.status).toBe(403);
+  });
+
+  it('adds product to store with computed selling_price', async () => {
+    const SP_ID = 'a0000000-0000-4000-8000-000000000010';
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID, owner_id: SELLER_ID, margin: 15 }] }) // store
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', price_net: 100, price_gross: 123, selling_price: 141.45, sku: 'F1', description: '', image_url: null, stock: 10, category: 'meble' }] }) // product
+      .mockResolvedValueOnce({ rows: [{ id: SP_ID, store_id: STORE_ID, product_id: PRODUCT_ID, selling_price: 155.60, active: true }] }) // insert
+      .mockResolvedValueOnce({ rows: [] }); // audit log insert
+
+    const res = await request(app)
+      .post('/api/my/store/products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, margin_type: 'percent', margin_value: 10 });
+    expect(res.status).toBe(201);
+    expect(res.body.store_id).toBe(STORE_ID);
+  });
+});
+
+describe('PATCH /api/my/store/products/:id', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).patch(`/api/my/store/products/${PRODUCT_ID}`);
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 for unknown shop product', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .patch(`/api/my/store/products/${PRODUCT_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ active: false });
+    expect(res.status).toBe(404);
+  });
+
+  it('updates margin and recalculates selling_price', async () => {
+    const SP_ID = 'a0000000-0000-4000-8000-000000000011';
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SP_ID, store_id: STORE_ID, product_id: PRODUCT_ID, owner_id: SELLER_ID, margin_type: 'percent', margin_value: 10, base_price: 141.45 }] }) // sp lookup
+      .mockResolvedValueOnce({ rows: [{ id: SP_ID, selling_price: 169.74, active: true }] }) // update
+      .mockResolvedValueOnce({ rows: [] }); // audit log
+
+    const res = await request(app)
+      .patch(`/api/my/store/products/${SP_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ margin_type: 'percent', margin_value: 20 });
+    expect(res.status).toBe(200);
+  });
+});
+
+describe('DELETE /api/my/store/products/:id', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).delete(`/api/my/store/products/${PRODUCT_ID}`);
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 for unknown shop product', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .delete(`/api/my/store/products/${PRODUCT_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('deletes the shop product', async () => {
+    const SP_ID = 'a0000000-0000-4000-8000-000000000012';
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SP_ID, store_id: STORE_ID, product_id: PRODUCT_ID, owner_id: SELLER_ID }] }) // sp lookup
+      .mockResolvedValueOnce({ rows: [] }) // delete
+      .mockResolvedValueOnce({ rows: [] }); // audit log
+
+    const res = await request(app)
+      .delete(`/api/my/store/products/${SP_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBeDefined();
+  });
+});
+
+// ─── POST /api/cart (convenience alias) ───────────────────────────────────────
+
+describe('POST /api/cart', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post('/api/cart')
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, quantity: 1 });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 422 for missing fields', async () => {
+    const res = await request(app)
+      .post('/api/cart')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID }); // missing product_id and quantity
+    expect(res.status).toBe(422);
+  });
+
+  it('adds item via POST /api/cart shorthand', async () => {
+    const CART_ID = 'cart-alias-1';
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, selling_price: 141.45, stock: 10, name: 'Fotel' }] })
+      .mockResolvedValueOnce({ rows: [{ id: CART_ID, user_id: SELLER_ID, store_id: STORE_ID, status: 'active' }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ id: CART_ID, user_id: SELLER_ID, store_id: STORE_ID, status: 'active' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'ci-alias', cart_id: CART_ID, product_id: PRODUCT_ID, quantity: 1, unit_price: 141.45, name: 'Fotel', image_url: null }] });
+
+    const res = await request(app)
+      .post('/api/cart')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, quantity: 1 });
+    expect(res.status).toBe(201);
+    expect(res.body.items).toHaveLength(1);
+  });
+});
+
 // ─── 404 ───────────────────────────────────────────────────────────────────────
 
 describe('Unknown route', () => {
