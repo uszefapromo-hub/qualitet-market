@@ -223,6 +223,8 @@
 
   <script src="js/app.js" defer></script>
   <script src="js/cart.js" defer></script>
+  <script src="js/api.js" defer></script>
+  <script src="js/flow.js" defer></script>
   <script>
     document.addEventListener('DOMContentLoaded', function(){
       var cart = window.QMCart;
@@ -237,7 +239,6 @@
       var summaryCount = document.querySelector('[data-summary-count]');
       var summaryTotal = document.querySelector('[data-summary-total]');
       var form = document.querySelector('[data-checkout-form]');
-      var submitBtn = document.querySelector('[data-checkout-btn]');
 
       function render(){
         var items = cart.getCart();
@@ -313,31 +314,8 @@
         });
       }
 
-      if(form){
-        form.addEventListener('submit', function(e){
-          e.preventDefault();
-          var items = cart.getCart();
-          if(!items.length) return;
-          if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Składam zamówienie...'; }
-          var fd = new FormData(form);
-          var formData = {
-            name: fd.get('name') || '',
-            email: fd.get('email') || '',
-            phone: fd.get('phone') || '',
-            address: fd.get('address') || ''
-          };
-          var order = cart.saveOrder(formData, items);
-          try{ sessionStorage.setItem('qm_last_order', order.number); }catch(e){}
-          setTimeout(function(){
-            cart.clearCart();
-            var numEl = document.querySelector('[data-order-number]');
-            if(numEl){ numEl.textContent = 'Numer zamówienia: ' + order.number; }
-            if(contentEl) contentEl.hidden = true;
-            if(successEl) successEl.hidden = false;
-            window.scrollTo({top: 0, behavior: 'smooth'});
-          }, 400);
-        });
-      }
+      /* Re-render when flow.js syncs the API cart into localStorage */
+      document.addEventListener('qm:cart-synced', render);
 
       render();
     });
