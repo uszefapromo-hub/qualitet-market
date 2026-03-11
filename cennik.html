@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pl">
 <head>
-  <title>Cennik - HurtDetal Uszefa QUALITET</title>
+  <title>Cennik - Qualitet | Plany subskrypcji</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="manifest" href="manifest.json">
@@ -17,10 +17,10 @@
   <div class="app-splash" data-app-splash>
     <div class="app-splash-card">
       <div class="app-splash-logo">
-        <img src="assets/icons/icon-192.svg" alt="UszefaQualitet">
+        <img src="assets/icons/icon-192.svg" alt="Qualitet">
       </div>
       <div class="app-splash-title">
-        <strong>UszefaQualitet</strong>
+        <strong>Qualitet</strong>
         <span>QualitetMarket</span>
       </div>
       <div class="app-splash-loader"></div>
@@ -30,15 +30,14 @@
     <div class="wrap topbar-inner">
       <a class="brand" href="index.html">
         <div>
-          <strong>UszefaQualitet</strong>
+          <strong>Qualitet</strong>
           <span>QualitetMarket</span>
-          <span class="brand-tag">U SZEFA</span>
         </div>
       </a>
       <nav class="nav" aria-label="Główna nawigacja">
         <a href="index.html">Start</a>
         <a href="dashboard.html">Dashboard</a>
-        <a href="cennik.html">Cennik</a>
+        <a href="cennik.html" class="active">Cennik</a>
       </nav>
       <a class="btn btn-primary topbar-cta" href="login.html">Wejdź do platformy</a>
       <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
@@ -48,9 +47,13 @@
   <main>
     <section class="page-hero">
       <div class="wrap">
-        <span class="eyebrow">Cennik U SZEFA</span>
+        <span class="eyebrow">Cennik Qualitet</span>
         <h1>Wybierz plan subskrypcji</h1>
-        <p class="lead">Zacznij od planu BASIC z 7-dniowym trialem, a następnie rozwijaj sprzedaż dzięki planom PRO i ELITE.</p>
+        <p class="lead">Zacznij od planu BASIC i rozwijaj sprzedaż dzięki planom PRO i ELITE.</p>
+        <div class="pricing-billing-toggle" role="group" aria-label="Okres rozliczeniowy" style="margin-top:20px">
+          <button class="pricing-billing-btn is-active" type="button" data-billing="monthly">Miesięcznie</button>
+          <button class="pricing-billing-btn" type="button" data-billing="yearly">Rocznie<span class="pricing-discount-badge">-20%</span></button>
+        </div>
       </div>
     </section>
 
@@ -65,52 +68,72 @@
       </div>
     </section>
 
-    <section class="wrap pricing-grid">
-      <article class="price-card" data-plan-card data-plan="basic">
-        <div class="plan-header">
-          <h3>BASIC</h3>
-          <span class="plan-current" data-current-plan hidden>AKTYWNY</span>
+    <section class="wrap pricing-grid-new" id="plany" style="padding:10px 0 30px">
+
+      <!-- BASIC -->
+      <article class="price-card-new card-basic" id="basic" data-plan-card data-plan="basic">
+        <div class="plan-name">BASIC</div>
+        <div class="plan-price-block">
+          <span class="plan-price">
+            <span data-monthly-price>99 zł</span>
+            <span data-yearly-price>79 zł</span>
+          </span>
+          <span class="plan-period">&nbsp;/ mies.</span>
         </div>
-        <strong>29 zł / miesiąc</strong>
-        <p class="hint">7 dni trialu na start</p>
-        <ul>
-          <li>Podstawowy panel sprzedaży</li>
-          <li>Lista produktów i zamówień</li>
-          <li>Wsparcie startowe U SZEFA</li>
+        <p class="plan-hint">Idealny start dropshippingu</p>
+        <ul class="plan-features">
+          <li>Twój Sklep pod własną marką</li>
+          <li>Podstawowe moduły sprzedaży</li>
+          <li>1 Hurtownia w pakiecie</li>
+          <li>Wsparcie startowe</li>
         </ul>
-        <a class="btn btn-primary" href="https://buy.stripe.com/28E4gz3qP0er3AL2P0ak000" data-plan-checkout data-plan="basic">Kup BASIC</a>
+        <span class="plan-current" data-current-plan hidden>AKTYWNY</span>
+        <a class="btn-plan" href="https://buy.stripe.com/28E4gz3qP0er3AL2P0ak000" data-plan-checkout data-plan="basic">Wybierz BASIC</a>
       </article>
 
-      <article class="price-card featured" data-plan-card data-plan="pro">
+      <!-- PRO -->
+      <article class="price-card-new card-pro" id="pro" data-plan-card data-plan="pro">
         <span class="badge">Najczęściej wybierany</span>
-        <div class="plan-header">
-          <h3>PRO</h3>
-          <span class="plan-current" data-current-plan hidden>AKTYWNY</span>
+        <div class="plan-name">PRO</div>
+        <div class="plan-price-block">
+          <span class="plan-price">
+            <span data-monthly-price>199 zł</span>
+            <span data-yearly-price>159 zł</span>
+          </span>
+          <span class="plan-period">&nbsp;/ mies.</span>
         </div>
-        <strong>79 zł / miesiąc</strong>
-        <p class="hint">Pełny dostęp do hurtowni i listingów</p>
-        <ul>
-          <li>Moduł Hurtownie + QualitetMarket</li>
-          <li>Listing i CRM sprzedaży</li>
+        <p class="plan-hint">Pełny dostęp do hurtowni i CRM</p>
+        <ul class="plan-features">
+          <li>Pełny Dostęp do platformy</li>
+          <li>Hurtownie + CRM sprzedaży</li>
+          <li>Automatyzacje procesów</li>
           <li>Priorytetowe wsparcie 24/7</li>
         </ul>
-        <a class="btn btn-primary" href="https://buy.stripe.com/aFa5kD9PdgdpgnxdtEak001" data-plan-checkout data-plan="pro">Kup PRO</a>
+        <span class="plan-current" data-current-plan hidden>AKTYWNY</span>
+        <a class="btn-plan" href="https://buy.stripe.com/aFa5kD9PdgdpgnxdtEak001" data-plan-checkout data-plan="pro">Wybierz PRO</a>
       </article>
 
-      <article class="price-card" data-plan-card data-plan="elite">
-        <div class="plan-header">
-          <h3>ELITE</h3>
-          <span class="plan-current" data-current-plan hidden>AKTYWNY</span>
+      <!-- ELITE -->
+      <article class="price-card-new card-elite" id="elite" data-plan-card data-plan="elite">
+        <div class="plan-name">ELITE</div>
+        <div class="plan-price-block">
+          <span class="plan-price">
+            <span data-monthly-price>499 zł</span>
+            <span data-yearly-price>399 zł</span>
+          </span>
+          <span class="plan-period">&nbsp;/ mies.</span>
         </div>
-        <strong>199 zł / miesiąc</strong>
-        <p class="hint">Ekskluzywne AI + analityka sprzedaży</p>
-        <ul>
-          <li>Intelligence + analizy predykcyjne</li>
-          <li>Dedykowany opiekun i wdrożenie</li>
-          <li>Pełny pakiet automatyzacji</li>
+        <p class="plan-hint">AI, analityka i wsparcie VIP</p>
+        <ul class="plan-features">
+          <li>AI + Analityka predykcyjna</li>
+          <li>Unlimited sklepów i hurtowni</li>
+          <li>Wsparcie VIP i dedykowany opiekun</li>
+          <li>Pełna automatyzacja sprzedaży</li>
         </ul>
-        <a class="btn btn-primary" href="https://buy.stripe.com/7sY4gz5yX6CP0ozdtEak002" data-plan-checkout data-plan="elite">Kup ELITE</a>
+        <span class="plan-current" data-current-plan hidden>AKTYWNY</span>
+        <a class="btn-plan" href="https://buy.stripe.com/7sY4gz5yX6CP0ozdtEak002" data-plan-checkout data-plan="elite">Wybierz ELITE</a>
       </article>
+
     </section>
 
     <section class="app-cta-section">
@@ -156,6 +179,8 @@
       </div>
     </section>
   </main>
+
+  <div id="billing-announcer" aria-live="polite" aria-atomic="true" class="sr-only"></div>
 
   <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
     <a href="index.html" rel="nofollow noreferrer" data-nav="index">
