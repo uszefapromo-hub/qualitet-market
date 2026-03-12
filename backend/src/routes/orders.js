@@ -85,10 +85,23 @@ router.post(
       const store = storeResult.rows[0];
       if (!store) return res.status(404).json({ error: 'Sklep nie znaleziony' });
 
-      // Fetch products and verify stock
+      // Fetch products via shop_products (supports central catalog and store-scoped products).
+      // The effective selling_price respects any per-store price_override / margin_override.
       const productIds = items.map((i) => i.product_id);
       const productResult = await db.query(
-        `SELECT id, name, selling_price, stock, margin FROM products WHERE id = ANY($1::uuid[]) AND store_id = $2`,
+        `SELECT p.id, p.name, p.stock,
+                COALESCE(sp.margin_override, p.margin) AS margin,
+                CASE
+                  WHEN sp.price_override IS NOT NULL THEN sp.price_override
+                  WHEN sp.margin_override IS NOT NULL AND COALESCE(sp.margin_type,'percent') = 'fixed'
+                    THEN p.price_gross + sp.margin_override
+                  WHEN sp.margin_override IS NOT NULL
+                    THEN p.price_gross * (1 + sp.margin_override / 100)
+                  ELSE p.selling_price
+                END AS selling_price
+         FROM products p
+         JOIN shop_products sp ON sp.product_id = p.id
+         WHERE sp.store_id = $2 AND sp.active = true AND p.id = ANY($1::uuid[])`,
         [productIds, store_id]
       );
       const productMap = Object.fromEntries(productResult.rows.map((p) => [p.id, p]));

@@ -10,7 +10,22 @@ const { validate } = require('../middleware/validate');
 
 const router = express.Router();
 
-const VALID_PLANS = ['trial', 'basic', 'pro', 'elite'];
+/**
+ * Platform subscription plan configuration.
+ * Imported by admin.js and orders.js for plan-limit enforcement.
+ *
+ * @property {number|null} maxProducts        – max shop_products per store (null = unlimited)
+ * @property {number}      platformMarginPct  – platform's take (%) on each sale
+ * @property {number}      durationDays       – default subscription period in days
+ */
+const PLAN_CONFIG = {
+  trial:  { maxProducts: 10,   platformMarginPct: 15, durationDays: 14 },
+  basic:  { maxProducts: 100,  platformMarginPct: 10, durationDays: 30 },
+  pro:    { maxProducts: 500,  platformMarginPct: 7,  durationDays: 30 },
+  elite:  { maxProducts: null, platformMarginPct: 5,  durationDays: 30 },
+};
+
+const VALID_PLANS = Object.keys(PLAN_CONFIG);
 
 // ─── List subscriptions ────────────────────────────────────────────────────────
 
@@ -161,3 +176,4 @@ router.put(
 );
 
 module.exports = router;
+module.exports.PLAN_CONFIG = PLAN_CONFIG;

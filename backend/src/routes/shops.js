@@ -128,8 +128,15 @@ router.get('/:slug/products', async (req, res) => {
               COALESCE(sp.custom_title, p.name)              AS name,
               COALESCE(sp.custom_description, p.description) AS description,
               p.sku, p.category, p.image_url, p.stock,
-              COALESCE(sp.price_override, p.selling_price)   AS price,
-              COALESCE(sp.margin_override, p.margin)         AS margin
+              COALESCE(sp.margin_override, p.margin)         AS margin,
+              CASE
+                WHEN sp.price_override IS NOT NULL THEN sp.price_override
+                WHEN sp.margin_override IS NOT NULL AND COALESCE(sp.margin_type,'percent') = 'fixed'
+                  THEN p.price_gross + sp.margin_override
+                WHEN sp.margin_override IS NOT NULL
+                  THEN p.price_gross * (1 + sp.margin_override / 100)
+                ELSE p.selling_price
+              END AS price
        FROM shop_products sp
        JOIN products p ON sp.product_id = p.id
        ${where}

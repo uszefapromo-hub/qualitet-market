@@ -180,11 +180,15 @@
 
   const Shops = {
     /** Create a new shop (default margin 30%). POST /api/shops */
-    create(data)          { return post('/shops', data); },
+    create(data)                { return post('/shops', data); },
     /** Get public shop profile by slug. GET /api/shops/:slug */
-    getBySlug(slug)       { return get(`/shops/${slug}`); },
+    get(slug)                   { return get(`/shops/${slug}`); },
+    /** Alias for backward compat */
+    getBySlug(slug)             { return get(`/shops/${slug}`); },
     /** List products of a public shop. GET /api/shops/:slug/products */
-    products(slug, params){ return get(`/shops/${slug}/products`, params); },
+    products(slug, params)      { return get(`/shops/${slug}/products`, params); },
+    /** Alias used by flow.js */
+    getProducts(slug, params)   { return get(`/shops/${slug}/products`, params); },
   };
 
   // ─── Products (central catalogue) ────────────────────────────────────────────
