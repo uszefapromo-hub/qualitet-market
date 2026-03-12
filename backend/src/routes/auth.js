@@ -17,6 +17,8 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const { authenticate, signToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { PLAN_CONFIG } = require('./subscriptions');
+const { nameToSlug, uniqueSlug } = require('../helpers/slug');
 
 const router = express.Router();
 
@@ -50,11 +52,38 @@ router.post(
         [id, email, passwordHash, name, role, trialEndsAt]
       );
 
+      // ── Auto-create shop for sellers ──────────────────────────────────────
+      let shop = null;
+      if (role === 'seller' || role === 'owner') {
+        const shopId   = uuidv4();
+        const shopName = name;
+        const slug     = await uniqueSlug(nameToSlug(shopName));
+        const subdomain = `${slug}.qualitetmarket.pl`;
+
+        const shopResult = await db.query(
+          `INSERT INTO stores (id, owner_id, name, slug, subdomain, margin, plan, status, created_at)
+           VALUES ($1, $2, $3, $4, $5, 30, 'trial', 'active', NOW())
+           RETURNING *`,
+          [shopId, id, shopName, slug, subdomain]
+        );
+        shop = shopResult.rows[0];
+
+        // Auto-create trial subscription for the new shop
+        const trialConfig = PLAN_CONFIG['trial'];
+        const subExpiresAt = new Date(Date.now() + trialConfig.duration_days * 24 * 60 * 60 * 1000);
+        await db.query(
+          `INSERT INTO subscriptions
+             (id, shop_id, plan, status, product_limit, commission_rate, started_at, expires_at, created_at)
+           VALUES ($1, $2, 'trial', 'active', $3, $4, NOW(), $5, NOW())`,
+          [uuidv4(), shopId, trialConfig.product_limit, trialConfig.commission_rate, subExpiresAt]
+        );
+      }
+
       const token = signToken({ id, email, role });
       return res.status(201).json({
         token,
         user: { id, email, name, role, plan: 'trial' },
-        next_step: 'create_shop',
+        shop,
       });
     } catch (err) {
       console.error('auth register error:', err.message);

@@ -90,8 +90,8 @@ function setupDbMock() {
       return { rows: mockDb.stores };
     }
     if (s.startsWith('insert into stores')) {
-      const [id, owner_id, name, slug, description, margin, plan] = params;
-      const store = { id, owner_id, name, slug, description, margin, plan, status: 'active' };
+      const [id, owner_id, name, slug, subdomain, description, margin, plan] = params;
+      const store = { id, owner_id, name, slug, subdomain, description, margin, plan, status: 'active' };
       mockDb.stores.push(store);
       return { rows: [store] };
     }
@@ -1378,10 +1378,14 @@ describe('POST /api/auth/register', () => {
     expect(res.status).toBe(422);
   });
 
-  it('registers with default seller role and returns next_step', async () => {
+  it('registers with default seller role and auto-creates shop', async () => {
+    const shopRow = { id: 'shop-new', owner_id: 'user-new', name: 'New Seller', slug: 'new-seller', subdomain: 'new-seller.qualitetmarket.pl', status: 'active', plan: 'trial' };
     db.query
-      .mockResolvedValueOnce({ rows: [] })                // SELECT – no duplicate
-      .mockResolvedValueOnce({ rows: [] });               // INSERT
+      .mockResolvedValueOnce({ rows: [] })        // SELECT – no duplicate email
+      .mockResolvedValueOnce({ rows: [] })         // INSERT user
+      .mockResolvedValueOnce({ rows: [] })         // uniqueSlug: slug check (free)
+      .mockResolvedValueOnce({ rows: [shopRow] }) // INSERT store
+      .mockResolvedValueOnce({ rows: [] });        // INSERT subscription
 
     const res = await request(app).post('/api/auth/register').send({
       email: 'newseller@test.pl',
@@ -1390,7 +1394,9 @@ describe('POST /api/auth/register', () => {
     });
     expect(res.status).toBe(201);
     expect(res.body.token).toBeDefined();
-    expect(res.body.next_step).toBe('create_shop');
+    expect(res.body.shop).toBeDefined();
+    expect(res.body.shop.slug).toBe('new-seller');
+    expect(res.body.shop.subdomain).toBe('new-seller.qualitetmarket.pl');
   });
 
   it('rejects duplicate email with 409', async () => {
@@ -1446,23 +1452,30 @@ describe('GET /api/auth/me', () => {
 
 describe('POST /api/shops', () => {
   it('requires seller role', async () => {
-    const res = await request(app).post('/api/shops').send({ name: 'Sklep', slug: 'sklep' });
+    const res = await request(app).post('/api/shops').send({ name: 'Sklep' });
     expect(res.status).toBe(401);
   });
 
-  it('rejects duplicate slug with 409', async () => {
-    db.query.mockResolvedValueOnce({ rows: [{ id: 'existing' }] }); // slug taken
+  it('auto-generates unique slug when provided slug is taken', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'existing' }] }) // slug 'moj-sklep' taken
+      .mockResolvedValueOnce({ rows: [] })                   // slug 'moj-sklep-1' free
+      .mockResolvedValueOnce({ rows: [{ id: 'new-shop-id', name: 'Sklep', slug: 'moj-sklep-1', subdomain: 'moj-sklep-1.qualitetmarket.pl', margin: 30, status: 'active' }] })
+      .mockResolvedValueOnce({ rows: [] }); // subscription
+
     const res = await request(app)
       .post('/api/shops')
       .set('Authorization', `Bearer ${sellerToken}`)
       .send({ name: 'Sklep', slug: 'moj-sklep' });
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(201);
+    expect(res.body.slug).toBe('moj-sklep-1');
+    expect(res.body.subdomain).toBe('moj-sklep-1.qualitetmarket.pl');
   });
 
   it('creates shop with default 30% margin and next_step', async () => {
     db.query
       .mockResolvedValueOnce({ rows: [] })  // slug free
-      .mockResolvedValueOnce({ rows: [{ id: 'new-shop-id', name: 'Nowy Sklep', slug: 'nowy-sklep', margin: 30, status: 'active' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'new-shop-id', name: 'Nowy Sklep', slug: 'nowy-sklep', subdomain: 'nowy-sklep.qualitetmarket.pl', margin: 30, status: 'active' }] })
       .mockResolvedValueOnce({ rows: [] }); // auto-create trial subscription
 
     const res = await request(app)
@@ -1472,6 +1485,22 @@ describe('POST /api/shops', () => {
     expect(res.status).toBe(201);
     expect(res.body.next_step).toBe('add_products');
     expect(res.body.margin).toBe(30);
+    expect(res.body.subdomain).toBe('nowy-sklep.qualitetmarket.pl');
+  });
+
+  it('auto-generates slug from name when no slug is provided', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })  // slug free
+      .mockResolvedValueOnce({ rows: [{ id: 'auto-shop-id', name: 'Mój Sklep', slug: 'moj-sklep', subdomain: 'moj-sklep.qualitetmarket.pl', margin: 30, status: 'active' }] })
+      .mockResolvedValueOnce({ rows: [] }); // subscription
+
+    const res = await request(app)
+      .post('/api/shops')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ name: 'Mój Sklep' });
+    expect(res.status).toBe(201);
+    expect(res.body.slug).toBe('moj-sklep');
+    expect(res.body.subdomain).toBe('moj-sklep.qualitetmarket.pl');
   });
 });
 

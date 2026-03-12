@@ -477,6 +477,68 @@
     btn.textContent = origText || 'Wy\u015blij';
   }
 
+  // ─── Store panel page (panel-sklepu.html) ────────────────────────────────────
+
+  function initStorePanelPage() {
+    var api = window.QMApi;
+    if (!api || !api.Auth.isLoggedIn()) {
+      return;
+    }
+
+    var contentEl = document.querySelector('[data-store-content]');
+    var emptyEl = document.querySelector('[data-store-empty]');
+
+    api.MyStore.get()
+      .then(function (store) {
+        if (!store || !store.id) {
+          if (contentEl) contentEl.hidden = true;
+          if (emptyEl) emptyEl.hidden = false;
+          return;
+        }
+
+        if (contentEl) contentEl.hidden = false;
+        if (emptyEl) emptyEl.hidden = true;
+
+        var nameEl = document.querySelector('[data-store-name]');
+        if (nameEl) nameEl.textContent = store.name || 'Panel sklepu';
+
+        var planEl = document.querySelector('[data-store-plan]');
+        if (planEl) planEl.textContent = (store.plan || 'trial').toUpperCase();
+
+        var marginEl = document.querySelector('[data-store-margin]');
+        if (marginEl) marginEl.textContent = (store.margin != null ? store.margin : 0) + '%';
+
+        var subdomainEl = document.querySelector('[data-store-subdomain]');
+        if (subdomainEl && store.subdomain) subdomainEl.textContent = store.subdomain;
+
+        var slugEl = document.querySelector('[data-store-slug]');
+        if (slugEl && store.slug) slugEl.textContent = store.slug;
+      })
+      .catch(function () {
+        if (contentEl) contentEl.hidden = true;
+        if (emptyEl) emptyEl.hidden = false;
+      });
+  }
+
+  // ─── Owner panel page (owner-panel.html) ─────────────────────────────────────
+
+  function initOwnerPanelPage() {
+    var api = window.QMApi;
+    if (!api || !api.Auth.isLoggedIn()) {
+      return;
+    }
+
+    api.MyStore.get()
+      .then(function (store) {
+        if (!store) return;
+        var nameEl = document.querySelector('[data-store-name]');
+        if (nameEl) nameEl.textContent = store.name || '';
+      })
+      .catch(function (err) {
+        console.warn('[pwa-connect] owner-panel: could not load store data', err);
+      });
+  }
+
   // ─── Entry point ─────────────────────────────────────────────────────────────
 
   var page = document.body ? document.body.dataset.page : null;
@@ -500,6 +562,18 @@
       setTimeout(function () {
         initDashboardPage();
       }, 0);
+    });
+  }
+
+  if (page === 'panel-sklepu') {
+    document.addEventListener('DOMContentLoaded', function () {
+      initStorePanelPage();
+    });
+  }
+
+  if (page === 'owner-panel') {
+    document.addEventListener('DOMContentLoaded', function () {
+      initOwnerPanelPage();
     });
   }
 

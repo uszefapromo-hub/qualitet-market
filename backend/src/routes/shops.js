@@ -16,6 +16,7 @@ const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate, sanitizeText } = require('../middleware/validate');
 const { PLAN_CONFIG } = require('./subscriptions');
+const { nameToSlug, uniqueSlug } = require('../helpers/slug');
 
 const router = express.Router();
 
@@ -27,7 +28,7 @@ router.post(
   requireRole('seller', 'owner', 'admin'),
   [
     body('name').trim().notEmpty(),
-    body('slug').trim().matches(/^[a-z0-9-]+$/i).isLength({ max: 80 }),
+    body('slug').optional().trim().matches(/^[a-z0-9-]+$/i).isLength({ max: 80 }),
     body('description').optional().trim(),
     body('margin').optional().isFloat({ min: 0, max: 100 }),
     body('plan').optional().isIn(['basic', 'pro', 'elite']),
@@ -36,7 +37,6 @@ router.post(
   async (req, res) => {
     const {
       name,
-      slug,
       description = null,
       margin = 30,   // default 30 % margin for new shops
       plan = 'basic',
@@ -46,17 +46,17 @@ router.post(
     const safeDescription = description ? sanitizeText(description) : null;
 
     try {
-      const slugCheck = await db.query('SELECT id FROM stores WHERE slug = $1', [slug]);
-      if (slugCheck.rows.length > 0) {
-        return res.status(409).json({ error: 'Slug jest już zajęty' });
-      }
+      // Auto-generate slug from name if not provided; ensure uniqueness
+      const baseSlug = req.body.slug ? req.body.slug.toLowerCase() : nameToSlug(safeName);
+      const slug = await uniqueSlug(baseSlug);
+      const subdomain = `${slug}.qualitetmarket.pl`;
 
       const id = uuidv4();
       const result = await db.query(
-        `INSERT INTO stores (id, owner_id, name, slug, description, margin, plan, status, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', NOW())
+        `INSERT INTO stores (id, owner_id, name, slug, subdomain, description, margin, plan, status, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'active', NOW())
          RETURNING *`,
-        [id, req.user.id, safeName, slug, safeDescription, margin, plan]
+        [id, req.user.id, safeName, slug, subdomain, safeDescription, margin, plan]
       );
 
       // Auto-create trial subscription for the new shop
