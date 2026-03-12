@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Qualitet Market — Dołącz do platformy</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
+  <link rel="stylesheet" href="landing.css">
+  <style>
+    /* ── Landing-page specific overrides ───────────────────── */
+    .ml-hero{
+      padding:72px 0 56px;
+      text-align:center;
+    }
+    .ml-hero h1{
+      font-size:clamp(32px,5vw,60px);
+      line-height:1.08;
+      margin:14px 0 18px;
+      color:var(--text);
+    }
+    .ml-hero .lead{
+      font-size:19px;
+      color:var(--muted);
+      max-width:660px;
+      margin:0 auto 28px;
+    }
+    .ml-cta-row{
+      display:flex;
+      gap:14px;
+      justify-content:center;
+      flex-wrap:wrap;
+    }
+
+    /* ── Countdown ──────────────────────────────────────────── */
+    .ml-countdown-bar{
+      background:linear-gradient(135deg,#1d4ed8,#16a34a);
+      color:#fff;
+      padding:14px 20px;
+      text-align:center;
+      font-size:15px;
+      font-weight:600;
+    }
+    .ml-countdown-bar strong{
+      font-size:17px;
+    }
+    .ml-countdown-units{
+      display:inline-flex;
+      gap:10px;
+      align-items:center;
+      margin-left:12px;
+    }
+    .ml-countdown-unit{
+      display:inline-flex;
+      flex-direction:column;
+      align-items:center;
+      background:rgba(255,255,255,.18);
+      border-radius:10px;
+      padding:6px 12px;
+      min-width:52px;
+    }
+    .ml-countdown-unit span.ml-cu-val{
+      font-size:22px;
+      font-weight:800;
+      line-height:1;
+    }
+    .ml-countdown-unit span.ml-cu-label{
+      font-size:10px;
+      font-weight:600;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      opacity:.82;
+    }
+
+    /* ── How it works ───────────────────────────────────────── */
+    .ml-how{padding:56px 0}
+    .ml-section-header{text-align:center;margin-bottom:36px}
+    .ml-section-header .eyebrow{margin-bottom:10px}
+    .ml-section-header h2{font-size:clamp(26px,4vw,44px);margin:0 0 10px;color:var(--text)}
+    .ml-section-header p{color:var(--muted);font-size:16px;max-width:560px;margin:0 auto}
+
+    .ml-steps{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:20px;
+    }
+    .ml-step{
+      background:#ffffff;
+      border:1px solid var(--stroke);
+      border-radius:20px;
+      padding:28px 22px;
+      box-shadow:0 6px 20px rgba(15,23,42,.07);
+      text-align:center;
+    }
+    .ml-step-num{
+      width:44px;height:44px;
+      border-radius:50%;
+      background:linear-gradient(135deg,#2563eb,#22c55e);
+      color:#fff;
+      font-weight:800;
+      font-size:20px;
+      display:flex;align-items:center;justify-content:center;
+      margin:0 auto 16px;
+    }
+    .ml-step h3{margin:0 0 8px;font-size:17px;color:var(--text)}
+    .ml-step p{margin:0;font-size:14px;color:var(--muted);line-height:1.55}
+
+    /* ── Promo offer ────────────────────────────────────────── */
+    .ml-promo{padding:48px 0}
+    .ml-promo-card{
+      background:linear-gradient(135deg,#eff6ff,#f0fdf4);
+      border:2px solid rgba(37,99,235,.25);
+      border-radius:24px;
+      padding:40px 36px;
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:32px;
+      align-items:center;
+    }
+    .ml-promo-badge{
+      display:inline-block;
+      background:linear-gradient(135deg,#2563eb,#16a34a);
+      color:#fff;
+      font-size:12px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.6px;
+      padding:5px 14px;
+      border-radius:999px;
+      margin-bottom:14px;
+    }
+    .ml-promo-card h2{
+      margin:0 0 10px;
+      font-size:clamp(22px,3vw,34px);
+      color:var(--text);
+    }
+    .ml-promo-card p{
+      margin:0 0 20px;
+      color:var(--muted);
+      font-size:16px;
+      max-width:520px;
+    }
+    .ml-promo-perks{
+      list-style:none;
+      margin:0 0 24px;
+      padding:0;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+    .ml-promo-perks li{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-size:15px;
+      color:var(--text);
+    }
+    .ml-promo-perks li::before{
+      content:"✓";
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:22px;height:22px;
+      border-radius:50%;
+      background:rgba(34,197,94,.15);
+      color:#16a34a;
+      font-weight:800;
+      font-size:13px;
+      flex-shrink:0;
+    }
+    .ml-promo-slots{
+      background:#ffffff;
+      border:1px solid rgba(37,99,235,.2);
+      border-radius:18px;
+      padding:28px 24px;
+      text-align:center;
+      min-width:180px;
+    }
+    .ml-slots-num{
+      font-size:56px;
+      font-weight:800;
+      line-height:1;
+      background:linear-gradient(135deg,#2563eb,#16a34a);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+    }
+    .ml-slots-label{
+      font-size:13px;
+      font-weight:600;
+      color:var(--muted);
+      margin-top:6px;
+    }
+    .ml-slots-note{
+      font-size:12px;
+      color:#dc2626;
+      font-weight:700;
+      margin-top:8px;
+    }
+
+    /* ── Registration form ──────────────────────────────────── */
+    .ml-register{padding:48px 0 64px}
+    .ml-register-card{
+      max-width:560px;
+      margin:0 auto;
+      background:#ffffff;
+      border:1px solid var(--stroke);
+      border-radius:24px;
+      padding:40px 36px;
+      box-shadow:0 12px 32px rgba(15,23,42,.10);
+    }
+    .ml-register-card h2{
+      margin:0 0 6px;
+      font-size:26px;
+      color:var(--text);
+      text-align:center;
+    }
+    .ml-register-card .ml-form-hint{
+      text-align:center;
+      color:var(--muted);
+      font-size:14px;
+      margin:0 0 28px;
+    }
+    .ml-form-group{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      margin-bottom:18px;
+    }
+    .ml-form-group label{
+      font-size:14px;
+      font-weight:700;
+      color:var(--text);
+    }
+    .ml-form-group input,
+    .ml-form-group select{
+      width:100%;
+      height:48px;
+      border-radius:14px;
+      border:1px solid var(--stroke);
+      background:#f8fafc;
+      color:var(--text);
+      padding:0 14px;
+      font-size:15px;
+      outline:none;
+      transition:border-color .2s;
+    }
+    .ml-form-group input:focus,
+    .ml-form-group select:focus{
+      border-color:#2563eb;
+      background:#fff;
+    }
+    .ml-form-row{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+    }
+    .ml-form-submit{
+      width:100%;
+      height:52px;
+      border:none;
+      border-radius:16px;
+      background:linear-gradient(135deg,#1d4ed8,#16a34a);
+      color:#fff;
+      font-size:17px;
+      font-weight:700;
+      cursor:pointer;
+      margin-top:6px;
+      transition:opacity .2s,transform .15s;
+    }
+    .ml-form-submit:hover{opacity:.92;transform:translateY(-1px)}
+    .ml-form-submit:active{transform:translateY(0)}
+
+    .ml-form-success{
+      display:none;
+      text-align:center;
+      padding:24px 0 8px;
+    }
+    .ml-form-success-icon{font-size:48px;margin-bottom:12px}
+    .ml-form-success h3{margin:0 0 8px;color:var(--text);font-size:22px}
+    .ml-form-success p{color:var(--muted);font-size:15px;margin:0}
+
+    .ml-form-promo-note{
+      text-align:center;
+      font-size:13px;
+      color:#16a34a;
+      font-weight:600;
+      margin-top:14px;
+      padding:10px;
+      background:rgba(34,197,94,.08);
+      border-radius:10px;
+      border:1px solid rgba(34,197,94,.2);
+    }
+
+    /* ── Responsive ─────────────────────────────────────────── */
+    @media(max-width:720px){
+      .ml-promo-card{
+        grid-template-columns:1fr;
+      }
+      .ml-promo-slots{
+        max-width:220px;
+      }
+    }
+    @media(max-width:480px){
+      .ml-register-card{padding:28px 20px}
+      .ml-form-row{grid-template-columns:1fr}
+      .ml-countdown-units{gap:6px}
+      .ml-countdown-unit{min-width:44px;padding:5px 8px}
+      .ml-countdown-bar{font-size:13px}
+    }
+  </style>
+</head>
+<body data-page="market-landing" class="has-bottom-nav">
+  <div class="app-splash" data-app-splash>
+    <div class="app-splash-card">
+      <div class="app-splash-logo">
+        <img src="assets/icons/icon-192.svg" alt="Qualitet Market">
+      </div>
+      <div class="app-splash-title">
+        <strong>Qualitet Market</strong>
+        <span>Platforma sprzedaży</span>
+      </div>
+      <div class="app-splash-loader"></div>
+    </div>
+  </div>
+
+  <!-- ── Countdown bar ── -->
+  <div class="ml-countdown-bar" id="mlCountdownBar" aria-live="polite">
+    🚀 <strong>Start platformy za:</strong>
+    <span class="ml-countdown-units" id="mlCountdownUnits">
+      <span class="ml-countdown-unit">
+        <span class="ml-cu-val" id="mlDays">5</span>
+        <span class="ml-cu-label">dni</span>
+      </span>
+      <span class="ml-countdown-unit">
+        <span class="ml-cu-val" id="mlHours">00</span>
+        <span class="ml-cu-label">godz</span>
+      </span>
+      <span class="ml-countdown-unit">
+        <span class="ml-cu-val" id="mlMins">00</span>
+        <span class="ml-cu-label">min</span>
+      </span>
+      <span class="ml-countdown-unit">
+        <span class="ml-cu-val" id="mlSecs">00</span>
+        <span class="ml-cu-label">sek</span>
+      </span>
+    </span>
+  </div>
+
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>Qualitet</strong>
+          <span>Qualitet Market</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Główna nawigacja">
+        <a href="index.html">Start</a>
+        <a href="#jak-dziala">Jak działa</a>
+        <a href="#promocja">Promocja</a>
+        <a href="#rejestracja" class="active">Rejestracja</a>
+        <a href="cennik.html">Cennik</a>
+      </nav>
+      <a class="btn btn-primary topbar-cta" href="#rejestracja">Zarejestruj się</a>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ══════════════ HERO ══════════════ -->
+    <section class="ml-hero">
+      <div class="wrap">
+        <span class="eyebrow">🛍️ Qualitet Market — Platforma sprzedaży</span>
+        <h1>Sprzedawaj więcej dzięki<br><span style="color:#2563eb">wspólnej platformie</span></h1>
+        <p class="lead">Qualitet Market łączy sprzedawców, dostawców i kupujących w jednym miejscu. Dołącz do platformy i skorzystaj z wyjątkowej oferty dla pierwszych użytkowników.</p>
+        <div class="ml-cta-row">
+          <a class="btn btn-primary" href="#rejestracja" style="font-size:17px;min-height:54px;padding:0 32px">Zarejestruj się za darmo</a>
+          <a class="btn btn-secondary" href="#jak-dziala" style="font-size:16px;min-height:54px;padding:0 28px">Jak to działa?</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════ JAK DZIAŁA ══════════════ -->
+    <section class="ml-how" id="jak-dziala">
+      <div class="wrap">
+        <div class="ml-section-header">
+          <span class="eyebrow">Prosty start</span>
+          <h2>Jak działa Qualitet Market?</h2>
+          <p>Cztery kroki dzielą cię od uruchomienia własnego kanału sprzedaży.</p>
+        </div>
+        <div class="ml-steps">
+          <div class="ml-step">
+            <div class="ml-step-num">1</div>
+            <h3>Zarejestruj konto</h3>
+            <p>Wypełnij formularz i utwórz konto w mniej niż 2 minuty. Brak opłat startowych.</p>
+          </div>
+          <div class="ml-step">
+            <div class="ml-step-num">2</div>
+            <h3>Dodaj produkty</h3>
+            <p>Wybierz produkty z katalogu hurtowni lub importuj własny asortyment do platformy.</p>
+          </div>
+          <div class="ml-step">
+            <div class="ml-step-num">3</div>
+            <h3>Sprzedawaj i zarabiaj</h3>
+            <p>Obsługuj zamówienia automatycznie. Platforma rozlicza prowizję i wypłaca zyski.</p>
+          </div>
+          <div class="ml-step">
+            <div class="ml-step-num">4</div>
+            <h3>Rozwijaj sprzedaż</h3>
+            <p>Korzystaj z kampanii, promocji i narzędzi analitycznych dostępnych dla partnerów.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════ PROMO OFFER ══════════════ -->
+    <section class="ml-promo" id="promocja">
+      <div class="wrap">
+        <div class="ml-promo-card">
+          <div>
+            <span class="ml-promo-badge">🎁 Oferta limitowana</span>
+            <h2>Specjalna promocja dla pierwszych 30 użytkowników</h2>
+            <p>Pierwsi rejestrujący się partnerzy otrzymują rozszerzony pakiet startowy bez dodatkowych opłat przez pierwsze 365 dni.</p>
+            <ul class="ml-promo-perks">
+              <li>365 dni planu PRO gratis (wartość 1 188 zł)</li>
+              <li>Zerowa prowizja od sprzedaży przez pierwsze 3 miesiące</li>
+              <li>Dedykowane wsparcie onboardingowe (priorytet)</li>
+              <li>Dostęp do ekskluzywnego katalogu produktów premium</li>
+              <li>Ekspozycja sklepu na stronie głównej Qualitet Market</li>
+            </ul>
+            <a class="btn btn-primary" href="#rejestracja" style="font-size:16px;min-height:50px;padding:0 28px">Chcę skorzystać z promocji →</a>
+          </div>
+          <div class="ml-promo-slots">
+            <div class="ml-slots-num" id="mlSlotsNum">30</div>
+            <div class="ml-slots-label">Wolnych miejsc</div>
+            <div class="ml-slots-note" id="mlSlotsNote">Zostało tylko 30!</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════ REGISTRATION FORM ══════════════ -->
+    <section class="ml-register" id="rejestracja">
+      <div class="wrap">
+        <div class="ml-section-header">
+          <span class="eyebrow">✍️ Rejestracja</span>
+          <h2>Dołącz do Qualitet Market</h2>
+          <p>Zarejestruj się teraz i skorzystaj z oferty dla pierwszych użytkowników.</p>
+        </div>
+        <div class="ml-register-card">
+          <h2>Utwórz konto</h2>
+          <p class="ml-form-hint">Formularz rejestracyjny · Bez opłat startowych</p>
+
+          <form id="mlRegisterForm" novalidate>
+            <div class="ml-form-row">
+              <div class="ml-form-group">
+                <label for="mlFirstName">Imię</label>
+                <input type="text" id="mlFirstName" name="first_name" placeholder="Jan" required autocomplete="given-name">
+              </div>
+              <div class="ml-form-group">
+                <label for="mlLastName">Nazwisko</label>
+                <input type="text" id="mlLastName" name="last_name" placeholder="Kowalski" required autocomplete="family-name">
+              </div>
+            </div>
+            <div class="ml-form-group">
+              <label for="mlEmail">Adres e-mail</label>
+              <input type="email" id="mlEmail" name="email" placeholder="jan@firma.pl" required autocomplete="email">
+            </div>
+            <div class="ml-form-group">
+              <label for="mlPassword">Hasło</label>
+              <input type="password" id="mlPassword" name="password" placeholder="Minimum 8 znaków" required autocomplete="new-password" minlength="8">
+            </div>
+            <div class="ml-form-group">
+              <label for="mlStoreName">Nazwa sklepu / firmy</label>
+              <input type="text" id="mlStoreName" name="store_name" placeholder="Mój Sklep" required>
+            </div>
+            <div id="mlFormError" role="alert" style="color:#dc2626;font-size:13px;margin-bottom:10px;display:none"></div>
+            <button class="ml-form-submit" type="submit" id="mlSubmitBtn">Zarejestruj się za darmo 🚀</button>
+          </form>
+
+          <div class="ml-form-success" id="mlFormSuccess" aria-live="polite">
+            <div class="ml-form-success-icon">🎉</div>
+            <h3>Witamy w Qualitet Market!</h3>
+            <p>Twoje konto zostało utworzone. Sprawdź skrzynkę e-mail, aby potwierdzić rejestrację.</p>
+          </div>
+
+          <p class="ml-form-promo-note">🎁 Rejestrując się teraz, automatycznie kwalifikujesz się do oferty dla pierwszych 30 użytkowników!</p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="wrap panel-footer" style="padding-bottom:32px">
+      <div class="panel-footer-inner">
+        <span>© 2025 Qualitet Market &mdash; Platforma sprzedaży dropshipping</span>
+        <div class="panel-footer-links">
+          <a href="index.html">Strona główna</a>
+          <a href="cennik.html">Cennik</a>
+          <a href="dashboard.html">Panel</a>
+          <a href="login.html">Logowanie</a>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
+    <a href="index.html" rel="nofollow noreferrer" data-nav="index">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 11.5L12 4l9 7.5"></path>
+        <path d="M5 10.5V20h14v-9.5"></path>
+      </svg>
+      <span>Start</span>
+    </a>
+    <a href="sklep.html" rel="nofollow noreferrer" data-nav="sklep">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 9h18l-1.5 11H4.5L3 9z"></path>
+        <path d="M7 9V7a5 5 0 0 1 10 0v2"></path>
+      </svg>
+      <span>Sklep</span>
+    </a>
+    <a href="market-landing.html" rel="nofollow noreferrer" data-nav="market-landing" class="is-active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="M12 8v4l3 3"></path>
+      </svg>
+      <span>Market</span>
+    </a>
+    <a href="dashboard.html" rel="nofollow noreferrer" data-nav="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="14" width="7" height="7" rx="1.2"></rect>
+        <rect x="3" y="14" width="7" height="7" rx="1.2"></rect>
+      </svg>
+      <span>Panel</span>
+    </a>
+    <a href="login.html" rel="nofollow noreferrer" data-nav="login">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4 20c2-3.5 6-5 8-5s6 1.5 8 5"></path>
+      </svg>
+      <span>Konto</span>
+    </a>
+  </nav>
+
+  <script src="js/api.js" defer></script>
+  <script src="js/pwa-connect.js" defer></script>
+  <script src="js/app.js" defer></script>
+  <script>
+    (function () {
+      'use strict';
+
+      /* ── Countdown timer ───────────────────────────────────── */
+      var LAUNCH_DATE = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+
+      function pad(n) { return String(n).padStart(2, '0'); }
+
+      function updateCountdown() {
+        var diff = LAUNCH_DATE - Date.now();
+        if (diff <= 0) {
+          document.getElementById('mlCountdownBar').innerHTML =
+            '🚀 <strong>Platforma Qualitet Market jest już dostępna!</strong>';
+          return;
+        }
+        var days  = Math.floor(diff / 864e5);
+        var hours = Math.floor((diff % 864e5) / 36e5);
+        var mins  = Math.floor((diff % 36e5) / 6e4);
+        var secs  = Math.floor((diff % 6e4) / 1e3);
+        document.getElementById('mlDays').textContent  = days;
+        document.getElementById('mlHours').textContent = pad(hours);
+        document.getElementById('mlMins').textContent  = pad(mins);
+        document.getElementById('mlSecs').textContent  = pad(secs);
+      }
+
+      updateCountdown();
+      setInterval(updateCountdown, 1000);
+
+      /* ── Registration form ─────────────────────────────────── */
+      var form        = document.getElementById('mlRegisterForm');
+      var submitBtn   = document.getElementById('mlSubmitBtn');
+      var formError   = document.getElementById('mlFormError');
+      var formSuccess = document.getElementById('mlFormSuccess');
+
+      if (form) {
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          formError.style.display = 'none';
+
+          var firstName = form.first_name.value.trim();
+          var lastName  = form.last_name.value.trim();
+          var email     = form.email.value.trim();
+          var password  = form.password.value;
+          var storeName = form.store_name.value.trim();
+
+          if (!firstName || !lastName || !email || !password || !storeName) {
+            showError('Proszę wypełnić wszystkie pola.');
+            return;
+          }
+          if (password.length < 8) {
+            showError('Hasło musi mieć minimum 8 znaków.');
+            return;
+          }
+
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Trwa rejestracja…';
+
+          var api = window.QMApi;
+          if (api && api.Auth && api.Auth.register) {
+            api.Auth.register({
+              email: email,
+              password: password,
+              name: firstName + ' ' + lastName,
+              store_name: storeName
+            })
+            .then(function () {
+              showSuccess();
+            })
+            .catch(function (err) {
+              var msg = (err && err.body && err.body.error) || 'Błąd rejestracji. Spróbuj ponownie.';
+              showError(msg);
+            })
+            .finally(function () {
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Zarejestruj się za darmo 🚀';
+            });
+          } else {
+            /* Fallback: no API available — show success for demo */
+            setTimeout(function () {
+              showSuccess();
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Zarejestruj się za darmo 🚀';
+            }, 900);
+          }
+        });
+      }
+
+      /* ── Slot counter with localStorage persistence ─────── */
+      var SLOTS_KEY = 'qm_market_slots';
+      var TOTAL_SLOTS = 30;
+
+      function getSlotsRemaining() {
+        try {
+          var stored = localStorage.getItem(SLOTS_KEY);
+          if (stored !== null) {
+            var n = parseInt(stored, 10);
+            if (!isNaN(n) && n >= 0) return n;
+          }
+        } catch (e) { /* ignore */ }
+        return TOTAL_SLOTS;
+      }
+
+      function setSlotsRemaining(n) {
+        try { localStorage.setItem(SLOTS_KEY, String(n)); } catch (e) { /* ignore */ }
+      }
+
+      function renderSlots() {
+        var n = getSlotsRemaining();
+        var slotEl = document.getElementById('mlSlotsNum');
+        var noteEl = document.getElementById('mlSlotsNote');
+        if (slotEl) slotEl.textContent = n;
+        if (noteEl) noteEl.textContent = n > 0 ? 'Zostało tylko ' + n + '!' : 'Wszystkie miejsca zajęte!';
+      }
+
+      renderSlots();
+
+      function showError(msg) {
+        formError.textContent = msg;
+        formError.style.display = 'block';
+      }
+
+      function showSuccess() {
+        form.style.display = 'none';
+        formSuccess.style.display = 'block';
+        /* Decrement and persist the slot counter */
+        var current = getSlotsRemaining();
+        if (current > 0) {
+          setSlotsRemaining(current - 1);
+          renderSlots();
+        }
+      }
+
+    }());
+  </script>
+</body>
+</html>
