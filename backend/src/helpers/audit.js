@@ -42,11 +42,11 @@ function auditLog({ actorUserId = null, action, resource = null, resourceId = nu
  *   fixed   → priceGross + marginValue
  */
 function computeSellingPrice(priceGross, marginType, marginValue) {
-  const pg = parseFloat(priceGross);
-  if (marginValue == null) return parseFloat(pg.toFixed(2));
-  const mv = parseFloat(marginValue);
-  const raw = marginType === 'fixed' ? pg + mv : pg * (1 + mv / 100);
-  return parseFloat(raw.toFixed(2));
+  const parsedPriceGross = parseFloat(priceGross);
+  if (marginValue == null) return parseFloat(parsedPriceGross.toFixed(2));
+  const parsedMarginValue = parseFloat(marginValue);
+  const calculatedPrice = marginType === 'fixed' ? parsedPriceGross + parsedMarginValue : parsedPriceGross * (1 + parsedMarginValue / 100);
+  return parseFloat(calculatedPrice.toFixed(2));
 }
 
 module.exports = { auditLog, computeSellingPrice };

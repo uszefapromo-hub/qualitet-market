@@ -167,17 +167,17 @@ router.put(
          WHERE sp.id = $1`,
         [req.params.id]
       );
-      const sp = spResult.rows[0];
-      if (!sp) return res.status(404).json({ error: 'Produkt sklepu nie znaleziony' });
+      const shopProduct = spResult.rows[0];
+      if (!shopProduct) return res.status(404).json({ error: 'Produkt sklepu nie znaleziony' });
 
       const isAdmin = ['owner', 'admin'].includes(req.user.role);
-      if (!isAdmin && sp.owner_id !== req.user.id) {
+      if (!isAdmin && shopProduct.owner_id !== req.user.id) {
         return res.status(403).json({ error: 'Brak uprawnień' });
       }
 
-      const basePlatformPrice = parseFloat(sp.platform_price || sp.product_selling_price || 0);
+      const basePlatformPrice = parseFloat(shopProduct.platform_price || shopProduct.product_selling_price || 0);
       // min_selling_price is always set to platform_price via migration; fall back for pre-migration rows
-      const minPrice = parseFloat(sp.min_selling_price || sp.platform_price || sp.product_selling_price || 0);
+      const minPrice = parseFloat(shopProduct.min_selling_price || shopProduct.platform_price || shopProduct.product_selling_price || 0);
 
       // Compute selling_price from seller_margin
       let computedSellingPrice = null;
@@ -236,11 +236,11 @@ router.delete(
          WHERE sp.id = $1`,
         [req.params.id]
       );
-      const sp = spResult.rows[0];
-      if (!sp) return res.status(404).json({ error: 'Produkt sklepu nie znaleziony' });
+      const shopProduct = spResult.rows[0];
+      if (!shopProduct) return res.status(404).json({ error: 'Produkt sklepu nie znaleziony' });
 
       const isAdmin = ['owner', 'admin'].includes(req.user.role);
-      if (!isAdmin && sp.owner_id !== req.user.id) {
+      if (!isAdmin && shopProduct.owner_id !== req.user.id) {
         return res.status(403).json({ error: 'Brak uprawnień' });
       }
 

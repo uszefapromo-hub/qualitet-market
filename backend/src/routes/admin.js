@@ -134,10 +134,10 @@ router.get('/users', authenticate, requireRole('owner', 'admin'), async (req, re
   try {
     const conditions = [];
     const params = [];
-    let idx = 1;
+    let nextParamIndex = 1;
 
-    if (role)   { conditions.push(`role = $${idx++}`);                                  params.push(role); }
-    if (search) { conditions.push(`(email ILIKE $${idx} OR name ILIKE $${idx})`);       params.push(`%${search}%`); idx++; }
+    if (role)   { conditions.push(`role = $${nextParamIndex++}`);                                  params.push(role); }
+    if (search) { conditions.push(`(email ILIKE $${nextParamIndex} OR name ILIKE $${nextParamIndex})`);       params.push(`%${search}%`); nextParamIndex++; }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -148,7 +148,7 @@ router.get('/users', authenticate, requireRole('owner', 'admin'), async (req, re
       `SELECT id, email, name, role, plan, trial_ends_at, created_at
        FROM users ${where}
        ORDER BY created_at DESC
-       LIMIT $${idx} OFFSET $${idx + 1}`,
+       LIMIT $${nextParamIndex} OFFSET $${nextParamIndex + 1}`,
       [...params, limit, offset]
     );
     return res.json({ total, page, limit, users: result.rows });
@@ -276,13 +276,13 @@ router.get('/shops', authenticate, requireRole('owner', 'admin'), async (req, re
   try {
     const conditions = [];
     const params = [];
-    let idx = 1;
+    let nextParamIndex = 1;
 
-    if (status) { conditions.push(`s.status = $${idx++}`); params.push(status); }
+    if (status) { conditions.push(`s.status = $${nextParamIndex++}`); params.push(status); }
     if (search) {
-      conditions.push(`(s.name ILIKE $${idx} OR s.slug ILIKE $${idx})`);
+      conditions.push(`(s.name ILIKE $${nextParamIndex} OR s.slug ILIKE $${nextParamIndex})`);
       params.push(`%${search}%`);
-      idx++;
+      nextParamIndex++;
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -296,7 +296,7 @@ router.get('/shops', authenticate, requireRole('owner', 'admin'), async (req, re
        LEFT JOIN users u ON s.owner_id = u.id
        ${where}
        ORDER BY s.created_at DESC
-       LIMIT $${idx} OFFSET $${idx + 1}`,
+       LIMIT $${nextParamIndex} OFFSET $${nextParamIndex + 1}`,
       [...params, limit, offset]
     );
     return res.json({ total, page, limit, shops: result.rows });
@@ -317,10 +317,10 @@ router.get('/suppliers', authenticate, requireRole('owner', 'admin'), async (req
   try {
     const conditions = [];
     const params = [];
-    let idx = 1;
+    let nextParamIndex = 1;
 
     if (search) {
-      conditions.push(`name ILIKE $${idx++}`);
+      conditions.push(`name ILIKE $${nextParamIndex++}`);
       params.push(`%${search}%`);
     }
 
@@ -335,7 +335,7 @@ router.get('/suppliers', authenticate, requireRole('owner', 'admin'), async (req
        FROM suppliers s
        ${where}
        ORDER BY s.name ASC
-       LIMIT $${idx} OFFSET $${idx + 1}`,
+       LIMIT $${nextParamIndex} OFFSET $${nextParamIndex + 1}`,
       [...params, limit, offset]
     );
     return res.json({ total, page, limit, suppliers: result.rows });
@@ -705,13 +705,13 @@ router.get('/catalogue', authenticate, requireRole('owner', 'admin'), async (req
   try {
     const conditions = ['is_central = true'];
     const params = [];
-    let idx = 1;
+    let nextParamIndex = 1;
 
-    if (category) { conditions.push(`category = $${idx++}`); params.push(category); }
+    if (category) { conditions.push(`category = $${nextParamIndex++}`); params.push(category); }
     if (search) {
-      conditions.push(`(name ILIKE $${idx} OR description ILIKE $${idx})`);
+      conditions.push(`(name ILIKE $${nextParamIndex} OR description ILIKE $${nextParamIndex})`);
       params.push(`%${search}%`);
-      idx++;
+      nextParamIndex++;
     }
 
     const where = `WHERE ${conditions.join(' AND ')}`;
@@ -725,7 +725,7 @@ router.get('/catalogue', authenticate, requireRole('owner', 'admin'), async (req
        LEFT JOIN suppliers s ON p.supplier_id = s.id
        ${where}
        ORDER BY p.created_at DESC
-       LIMIT $${idx} OFFSET $${idx + 1}`,
+       LIMIT $${nextParamIndex} OFFSET $${nextParamIndex + 1}`,
       [...params, limit, offset]
     );
     return res.json({ total, page, limit, products: result.rows });
@@ -748,11 +748,11 @@ router.get('/products', authenticate, requireRole('owner', 'admin'), async (req,
   try {
     const conditions = [];
     const params = [];
-    let idx = 1;
+    let nextParamIndex = 1;
 
-    if (status)            { conditions.push(`p.status = $${idx++}`);                                   params.push(status); }
-    if (isCentral !== null){ conditions.push(`p.is_central = $${idx++}`);                               params.push(isCentral); }
-    if (search)            { conditions.push(`(p.name ILIKE $${idx} OR p.sku ILIKE $${idx})`);          params.push(`%${search}%`); idx++; }
+    if (status)            { conditions.push(`p.status = $${nextParamIndex++}`);                                   params.push(status); }
+    if (isCentral !== null){ conditions.push(`p.is_central = $${nextParamIndex++}`);                               params.push(isCentral); }
+    if (search)            { conditions.push(`(p.name ILIKE $${nextParamIndex} OR p.sku ILIKE $${nextParamIndex})`);          params.push(`%${search}%`); nextParamIndex++; }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -765,7 +765,7 @@ router.get('/products', authenticate, requireRole('owner', 'admin'), async (req,
        LEFT JOIN stores s ON p.store_id = s.id
        ${where}
        ORDER BY p.created_at DESC
-       LIMIT $${idx} OFFSET $${idx + 1}`,
+       LIMIT $${nextParamIndex} OFFSET $${nextParamIndex + 1}`,
       [...params, limit, offset]
     );
     return res.json({ total, page, limit, products: result.rows });
@@ -932,15 +932,15 @@ const DEFAULT_TAX_RATE = 23; // Polish standard VAT rate (%)
 
 function adminParseCsvProducts(content) {
   const records = csvParse(content, { columns: true, skip_empty_lines: true, trim: true });
-  return records.map((r) => ({
-    sku:         r.sku || r.SKU || r.id || null,
-    name:        r.name || r.nazwa || r.Name || '',
-    price_net:   parseFloat(r.price_net || r.cena_netto || r.price || 0),
-    price_gross: parseFloat(r.price_gross || r.cena_brutto || 0) || null,
-    stock:       parseInt(r.stock || r.stan || 0, 10),
-    category:    r.category || r.kategoria || null,
-    description: r.description || r.opis || '',
-    image_url:   r.image_url || r.zdjecie || r.image || null,
+  return records.map((csvRecord) => ({
+    sku:         csvRecord.sku || csvRecord.SKU || csvRecord.id || null,
+    name:        csvRecord.name || csvRecord.nazwa || csvRecord.Name || '',
+    price_net:   parseFloat(csvRecord.price_net || csvRecord.cena_netto || csvRecord.price || 0),
+    price_gross: parseFloat(csvRecord.price_gross || csvRecord.cena_brutto || 0) || null,
+    stock:       parseInt(csvRecord.stock || csvRecord.stan || 0, 10),
+    category:    csvRecord.category || csvRecord.kategoria || null,
+    description: csvRecord.description || csvRecord.opis || '',
+    image_url:   csvRecord.image_url || csvRecord.zdjecie || csvRecord.image || null,
   }));
 }
 

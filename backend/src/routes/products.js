@@ -46,16 +46,16 @@ router.get('/', async (req, res) => {
   try {
     const conditions = [];
     const params = [];
-    let idx = 1;
+    let nextParamIndex = 1;
 
-    if (storeId) { conditions.push(`store_id = $${idx++}`); params.push(storeId); }
-    if (category) { conditions.push(`category = $${idx++}`); params.push(category); }
-    if (isCentral !== null) { conditions.push(`is_central = $${idx++}`); params.push(isCentral); }
-    if (status) { conditions.push(`status = $${idx++}`); params.push(status); }
+    if (storeId) { conditions.push(`store_id = $${nextParamIndex++}`); params.push(storeId); }
+    if (category) { conditions.push(`category = $${nextParamIndex++}`); params.push(category); }
+    if (isCentral !== null) { conditions.push(`is_central = $${nextParamIndex++}`); params.push(isCentral); }
+    if (status) { conditions.push(`status = $${nextParamIndex++}`); params.push(status); }
     if (search) {
-      conditions.push(`(name ILIKE $${idx} OR description ILIKE $${idx})`);
+      conditions.push(`(name ILIKE $${nextParamIndex} OR description ILIKE $${nextParamIndex})`);
       params.push(`%${search}%`);
-      idx++;
+      nextParamIndex++;
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -64,7 +64,7 @@ router.get('/', async (req, res) => {
     const total = parseInt(countResult.rows[0].count, 10);
 
     const result = await db.query(
-      `SELECT * FROM products ${where} ORDER BY created_at DESC LIMIT $${idx} OFFSET $${idx + 1}`,
+      `SELECT * FROM products ${where} ORDER BY created_at DESC LIMIT $${nextParamIndex} OFFSET $${nextParamIndex + 1}`,
       [...params, limit, offset]
     );
 

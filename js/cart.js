@@ -24,18 +24,18 @@
   }
 
   function getCartCount(cart){
-    return (cart || getCart()).reduce(function(sum, i){ return sum + (Number(i.qty) || 1); }, 0);
+    return (cart || getCart()).reduce(function(sum, item){ return sum + (Number(item.qty) || 1); }, 0);
   }
 
   function getCartTotal(cart){
-    return (cart || getCart()).reduce(function(sum, i){ return sum + ((Number(i.price) || 0) * (Number(i.qty) || 1)); }, 0);
+    return (cart || getCart()).reduce(function(sum, item){ return sum + ((Number(item.price) || 0) * (Number(item.qty) || 1)); }, 0);
   }
 
   function updateCartBadge(){
     var count = getCartCount();
-    document.querySelectorAll('[data-cart-badge]').forEach(function(el){
-      el.textContent = count;
-      el.hidden = count === 0;
+    document.querySelectorAll('[data-cart-badge]').forEach(function(badgeElement){
+      badgeElement.textContent = count;
+      badgeElement.hidden = count === 0;
     });
   }
 
@@ -64,7 +64,7 @@
 
   function addToCart(product){
     var cart = getCart();
-    var existing = cart.filter(function(i){ return i.id === product.id; })[0];
+    var existing = cart.filter(function(item){ return item.id === product.id; })[0];
     if(existing){
       existing.qty = (Number(existing.qty) || 1) + 1;
     } else {
@@ -83,8 +83,8 @@
 
   function removeFromCart(productId){
     var cart = getCart();
-    var item = cart.filter(function(i){ return i.id === productId; })[0];
-    var newCart = cart.filter(function(i){ return i.id !== productId; });
+    var item = cart.filter(function(item){ return item.id === productId; })[0];
+    var newCart = cart.filter(function(item){ return item.id !== productId; });
     saveCart(newCart);
     updateCartBadge();
 
@@ -98,8 +98,8 @@
 
   function updateQty(productId, qty){
     var cart = getCart();
-    cart.forEach(function(i){
-      if(i.id === productId){ i.qty = Math.max(1, Number(qty) || 1); }
+    cart.forEach(function(item){
+      if(item.id === productId){ item.qty = Math.max(1, Number(qty) || 1); }
     });
     saveCart(cart);
     updateCartBadge();
@@ -120,7 +120,7 @@
 
     // Mirror to localStorage immediately for instant UI feedback
     var cart = getCart();
-    var existing = cart.filter(function(i){ return i.id === shopProductId; })[0];
+    var existing = cart.filter(function(item){ return item.id === shopProductId; })[0];
     if(existing){
       existing.qty = (Number(existing.qty) || 1) + quantity;
     } else {
@@ -134,7 +134,7 @@
         // Sync the backend cart item UUID back to localStorage so we can remove by API ID later.
         if(resp && resp.items){
           var newCart = getCart();
-          var local = newCart.filter(function(i){ return i.id === shopProductId; })[0];
+          var local = newCart.filter(function(item){ return item.id === shopProductId; })[0];
           if(local && resp.items.length){
             var apiItem = resp.items[resp.items.length - 1];
             if(apiItem){ local.apiItemId = apiItem.id; }
@@ -154,10 +154,10 @@
     try{ orders = JSON.parse(localStorage.getItem(CART_ORDERS_KEY) || '[]'); }catch(e){}
     var now = new Date().toISOString();
     var year = new Date().getFullYear();
-    var maxSeq = orders.reduce(function(max, o){
-      var m = o.number && o.number.match(/QM-\d{4}-(\d+)/);
-      var n = m ? parseInt(m[1], 10) : 0;
-      return n > max ? n : max;
+    var maxSeq = orders.reduce(function(max, order){
+      var match = order.number && order.number.match(/QM-\d{4}-(\d+)/);
+      var sequenceNumber = match ? parseInt(match[1], 10) : 0;
+      return sequenceNumber > max ? sequenceNumber : max;
     }, 0);
     var seq = String(maxSeq + 1).padStart(4, '0');
     var randomSuffix = Math.floor(Math.random() * 900 + 100);
@@ -168,7 +168,7 @@
       clientEmail: formData.email || '',
       clientPhone: formData.phone || '',
       clientAddress: formData.address || '',
-      items: cart.map(function(i){ return {id: i.id, name: i.name, price: i.price, qty: i.qty || 1}; }),
+      items: cart.map(function(item){ return {id: item.id, name: item.name, price: item.price, qty: item.qty || 1}; }),
       total: getCartTotal(cart),
       status: 'pending',
       createdAt: now
@@ -187,8 +187,8 @@
    */
   function createOrder(formData, cartItems, storeId){
     if(isLoggedIn() && storeId && window.QMApi && window.QMApi.Orders){
-      var items = cartItems.map(function(i){
-        return {product_id: i.id, quantity: i.qty || 1};
+      var items = cartItems.map(function(item){
+        return {product_id: item.id, quantity: item.qty || 1};
       });
       return window.QMApi.Orders.create({
         store_id: storeId,
