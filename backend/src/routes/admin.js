@@ -1060,4 +1060,56 @@ async function upsertCentralProducts(rawProducts, supplierId) {
   return count;
 }
 
+// ─── GET /api/admin/settings – read platform settings ────────────────────────
+
+router.get('/settings', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+  try {
+    const result = await db.query('SELECT key, value FROM platform_settings');
+    const settings = {};
+    for (const row of result.rows) {
+      settings[row.key] = row.value;
+    }
+    // Ensure commission_rate is returned as a number
+    if (settings.commission_rate !== undefined) {
+      settings.commission_rate = parseFloat(settings.commission_rate);
+    }
+    return res.json(settings);
+  } catch (err) {
+    console.error('admin get settings error:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// ─── PATCH /api/admin/settings – update platform settings ────────────────────
+
+router.patch(
+  '/settings',
+  authenticate,
+  requireRole('owner', 'admin'),
+  [
+    body('commission_rate').optional().isFloat({ min: 0, max: 1 }),
+  ],
+  validate,
+  async (req, res) => {
+    const { commission_rate } = req.body;
+
+    if (commission_rate === undefined) {
+      return res.status(422).json({ error: 'Brak pól do zaktualizowania' });
+    }
+
+    try {
+      await db.query(
+        `INSERT INTO platform_settings (key, value, updated_at)
+         VALUES ('commission_rate', $1, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+        [String(commission_rate)]
+      );
+      return res.json({ commission_rate });
+    } catch (err) {
+      console.error('admin update settings error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
 module.exports = router;

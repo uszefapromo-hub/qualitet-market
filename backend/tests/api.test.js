@@ -1185,12 +1185,12 @@ describe('POST /api/orders', () => {
 
     db.query
       .mockResolvedValueOnce({ rows: [{ id: STORE_ID, owner_id: SELLER_ID, margin: 15 }] })
-      .mockResolvedValueOnce({ rows: [{ commission_rate: 0.10 }] }) // subscription commission
+      .mockResolvedValueOnce({ rows: [{ value: '0.08' }] }) // platform_settings commission_rate
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', selling_price: 141.45, stock: 10, margin: 15 }] })
       .mockResolvedValueOnce({ rows: [] }) // INSERT INTO orders
       .mockResolvedValueOnce({ rows: [] }) // INSERT INTO order_items
       .mockResolvedValueOnce({ rows: [] }) // UPDATE products stock
-      .mockResolvedValueOnce({ rows: [{ id: NEW_ORDER_ID, store_id: STORE_ID, total: 141.45, status: 'created' }] })
+      .mockResolvedValueOnce({ rows: [{ id: NEW_ORDER_ID, store_id: STORE_ID, order_total: 141.45, total: 141.45, platform_commission: 11.32, seller_revenue: 130.13, status: 'created' }] })
       .mockResolvedValueOnce({ rows: [] }); // order_items
 
     const res = await request(app)
@@ -1204,6 +1204,9 @@ describe('POST /api/orders', () => {
 
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('total', 141.45);
+    expect(res.body).toHaveProperty('order_total', 141.45);
+    expect(res.body).toHaveProperty('platform_commission', 11.32);
+    expect(res.body).toHaveProperty('seller_revenue', 130.13);
     expect(res.body).toHaveProperty('status', 'created');
   });
 });
@@ -2102,17 +2105,17 @@ describe('POST /api/my/store/products/bulk', () => {
 });
 
 describe('POST /api/orders – commission calculation', () => {
-  it('uses subscription commission_rate for platform_commission', async () => {
+  it('uses global commission_rate from platform_settings for platform_commission', async () => {
     const NEW_ORDER_ID = 'b0000000-0000-4000-8000-000000000098';
 
     db.query
       .mockResolvedValueOnce({ rows: [{ id: STORE_ID, owner_id: SELLER_ID, margin: 15 }] })
-      .mockResolvedValueOnce({ rows: [{ commission_rate: 0.07 }] }) // pro plan subscription
+      .mockResolvedValueOnce({ rows: [{ value: '0.07' }] }) // platform_settings commission_rate
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', selling_price: 100.00, stock: 10, margin: 15 }] })
       .mockResolvedValueOnce({ rows: [] }) // INSERT orders
       .mockResolvedValueOnce({ rows: [] }) // INSERT order_items
       .mockResolvedValueOnce({ rows: [] }) // UPDATE products stock
-      .mockResolvedValueOnce({ rows: [{ id: NEW_ORDER_ID, store_id: STORE_ID, total: 100.00, platform_commission: 7.00, seller_revenue: 93.00, status: 'created' }] })
+      .mockResolvedValueOnce({ rows: [{ id: NEW_ORDER_ID, store_id: STORE_ID, total: 100.00, order_total: 100.00, platform_commission: 7.00, seller_revenue: 93.00, status: 'created' }] })
       .mockResolvedValueOnce({ rows: [] }); // order_items
 
     const res = await request(app)
@@ -2128,17 +2131,17 @@ describe('POST /api/orders – commission calculation', () => {
     expect(res.body).toHaveProperty('seller_revenue', 93.00);
   });
 
-  it('falls back to default commission when no subscription found', async () => {
+  it('falls back to default commission when no platform setting found', async () => {
     const NEW_ORDER_ID = 'b0000000-0000-4000-8000-000000000097';
 
     db.query
       .mockResolvedValueOnce({ rows: [{ id: STORE_ID, owner_id: SELLER_ID, margin: 15 }] })
-      .mockResolvedValueOnce({ rows: [] }) // no active subscription
+      .mockResolvedValueOnce({ rows: [] }) // no platform_settings row
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', selling_price: 100.00, stock: 10, margin: 15 }] })
       .mockResolvedValueOnce({ rows: [] }) // INSERT orders
       .mockResolvedValueOnce({ rows: [] }) // INSERT order_items
       .mockResolvedValueOnce({ rows: [] }) // UPDATE products stock
-      .mockResolvedValueOnce({ rows: [{ id: NEW_ORDER_ID, store_id: STORE_ID, total: 100.00, status: 'created' }] })
+      .mockResolvedValueOnce({ rows: [{ id: NEW_ORDER_ID, store_id: STORE_ID, total: 100.00, order_total: 100.00, platform_commission: 8.00, seller_revenue: 92.00, status: 'created' }] })
       .mockResolvedValueOnce({ rows: [] }); // order_items
 
     const res = await request(app)
@@ -2639,5 +2642,65 @@ describe('PUT /api/shop-products/:id – seller_margin enforcement', () => {
       .send({ seller_margin: 20 });
     expect(res.status).toBe(200);
     expect(res.body.selling_price).toBe(120);
+  });
+});
+
+// ─── Admin settings (commission) ──────────────────────────────────────────────
+
+describe('GET /api/admin/settings', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .get('/api/admin/settings')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns platform settings with commission_rate', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ key: 'commission_rate', value: '0.08' }],
+    });
+
+    const res = await request(app)
+      .get('/api/admin/settings')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('commission_rate', 0.08);
+  });
+});
+
+describe('PATCH /api/admin/settings', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .patch('/api/admin/settings')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ commission_rate: 0.10 });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects invalid commission_rate', async () => {
+    const res = await request(app)
+      .patch('/api/admin/settings')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ commission_rate: 1.5 });
+    expect(res.status).toBe(422);
+  });
+
+  it('rejects missing fields', async () => {
+    const res = await request(app)
+      .patch('/api/admin/settings')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
+    expect(res.status).toBe(422);
+  });
+
+  it('updates commission_rate', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // UPSERT
+
+    const res = await request(app)
+      .patch('/api/admin/settings')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ commission_rate: 0.10 });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('commission_rate', 0.10);
   });
 });
