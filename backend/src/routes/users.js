@@ -8,6 +8,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const { authenticate, requireRole, signToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { getPromoTier } = require('../helpers/promo');
 
 const router = express.Router();
 
@@ -20,19 +21,25 @@ router.post(
     body('password').isLength({ min: 8 }),
     body('name').trim().notEmpty(),
     body('role').optional().isIn(['seller', 'buyer']),
+    body('ref_code').optional().trim(),
   ],
   validate,
   async (req, res) => {
-    const { email, password, name, role = 'buyer' } = req.body;
+    const { email, password, name, role = 'buyer', ref_code } = req.body;
     try {
       const existing = await db.query('SELECT id FROM users WHERE email = $1', [email]);
       if (existing.rows.length > 0) {
         return res.status(409).json({ error: 'Użytkownik z tym e-mailem już istnieje' });
       }
 
+      // ── Determine promotional subscription tier ──────────────────────────
+      const sellerCountResult = await db.query(`SELECT COUNT(*) FROM users WHERE role = 'seller'`);
+      const currentSellerCount = parseInt(sellerCountResult.rows[0].count, 10);
+      const promoTier = getPromoTier(currentSellerCount);
+
       const passwordHash = await bcrypt.hash(password, 12);
       const id = uuidv4();
-      const trialEndsAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      const trialEndsAt = new Date(Date.now() + promoTier.durationDays * 24 * 60 * 60 * 1000);
 
       await db.query(
         `INSERT INTO users (id, email, password_hash, name, role, plan, trial_ends_at, created_at)
@@ -40,8 +47,28 @@ router.post(
         [id, email, passwordHash, name, role, trialEndsAt]
       );
 
+      // ── Record referral use (non-blocking) ──────────────────────────────
+      if (ref_code) {
+        db.query('SELECT id, user_id FROM referral_codes WHERE code = $1', [ref_code.toUpperCase()])
+          .then(async (codeResult) => {
+            const refRow = codeResult.rows[0];
+            if (!refRow || refRow.user_id === id) return;
+            await db.query(
+              `INSERT INTO referral_uses (id, referral_code_id, referrer_id, new_user_id, bonus_months, created_at)
+               VALUES ($1, $2, $3, $4, $5, NOW())
+               ON CONFLICT DO NOTHING`,
+              [uuidv4(), refRow.id, refRow.user_id, id, promoTier.bonusMonths]
+            );
+          })
+          .catch((err) => console.error('referral record error:', err.message));
+      }
+
       const token = signToken({ id, email, role });
-      return res.status(201).json({ token, user: { id, email, name, role, plan: 'trial' } });
+      return res.status(201).json({
+        token,
+        user: { id, email, name, role, plan: 'trial' },
+        promo: { bonusMonths: promoTier.bonusMonths, label: promoTier.label },
+      });
     } catch (err) {
       console.error('register error:', err.message);
       return res.status(500).json({ error: 'Błąd serwera' });

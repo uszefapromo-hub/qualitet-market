@@ -22,6 +22,7 @@ const paymentsRouter = require('./routes/payments');
 const shopProductsRouter = require('./routes/shop-products');
 const myRouter = require('./routes/my');
 const storeRouter = require('./routes/store');
+const referralRouter = require('./routes/referral');
 const { importSupplierProducts } = require('./services/supplier-import');
 const db = require('./config/database');
 
@@ -156,6 +157,7 @@ app.use('/api/payments', paymentsRouter);
 app.use('/api/shop-products', shopProductsRouter);
 app.use('/api/my', myRouter);
 app.use('/api/store', storeRouter);
+app.use('/api/referral', referralRouter);
 
 // ─── 404 ───────────────────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'Nie znaleziono zasobu' }));
