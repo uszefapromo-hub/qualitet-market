@@ -772,7 +772,222 @@ describe('GET /api/admin/stats', () => {
   });
 });
 
-// ─── Payments ──────────────────────────────────────────────────────────────────
+// ─── Admin suppliers ───────────────────────────────────────────────────────────
+
+const SUPPLIER_ID = 'a0000000-0000-4000-8000-000000000020';
+
+describe('POST /api/admin/suppliers', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ name: 'Hurtownia Test', type: 'api', api_endpoint: 'https://example.com/api' });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects missing name', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ type: 'api' });
+    expect(res.status).toBe(422);
+  });
+
+  it('rejects invalid type', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Test', type: 'ftp' });
+    expect(res.status).toBe(422);
+  });
+
+  it('creates a supplier with new schema fields', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{
+        id: SUPPLIER_ID, name: 'Hurtownia ABC', integration_type: 'api',
+        api_url: 'https://api.hurtownia.pl', country: 'PL',
+        xml_endpoint: null, csv_endpoint: null, status: 'active', active: true,
+      }],
+    });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Hurtownia ABC',
+        type: 'api',
+        country: 'PL',
+        api_endpoint: 'https://api.hurtownia.pl',
+        status: 'active',
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.name).toBe('Hurtownia ABC');
+    expect(res.body.status).toBe('active');
+  });
+
+  it('creates a supplier accepting integration_type fallback', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{
+        id: SUPPLIER_ID, name: 'Hurtownia XML', integration_type: 'xml',
+        xml_endpoint: 'https://hurtownia.pl/feed.xml', status: 'active', active: true,
+      }],
+    });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        name: 'Hurtownia XML',
+        integration_type: 'xml',
+        xml_endpoint: 'https://hurtownia.pl/feed.xml',
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.integration_type).toBe('xml');
+  });
+});
+
+describe('GET /api/admin/suppliers', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .get('/api/admin/suppliers')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns paginated supplier list', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({ rows: [{ id: SUPPLIER_ID, name: 'Hurtownia ABC', status: 'active' }] });
+
+    const res = await request(app)
+      .get('/api/admin/suppliers')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('suppliers');
+    expect(res.body).toHaveProperty('total', 1);
+    expect(Array.isArray(res.body.suppliers)).toBe(true);
+  });
+});
+
+describe('POST /api/admin/suppliers/import', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/import')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .field('supplier_id', SUPPLIER_ID);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 422 when supplier_id is missing', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/import')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 404 when supplier does not exist', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // supplier not found
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/import')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .field('supplier_id', SUPPLIER_ID);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 422 when no file and no API url configured', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SUPPLIER_ID, name: 'Test', integration_type: 'manual', api_url: null, xml_endpoint: null, csv_endpoint: null }],
+    });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/import')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .field('supplier_id', SUPPLIER_ID);
+    expect(res.status).toBe(422);
+  });
+
+  it('imports products from CSV file upload', async () => {
+    const csv = 'sku,name,price_net,stock,category\nABC-1,Produkt A,100,10,Elektronika\nABC-2,Produkt B,50,5,\n';
+
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SUPPLIER_ID, name: 'Test', integration_type: 'csv' }] }) // supplier
+      .mockResolvedValueOnce({ rows: [] })   // check existing sku ABC-1 (not found)
+      .mockResolvedValueOnce({ rows: [] })   // insert ABC-1
+      .mockResolvedValueOnce({ rows: [] })   // check existing sku ABC-2 (not found)
+      .mockResolvedValueOnce({ rows: [] });  // insert ABC-2
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/import')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .field('supplier_id', SUPPLIER_ID)
+      .attach('file', Buffer.from(csv), { filename: 'products.csv', contentType: 'text/csv' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('count', 2);
+  });
+
+  it('updates existing products by SKU during import', async () => {
+    const csv = 'sku,name,price_net,stock\nEXIST-1,Updated Product,120,20\n';
+    const EXISTING_PRODUCT_ID = 'a0000000-0000-4000-8000-000000000021';
+
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SUPPLIER_ID, name: 'Test', integration_type: 'csv' }] }) // supplier
+      .mockResolvedValueOnce({ rows: [{ id: EXISTING_PRODUCT_ID }] }) // existing product found by sku
+      .mockResolvedValueOnce({ rows: [] }); // update
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/import')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .field('supplier_id', SUPPLIER_ID)
+      .attach('file', Buffer.from(csv), { filename: 'products.csv', contentType: 'text/csv' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('count', 1);
+  });
+});
+
+describe('POST /api/admin/suppliers/sync', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/sync')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ supplier_id: SUPPLIER_ID });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 422 when supplier_id is missing', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/sync')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 404 when supplier does not exist', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/sync')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ supplier_id: SUPPLIER_ID });
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 422 when supplier has no API url configured', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SUPPLIER_ID, name: 'Test', integration_type: 'manual', api_url: null, xml_endpoint: null, csv_endpoint: null }],
+    });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/sync')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ supplier_id: SUPPLIER_ID });
+    expect(res.status).toBe(422);
+  });
+});
+
+
 
 describe('POST /api/payments', () => {
   it('rejects missing fields', async () => {

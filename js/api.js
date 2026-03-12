@@ -413,6 +413,43 @@
     updateProductStatus(id, status) { return patch(`/admin/products/${id}/status`, { status }); },
     /** List suppliers via admin endpoint. GET /api/admin/suppliers */
     suppliers(params)          { return get('/admin/suppliers', params); },
+    /**
+     * Create a new supplier (admin only). POST /api/admin/suppliers
+     * @param {{ name, type?, integration_type?, country?, api_endpoint?, xml_endpoint?, csv_endpoint?, api_key?, margin?, notes?, status? }} data
+     */
+    createSupplier(data)       { return post('/admin/suppliers', data); },
+    /**
+     * Import products from a CSV/XML file or the supplier's API endpoint.
+     * POST /api/admin/suppliers/import
+     * @param {string} supplierId
+     * @param {File|null} file – browser File object (CSV or XML); omit to fetch from supplier API
+     */
+    importSupplier(supplierId, file = null) {
+      const token = getToken();
+      const form  = new FormData();
+      form.append('supplier_id', supplierId);
+      if (file) form.append('file', file);
+      return fetch(`${API_BASE}/admin/suppliers/import`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      }).then(async (res) => {
+        const body = await res.json();
+        if (!res.ok) {
+          const err = new Error(body.error || `HTTP ${res.status}`);
+          err.status = res.status;
+          err.body   = body;
+          throw err;
+        }
+        return body;
+      });
+    },
+    /**
+     * Sync products from a supplier's API endpoint into the central catalogue.
+     * POST /api/admin/suppliers/sync
+     * @param {string} supplierId
+     */
+    syncSupplier(supplierId)   { return post('/admin/suppliers/sync', { supplier_id: supplierId }); },
     subscriptions(params)      { return get('/admin/subscriptions', params); },
     auditLogs(params)          { return get('/admin/audit-logs', params); },
   };
