@@ -465,6 +465,10 @@
     get()                      { return get('/my/store'); },
     /** Update the seller's primary store. */
     update(data)               { return patch('/my/store', data); },
+    /** Get dashboard stats for the seller's store. */
+    stats()                    { return get('/my/store/stats'); },
+    /** List orders for the seller's store. */
+    storeOrders(params)        { return get('/my/store/orders', params); },
     /** Get the seller's order history (as buyer). */
     orders(params)             { return get('/my/orders', params); },
     /**
