@@ -310,3 +310,11 @@ body{
 @media(max-width:380px){
   .market-grid{grid-template-columns:1fr}
 }
+
+/* Owner panel modals */
+.owner-modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;display:flex;align-items:center;justify-content:center;padding:16px}
+.owner-modal[hidden]{display:none}
+.owner-modal-box{background:var(--card,#fff);border-radius:14px;padding:24px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;position:relative;box-shadow:0 8px 40px rgba(0,0,0,.22)}
+.owner-modal-close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted,#64748b);line-height:1}
+.owner-modal-close:hover{color:var(--text,#0f172a)}
+.owner-modal-box h3{margin:0 0 4px;font-size:18px}
