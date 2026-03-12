@@ -1191,7 +1191,10 @@ body.store-shop .shop-contact h2{
 .btn-task-complete:hover{background:rgba(250,204,21,.18)}
 .btn-task-close{border-color:rgba(34,197,94,.4);color:#86efac;background:rgba(34,197,94,.08)}
 .btn-task-close:hover{background:rgba(34,197,94,.18)}
-.task-item.is-closed{opacity:.45;pointer-events:none}
+.btn-task-share{border-color:rgba(139,92,246,.4);color:#c4b5fd;background:rgba(139,92,246,.08)}
+.btn-task-share:hover{background:rgba(139,92,246,.18)}
+.task-item.is-closed{opacity:.45}
+.task-item.is-closed .btn-task:not(.btn-task-share){pointer-events:none}
 .task-item--focused{
   outline:2px solid rgba(56,189,248,.7);
   box-shadow:0 0 0 4px rgba(56,189,248,.15),0 8px 24px rgba(2,6,23,.4);

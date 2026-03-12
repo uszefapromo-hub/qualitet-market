@@ -6116,6 +6116,16 @@
       return '';
     }
 
+    function buildTaskPermalink(task){
+      const origin = (typeof window !== 'undefined' && window.location && window.location.origin !== undefined && window.location.origin !== null) ? window.location.origin : '';
+      const author = task.author ? '?author=' + encodeURIComponent(task.author) : '';
+      return origin + '/tasks/' + encodeURIComponent(task.id) + author;
+    }
+
+    function truncateUrl(url){
+      return url.length > 60 ? url.slice(0, 60) + '…' : url;
+    }
+
     function renderTaskCard(task){
       const priorityCls = getPriorityClass(task.priority);
       const priorityLabel = getPriorityLabel(task.priority);
@@ -6125,6 +6135,7 @@
       const closedClass = task.status === 'closed' ? ' is-closed' : '';
       const descHtml = task.description ? `<p class="task-desc">${escapeHtml(task.description)}</p>` : '';
       const attachHtml = (task.attachment && /^data:image\//.test(task.attachment)) ? `<img class="task-attachment-thumb" src="${task.attachment}" alt="Załącznik" loading="lazy">` : '';
+      const shareBtn = `<button class="btn-task btn-task-share" data-task-action="copy-link" data-task-id="${escapeHtml(task.id)}" title="Skopiuj link do zadania" aria-label="Skopiuj link">🔗 Skopiuj link</button>`;
       return `
         <div class="task-item${closedClass}" data-task-id="${escapeHtml(task.id)}">
           <div class="task-header">
@@ -6138,7 +6149,7 @@
             <span>${escapeHtml(task.assignee)}</span>
             ${dueHtml}
           </div>
-          ${actionBtn ? `<div class="task-action-row">${actionBtn}</div>` : ''}
+          <div class="task-action-row">${actionBtn ? actionBtn + ' ' : ''}${shareBtn}</div>
         </div>`;
     }
 
@@ -6219,6 +6230,21 @@
     }
 
     function handleTaskAction(action, taskId){
+      if(action === 'copy-link'){
+        const task = tasks.find(t => t.id === taskId);
+        if(!task) return;
+        const url = buildTaskPermalink(task);
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(url).then(function(){
+            showTaskFeedback('🔗 Link skopiowany', truncateUrl(url));
+          }).catch(function(){
+            showTaskFeedback('Link do zadania', truncateUrl(url));
+          });
+        } else {
+          showTaskFeedback('Link do zadania', truncateUrl(url));
+        }
+        return;
+      }
       const idx = tasks.findIndex(t => t.id === taskId);
       if(idx === -1) return;
       if(action === 'start'){
@@ -6329,6 +6355,12 @@
           const newId = (typeof crypto !== 'undefined' && crypto.randomUUID)
             ? crypto.randomUUID()
             : `task_${Date.now()}`;
+          let taskAuthor = '';
+          try {
+            const profileRaw = localStorage.getItem(STORAGE_KEYS.userProfile);
+            const profile = profileRaw ? JSON.parse(profileRaw) : null;
+            taskAuthor = (profile && (profile.name || profile.login || profile.email)) || '';
+          } catch(e) {}
           const newTask = {
             id: newId,
             title,
@@ -6339,6 +6371,7 @@
             status: data.get('status') || 'open',
             createdAt: new Date().toISOString(),
             closedAt: null,
+            author: taskAuthor,
             attachment: pendingAttachment || null
           };
           tasks.unshift(newTask);
