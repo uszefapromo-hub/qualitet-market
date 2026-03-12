@@ -501,6 +501,24 @@
       })
       .catch(function () {});
 
+    // Wire "Dodaj produkt" button (in Products tab)
+    var addBtn = document.querySelector('[data-add-store-product]');
+    if (addBtn) {
+      addBtn.addEventListener('click', function () {
+        Promise.resolve(window._panelStore || a.MyStore.get())
+          .then(function (store) {
+            if (!store || !store.id) {
+              alert('Nie znaleziono aktywnego sklepu. Zaloguj się lub utwórz sklep.');
+              return;
+            }
+            openAddProductDialog(a, store.id);
+          })
+          .catch(function () {
+            alert('Nie udało się załadować danych sklepu. Sprawdź połączenie.');
+          });
+      });
+    }
+
     // Settings form submission
     var settingsForm = document.querySelector('[data-settings-form]');
     if (settingsForm) {
@@ -533,6 +551,9 @@
           });
       });
     }
+
+    // Wire catalog (add product from central catalog)
+    initCatalogFlow();
   }
 
   function renderSellerProducts(products) {
@@ -550,15 +571,39 @@
 
     tbody.innerHTML = '';
     products.forEach(function (p) {
-      var row = document.createElement('tr');
       var activeLabel = p.active !== false ? 'Aktywny' : 'Wyłączony';
-      var activePill  = p.active !== false ? 'pill-active' : 'pill-inactive';
+      var activePill = p.active !== false ? 'pill-active' : 'pill-inactive';
+      var currentMargin = p.margin_override != null ? p.margin_override : (p.base_margin || 0);
+      var currentPrice = p.price_override != null ? p.price_override : (p.price || p.base_price || 0);
+      var basePrice = p.base_price || p.price || 0;
+
+      var row = document.createElement('tr');
+      row.setAttribute('data-shop-product-id', p.id || '');
       row.innerHTML =
         '<td>' + escHtml(p.name || p.custom_title || '—') + '</td>' +
-        '<td>' + formatPrice(p.price || p.base_price || 0) + '</td>' +
-        '<td>' + escHtml(String(p.margin_override != null ? p.margin_override : (p.base_margin || 0))) + '%</td>' +
-        '<td><span class="' + activePill + '">' + activeLabel + '</span></td>' +
+        '<td>' + formatPrice(basePrice) + '</td>' +
         '<td>' +
+          '<input type="number" min="0" max="200" step="0.1" class="owner-input" ' +
+            'style="width:80px;padding:4px 8px;font-size:13px" ' +
+            'value="' + escHtml(String(currentMargin)) + '" ' +
+            'data-edit-margin ' +
+            'aria-label="Marża dla ' + escHtml(p.name || '') + '">' +
+          '%' +
+        '</td>' +
+        '<td>' +
+          '<input type="number" min="0" step="0.01" class="owner-input" ' +
+            'style="width:100px;padding:4px 8px;font-size:13px" ' +
+            'value="' + escHtml(String(parseFloat(currentPrice).toFixed(2))) + '" ' +
+            'data-edit-price ' +
+            'aria-label="Cena dla ' + escHtml(p.name || '') + '">' +
+          ' zł' +
+        '</td>' +
+        '<td><span class="' + activePill + '">' + activeLabel + '</span></td>' +
+        '<td style="white-space:nowrap">' +
+          '<button class="btn btn-primary" style="padding:4px 10px;font-size:12px;margin-right:4px" ' +
+            'data-save-product-id="' + escHtml(p.id || '') + '">' +
+            'Zapisz' +
+          '</button>' +
           '<button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" ' +
             'data-toggle-product-id="' + escHtml(p.id || '') + '" ' +
             'data-toggle-product-active="' + (p.active !== false ? 'true' : 'false') + '">' +
@@ -568,28 +613,166 @@
       tbody.appendChild(row);
     });
 
-    // Wire toggle buttons
+    // Wire save buttons (margin + price)
     tbody.addEventListener('click', function (e) {
-      var btn = e.target.closest('[data-toggle-product-id]');
-      if (!btn) return;
-      var id     = btn.getAttribute('data-toggle-product-id');
-      var active = btn.getAttribute('data-toggle-product-active') !== 'true';
+      var saveBtn = e.target.closest('[data-save-product-id]');
+      if (saveBtn) {
+        var id  = saveBtn.getAttribute('data-save-product-id');
+        var row = saveBtn.closest('tr');
+        var marginInput = row.querySelector('[data-edit-margin]');
+        var priceInput  = row.querySelector('[data-edit-price]');
+        var a2 = api();
+        if (!a2) return;
+
+        var payload = {};
+        if (marginInput) payload.margin_override = parseFloat(marginInput.value) || 0;
+        var priceVal = parseFloat(priceInput && priceInput.value);
+        if (priceInput) payload.price_override = !isNaN(priceVal) ? priceVal : null;
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = '…';
+
+        a2.MyStore.updateProduct(id, payload)
+          .then(function () {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Zapisano';
+            setTimeout(function () { saveBtn.textContent = 'Zapisz'; }, 1500);
+          })
+          .catch(function () {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Błąd';
+            setTimeout(function () { saveBtn.textContent = 'Zapisz'; }, 1500);
+          });
+        return;
+      }
+
+      // Wire toggle buttons
+      var toggleBtn = e.target.closest('[data-toggle-product-id]');
+      if (!toggleBtn) return;
+      var id     = toggleBtn.getAttribute('data-toggle-product-id');
+      var active = toggleBtn.getAttribute('data-toggle-product-active') !== 'true';
       var a2 = api();
       if (!a2) return;
-      btn.disabled = true;
+      toggleBtn.disabled = true;
       a2.MyStore.updateProduct(id, { active: active })
         .then(function () {
-          btn.setAttribute('data-toggle-product-active', active ? 'true' : 'false');
-          btn.textContent = active ? 'Wyłącz' : 'Włącz';
-          var pill = btn.closest('tr').querySelector('.pill-active,.pill-inactive');
+          toggleBtn.setAttribute('data-toggle-product-active', active ? 'true' : 'false');
+          toggleBtn.textContent = active ? 'Wyłącz' : 'Włącz';
+          var pill = toggleBtn.closest('tr').querySelector('.pill-active,.pill-inactive');
           if (pill) {
             pill.className = active ? 'pill-active' : 'pill-inactive';
             pill.textContent = active ? 'Aktywny' : 'Wyłączony';
           }
-          btn.disabled = false;
+          toggleBtn.disabled = false;
         })
-        .catch(function () { btn.disabled = false; });
+        .catch(function () { toggleBtn.disabled = false; });
     });
+  }
+
+  function initCatalogFlow() {
+    var searchInput   = document.querySelector('[data-catalog-search]');
+    var searchBtn     = document.querySelector('[data-catalog-load]');
+    var catalogLoading = document.querySelector('[data-catalog-loading]');
+    var catalogEmpty  = document.querySelector('[data-catalog-empty]');
+    var catalogWrap   = document.querySelector('[data-catalog-table-wrap]');
+    var catalogTbody  = document.querySelector('[data-catalog-tbody]');
+
+    if (!searchBtn || !catalogTbody) return;
+
+    function loadCatalog(query) {
+      var a = api();
+      if (!a) return;
+
+      if (catalogLoading) catalogLoading.hidden = false;
+      if (catalogEmpty)   catalogEmpty.hidden   = true;
+      if (catalogWrap)    catalogWrap.hidden    = true;
+
+      var params = { is_central: true, status: 'active', limit: 30 };
+      if (query) params.search = query;
+
+      a.Products.list(params)
+        .then(function (data) {
+          if (catalogLoading) catalogLoading.hidden = true;
+          var products = Array.isArray(data) ? data
+            : (data && Array.isArray(data.products)) ? data.products : [];
+
+          if (!products.length) {
+            if (catalogEmpty) catalogEmpty.hidden = false;
+            return;
+          }
+
+          catalogTbody.innerHTML = '';
+          products.forEach(function (p) {
+            var tr = document.createElement('tr');
+            tr.innerHTML =
+              '<td>' + escHtml(p.name || '—') + '</td>' +
+              '<td class="cell-muted">' + escHtml(p.category || '—') + '</td>' +
+              '<td>' + formatPrice(p.price_gross || p.selling_price || 0) + '</td>' +
+              '<td>' +
+                '<button class="btn btn-primary" style="padding:4px 10px;font-size:12px" ' +
+                  'data-add-catalog-product="' + escHtml(p.id || '') + '" ' +
+                  'data-add-catalog-name="' + escHtml(p.name || '') + '">' +
+                  '+ Dodaj' +
+                '</button>' +
+              '</td>';
+            catalogTbody.appendChild(tr);
+          });
+
+          if (catalogWrap) catalogWrap.hidden = false;
+        })
+        .catch(function () {
+          if (catalogLoading) catalogLoading.hidden = true;
+          if (catalogEmpty) { catalogEmpty.textContent = 'Błąd ładowania katalogu.'; catalogEmpty.hidden = false; }
+        });
+    }
+
+    searchBtn.addEventListener('click', function () {
+      loadCatalog(searchInput ? searchInput.value.trim() : '');
+    });
+
+    if (searchInput) {
+      searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') loadCatalog(searchInput.value.trim());
+      });
+    }
+
+    // Wire "Add to store" buttons
+    if (catalogTbody) {
+      catalogTbody.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-add-catalog-product]');
+        if (!btn) return;
+        var productId   = btn.getAttribute('data-add-catalog-product');
+        var productName = btn.getAttribute('data-add-catalog-name');
+        var a2 = api();
+        if (!a2) return;
+
+        var store = window._panelStore;
+        if (!store) {
+          alert('Błąd: nie można dodać produktu – brak aktywnego sklepu. Odśwież stronę i spróbuj ponownie.');
+          return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = '…';
+
+        a2.MyStore.addProduct({ store_id: store.id, product_id: productId, active: true })
+          .then(function () {
+            btn.textContent = '✓ Dodano';
+            btn.disabled = true;
+            // Reload products list
+            return a2.MyStore.products(store.id, { limit: 50 });
+          })
+          .then(function (data) {
+            if (data) renderSellerProducts(data.products || []);
+          })
+          .catch(function (err) {
+            btn.disabled = false;
+            btn.textContent = '+ Dodaj';
+            var msg = (err && err.body && err.body.error) || 'Błąd dodawania produktu.';
+            alert(msg);
+          });
+      });
+    }
   }
 
   function renderSellerOrders(orders) {
@@ -642,6 +825,7 @@
         .then(function () { sel.disabled = false; })
         .catch(function () { sel.disabled = false; });
     });
+  }
 
   function openAddProductDialog(a, storeId) {
     var existing = document.getElementById('qm-add-product-dialog');

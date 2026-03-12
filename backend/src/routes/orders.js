@@ -7,12 +7,11 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate, sanitizeText } = require('../middleware/validate');
-const { PLAN_CONFIG } = require('./subscriptions');
 
 const router = express.Router();
 
-// Default commission rate: use trial plan's commission_rate as fallback
-const PLATFORM_COMMISSION_DEFAULT = PLAN_CONFIG['trial'].commission_rate;
+// Default commission rate: 8% (used when platform_settings row is missing)
+const PLATFORM_COMMISSION_DEFAULT = parseFloat(process.env.PLATFORM_COMMISSION_DEFAULT || '0.08');
 
 // ─── List orders ───────────────────────────────────────────────────────────────
 
@@ -91,16 +90,12 @@ router.post(
       const store = storeResult.rows[0];
       if (!store) return res.status(404).json({ error: 'Sklep nie znaleziony' });
 
-      // Get commission rate from active subscription
-      const subResult = await db.query(
-        `SELECT commission_rate FROM subscriptions
-         WHERE shop_id = $1 AND status = 'active'
-           AND (expires_at IS NULL OR expires_at > NOW())
-         ORDER BY created_at DESC LIMIT 1`,
-        [store_id]
+      // Get global commission rate from platform settings
+      const settingsResult = await db.query(
+        `SELECT value FROM platform_settings WHERE key = 'commission_rate'`
       );
-      const commissionRate = subResult.rows[0]
-        ? parseFloat(subResult.rows[0].commission_rate)
+      const commissionRate = settingsResult.rows[0]
+        ? parseFloat(settingsResult.rows[0].value)
         : PLATFORM_COMMISSION_DEFAULT;
 
       // Fetch products and verify stock
@@ -146,19 +141,19 @@ router.post(
 
         const platformMargin = store.margin || parseFloat(process.env.PLATFORM_MARGIN_DEFAULT || '15');
         const platformFee = parseFloat((subtotal * (platformMargin / 100)).toFixed(2));
-        const total = parseFloat(subtotal.toFixed(2));
+        const orderTotal = parseFloat(subtotal.toFixed(2));
 
-        const platform_commission = parseFloat((subtotal * commissionRate).toFixed(2));
-        const seller_revenue = parseFloat((subtotal - platform_commission).toFixed(2));
+        const platform_commission = parseFloat((orderTotal * commissionRate).toFixed(2));
+        const seller_revenue = parseFloat((orderTotal - platform_commission).toFixed(2));
 
         await client.query(
           `INSERT INTO orders
              (id, store_id, store_owner_id, buyer_id, status, subtotal, platform_fee,
-              platform_commission, seller_revenue, total,
+              order_total, platform_commission, seller_revenue, total,
               shipping_address, notes, created_at)
-           VALUES ($1,$2,$3,$4,'created',$5,$6,$7,$8,$9,$10,$11,NOW())`,
+           VALUES ($1,$2,$3,$4,'created',$5,$6,$7,$8,$9,$10,$11,$12,NOW())`,
           [orderId, store_id, store.owner_id, req.user.id, subtotal.toFixed(2), platformFee,
-           platform_commission, seller_revenue, total, safeAddress, safeNotes]
+           orderTotal, platform_commission, seller_revenue, orderTotal, safeAddress, safeNotes]
         );
 
         for (const oi of orderItems) {
