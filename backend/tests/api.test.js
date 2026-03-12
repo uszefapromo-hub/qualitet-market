@@ -3304,7 +3304,7 @@ describe('POST /api/admin/products/import', () => {
     expect(res.status).toBe(422);
   });
 
-  it('imports CSV products into central catalogue', async () => {
+  it('imports CSV products into central catalog', async () => {
     const csv = 'name,sku,price_net,tax_rate,stock\nFotel Biurowy,SKU-001,200,23,5\n';
 
     db.query

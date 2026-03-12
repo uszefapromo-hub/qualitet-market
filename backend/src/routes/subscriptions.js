@@ -21,9 +21,9 @@ const VALID_PLANS = ['trial', 'basic', 'pro', 'elite'];
  */
 const PLAN_CONFIG = {
   trial:  { product_limit: 10,   maxProducts: 10,   commission_rate: 0.15, platformMarginPct: 15, duration_days: 14, durationDays: 14 },
-  basic:  { product_limit: 100,  maxProducts: 100,  commission_rate: 0.10, platformMarginPct: 10, durationDays: 30 },
-  pro:    { product_limit: 500,  maxProducts: 500,  commission_rate: 0.07, platformMarginPct: 7,  durationDays: 30 },
-  elite:  { product_limit: null, maxProducts: null, commission_rate: 0.05, platformMarginPct: 5,  durationDays: 30 },
+  basic:  { product_limit: 100,  maxProducts: 100,  commission_rate: 0.10, platformMarginPct: 10, duration_days: 30, durationDays: 30 },
+  pro:    { product_limit: 500,  maxProducts: 500,  commission_rate: 0.07, platformMarginPct: 7,  duration_days: 30, durationDays: 30 },
+  elite:  { product_limit: null, maxProducts: null, commission_rate: 0.05, platformMarginPct: 5,  duration_days: 30, durationDays: 30 },
 };
 
 // ─── List subscriptions (own shops) ───────────────────────────────────────────
