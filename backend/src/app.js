@@ -79,6 +79,67 @@ app.use('/api/auth/register', authLimiter);
 // ─── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
+// ─── Readiness check ───────────────────────────────────────────────────────────
+// Reports per-subsystem status so operators can confirm the platform is ready
+// for first sellers and first orders before opening to the public.
+app.get('/api/readiness', async (_req, res) => {
+  const checks = {};
+  let allOk = true;
+
+  // Database connectivity
+  try {
+    await db.query('SELECT 1');
+    checks.database = 'ok';
+  } catch (_err) {
+    checks.database = 'error';
+    allOk = false;
+  }
+
+  // User flow: register / login endpoint reachable
+  checks.user_flow = {
+    register:  'POST /api/users/register',
+    login:     'POST /api/users/login',
+    me:        'GET  /api/users/me',
+  };
+
+  // Store flow: store + product management
+  checks.store_flow = {
+    create_store:   'POST /api/stores',
+    list_products:  'GET  /api/products',
+    add_to_store:   'POST /api/shop-products',
+  };
+
+  // Cart & order flow
+  checks.cart_order_flow = {
+    add_to_cart:   'POST /api/cart/items',
+    create_order:  'POST /api/orders',
+    order_status:  'PATCH /api/orders/:id/status',
+  };
+
+  // Payment flow
+  checks.payment_flow = {
+    initiate_payment: 'POST /api/payments/:orderId/initiate',
+    webhook:          'POST /api/payments/webhook',
+    update_status:    'PUT  /api/payments/:id/status',
+  };
+
+  // Subscription system
+  checks.subscription_system = {
+    plans:       ['trial', 'basic', 'pro', 'elite'],
+    create:      'POST /api/subscriptions',
+  };
+
+  const status = allOk ? 'ready' : 'degraded';
+  return res.status(allOk ? 200 : 503).json({
+    status,
+    timestamp: new Date().toISOString(),
+    checks,
+    message: allOk
+      ? 'Platforma gotowa na pierwszych sprzedawców i pierwsze zamówienia.'
+      : 'Platforma niedostępna – sprawdź logi bazy danych.',
+  });
+});
+
 // ─── API routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);

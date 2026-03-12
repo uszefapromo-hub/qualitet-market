@@ -3321,3 +3321,133 @@ describe('POST /api/admin/products/import', () => {
     expect(res.body.count).toBeGreaterThanOrEqual(1);
   });
 });
+
+// ─── GET /api/readiness ────────────────────────────────────────────────────────
+
+describe('GET /api/readiness', () => {
+  it('returns ready status with all subsystem checks', async () => {
+    const res = await request(app).get('/api/readiness');
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('ready');
+    expect(res.body).toHaveProperty('checks');
+    expect(res.body.checks.database).toBe('ok');
+    expect(res.body.checks).toHaveProperty('user_flow');
+    expect(res.body.checks).toHaveProperty('store_flow');
+    expect(res.body.checks).toHaveProperty('cart_order_flow');
+    expect(res.body.checks).toHaveProperty('payment_flow');
+    expect(res.body.checks).toHaveProperty('subscription_system');
+    expect(res.body).toHaveProperty('message');
+    expect(res.body.message).toContain('gotowa');
+  });
+
+  it('reports degraded status when database is unavailable', async () => {
+    db.query.mockRejectedValueOnce(new Error('Connection refused'));
+    const res = await request(app).get('/api/readiness');
+    expect(res.status).toBe(503);
+    expect(res.body.status).toBe('degraded');
+    expect(res.body.checks.database).toBe('error');
+  });
+});
+
+// ─── E2E – full user flow ─────────────────────────────────────────────────────
+// Verifies the complete purchase flow in one sequential test:
+// register → login → create store → add product → cart → order → payment
+
+describe('E2E – full user flow', () => {
+  it('completes the full flow: register → login → store → product → cart → order → payment', async () => {
+    const E2E_EMAIL = 'e2eflow@test.pl';
+    const E2E_ORDER_ID = 'e2e00000-0000-4000-8000-000000000001';
+
+    // ── Step 1: Register ──────────────────────────────────────────────────────
+    const regRes = await request(app)
+      .post('/api/users/register')
+      .send({ email: E2E_EMAIL, password: 'Password123!', name: 'E2E Seller', role: 'seller' });
+    expect(regRes.status).toBe(201);
+    const { token: regToken, user: e2eUser } = regRes.body;
+    expect(regToken).toBeDefined();
+    expect(e2eUser).toHaveProperty('id');
+    expect(e2eUser.role).toBe('seller');
+
+    // ── Step 2: Login ─────────────────────────────────────────────────────────
+    const loginRes = await request(app)
+      .post('/api/users/login')
+      .send({ email: E2E_EMAIL, password: 'Password123!' });
+    expect(loginRes.status).toBe(200);
+    expect(loginRes.body).toHaveProperty('token');
+    const userToken = loginRes.body.token;
+
+    // ── Step 3: Create store ──────────────────────────────────────────────────
+    const storeRes = await request(app)
+      .post('/api/stores')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ name: 'E2E Sklep', slug: 'e2e-sklep-flow', margin: 15, plan: 'basic' });
+    expect(storeRes.status).toBe(201);
+    const { id: newStoreId } = storeRes.body;
+    expect(newStoreId).toBeDefined();
+
+    // ── Step 4: Add product to store ──────────────────────────────────────────
+    const shopProdRes = await request(app)
+      .post('/api/shop-products')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ store_id: newStoreId, product_id: PRODUCT_ID, seller_margin: 20 });
+    expect(shopProdRes.status).toBe(201);
+    const { id: newShopProdId } = shopProdRes.body;
+    expect(newShopProdId).toBeDefined();
+
+    // ── Step 5: Add product to cart ───────────────────────────────────────────
+    // The cart POST uses a JOIN query; mock the shop-product lookup for this step.
+    db.query.mockResolvedValueOnce({
+      rows: [{
+        id: newShopProdId, store_id: newStoreId, product_id: PRODUCT_ID,
+        active: true, effective_price: 169.74, stock: 10, name: 'Fotel',
+      }],
+    });
+    const cartRes = await request(app)
+      .post('/api/cart')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ shop_product_id: newShopProdId, quantity: 1 });
+    expect(cartRes.status).toBe(201);
+    expect(cartRes.body).toHaveProperty('items');
+    expect(cartRes.body.items.length).toBeGreaterThanOrEqual(1);
+
+    // ── Step 6: Create order ──────────────────────────────────────────────────
+    // Mock all order-creation DB queries in call order:
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: newStoreId, owner_id: e2eUser.id, margin: 15 }] })   // store
+      .mockResolvedValueOnce({ rows: [{ value: '0.08' }] })                                       // commission_rate
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', selling_price: 141.45, stock: 10, margin: 15 }] }) // products
+      .mockResolvedValueOnce({ rows: [] })  // INSERT INTO orders
+      .mockResolvedValueOnce({ rows: [] })  // INSERT INTO order_items
+      .mockResolvedValueOnce({ rows: [] })  // UPDATE products stock
+      .mockResolvedValueOnce({ rows: [{ id: E2E_ORDER_ID, store_id: newStoreId, order_total: 141.45, total: 141.45, platform_commission: 11.32, seller_revenue: 130.13, status: 'created' }] }) // SELECT order
+      .mockResolvedValueOnce({ rows: [] }); // SELECT order_items
+
+    const orderRes = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({
+        store_id: newStoreId,
+        items: [{ product_id: PRODUCT_ID, quantity: 1 }],
+        shipping_address: 'ul. E2E Testowa 1, Warszawa',
+      });
+    expect(orderRes.status).toBe(201);
+    expect(orderRes.body.status).toBe('created');
+    expect(orderRes.body).toHaveProperty('total', 141.45);
+    expect(orderRes.body).toHaveProperty('platform_commission', 11.32);
+    expect(orderRes.body).toHaveProperty('seller_revenue', 130.13);
+
+    // ── Step 7: Initiate payment ──────────────────────────────────────────────
+    // Mock the order lookup for the payment initiation step.
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: E2E_ORDER_ID, buyer_id: e2eUser.id, total: 141.45, status: 'created' }],
+    });
+    const payRes = await request(app)
+      .post(`/api/payments/${E2E_ORDER_ID}/initiate`)
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ method: 'blik' });
+    expect(payRes.status).toBe(201);
+    expect(payRes.body.provider).toBe('blik');
+    expect(payRes.body).toHaveProperty('payment_id');
+    expect(payRes.body).toHaveProperty('instructions');
+  });
+});
