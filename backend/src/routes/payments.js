@@ -165,7 +165,11 @@ function verifyWebhookSignature(paymentId, status, signature) {
   // Constant-time comparison to prevent timing attacks
   try {
     return crypto.timingSafeEqual(Buffer.from(signature, 'hex'), Buffer.from(expected, 'hex'));
-  } catch {
+  } catch (err) {
+    // Malformed hex string or other comparison error
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('webhook signature comparison error:', err.message);
+    }
     return false;
   }
 }
@@ -305,8 +309,8 @@ function buildProviderPayload(method, payment, returnUrl) {
   const cancelUrl  = `${base}/koszyk.html?payment=cancel`;
 
   if (method === 'card' || method === 'p24') {
-    const isProduction = Boolean(process.env.STRIPE_SECRET_KEY || process.env.P24_MERCHANT_ID);
-    if (!isProduction) {
+    const hasPaymentProvider = Boolean(process.env.STRIPE_SECRET_KEY || process.env.P24_MERCHANT_ID);
+    if (!hasPaymentProvider) {
       return {
         provider: method,
         payment_id: payment.id,

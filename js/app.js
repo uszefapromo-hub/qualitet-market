@@ -5789,8 +5789,8 @@
           return;
         } catch(err){
           const msg = (err && err.body && err.body.error) || (err && err.message) || '';
-          // Only block on explicit auth errors; network errors fall through to legacy
-          if(err && err.status && err.status < 500){
+          // Only block on explicit auth errors (401/403); network errors fall through to legacy
+          if(err && (err.status === 401 || err.status === 403)){
             alert('Błąd logowania: ' + (msg || 'Nieprawidłowy e-mail lub hasło'));
             return;
           }
