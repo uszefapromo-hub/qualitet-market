@@ -5089,6 +5089,57 @@
         }
       });
     }
+
+    // ── SCRIPTS TAB ──
+    const scriptRunBtns = document.querySelectorAll('[data-script-run]');
+    const scriptResultEl = document.querySelector('[data-script-result]');
+    const SCRIPT_LOG_KEY = 'qm_scripts_log';
+
+    function getScriptLog(){ try { return JSON.parse(localStorage.getItem(SCRIPT_LOG_KEY) || '[]'); } catch(_e){ return []; } }
+    function saveScriptLog(log){ localStorage.setItem(SCRIPT_LOG_KEY, JSON.stringify(log.slice(0, 50))); }
+
+    function renderScriptsLog(){
+      const list = document.querySelector('[data-scripts-log-list]');
+      if(!list) return;
+      const log = getScriptLog();
+      if(!log.length){ list.innerHTML = '<p class="hint">Brak historii uruchomień.</p>'; return; }
+      list.innerHTML = '';
+      log.forEach(entry => {
+        const card = document.createElement('div');
+        card.className = 'list-card';
+        const isOk = entry.ok === true;
+        card.innerHTML = `<strong>${escapeHtml(entry.name)}</strong> <span class="hint">${escapeHtml(entry.time)}</span> <span class="status-pill ${isOk ? 'is-ready' : 'is-error'}">${isOk ? 'OK' : 'Błąd'}</span>`;
+        list.appendChild(card);
+      });
+    }
+
+    if(scriptRunBtns.length){
+      renderScriptsLog();
+      scriptRunBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const scriptId = btn.dataset.scriptRun;
+          const scriptNames = {
+            'warehouse-sync': 'Synchronizacja hurtowni',
+            'recalculate-prices': 'Przeliczenie cen',
+            'csv-import': 'Import produktów CSV',
+            'cleanup-accounts': 'Czyszczenie nieaktywnych kont',
+            'export-report': 'Eksport raportów finansowych'
+          };
+          const name = scriptNames[scriptId] || scriptId;
+          btn.disabled = true;
+          btn.textContent = '⏳ Uruchamianie…';
+          window.setTimeout(() => {
+            const log = getScriptLog();
+            log.unshift({ name, time: new Date().toLocaleString('pl-PL'), ok: true });
+            saveScriptLog(log);
+            btn.disabled = false;
+            btn.textContent = '▶ Uruchom';
+            if(scriptResultEl){ scriptResultEl.textContent = `✅ Skrypt "${name}" wykonany.`; }
+            renderScriptsLog();
+          }, 1200);
+        });
+      });
+    }
   }
 
   function initSuppliersModule(){

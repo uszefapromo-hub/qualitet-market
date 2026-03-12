@@ -64,10 +64,12 @@
         <a href="#" data-owner-tab="operators">🛠 Operatorzy</a>
         <a href="#" data-owner-tab="reports">📊 Raporty</a>
         <a href="#" data-owner-tab="payments">💵 Płatności</a>
-        <a href="#" data-owner-tab="settings">⚙️ Ustawienia</a>
+        <a href="#" data-owner-tab="settings">⚙️ Ustawienia systemu</a>
         <a href="#" data-owner-tab="security">🔒 Bezpieczeństwo</a>
+        <a href="#" data-owner-tab="scripts">💻 Skrypty</a>
         <hr class="sidebar-sep">
-        <a href="dashboard.html">Panel użytkownika</a>
+        <a href="dashboard.html">🏠 Dashboard</a>
+        <a href="panel-sklepu.html">🛠 Panel Operatora</a>
         <a href="zostan-dostawca.html">Zostań dostawcą</a>
         <a href="crm.html">CRM</a>
       </nav>
@@ -111,33 +113,42 @@
           <!-- QUICK NAVIGATION TILES -->
           <section class="panel-card owner-quick-nav-section">
             <div class="section-head">
-              <span class="eyebrow">Szybka nawigacja</span>
-              <h2>Moduły platformy</h2>
+              <span class="eyebrow">Centrum dowodzenia</span>
+              <h2>Szybki dostęp — wszystkie moduły systemu</h2>
             </div>
             <div class="owner-quick-nav">
+              <a class="owner-tile owner-tile--primary" href="dashboard.html">
+                <span class="tile-icon">🏠</span><span class="tile-label">Dashboard</span>
+              </a>
               <button class="owner-tile" data-owner-tab-trigger="users">
                 <span class="tile-icon">👥</span><span class="tile-label">Użytkownicy</span>
-              </button>
-              <button class="owner-tile" data-owner-tab-trigger="partners">
-                <span class="tile-icon">🤝</span><span class="tile-label">Partnerzy</span>
-              </button>
-              <button class="owner-tile" data-owner-tab-trigger="stores">
-                <span class="tile-icon">🏪</span><span class="tile-label">Sklepy</span>
               </button>
               <button class="owner-tile" data-owner-tab-trigger="products">
                 <span class="tile-icon">📦</span><span class="tile-label">Produkty</span>
               </button>
-              <button class="owner-tile" data-owner-tab-trigger="warehouses">
-                <span class="tile-icon">🏭</span><span class="tile-label">Hurtownie</span>
-              </button>
-              <button class="owner-tile" data-owner-tab-trigger="supplier-apps">
-                <span class="tile-icon">📋</span><span class="tile-label">Zgłoszenia dostawców</span>
-              </button>
               <button class="owner-tile" data-owner-tab-trigger="orders">
                 <span class="tile-icon">🛒</span><span class="tile-label">Zamówienia</span>
               </button>
+              <button class="owner-tile" data-owner-tab-trigger="warehouses">
+                <span class="tile-icon">🏭</span><span class="tile-label">Wszystkie hurtownie</span>
+              </button>
               <button class="owner-tile" data-owner-tab-trigger="subscriptions">
-                <span class="tile-icon">💳</span><span class="tile-label">Subskrypcje</span>
+                <span class="tile-icon">💳</span><span class="tile-label">Subskrypcje i płatności</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="scripts">
+                <span class="tile-icon">💻</span><span class="tile-label">Skrypty</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="settings">
+                <span class="tile-icon">⚙️</span><span class="tile-label">Ustawienia systemu</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="stores">
+                <span class="tile-icon">🏪</span><span class="tile-label">Sklepy</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="partners">
+                <span class="tile-icon">🤝</span><span class="tile-label">Partnerzy</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="supplier-apps">
+                <span class="tile-icon">📋</span><span class="tile-label">Zgłoszenia dostawców</span>
               </button>
               <button class="owner-tile" data-owner-tab-trigger="finances">
                 <span class="tile-icon">💰</span><span class="tile-label">Marże i Prowizje</span>
@@ -154,15 +165,24 @@
               <button class="owner-tile" data-owner-tab-trigger="reports">
                 <span class="tile-icon">📊</span><span class="tile-label">Raporty</span>
               </button>
-              <button class="owner-tile" data-owner-tab-trigger="payments">
-                <span class="tile-icon">💵</span><span class="tile-label">Płatności</span>
-              </button>
-              <button class="owner-tile" data-owner-tab-trigger="settings">
-                <span class="tile-icon">⚙️</span><span class="tile-label">Ustawienia</span>
-              </button>
               <button class="owner-tile" data-owner-tab-trigger="security">
                 <span class="tile-icon">🔒</span><span class="tile-label">Bezpieczeństwo</span>
               </button>
+            </div>
+          </section>
+
+          <!-- OPERATOR PANEL CTA -->
+          <section class="panel-card owner-operator-cta">
+            <div class="store-summary-head">
+              <div>
+                <span class="eyebrow">Panel Operatora</span>
+                <h2>Moduł operatora systemu</h2>
+                <p class="hint">Bezpośredni dostęp do panelu operatora — zarządzanie sklepami, użytkownikami i zamówieniami w swoim zakresie.</p>
+              </div>
+              <div class="cta-row">
+                <a class="btn btn-primary" href="panel-sklepu.html">🛠 Panel Operatora</a>
+                <button class="btn btn-secondary" data-owner-tab-trigger="operators">Zarządzaj operatorami</button>
+              </div>
             </div>
           </section>
 
@@ -1086,6 +1106,98 @@
                 <span>AliExpress, CJ, EPROLO, VidaXL, Spocket…</span>
                 <ul><li>10 aktywnych integracji</li></ul>
               </div>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: SCRIPTS -->
+        <div class="owner-tab-panel" data-owner-tab-panel="scripts" hidden>
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Skrypty systemowe</span>
+            <h2>Zarządzanie skryptami</h2>
+            <p class="hint">Uruchamiaj i zarządzaj skryptami automatyzacji platformy — synchronizacja danych, import hurtowni, przeliczanie cen i inne zadania systemowe.</p>
+          </section>
+
+          <section class="stats-grid stats-g3">
+            <div class="stat-card">
+              <span>Aktywne skrypty</span>
+              <strong data-scripts-active>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Uruchomienia dziś</span>
+              <strong data-scripts-runs-today>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Błędy</span>
+              <strong data-scripts-errors>0</strong>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Skrypty systemowe</span>
+              <h2>Dostępne skrypty</h2>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table">
+                <thead>
+                  <tr>
+                    <th>Nazwa skryptu</th>
+                    <th>Opis</th>
+                    <th>Ostatnie uruchomienie</th>
+                    <th>Status</th>
+                    <th>Akcja</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Synchronizacja hurtowni</strong></td>
+                    <td>Pobiera aktualne dane produktów ze wszystkich hurtowni</td>
+                    <td data-script-run-warehouse>—</td>
+                    <td><span class="status-pill is-ready">Gotowy</span></td>
+                    <td><button class="btn btn-secondary" type="button" data-script-run="warehouse-sync">▶ Uruchom</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Przeliczenie cen</strong></td>
+                    <td>Aktualizuje ceny sprzedażowe wg aktualnych progów marży</td>
+                    <td data-script-run-prices>—</td>
+                    <td><span class="status-pill is-ready">Gotowy</span></td>
+                    <td><button class="btn btn-secondary" type="button" data-script-run="recalculate-prices">▶ Uruchom</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Import produktów CSV</strong></td>
+                    <td>Importuje produkty z pliku CSV do katalogu centralnego</td>
+                    <td data-script-run-import>—</td>
+                    <td><span class="status-pill is-ready">Gotowy</span></td>
+                    <td><button class="btn btn-secondary" type="button" data-script-run="csv-import">▶ Uruchom</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Czyszczenie nieaktywnych kont</strong></td>
+                    <td>Oznacza wygasłe konta trial bez aktywności (>30 dni)</td>
+                    <td data-script-run-cleanup>—</td>
+                    <td><span class="status-pill is-pending">Oczekujący</span></td>
+                    <td><button class="btn btn-secondary" type="button" data-script-run="cleanup-accounts">▶ Uruchom</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Eksport raportów finansowych</strong></td>
+                    <td>Generuje raport przychodów i prowizji za wybrany okres</td>
+                    <td data-script-run-report>—</td>
+                    <td><span class="status-pill is-ready">Gotowy</span></td>
+                    <td><button class="btn btn-secondary" type="button" data-script-run="export-report">▶ Uruchom</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="hint" data-script-result style="margin-top:12px"></p>
+          </section>
+
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Historia</span>
+              <h2>Ostatnie uruchomienia</h2>
+            </div>
+            <div class="list-cards" data-scripts-log-list>
+              <p class="hint">Brak historii uruchomień.</p>
             </div>
           </section>
         </div>
