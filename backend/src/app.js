@@ -23,6 +23,7 @@ const shopProductsRouter = require('./routes/shop-products');
 const myRouter = require('./routes/my');
 const storeRouter = require('./routes/store');
 const referralsRouter = require('./routes/referrals');
+const { router: referralRouter } = require('./routes/referral');
 const scriptsRouter = require('./routes/scripts');
 const analyticsRouter = require('./routes/analytics');
 const { importSupplierProducts } = require('./services/supplier-import');
@@ -137,6 +138,8 @@ app.get('/api/readiness', async (_req, res) => {
     create_code:  'POST /api/referrals',
     redeem_code:  'POST /api/referrals/redeem',
     list_uses:    'GET  /api/referrals/:id/uses',
+    my_code:      'GET  /api/referral/my-code',
+    stats:        'GET  /api/referral/stats',
   };
 
   // Scripts (seller storefront scripts)
@@ -180,6 +183,7 @@ app.use('/api/shop-products', shopProductsRouter);
 app.use('/api/my', myRouter);
 app.use('/api/store', storeRouter);
 app.use('/api/referrals', referralsRouter);
+app.use('/api/referral', referralRouter);
 app.use('/api/scripts', scriptsRouter);
 app.use('/api/analytics', analyticsRouter);
 

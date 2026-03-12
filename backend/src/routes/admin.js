@@ -44,6 +44,14 @@ router.get('/dashboard', authenticate, requireRole('owner', 'admin'), async (req
       activeShopProductsResult,
       // revenue
       revenueResult,
+      revenueTodayResult,
+      revenueMonthResult,
+      // referrals
+      referralCountResult,
+      // promo slots
+      promoTier1Result,
+      promoTier2Result,
+      promoTier3Result,
     ] = await Promise.all([
       db.query(`SELECT COUNT(*) FROM users WHERE role = 'seller'`),
       db.query(`SELECT COUNT(*) FROM stores WHERE status = 'active'`),
@@ -57,11 +65,22 @@ router.get('/dashboard', authenticate, requireRole('owner', 'admin'), async (req
       db.query(`SELECT COUNT(*) FROM products`),
       db.query(`SELECT COUNT(*) FROM shop_products WHERE active = true`),
       db.query(`SELECT COALESCE(SUM(total), 0) AS revenue FROM orders WHERE status != 'cancelled'`),
+      db.query(`SELECT COALESCE(SUM(total), 0) AS revenue FROM orders WHERE status != 'cancelled' AND created_at >= CURRENT_DATE`),
+      db.query(`SELECT COALESCE(SUM(total), 0) AS revenue FROM orders WHERE status != 'cancelled' AND created_at >= date_trunc('month', NOW())`),
+      db.query(`SELECT COUNT(*) FROM referral_uses`),
+      db.query(`SELECT COUNT(*) FROM users WHERE role = 'seller' AND promo_tier = 1`),
+      db.query(`SELECT COUNT(*) FROM users WHERE role = 'seller' AND promo_tier = 2`),
+      db.query(`SELECT COUNT(*) FROM users WHERE role = 'seller' AND promo_tier = 3`),
     ]);
+
+    const sellerCount = parseInt(totalSellersResult.rows[0].count, 10);
+    const tier1Used   = parseInt(promoTier1Result.rows[0].count, 10);
+    const tier2Used   = parseInt(promoTier2Result.rows[0].count, 10);
+    const tier3Used   = parseInt(promoTier3Result.rows[0].count, 10);
 
     return res.json({
       sellers: {
-        total_registrations:       parseInt(totalSellersResult.rows[0].count, 10),
+        total_registrations:       sellerCount,
         active_shops:              parseInt(activeShopsResult.rows[0].count, 10),
         shops_with_products:       parseInt(shopsWithProductsResult.rows[0].count, 10),
         shops_with_orders:         parseInt(shopsWithOrdersResult.rows[0].count, 10),
@@ -77,7 +96,19 @@ router.get('/dashboard', authenticate, requireRole('owner', 'admin'), async (req
         global_products:           parseInt(globalProductsResult.rows[0].count, 10),
         active_shop_products:      parseInt(activeShopProductsResult.rows[0].count, 10),
       },
-      revenue:                     parseFloat(revenueResult.rows[0].revenue),
+      revenue: {
+        total:                     parseFloat(revenueResult.rows[0].revenue),
+        today:                     parseFloat(revenueTodayResult.rows[0].revenue),
+        this_month:                parseFloat(revenueMonthResult.rows[0].revenue),
+      },
+      referrals: {
+        total_uses:                parseInt(referralCountResult.rows[0].count, 10),
+      },
+      promo_slots: {
+        tier1: { label: '12 miesięcy gratis', total: 10, used: tier1Used, remaining: Math.max(0, 10 - tier1Used) },
+        tier2: { label: '6 miesięcy gratis',  total: 10, used: tier2Used, remaining: Math.max(0, 10 - (sellerCount >= 10 ? tier2Used : 0)) },
+        tier3: { label: '3 miesiące gratis',  total: 10, used: tier3Used, remaining: Math.max(0, 10 - (sellerCount >= 20 ? tier3Used : 0)) },
+      },
     });
   } catch (err) {
     console.error('admin dashboard error:', err.message);
@@ -692,6 +723,61 @@ router.patch(
     }
   }
 );
+
+// ─── GET /api/admin/referrals – referral program stats (admin) ────────────────
+
+router.get('/referrals', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+  const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
+  const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
+  const offset = (page - 1) * limit;
+
+  try {
+    const [totalResult, rowsResult, summaryResult] = await Promise.all([
+      db.query(`SELECT COUNT(DISTINCT referrer_id) FROM referral_uses`),
+      db.query(
+        `SELECT rc.code,
+                u.id   AS user_id,
+                u.name AS user_name,
+                u.email AS user_email,
+                COUNT(ru.id) AS referred_count,
+                COUNT(DISTINCT s.id) FILTER (WHERE s.status = 'active') AS active_stores
+           FROM referral_codes rc
+           JOIN users u ON u.id = rc.user_id
+      LEFT JOIN referral_uses ru ON ru.code = rc.code
+      LEFT JOIN stores s ON s.owner_id = ru.new_user_id
+          GROUP BY rc.code, u.id, u.name, u.email
+          ORDER BY referred_count DESC
+          LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      ),
+      db.query(
+        `SELECT COUNT(*) AS total_uses,
+                SUM(bonus_days) AS total_bonus_days
+           FROM referral_uses`
+      ),
+    ]);
+
+    const summary = summaryResult.rows[0];
+    return res.json({
+      total_referrers: parseInt(totalResult.rows[0].count, 10),
+      total_uses:      parseInt(summary.total_uses || 0, 10),
+      total_bonus_days: parseInt(summary.total_bonus_days || 0, 10),
+      page,
+      limit,
+      referrers: rowsResult.rows.map((r) => ({
+        user_id:       r.user_id,
+        user_name:     r.user_name,
+        user_email:    r.user_email,
+        ref_code:      r.code,
+        referred_count: parseInt(r.referred_count, 10),
+        active_stores: parseInt(r.active_stores, 10),
+      })),
+    });
+  } catch (err) {
+    console.error('admin referrals error:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
 
 // ─── GET /api/admin/catalogue – central catalogue products (paginated) ─────────
 

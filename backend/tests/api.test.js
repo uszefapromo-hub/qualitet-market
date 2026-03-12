@@ -381,6 +381,43 @@ function setupDbMock() {
       return { rows: mockDb.audit_logs };
     }
 
+    // ── referral_codes ──
+    if (s.startsWith('select') && s.includes('from referral_codes') && s.includes('where user_id')) {
+      const userId = params[0];
+      const row = (mockDb.referral_codes || []).find((rc) => rc.user_id === userId);
+      return { rows: row ? [row] : [] };
+    }
+    if (s.startsWith('select') && s.includes('from referral_codes') && s.includes('where code')) {
+      const code = params[0];
+      const row = (mockDb.referral_codes || []).find((rc) => rc.code === code);
+      return { rows: row ? [row] : [] };
+    }
+    if (s.startsWith('insert into referral_codes')) {
+      if (!mockDb.referral_codes) mockDb.referral_codes = [];
+      const rc = { id: params[0], user_id: params[1], code: params[2] };
+      mockDb.referral_codes.push(rc);
+      return { rows: [rc] };
+    }
+
+    // ── referral_uses ──
+    if (s.startsWith('select count(*)') && s.includes('from referral_uses')) {
+      return { rows: [{ count: String((mockDb.referral_uses || []).length) }] };
+    }
+    if (s.startsWith('select') && s.includes('from referral_uses')) {
+      return { rows: mockDb.referral_uses || [] };
+    }
+    if (s.startsWith('insert into referral_uses')) {
+      if (!mockDb.referral_uses) mockDb.referral_uses = [];
+      const ru = { id: params[0], code: params[1], referrer_id: params[2], new_user_id: params[3], bonus_days: params[4] };
+      mockDb.referral_uses.push(ru);
+      return { rows: [ru] };
+    }
+
+    // ── promo_tier filter on users ──
+    if (s.startsWith('select count(*)') && s.includes('from users where role') && s.includes('promo_tier')) {
+      return { rows: [{ count: '0' }] };
+    }
+
     // ── platform_margin_config (pricing tiers) ──
     if (s.includes('from platform_margin_config')) {
       // Return empty rows so loadPlatformTiers falls back to DEFAULT_PLATFORM_TIERS
@@ -1767,11 +1804,15 @@ describe('POST /api/auth/register', () => {
   it('registers with default seller role and auto-creates shop', async () => {
     const shopRow = { id: 'shop-new', owner_id: 'user-new', name: 'New Seller', slug: 'new-seller', subdomain: 'new-seller.qualitetmarket.pl', status: 'active', plan: 'trial' };
     db.query
-      .mockResolvedValueOnce({ rows: [] })        // SELECT – no duplicate email
-      .mockResolvedValueOnce({ rows: [] })         // INSERT user
-      .mockResolvedValueOnce({ rows: [] })         // uniqueSlug: slug check (free)
-      .mockResolvedValueOnce({ rows: [shopRow] }) // INSERT store
-      .mockResolvedValueOnce({ rows: [] });        // INSERT subscription
+      .mockResolvedValueOnce({ rows: [] })                            // SELECT – no duplicate email
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] })             // COUNT sellers for promo tier
+      .mockResolvedValueOnce({ rows: [] })                            // INSERT user
+      .mockResolvedValueOnce({ rows: [] })                            // uniqueSlug: slug check (free)
+      .mockResolvedValueOnce({ rows: [shopRow] })                    // INSERT store
+      .mockResolvedValueOnce({ rows: [] })                            // INSERT subscription
+      .mockResolvedValueOnce({ rows: [] })                            // SELECT referral_codes (create code)
+      .mockResolvedValueOnce({ rows: [] })                            // SELECT collision check
+      .mockResolvedValueOnce({ rows: [] });                           // INSERT referral_code
 
     const res = await request(app).post('/api/auth/register').send({
       email: 'newseller@test.pl',
@@ -1783,6 +1824,77 @@ describe('POST /api/auth/register', () => {
     expect(res.body.shop).toBeDefined();
     expect(res.body.shop.slug).toBe('new-seller');
     expect(res.body.shop.subdomain).toBe('new-seller.qualitetmarket.pl');
+    expect(res.body.promo).toBeDefined();
+    expect(res.body.promo.tier).toBe(1);
+    expect(res.body.promo.duration_days).toBe(365);
+  });
+
+  it('assigns promo tier 2 (6 months) when 10 sellers already registered', async () => {
+    const shopRow = { id: 'shop-t2', owner_id: 'user-t2', name: 'Tier2 Seller', slug: 'tier2-seller', subdomain: 'tier2-seller.qualitetmarket.pl', status: 'active', plan: 'trial' };
+    db.query
+      .mockResolvedValueOnce({ rows: [] })                            // no duplicate email
+      .mockResolvedValueOnce({ rows: [{ count: '10' }] })            // 10 sellers → tier 2
+      .mockResolvedValueOnce({ rows: [] })                            // INSERT user
+      .mockResolvedValueOnce({ rows: [] })                            // uniqueSlug check
+      .mockResolvedValueOnce({ rows: [shopRow] })                    // INSERT store
+      .mockResolvedValueOnce({ rows: [] })                            // INSERT subscription
+      .mockResolvedValueOnce({ rows: [] })                            // SELECT referral_codes
+      .mockResolvedValueOnce({ rows: [] })                            // collision check
+      .mockResolvedValueOnce({ rows: [] });                           // INSERT referral_code
+
+    const res = await request(app).post('/api/auth/register').send({
+      email: 'tier2seller@test.pl',
+      password: 'Password123!',
+      name: 'Tier2 Seller',
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.promo.tier).toBe(2);
+    expect(res.body.promo.duration_days).toBe(180);
+  });
+
+  it('assigns promo tier 3 (3 months) when 20 sellers already registered', async () => {
+    const shopRow = { id: 'shop-t3', owner_id: 'user-t3', name: 'Tier3 Seller', slug: 'tier3-seller', subdomain: 'tier3-seller.qualitetmarket.pl', status: 'active', plan: 'trial' };
+    db.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ count: '20' }] })            // 20 sellers → tier 3
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [shopRow] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app).post('/api/auth/register').send({
+      email: 'tier3seller@test.pl',
+      password: 'Password123!',
+      name: 'Tier3 Seller',
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.promo.tier).toBe(3);
+    expect(res.body.promo.duration_days).toBe(90);
+  });
+
+  it('assigns no promo (standard trial) when more than 30 sellers registered', async () => {
+    const shopRow = { id: 'shop-t0', owner_id: 'user-t0', name: 'Late Seller', slug: 'late-seller', subdomain: 'late-seller.qualitetmarket.pl', status: 'active', plan: 'trial' };
+    db.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ count: '31' }] })            // 31 sellers → no promo
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [shopRow] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app).post('/api/auth/register').send({
+      email: 'lateseller@test.pl',
+      password: 'Password123!',
+      name: 'Late Seller',
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.promo.tier).toBe(0);
   });
 
   it('rejects duplicate email with 409', async () => {
@@ -2109,8 +2221,8 @@ describe('GET /api/admin/dashboard', () => {
   });
 
   it('returns dashboard metrics as admin', async () => {
-    // Mock all 12 parallel queries
-    for (let i = 0; i < 12; i++) {
+    // Mock all 19 parallel queries (12 original + 2 revenue daily/monthly + 1 referrals + 3 promo tiers + 1 removed)
+    for (let i = 0; i < 19; i++) {
       db.query.mockResolvedValueOnce({ rows: [{ count: '5', avg: '99.50', revenue: '497.50' }] });
     }
 
@@ -2122,6 +2234,14 @@ describe('GET /api/admin/dashboard', () => {
     expect(res.body).toHaveProperty('customers');
     expect(res.body).toHaveProperty('products');
     expect(res.body).toHaveProperty('revenue');
+    expect(res.body.revenue).toHaveProperty('total');
+    expect(res.body.revenue).toHaveProperty('today');
+    expect(res.body.revenue).toHaveProperty('this_month');
+    expect(res.body).toHaveProperty('promo_slots');
+    expect(res.body.promo_slots).toHaveProperty('tier1');
+    expect(res.body.promo_slots).toHaveProperty('tier2');
+    expect(res.body.promo_slots).toHaveProperty('tier3');
+    expect(res.body).toHaveProperty('referrals');
   });
 });
 
@@ -3502,6 +3622,86 @@ describe('GET /api/readiness', () => {
     expect(res.status).toBe(503);
     expect(res.body.status).toBe('degraded');
     expect(res.body.checks.database).toBe('error');
+  });
+});
+
+// ─── Referral program ─────────────────────────────────────────────────────────
+
+describe('GET /api/referral/my-code', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/referral/my-code');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns existing referral code', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ code: 'TESTCODE' }] }); // existing code
+
+    const res = await request(app)
+      .get('/api/referral/my-code')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('code', 'TESTCODE');
+    expect(res.body).toHaveProperty('referral_link');
+  });
+
+  it('creates a new referral code if none exists', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })                       // no existing code
+      .mockResolvedValueOnce({ rows: [] })                       // collision check
+      .mockResolvedValueOnce({ rows: [] });                      // INSERT code
+
+    const res = await request(app)
+      .get('/api/referral/my-code')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('code');
+    expect(res.body.code).toBeTruthy();
+    expect(res.body).toHaveProperty('referral_link');
+  });
+});
+
+describe('GET /api/referral/stats', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/referral/stats');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns referral stats for the current user', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ code: 'MYCODE1' }] })    // ensure code
+      .mockResolvedValueOnce({ rows: [] });                       // referral_uses list (empty)
+
+    const res = await request(app)
+      .get('/api/referral/stats')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('code');
+    expect(res.body).toHaveProperty('total_referred', 0);
+    expect(res.body).toHaveProperty('referral_link');
+  });
+});
+
+describe('GET /api/admin/referrals', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .get('/api/admin/referrals')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns referral stats as admin', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '2' }] })         // total referrers
+      .mockResolvedValueOnce({ rows: [] })                        // referrers list
+      .mockResolvedValueOnce({ rows: [{ total_uses: '3', total_bonus_days: '90' }] }); // summary
+
+    const res = await request(app)
+      .get('/api/admin/referrals')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('total_referrers');
+    expect(res.body).toHaveProperty('total_uses');
+    expect(res.body).toHaveProperty('referrers');
   });
 });
 

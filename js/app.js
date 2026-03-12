@@ -4046,6 +4046,29 @@
     setText('[data-owner-reg-today]', `${regsToday} os.`);
     setText('[data-owner-reg-month]', `${regsMonth} os.`);
 
+    // ── PROMO SLOTS: load from backend API when available ──
+    const api = window.QMApi;
+    if(api && api.Admin && typeof api.Admin.dashboard === 'function'){
+      api.Admin.dashboard().then(function(dash){
+        if(dash && dash.promo_slots){
+          const t1 = document.querySelector('[data-promo-tier1-remaining]');
+          const t2 = document.querySelector('[data-promo-tier2-remaining]');
+          const t3 = document.querySelector('[data-promo-tier3-remaining]');
+          if(t1) t1.textContent = dash.promo_slots.tier1.remaining;
+          if(t2) t2.textContent = dash.promo_slots.tier2.remaining;
+          if(t3) t3.textContent = dash.promo_slots.tier3.remaining;
+        }
+        if(dash && dash.referrals){
+          const refEl = document.querySelector('[data-owner-referrals-count]');
+          if(refEl) setCounterValue(refEl, dash.referrals.total_uses);
+        }
+        if(dash && dash.revenue){
+          setText('[data-owner-revenue-today]', formatCurrency(dash.revenue.today || 0));
+          setText('[data-owner-revenue-month]', formatCurrency(dash.revenue.this_month || 0));
+        }
+      }).catch(function(){/* API not reachable – keep localStorage values */});
+    }
+
     // ── OVERVIEW: charts ──
     const updateChart = (prefix, values) => {
       const total = Object.values(values).reduce((sum, v) => sum + v, 0) || 1;
@@ -4465,6 +4488,37 @@
     if(ownerRefLink){
       const baseUrl = window.location.origin + window.location.pathname.replace('owner-panel.html', 'index.html');
       ownerRefLink.value = `${baseUrl}?ref=OWNER2026`;
+      // Load actual referral code from backend API
+      if(api && api.Referral && typeof api.Referral.myCode === 'function'){
+        api.Referral.myCode().then(function(data){
+          if(data && data.referral_link) ownerRefLink.value = data.referral_link;
+        }).catch(function(){/* keep fallback */});
+      }
+    }
+
+    // Load referral stats from backend API
+    if(api && api.Admin && typeof api.Admin.referrals === 'function'){
+      api.Admin.referrals().then(function(data){
+        if(!data) return;
+        setText('[data-ref-total-referrers]', data.total_referrers || 0);
+        setText('[data-ref-total-referred]', data.total_uses || 0);
+        const refTbodyApi = document.querySelector('[data-ref-tbody]');
+        if(refTbodyApi && data.referrers && data.referrers.length){
+          refTbodyApi.innerHTML = '';
+          data.referrers.forEach(function(ref){
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><strong>${escapeHtml(ref.user_name)}</strong></td>
+              <td class="cell-mono">${escapeHtml(ref.ref_code || '')}</td>
+              <td>${ref.referred_count || 0}</td>
+              <td>${ref.active_stores || 0}</td>
+              <td>—</td>
+              <td>${statusPill('active')}</td>
+            `;
+            refTbodyApi.appendChild(tr);
+          });
+        }
+      }).catch(function(){/* keep localStorage values */});
     }
     const copyRefBtn = document.querySelector('[data-copy-referral-link]');
     if(copyRefBtn && ownerRefLink){
