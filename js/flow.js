@@ -417,6 +417,375 @@
       .catch(function () { return []; });
   };
 
+  // ─── 8. Seller Panel (panel-sklepu) ──────────────────────────────────────────
+
+  function initPanelSklepuFlow() {
+    var a = api();
+    if (!a || !isLoggedInApi()) return;
+
+    // Load store info first, then populate the panel
+    a.MyStore.get()
+      .then(function (store) {
+        if (!store) return;
+        window._panelStore = store;
+
+        // Update header store name
+        var nameEls = document.querySelectorAll('[data-store-name]');
+        nameEls.forEach(function (el) { el.textContent = store.name || 'Sklep'; });
+
+        // Update plan badge
+        var planEl = document.querySelector('[data-store-plan]');
+        if (planEl) planEl.textContent = (store.plan || 'basic').toUpperCase();
+
+        // Populate settings form
+        var nameInput = document.querySelector('[data-settings-name]');
+        if (nameInput) nameInput.value = store.name || '';
+        var descInput = document.querySelector('[data-settings-desc]');
+        if (descInput) descInput.value = store.description || '';
+        var logoInput = document.querySelector('[data-settings-logo]');
+        if (logoInput) logoInput.value = store.logo_url || '';
+        var bannerInput = document.querySelector('[data-settings-banner]');
+        if (bannerInput) bannerInput.value = store.banner_url || '';
+
+        // Load stats
+        return a.MyStore.stats()
+          .then(function (stats) {
+            var orderCountEl = document.querySelector('[data-stat-orders]');
+            if (orderCountEl) orderCountEl.textContent = stats.order_count || 0;
+
+            var revenueEl = document.querySelector('[data-stat-revenue]');
+            if (revenueEl) revenueEl.textContent = formatPrice(stats.revenue || 0);
+
+            var prodCountEl = document.querySelector('[data-stat-products]');
+            if (prodCountEl) prodCountEl.textContent = stats.product_count || 0;
+
+            var custCountEl = document.querySelector('[data-stat-customers]');
+            if (custCountEl) custCountEl.textContent = stats.customer_count || 0;
+
+            // Earnings
+            var earningsRevenueEl = document.querySelector('[data-earnings-revenue]');
+            if (earningsRevenueEl) earningsRevenueEl.textContent = formatPrice(stats.revenue || 0);
+            var earningsCommEl = document.querySelector('[data-earnings-commission]');
+            if (earningsCommEl) earningsCommEl.textContent = formatPrice(stats.platform_commission || 0);
+            var earningsSellerEl = document.querySelector('[data-earnings-seller]');
+            if (earningsSellerEl) earningsSellerEl.textContent = formatPrice(stats.seller_earnings || 0);
+          })
+          .catch(function () {});
+      })
+      .catch(function () {
+        var emptyEl = document.querySelector('[data-store-empty]');
+        var contentEl = document.querySelector('[data-store-content]');
+        if (emptyEl) emptyEl.hidden = false;
+        if (contentEl) contentEl.hidden = true;
+      });
+
+    // Load store products — depends on store id; resolved from cached _panelStore or a fresh call
+    Promise.resolve(window._panelStore || a.MyStore.get())
+      .then(function (store) {
+        if (!store) return;
+        window._panelStore = store;
+        return a.MyStore.products(store.id, { limit: 50 });
+      })
+      .then(function (data) {
+        if (!data) return;
+        var products = data.products || [];
+        renderSellerProducts(products);
+      })
+      .catch(function () {});
+
+    // Load store orders
+    a.MyStore.storeOrders({ limit: 20 })
+      .then(function (data) {
+        var orders = (data && data.orders) ? data.orders : [];
+        renderSellerOrders(orders);
+      })
+      .catch(function () {});
+
+    // Wire "Dodaj produkt" button (in Products tab)
+    var addBtn = document.querySelector('[data-add-store-product]');
+    if (addBtn) {
+      addBtn.addEventListener('click', function () {
+        Promise.resolve(window._panelStore || a.MyStore.get())
+          .then(function (store) {
+            if (!store || !store.id) {
+              alert('Nie znaleziono aktywnego sklepu. Zaloguj się lub utwórz sklep.');
+              return;
+            }
+            openAddProductDialog(a, store.id);
+          })
+          .catch(function () {
+            alert('Nie udało się załadować danych sklepu. Sprawdź połączenie.');
+          });
+      });
+    }
+
+    // Settings form submission
+    var settingsForm = document.querySelector('[data-settings-form]');
+    if (settingsForm) {
+      settingsForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var nameInput   = settingsForm.querySelector('[data-settings-name]');
+        var descInput   = settingsForm.querySelector('[data-settings-desc]');
+        var logoInput   = settingsForm.querySelector('[data-settings-logo]');
+        var bannerInput = settingsForm.querySelector('[data-settings-banner]');
+        var saveBtn     = settingsForm.querySelector('[data-settings-save]');
+
+        var payload = {};
+        if (nameInput   && nameInput.value.trim())   payload.name        = nameInput.value.trim();
+        if (descInput   && descInput.value.trim())   payload.description = descInput.value.trim();
+        if (logoInput   && logoInput.value.trim())   payload.logo_url    = logoInput.value.trim();
+        if (bannerInput && bannerInput.value.trim()) payload.banner_url  = bannerInput.value.trim();
+
+        if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Zapisywanie…'; }
+
+        a.MyStore.update(payload)
+          .then(function () {
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Zapisz zmiany'; }
+            var msg = document.querySelector('[data-settings-msg]');
+            if (msg) { msg.textContent = 'Zapisano pomyślnie.'; msg.hidden = false; }
+          })
+          .catch(function () {
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Zapisz zmiany'; }
+            var msg = document.querySelector('[data-settings-msg]');
+            if (msg) { msg.textContent = 'Błąd zapisu. Sprawdź dane.'; msg.hidden = false; }
+          });
+      });
+    }
+  }
+
+  function renderSellerProducts(products) {
+    var tbody = document.querySelector('[data-products-tbody]');
+    if (!tbody) return;
+    var emptyEl = document.querySelector('[data-products-empty]');
+    var loadingEl = document.querySelector('[data-products-loading]');
+    if (loadingEl) loadingEl.hidden = true;
+
+    if (!products.length) {
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+    if (emptyEl) emptyEl.hidden = true;
+
+    tbody.innerHTML = '';
+    products.forEach(function (p) {
+      var row = document.createElement('tr');
+      var activeLabel = p.active !== false ? 'Aktywny' : 'Wyłączony';
+      var activePill  = p.active !== false ? 'pill-active' : 'pill-inactive';
+      row.innerHTML =
+        '<td>' + escHtml(p.name || p.custom_title || '—') + '</td>' +
+        '<td>' + formatPrice(p.price || p.base_price || 0) + '</td>' +
+        '<td>' + escHtml(String(p.margin_override != null ? p.margin_override : (p.base_margin || 0))) + '%</td>' +
+        '<td><span class="' + activePill + '">' + activeLabel + '</span></td>' +
+        '<td>' +
+          '<button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" ' +
+            'data-toggle-product-id="' + escHtml(p.id || '') + '" ' +
+            'data-toggle-product-active="' + (p.active !== false ? 'true' : 'false') + '">' +
+            (p.active !== false ? 'Wyłącz' : 'Włącz') +
+          '</button>' +
+        '</td>';
+      tbody.appendChild(row);
+    });
+
+    // Wire toggle buttons
+    tbody.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-toggle-product-id]');
+      if (!btn) return;
+      var id     = btn.getAttribute('data-toggle-product-id');
+      var active = btn.getAttribute('data-toggle-product-active') !== 'true';
+      var a2 = api();
+      if (!a2) return;
+      btn.disabled = true;
+      a2.MyStore.updateProduct(id, { active: active })
+        .then(function () {
+          btn.setAttribute('data-toggle-product-active', active ? 'true' : 'false');
+          btn.textContent = active ? 'Wyłącz' : 'Włącz';
+          var pill = btn.closest('tr').querySelector('.pill-active,.pill-inactive');
+          if (pill) {
+            pill.className = active ? 'pill-active' : 'pill-inactive';
+            pill.textContent = active ? 'Aktywny' : 'Wyłączony';
+          }
+          btn.disabled = false;
+        })
+        .catch(function () { btn.disabled = false; });
+    });
+  }
+
+  function renderSellerOrders(orders) {
+    var tbody = document.querySelector('[data-orders-tbody]');
+    if (!tbody) return;
+    var emptyEl   = document.querySelector('[data-seller-orders-empty]');
+    var loadingEl = document.querySelector('[data-seller-orders-loading]');
+    if (loadingEl) loadingEl.hidden = true;
+
+    if (!orders.length) {
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+    if (emptyEl) emptyEl.hidden = true;
+
+    var STATUSES = ['new', 'processing', 'shipped', 'completed'];
+
+    tbody.innerHTML = '';
+    orders.forEach(function (o) {
+      var row = document.createElement('tr');
+      var num = escHtml(o.order_number || (o.id || '').slice(0, 8) || '—');
+      var date = o.created_at ? new Date(o.created_at).toLocaleDateString('pl-PL') : '—';
+      var status = o.status || 'new';
+
+      var selectHtml = '<select class="owner-filter" style="padding:4px 8px;font-size:12px" ' +
+        'data-order-status-id="' + escHtml(o.id || '') + '">';
+      STATUSES.forEach(function (s) {
+        selectHtml += '<option value="' + s + '"' + (s === status ? ' selected' : '') + '>' + s + '</option>';
+      });
+      selectHtml += '</select>';
+
+      row.innerHTML =
+        '<td class="cell-mono">' + num + '</td>' +
+        '<td class="cell-muted">' + escHtml(date) + '</td>' +
+        '<td>' + escHtml(o.shipping_address || '—') + '</td>' +
+        '<td>' + selectHtml + '</td>';
+      tbody.appendChild(row);
+    });
+
+    // Wire status dropdowns
+    tbody.addEventListener('change', function (e) {
+      var sel = e.target.closest('[data-order-status-id]');
+      if (!sel) return;
+      var id     = sel.getAttribute('data-order-status-id');
+      var status = sel.value;
+      var a2 = api();
+      if (!a2) return;
+      sel.disabled = true;
+      a2.Orders.updateStatus(id, status)
+        .then(function () { sel.disabled = false; })
+        .catch(function () { sel.disabled = false; });
+    });
+  }
+
+  function openAddProductDialog(a, storeId) {
+    var existing = document.getElementById('qm-add-product-dialog');
+    if (existing) existing.remove();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'qm-add-product-dialog';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Dodaj produkt do sklepu');
+    overlay.style.cssText = [
+      'position:fixed', 'inset:0', 'background:rgba(0,0,0,.55)', 'z-index:9000',
+      'display:flex', 'align-items:center', 'justify-content:center', 'padding:16px'
+    ].join(';');
+
+    var box = document.createElement('div');
+    box.style.cssText = [
+      'background:#fff', 'border-radius:12px', 'width:100%', 'max-width:540px',
+      'max-height:80vh', 'overflow:auto', 'padding:24px'
+    ].join(';');
+
+    box.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">' +
+        '<h3 style="margin:0;font-size:1.1rem;font-weight:700">Wybierz produkt do sklepu</h3>' +
+        '<button type="button" id="qm-dlg-close" aria-label="Zamknij" style="border:none;background:none;font-size:1.5rem;cursor:pointer;line-height:1;padding:0 4px">×</button>' +
+      '</div>' +
+      '<p id="qm-dlg-status" role="alert" style="color:#c53030;font-size:.875rem;margin-bottom:12px;display:none"></p>' +
+      '<div id="qm-dlg-list" style="display:flex;flex-direction:column;gap:10px"></div>';
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    box.querySelector('#qm-dlg-close').addEventListener('click', function () {
+      overlay.remove();
+    });
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) overlay.remove();
+    });
+
+    var listEl = box.querySelector('#qm-dlg-list');
+    var statusEl = box.querySelector('#qm-dlg-status');
+
+    listEl.innerHTML = '<p style="color:#718096;font-size:.9rem">Ładowanie katalogu produktów…</p>';
+
+    a.Products.list({ status: 'active', limit: 24 })
+      .then(function (data) {
+        var products = Array.isArray(data) ? data
+          : (data && Array.isArray(data.products)) ? data.products : [];
+
+        if (!products.length) {
+          listEl.innerHTML = '<p style="color:#718096;font-size:.9rem">Brak dostępnych produktów w katalogu.</p>';
+          return;
+        }
+
+        listEl.innerHTML = '';
+
+        products.forEach(function (product) {
+          var row = document.createElement('div');
+          row.style.cssText = [
+            'display:flex', 'align-items:center', 'gap:12px', 'padding:10px',
+            'border:1px solid #e2e8f0', 'border-radius:8px'
+          ].join(';');
+
+          var mediaHtml = product.image_url
+            ? '<img src="' + escHtml(product.image_url) + '" alt="' + escHtml(product.name || 'Zdjęcie produktu') + '" style="width:52px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0" onerror="this.style.display=\'none\'">'
+            : '<span aria-hidden="true" style="width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:#f7fafc;border-radius:6px;flex-shrink:0">📦</span>';
+
+          var price = product.price_gross || product.selling_price || product.platform_price || 0;
+
+          row.innerHTML =
+            mediaHtml +
+            '<div style="flex:1;min-width:0">' +
+              '<div style="font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escHtml(product.name || '') + '</div>' +
+              '<div style="font-size:.78rem;color:#718096;margin-top:2px">' +
+                escHtml(product.category || '') +
+                (price ? ' · ' + formatPrice(price) : '') +
+              '</div>' +
+            '</div>' +
+            '<button type="button" style="flex-shrink:0;padding:6px 16px;font-size:.82rem;border-radius:6px;border:none;background:#3182ce;color:#fff;cursor:pointer;font-weight:600" data-pid="' + escHtml(product.id || '') + '">Dodaj</button>';
+
+          listEl.appendChild(row);
+        });
+
+        listEl.addEventListener('click', function (e) {
+          var btn = e.target.closest('[data-pid]');
+          if (!btn) return;
+          var productId = btn.dataset.pid;
+          if (!productId) return;
+
+          btn.disabled = true;
+          btn.textContent = '…';
+          statusEl.style.display = 'none';
+
+          a.MyStore.addProduct({ store_id: storeId, product_id: productId })
+            .then(function () {
+              btn.textContent = 'Dodano ✓';
+              btn.style.background = '#276749';
+
+              // Refresh product count
+              a.MyStore.products(storeId, { limit: 1 })
+                .then(function (d) {
+                  var countEl = document.querySelector('[data-store-products]');
+                  if (countEl && d && d.total != null) countEl.textContent = d.total;
+                })
+                .catch(function () {});
+            })
+            .catch(function (err) {
+              btn.disabled = false;
+              btn.textContent = 'Dodaj';
+              var code = err && err.body && err.body.error;
+              var msg = code === 'product_limit_reached'
+                ? 'Osiągnięto limit produktów w planie. Ulepsz subskrypcję, aby dodać więcej.'
+                : code === 'subscription_expired'
+                ? 'Subskrypcja wygasła. Odnów plan, aby dodawać produkty.'
+                : code || 'Nie udało się dodać produktu. Spróbuj ponownie.';
+              statusEl.textContent = msg;
+              statusEl.style.display = '';
+            });
+        });
+      })
+      .catch(function () {
+        listEl.innerHTML = '<p style="color:#c53030;font-size:.9rem">Nie udało się załadować katalogu produktów.</p>';
+      });
+  }
+
   // ─── Initialisation ───────────────────────────────────────────────────────────
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -428,10 +797,11 @@
       if (a) a.Auth.me().catch(function () {});
     }
 
-    if (page === 'login')     initLoginFlow();
-    if (page === 'dashboard') initDashboardFlow();
-    if (page === 'sklep')     initProductsFlow();
-    if (page === 'koszyk')    initCartFlow();
+    if (page === 'login')         initLoginFlow();
+    if (page === 'dashboard')     initDashboardFlow();
+    if (page === 'sklep')         initProductsFlow();
+    if (page === 'koszyk')        initCartFlow();
+    if (page === 'panel-sklepu')  initPanelSklepuFlow();
   });
 
 }());

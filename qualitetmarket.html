@@ -84,8 +84,18 @@
           <h2>Polecane produkty</h2>
           <p class="hint">Produkty z najwyższą sprzedażą i oceną partnerów w tym tygodniu.</p>
         </div>
-        <div class="market-grid">
-          <div class="market-product-card">
+
+        <div class="catalog-bulk-bar" id="catalogBulkBar" style="display:none;">
+          <span class="catalog-bulk-info" id="catalogBulkInfo">0 produktów zaznaczonych</span>
+          <button class="btn btn-primary" type="button" id="catalogBulkAddBtn">Dodaj wybrane produkty</button>
+          <button class="btn btn-secondary" type="button" id="catalogBulkClearBtn">Odznacz wszystkie</button>
+        </div>
+
+        <div class="market-grid" id="catalogGrid">
+          <div class="market-product-card" data-product-id="prod-sluchawki">
+            <label class="catalog-select-label" aria-label="Zaznacz produkt">
+              <input type="checkbox" class="catalog-product-checkbox" value="prod-sluchawki">
+            </label>
             <div class="market-product-emoji">🎧</div>
             <div class="market-product-info">
               <h3>Słuchawki bezprzewodowe Pro X</h3>
@@ -95,8 +105,12 @@
               <span class="market-price">239 zł</span>
               <span class="market-badge">⭐ Top seller</span>
             </div>
+            <button class="btn btn-sm btn-primary catalog-add-btn" type="button" data-product-id="prod-sluchawki">Dodaj do sklepu</button>
           </div>
-          <div class="market-product-card">
+          <div class="market-product-card" data-product-id="prod-smartwatch">
+            <label class="catalog-select-label" aria-label="Zaznacz produkt">
+              <input type="checkbox" class="catalog-product-checkbox" value="prod-smartwatch">
+            </label>
             <div class="market-product-emoji">⌚</div>
             <div class="market-product-info">
               <h3>Smartwatch Sport Edition</h3>
@@ -106,8 +120,12 @@
               <span class="market-price">499 zł</span>
               <span class="market-badge">⭐ Top seller</span>
             </div>
+            <button class="btn btn-sm btn-primary catalog-add-btn" type="button" data-product-id="prod-smartwatch">Dodaj do sklepu</button>
           </div>
-          <div class="market-product-card">
+          <div class="market-product-card" data-product-id="prod-buty">
+            <label class="catalog-select-label" aria-label="Zaznacz produkt">
+              <input type="checkbox" class="catalog-product-checkbox" value="prod-buty">
+            </label>
             <div class="market-product-emoji">👟</div>
             <div class="market-product-info">
               <h3>Buty sportowe Running Pro</h3>
@@ -117,8 +135,12 @@
               <span class="market-price">299 zł</span>
               <span class="market-badge">🔥 Trending</span>
             </div>
+            <button class="btn btn-sm btn-primary catalog-add-btn" type="button" data-product-id="prod-buty">Dodaj do sklepu</button>
           </div>
-          <div class="market-product-card">
+          <div class="market-product-card" data-product-id="prod-smartfon">
+            <label class="catalog-select-label" aria-label="Zaznacz produkt">
+              <input type="checkbox" class="catalog-product-checkbox" value="prod-smartfon">
+            </label>
             <div class="market-product-emoji">📱</div>
             <div class="market-product-info">
               <h3>Smartfon Ultra Slim 128GB</h3>
@@ -128,8 +150,12 @@
               <span class="market-price">1 299 zł</span>
               <span class="market-badge">🔥 Trending</span>
             </div>
+            <button class="btn btn-sm btn-primary catalog-add-btn" type="button" data-product-id="prod-smartfon">Dodaj do sklepu</button>
           </div>
-          <div class="market-product-card">
+          <div class="market-product-card" data-product-id="prod-fotel">
+            <label class="catalog-select-label" aria-label="Zaznacz produkt">
+              <input type="checkbox" class="catalog-product-checkbox" value="prod-fotel">
+            </label>
             <div class="market-product-emoji">🛋️</div>
             <div class="market-product-info">
               <h3>Fotel biurowy Ergonomic</h3>
@@ -139,8 +165,12 @@
               <span class="market-price">899 zł</span>
               <span class="market-badge">✨ Nowy</span>
             </div>
+            <button class="btn btn-sm btn-primary catalog-add-btn" type="button" data-product-id="prod-fotel">Dodaj do sklepu</button>
           </div>
-          <div class="market-product-card">
+          <div class="market-product-card" data-product-id="prod-plecak">
+            <label class="catalog-select-label" aria-label="Zaznacz produkt">
+              <input type="checkbox" class="catalog-product-checkbox" value="prod-plecak">
+            </label>
             <div class="market-product-emoji">🎒</div>
             <div class="market-product-info">
               <h3>Plecak turystyczny 40L</h3>
@@ -150,6 +180,7 @@
               <span class="market-price">189 zł</span>
               <span class="market-badge">✨ Nowy</span>
             </div>
+            <button class="btn btn-sm btn-primary catalog-add-btn" type="button" data-product-id="prod-plecak">Dodaj do sklepu</button>
           </div>
         </div>
       </div>
@@ -223,6 +254,164 @@
     </a>
   </nav>
 
+  <script src="js/api.js" defer></script>
   <script src="js/app.js" defer></script>
+  <script>
+    (function () {
+      'use strict';
+
+      function initCatalog() {
+        var grid        = document.getElementById('catalogGrid');
+        var bulkBar     = document.getElementById('catalogBulkBar');
+        var bulkInfo    = document.getElementById('catalogBulkInfo');
+        var bulkAddBtn  = document.getElementById('catalogBulkAddBtn');
+        var bulkClearBtn = document.getElementById('catalogBulkClearBtn');
+
+        if (!grid) return;
+
+        function getChecked() {
+          return Array.from(grid.querySelectorAll('.catalog-product-checkbox:checked'))
+            .map(function (cb) { return cb.value; });
+        }
+
+        function updateBulkBar() {
+          var checked = getChecked();
+          if (checked.length > 0) {
+            var n = checked.length;
+            var label;
+            if (n === 1) {
+              label = '1 produkt zaznaczony';
+            } else if (n >= 2 && n <= 4) {
+              label = n + ' produkty zaznaczone';
+            } else {
+              label = n + ' produktów zaznaczonych';
+            }
+            bulkInfo.textContent = label;
+            bulkBar.style.display = '';
+          } else {
+            bulkBar.style.display = 'none';
+          }
+        }
+
+        function getStoreId() {
+          var api = window.QMApi;
+          if (!api) return null;
+          var user = api.Auth.currentUser();
+          return (user && user.store_id) || null;
+        }
+
+        function showToast(msg, type) {
+          var el = document.createElement('div');
+          el.className = 'catalog-toast catalog-toast--' + (type || 'success');
+          el.textContent = msg;
+          document.body.appendChild(el);
+          setTimeout(function () { el.remove(); }, 3000);
+        }
+
+        function markAdded(productId) {
+          var btn = grid.querySelector('.catalog-add-btn[data-product-id="' + productId + '"]');
+          if (btn) {
+            btn.textContent = 'Dodano ✓';
+            btn.disabled = true;
+          }
+        }
+
+        function addSingleProduct(productId) {
+          var api = window.QMApi;
+          if (!api || !api.Auth.isLoggedIn()) {
+            window.location.href = 'login.html';
+            return;
+          }
+          var storeId = getStoreId();
+          if (!storeId) {
+            showToast('Nie znaleziono sklepu. Zaloguj się ponownie.', 'error');
+            return;
+          }
+          api.MyStore.addProduct({ store_id: storeId, product_id: productId })
+            .then(function () {
+              markAdded(productId);
+              showToast('Produkt dodany do sklepu!', 'success');
+            })
+            .catch(function (err) {
+              var msg = (err && err.body && err.body.error) || 'Błąd dodawania produktu';
+              showToast(msg, 'error');
+            });
+        }
+
+        function addBulkProducts(productIds) {
+          var api = window.QMApi;
+          if (!api || !api.Auth.isLoggedIn()) {
+            window.location.href = 'login.html';
+            return;
+          }
+          var storeId = getStoreId();
+          if (!storeId) {
+            showToast('Nie znaleziono sklepu. Zaloguj się ponownie.', 'error');
+            return;
+          }
+          bulkAddBtn.disabled = true;
+          api.MyStore.bulkAddProducts({ store_id: storeId, product_ids: productIds })
+            .then(function (data) {
+              // Only mark products confirmed as added in the response
+              var addedResults = data.results || [];
+              addedResults.forEach(function (sp) {
+                if (sp && sp.product_id) markAdded(sp.product_id);
+              });
+              grid.querySelectorAll('.catalog-product-checkbox:checked').forEach(function (cb) {
+                cb.checked = false;
+              });
+              updateBulkBar();
+              showToast('Dodano ' + (data.added || 0) + ' produktów do sklepu!', 'success');
+            })
+            .catch(function (err) {
+              var msg = (err && err.body && err.body.error) || 'Błąd masowego dodawania';
+              showToast(msg, 'error');
+            })
+            .finally(function () {
+              bulkAddBtn.disabled = false;
+            });
+        }
+
+        // Event delegation for checkboxes
+        grid.addEventListener('change', function (e) {
+          if (e.target.classList.contains('catalog-product-checkbox')) {
+            updateBulkBar();
+          }
+        });
+
+        // Event delegation for single-add buttons
+        grid.addEventListener('click', function (e) {
+          var btn = e.target.closest('.catalog-add-btn');
+          if (btn) {
+            addSingleProduct(btn.dataset.productId);
+          }
+        });
+
+        // Bulk add
+        if (bulkAddBtn) {
+          bulkAddBtn.addEventListener('click', function () {
+            var ids = getChecked();
+            if (ids.length > 0) addBulkProducts(ids);
+          });
+        }
+
+        // Clear selection
+        if (bulkClearBtn) {
+          bulkClearBtn.addEventListener('click', function () {
+            grid.querySelectorAll('.catalog-product-checkbox').forEach(function (cb) {
+              cb.checked = false;
+            });
+            updateBulkBar();
+          });
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCatalog);
+      } else {
+        initCatalog();
+      }
+    }());
+  </script>
 </body>
 </html>

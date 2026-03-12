@@ -45,88 +45,203 @@
     </div>
   </header>
 
-  <main class="wrap panel-shell" data-store-panel>
-    <div data-store-content>
-      <section class="panel-card">
-        <span class="eyebrow">Panel sklepu</span>
-        <h1 data-store-name>Panel sklepu</h1>
-        <p class="lead">Zarządzaj sprzedażą i kontroluj ustawienia sklepu.</p>
+  <div class="dashboard-shell owner-shell">
+    <!-- Sidebar / Tab navigation -->
+    <aside class="sidebar">
+      <nav class="sidebar-nav owner-tab-nav" aria-label="Menu sprzedawcy" data-seller-tab-nav>
+        <a class="active" href="#" data-seller-tab="dashboard">🏠 Dashboard</a>
+        <a href="#" data-seller-tab="products">📦 Produkty</a>
+        <a href="#" data-seller-tab="orders">🛒 Zamówienia</a>
+        <a href="#" data-seller-tab="earnings">💰 Zarobki</a>
+        <a href="#" data-seller-tab="settings">⚙️ Ustawienia</a>
+        <hr class="sidebar-sep">
+        <a href="sklep.html">Podgląd sklepu</a>
+        <a href="dashboard.html">Dashboard</a>
+      </nav>
+    </aside>
+
+    <main class="dashboard-main">
+
+      <!-- Empty state when no store -->
+      <section class="panel-card panel-empty" data-store-empty hidden>
+        <h2>Brak aktywnego sklepu</h2>
+        <p class="hint">Utwórz sklep w generatorze, aby aktywować panel sprzedawcy.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="generator-sklepu.html">Przejdź do generatora</a>
+        </div>
       </section>
 
-      <section class="panel-card panel-metrics">
-        <div class="metric-card">
-          <span>Plan</span>
-          <strong data-store-plan>Basic</strong>
-        </div>
-        <div class="metric-card">
-          <span>Marża</span>
-          <strong data-store-margin>0%</strong>
-        </div>
-        <div class="metric-card">
-          <span>Ilość produktów</span>
-          <strong data-store-products>0</strong>
-        </div>
-        <div class="metric-card">
-          <span>Przychód (mies.)</span>
-          <strong data-store-revenue>0 zł</strong>
-        </div>
-      </section>
+      <div data-store-content>
 
-      <section class="app-cta-section">
-        <div class="app-cta-box app-cta-grid">
-          <div class="app-cta-content">
-            <span class="app-cta-icon" aria-hidden="true">📱</span>
-            <span class="eyebrow">Sklep mobilny</span>
-            <h2>Prowadź sklep z telefonu</h2>
-            <p class="hint">Ustawienia, produkty i hurtownie są dostępne w wersji mobilnej. Dodaj platformę do ekranu głównego.</p>
-            <div class="app-cta-actions">
-              <button class="btn btn-primary" type="button" data-app-install-open>Otwórz aplikację</button>
-              <a class="btn btn-secondary" href="sklep.html">Podgląd sklepu</a>
-            </div>
-            <div class="app-instructions">
+        <!-- ── TAB: DASHBOARD ────────────────────────────────────── -->
+        <div class="owner-tab-panel" data-seller-tab-panel="dashboard">
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Panel sprzedawcy</span>
+            <h1 data-store-name>Panel sklepu</h1>
+            <p class="hint">Zarządzaj sprzedażą i kontroluj ustawienia sklepu.</p>
+            <div class="dashboard-meta">
               <div>
-                <strong>iPhone</strong>
-                <ul>
-                  <li>Udostępnij</li>
-                  <li>Dodaj do ekranu głównego</li>
-                </ul>
+                <span>Plan</span>
+                <strong data-store-plan>—</strong>
               </div>
               <div>
-              <strong>Android</strong>
-              <ul>
-                <li>Menu przeglądarki</li>
-                <li>Zainstaluj aplikację</li>
-                <li>Dodaj do ekranu głównego</li>
-              </ul>
+                <span>Status</span>
+                <strong>Aktywny</strong>
+              </div>
             </div>
-          </div>
-          </div>
-          <div class="app-cta-media">
-            <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=900&q=80" alt="Zespół e-commerce w panelu sklepu" loading="lazy" decoding="async">
-            <span class="app-cta-badge">Panel PRO</span>
-          </div>
-        </div>
-      </section>
+          </section>
 
-      <section class="panel-card panel-actions">
-        <h2>Szybkie akcje</h2>
-        <div class="cta-row">
-          <button class="btn btn-primary" type="button">Dodaj produkt</button>
-          <a class="btn btn-secondary" href="sklep.html">Sklep</a>
-          <button class="btn btn-secondary" type="button">Reklamy</button>
-          <button class="btn btn-secondary" type="button">Ustawienia</button>
-        </div>
-      </section>
-    </div>
+          <section class="panel-card panel-metrics">
+            <div class="metric-card">
+              <span>Zamówienia</span>
+              <strong data-stat-orders>—</strong>
+            </div>
+            <div class="metric-card">
+              <span>Przychód</span>
+              <strong data-stat-revenue>—</strong>
+            </div>
+            <div class="metric-card">
+              <span>Produkty</span>
+              <strong data-stat-products>—</strong>
+            </div>
+            <div class="metric-card">
+              <span>Klienci</span>
+              <strong data-stat-customers>—</strong>
+            </div>
+          </section>
 
-    <section class="panel-card panel-empty" data-store-empty hidden>
-      <h2>Brak aktywnego sklepu</h2>
-      <p class="hint">Utwórz sklep w generatorze, aby aktywować panel.</p>
-      <div class="cta-row">
-        <a class="btn btn-primary" href="generator-sklepu.html">Przejdź do generatora</a>
-      </div>
-    </section>
-  </main>
+          <section class="panel-card panel-actions">
+            <h2>Szybkie akcje</h2>
+            <div class="cta-row">
+              <button class="btn btn-primary" type="button" data-goto-tab="products">Produkty</button>
+              <button class="btn btn-secondary" type="button" data-goto-tab="orders">Zamówienia</button>
+              <button class="btn btn-secondary" type="button" data-goto-tab="earnings">Zarobki</button>
+              <button class="btn btn-secondary" type="button" data-goto-tab="settings">Ustawienia</button>
+            </div>
+          </section>
+        </div>
+
+        <!-- ── TAB: PRODUKTY ─────────────────────────────────────── -->
+        <div class="owner-tab-panel" data-seller-tab-panel="products" hidden>
+          <section class="panel-card">
+            <span class="eyebrow">Produkty</span>
+            <h2>Produkty w sklepie</h2>
+            <p class="hint">Zarządzaj produktami: zmień marżę, cenę lub wyłącz produkt.</p>
+            <div class="cta-row" style="margin-top:12px">
+              <button class="btn btn-primary" type="button" data-add-store-product>Dodaj produkt</button>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <p data-products-loading class="hint">Ładowanie produktów…</p>
+            <p data-products-empty class="hint" hidden>Brak produktów w sklepie. Dodaj produkty z katalogu.</p>
+            <div class="owner-table-wrap">
+              <table class="owner-table" aria-label="Produkty sklepu">
+                <thead>
+                  <tr>
+                    <th>Produkt</th>
+                    <th>Cena</th>
+                    <th>Marża</th>
+                    <th>Status</th>
+                    <th>Akcje</th>
+                  </tr>
+                </thead>
+                <tbody data-products-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- ── TAB: ZAMÓWIENIA ───────────────────────────────────── -->
+        <div class="owner-tab-panel" data-seller-tab-panel="orders" hidden>
+          <section class="panel-card">
+            <span class="eyebrow">Zamówienia</span>
+            <h2>Zamówienia sklepu</h2>
+            <p class="hint">Lista wszystkich zamówień złożonych w Twoim sklepie.</p>
+          </section>
+
+          <section class="panel-card">
+            <p data-seller-orders-loading class="hint">Ładowanie zamówień…</p>
+            <p data-seller-orders-empty class="hint" hidden>Brak zamówień w sklepie.</p>
+            <div class="owner-table-wrap">
+              <table class="owner-table" aria-label="Zamówienia sklepu">
+                <thead>
+                  <tr>
+                    <th>Nr zamówienia</th>
+                    <th>Data</th>
+                    <th>Klient / Adres</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody data-orders-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- ── TAB: ZAROBKI ──────────────────────────────────────── -->
+        <div class="owner-tab-panel" data-seller-tab-panel="earnings" hidden>
+          <section class="panel-card">
+            <span class="eyebrow">Zarobki</span>
+            <h2>Panel zarobków</h2>
+            <p class="hint">Zestawienie przychodów, prowizji platformy i Twoich zysków.</p>
+          </section>
+
+          <section class="panel-card panel-metrics">
+            <div class="metric-card">
+              <span>Przychód sklepu</span>
+              <strong data-earnings-revenue>—</strong>
+            </div>
+            <div class="metric-card">
+              <span>Prowizja platformy</span>
+              <strong data-earnings-commission>—</strong>
+            </div>
+            <div class="metric-card">
+              <span>Zarobek sprzedawcy</span>
+              <strong data-earnings-seller>—</strong>
+            </div>
+          </section>
+        </div>
+
+        <!-- ── TAB: USTAWIENIA ───────────────────────────────────── -->
+        <div class="owner-tab-panel" data-seller-tab-panel="settings" hidden>
+          <section class="panel-card">
+            <span class="eyebrow">Ustawienia</span>
+            <h2>Ustawienia sklepu</h2>
+            <p class="hint">Zmień nazwę, opis, logo i baner sklepu.</p>
+          </section>
+
+          <section class="panel-card">
+            <form data-settings-form>
+              <div style="display:flex;flex-direction:column;gap:16px">
+                <div class="form-field">
+                  <label for="settings-name">Nazwa sklepu</label>
+                  <input id="settings-name" type="text" name="name" placeholder="Nazwa sklepu" data-settings-name>
+                </div>
+                <div class="form-field">
+                  <label for="settings-desc">Opis</label>
+                  <input id="settings-desc" type="text" name="description" placeholder="Krótki opis sklepu" data-settings-desc>
+                </div>
+                <div class="form-field">
+                  <label for="settings-logo">Logo (URL)</label>
+                  <input id="settings-logo" type="url" name="logo_url" placeholder="https://..." data-settings-logo>
+                </div>
+                <div class="form-field">
+                  <label for="settings-banner">Baner (URL)</label>
+                  <input id="settings-banner" type="url" name="banner_url" placeholder="https://..." data-settings-banner>
+                </div>
+                <div class="cta-row">
+                  <button class="btn btn-primary" type="submit" data-settings-save>Zapisz zmiany</button>
+                </div>
+                <p data-settings-msg class="hint" hidden></p>
+              </div>
+            </form>
+          </section>
+        </div>
+
+      </div><!-- /data-store-content -->
+    </main>
+  </div>
 
   <footer class="wrap panel-footer">
     <div class="panel-footer-inner">
@@ -180,8 +295,44 @@
     </a>
   </nav>
 
+  <script src="js/api.js" defer></script>
+  <script src="js/pwa-connect.js" defer></script>
+  <script src="js/flow.js" defer></script>
   <script src="js/app.js" defer></script>
   <script src="stores.js" defer></script>
   <script src="shop.js" defer></script>
+  <script>
+    // ─── Seller tab navigation ────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', function () {
+      var nav = document.querySelector('[data-seller-tab-nav]');
+      if (!nav) return;
+
+      function switchTab(tabId) {
+        nav.querySelectorAll('[data-seller-tab]').forEach(function (a) {
+          a.classList.toggle('active', a.dataset.sellerTab === tabId);
+        });
+        document.querySelectorAll('[data-seller-tab-panel]').forEach(function (panel) {
+          panel.hidden = panel.dataset.sellerTabPanel !== tabId;
+        });
+      }
+
+      nav.addEventListener('click', function (e) {
+        var link = e.target.closest('[data-seller-tab]');
+        if (!link) return;
+        e.preventDefault();
+        switchTab(link.dataset.sellerTab);
+      });
+
+      // Quick-action buttons that switch tabs
+      document.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-goto-tab]');
+        if (!btn) return;
+        switchTab(btn.dataset.gotoTab);
+      });
+
+      // Show first tab by default
+      switchTab('dashboard');
+    });
+  </script>
 </body>
 </html>

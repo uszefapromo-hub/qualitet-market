@@ -29,9 +29,11 @@ router.get('/', async (req, res) => {
     const total = parseInt(countResult.rows[0].count, 10);
 
     const result = await db.query(
-      `SELECT sp.id, sp.store_id, sp.product_id, sp.active, sp.sort_order, sp.created_at,
+      `SELECT sp.id, sp.store_id, sp.product_id, sp.active, sp.sort_order,
+              sp.seller_margin, sp.selling_price, sp.created_at,
               p.name, p.sku, p.description, p.category, p.image_url, p.stock,
-              COALESCE(sp.price_override, p.selling_price) AS price,
+              p.supplier_price, p.platform_price, p.min_selling_price,
+              COALESCE(sp.price_override, p.platform_price, p.selling_price) AS price,
               COALESCE(sp.margin_override, p.margin) AS margin
        FROM shop_products sp
        JOIN products p ON sp.product_id = p.id
@@ -58,6 +60,7 @@ router.post(
     body('product_id').isUUID(),
     body('price_override').optional().isFloat({ min: 0 }),
     body('margin_override').optional().isFloat({ min: 0, max: 100 }),
+    body('seller_margin').optional().isFloat({ min: 0 }),
     body('sort_order').optional().isInt({ min: 0 }),
   ],
   validate,
@@ -67,6 +70,7 @@ router.post(
       product_id,
       price_override = null,
       margin_override = null,
+      seller_margin = null,
       sort_order = 0,
     } = req.body;
 
@@ -81,42 +85,51 @@ router.post(
         return res.status(403).json({ error: 'Brak uprawnień do tego sklepu' });
       }
 
-      // Verify product exists in central catalogue (fetch platform_price for min-price validation)
+      // Verify product exists in central catalogue and get pricing data
       const productResult = await db.query(
-        'SELECT id, platform_price, price_gross FROM products WHERE id = $1',
+        'SELECT id, platform_price, min_selling_price, selling_price FROM products WHERE id = $1',
         [product_id]
       );
       if (!productResult.rows[0]) {
         return res.status(404).json({ error: 'Produkt nie znaleziony' });
       }
 
-      // Validate selling price against platform minimum price
       const product = productResult.rows[0];
-      if (product.platform_price != null && (price_override != null || margin_override != null)) {
-        let effectivePrice;
-        if (price_override != null) {
-          effectivePrice = parseFloat(price_override);
-        } else {
-          effectivePrice = parseFloat(product.price_gross) * (1 + parseFloat(margin_override) / 100);
-        }
-        if (effectivePrice < parseFloat(product.platform_price)) {
-          return res.status(422).json({ error: 'selling_price_below_platform_price' });
-        }
+      // platform_price is the authoritative base; fall back to selling_price for pre-migration products
+      const basePlatformPrice = parseFloat(product.platform_price || product.selling_price || 0);
+      const minPrice = parseFloat(product.min_selling_price || product.platform_price || product.selling_price || 0);
+
+      // Compute selling_price from seller_margin when provided
+      let computedSellingPrice = null;
+      if (seller_margin !== null) {
+        computedSellingPrice = parseFloat((basePlatformPrice * (1 + parseFloat(seller_margin) / 100)).toFixed(2));
+      }
+
+      // Enforce minimum price
+      if (price_override !== null && price_override < minPrice) {
+        return res.status(422).json({ error: 'Cena nie może być niższa niż cena platformy', min_selling_price: minPrice });
+      }
+      if (computedSellingPrice !== null && computedSellingPrice < minPrice) {
+        return res.status(422).json({ error: 'Cena sprzedaży nie może być niższa niż cena platformy', min_selling_price: minPrice });
       }
 
       const id = uuidv4();
       const result = await db.query(
         `INSERT INTO shop_products
-           (id, store_id, product_id, price_override, margin_override, active, sort_order, created_at)
-         VALUES ($1, $2, $3, $4, $5, true, $6, NOW())
+           (id, store_id, product_id, price_override, margin_override,
+            seller_margin, selling_price, active, sort_order, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, true, $8, NOW())
          ON CONFLICT (store_id, product_id) DO UPDATE SET
            price_override  = EXCLUDED.price_override,
            margin_override = EXCLUDED.margin_override,
+           seller_margin   = EXCLUDED.seller_margin,
+           selling_price   = EXCLUDED.selling_price,
            sort_order      = EXCLUDED.sort_order,
            active          = true,
            updated_at      = NOW()
          RETURNING *`,
-        [id, store_id, product_id, price_override, margin_override, sort_order]
+        [id, store_id, product_id, price_override, margin_override,
+         seller_margin, computedSellingPrice, sort_order]
       );
       return res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -136,17 +149,21 @@ router.put(
     param('id').isUUID(),
     body('price_override').optional().isFloat({ min: 0 }),
     body('margin_override').optional().isFloat({ min: 0, max: 100 }),
+    body('seller_margin').optional().isFloat({ min: 0 }),
     body('active').optional().isBoolean(),
     body('sort_order').optional().isInt({ min: 0 }),
   ],
   validate,
   async (req, res) => {
-    const { price_override, margin_override, active, sort_order } = req.body;
+    const { price_override, margin_override, seller_margin, active, sort_order } = req.body;
 
     try {
       const spResult = await db.query(
-        `SELECT sp.*, s.owner_id FROM shop_products sp
+        `SELECT sp.*, s.owner_id,
+                p.platform_price, p.min_selling_price, p.selling_price AS product_selling_price
+         FROM shop_products sp
          JOIN stores s ON sp.store_id = s.id
+         JOIN products p ON sp.product_id = p.id
          WHERE sp.id = $1`,
         [req.params.id]
       );
@@ -158,45 +175,40 @@ router.put(
         return res.status(403).json({ error: 'Brak uprawnień' });
       }
 
-      // Validate selling price against platform minimum price (only when price fields are being changed)
-      if (price_override !== undefined || margin_override !== undefined) {
-        const prodResult = await db.query(
-          'SELECT platform_price, price_gross FROM products WHERE id = $1',
-          [sp.product_id]
-        );
-        const product = prodResult.rows[0];
-        if (product && product.platform_price != null) {
-          const finalPriceOverride = price_override != null ? price_override : sp.price_override;
-          const finalMarginOverride = margin_override != null ? margin_override : sp.margin_override;
-          const finalMarginType = sp.margin_type || 'percent';
-          let effectivePrice;
-          if (finalPriceOverride != null) {
-            effectivePrice = parseFloat(finalPriceOverride);
-          } else if (finalMarginOverride != null) {
-            if (finalMarginType === 'fixed') {
-              effectivePrice = parseFloat(product.price_gross) + parseFloat(finalMarginOverride);
-            } else {
-              effectivePrice = parseFloat(product.price_gross) * (1 + parseFloat(finalMarginOverride) / 100);
-            }
-          }
-          if (effectivePrice !== undefined && effectivePrice < parseFloat(product.platform_price)) {
-            return res.status(422).json({ error: 'selling_price_below_platform_price' });
-          }
-        }
+      const basePlatformPrice = parseFloat(sp.platform_price || sp.product_selling_price || 0);
+      // min_selling_price is always set to platform_price via migration; fall back for pre-migration rows
+      const minPrice = parseFloat(sp.min_selling_price || sp.platform_price || sp.product_selling_price || 0);
+
+      // Compute selling_price from seller_margin
+      let computedSellingPrice = null;
+      if (seller_margin !== undefined && seller_margin !== null) {
+        computedSellingPrice = parseFloat((basePlatformPrice * (1 + parseFloat(seller_margin) / 100)).toFixed(2));
+      }
+
+      // Enforce minimum price
+      if (price_override !== undefined && price_override !== null && price_override < minPrice) {
+        return res.status(422).json({ error: 'Cena nie może być niższa niż cena platformy', min_selling_price: minPrice });
+      }
+      if (computedSellingPrice !== null && computedSellingPrice < minPrice) {
+        return res.status(422).json({ error: 'Cena sprzedaży nie może być niższa niż cena platformy', min_selling_price: minPrice });
       }
 
       const result = await db.query(
         `UPDATE shop_products SET
            price_override  = COALESCE($1, price_override),
            margin_override = COALESCE($2, margin_override),
-           active          = COALESCE($3, active),
-           sort_order      = COALESCE($4, sort_order),
+           seller_margin   = COALESCE($3, seller_margin),
+           selling_price   = COALESCE($4, selling_price),
+           active          = COALESCE($5, active),
+           sort_order      = COALESCE($6, sort_order),
            updated_at      = NOW()
-         WHERE id = $5
+         WHERE id = $7
          RETURNING *`,
         [
           price_override !== undefined ? price_override : null,
           margin_override !== undefined ? margin_override : null,
+          seller_margin !== undefined ? seller_margin : null,
+          computedSellingPrice,
           active !== undefined ? active : null,
           sort_order !== undefined ? sort_order : null,
           req.params.id,

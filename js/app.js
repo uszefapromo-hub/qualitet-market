@@ -4962,6 +4962,133 @@
         saveStoredList(OWNER_STORAGE_KEYS.adminLogs, logsForSave);
       });
     }
+
+    // ── PLATFORM MARGIN TIERS ──
+    const MARGIN_TIERS_KEY = 'qm_platform_margin_tiers';
+    const DEFAULT_TIERS = [
+      { threshold_max: 20,   margin_percent: 60 },
+      { threshold_max: 100,  margin_percent: 40 },
+      { threshold_max: 300,  margin_percent: 25 },
+      { threshold_max: null, margin_percent: 15 },
+    ];
+    const tiersTbody  = document.querySelector('[data-margin-tiers-tbody]');
+    const tiersAddBtn = document.querySelector('[data-margin-tier-add]');
+    const tiersSaveBtn = document.querySelector('[data-margin-tiers-save]');
+    const tiersSavedMsg = document.querySelector('[data-margin-tiers-saved]');
+
+    function buildTierRow(tier) {
+      const tr = document.createElement('tr');
+      const maxNum = tier.threshold_max != null ? parseFloat(tier.threshold_max) : null;
+      const marginNum = parseFloat(tier.margin_percent) || 0;
+
+      const maxInput = document.createElement('input');
+      maxInput.className = 'owner-input';
+      maxInput.type = 'number';
+      maxInput.min = '0';
+      maxInput.step = '0.01';
+      maxInput.placeholder = '(brak limitu)';
+      maxInput.style.width = '100%';
+      maxInput.setAttribute('data-tier-max', '');
+      if (maxNum !== null) maxInput.value = maxNum;
+
+      const marginInput = document.createElement('input');
+      marginInput.className = 'owner-input';
+      marginInput.type = 'number';
+      marginInput.min = '0';
+      marginInput.max = '999';
+      marginInput.step = '0.1';
+      marginInput.style.width = '100%';
+      marginInput.setAttribute('data-tier-margin', '');
+      marginInput.value = marginNum;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'btn btn-secondary';
+      removeBtn.type = 'button';
+      removeBtn.setAttribute('data-tier-remove', '');
+      removeBtn.style.padding = '4px 10px';
+      removeBtn.textContent = '✕';
+      removeBtn.addEventListener('click', () => tr.remove());
+
+      const tdMax = document.createElement('td');
+      tdMax.appendChild(maxInput);
+      const tdMargin = document.createElement('td');
+      tdMargin.appendChild(marginInput);
+      const tdAction = document.createElement('td');
+      tdAction.appendChild(removeBtn);
+
+      tr.append(tdMax, tdMargin, tdAction);
+      return tr;
+    }
+
+    function readTiersFromTable() {
+      if (!tiersTbody) return [];
+      return Array.from(tiersTbody.querySelectorAll('tr')).map(tr => {
+        const maxRaw = tr.querySelector('[data-tier-max]').value.trim();
+        const marginRaw = tr.querySelector('[data-tier-margin]').value.trim();
+        const marginVal = parseFloat(marginRaw);
+        return {
+          threshold_max:   maxRaw === '' ? null : parseFloat(maxRaw),
+          margin_percent:  isNaN(marginVal) ? 0 : marginVal,
+        };
+      });
+    }
+
+    function renderTiersTable(tiers) {
+      if (!tiersTbody) return;
+      tiersTbody.innerHTML = '';
+      tiers.forEach(t => tiersTbody.appendChild(buildTierRow(t)));
+    }
+
+    if (tiersTbody) {
+      // Try loading from backend; fall back to localStorage, then defaults
+      const api = window.QMApi;
+      if (api && api.Admin && api.Admin.platformMargins && typeof api.Admin.platformMargins === 'function') {
+        api.Admin.platformMargins()
+          .then(data => {
+            const tiers = (data && data.tiers && data.tiers.length)
+              ? data.tiers
+              : JSON.parse(localStorage.getItem(MARGIN_TIERS_KEY) || 'null') || DEFAULT_TIERS;
+            renderTiersTable(tiers);
+          })
+          .catch(() => {
+            const tiers = JSON.parse(localStorage.getItem(MARGIN_TIERS_KEY) || 'null') || DEFAULT_TIERS;
+            renderTiersTable(tiers);
+          });
+      } else {
+        const tiers = JSON.parse(localStorage.getItem(MARGIN_TIERS_KEY) || 'null') || DEFAULT_TIERS;
+        renderTiersTable(tiers);
+      }
+    }
+
+    if (tiersAddBtn) {
+      tiersAddBtn.addEventListener('click', () => {
+        if (tiersTbody) {
+          tiersTbody.appendChild(buildTierRow({ threshold_max: null, margin_percent: 0 }));
+        }
+      });
+    }
+
+    if (tiersSaveBtn) {
+      tiersSaveBtn.addEventListener('click', () => {
+        const tiers = readTiersFromTable();
+        localStorage.setItem(MARGIN_TIERS_KEY, JSON.stringify(tiers));
+        const api = window.QMApi;
+        const saveFinish = (ok) => {
+          if (tiersSavedMsg) {
+            tiersSavedMsg.textContent = ok ? '✅ Zapisano!' : '⚠️ Zapisano lokalnie (brak połączenia z API).';
+            tiersSavedMsg.hidden = false;
+            window.setTimeout(() => { tiersSavedMsg.hidden = true; }, 2500);
+          }
+        };
+        if (api && api.Admin && api.Admin.updatePlatformMargins && typeof api.Admin.updatePlatformMargins === 'function') {
+          api.Admin.updatePlatformMargins({ tiers })
+            .then(() => saveFinish(true))
+            .catch(() => saveFinish(false));
+        } else {
+          saveFinish(false);
+        }
+      });
+    }
   }
 
   function initSuppliersModule(){

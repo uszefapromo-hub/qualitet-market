@@ -3,12 +3,15 @@
 /**
  * "My" routes – user-facing endpoints for the currently authenticated user.
  *
- * GET    /api/my/store                 – seller's primary store
- * GET    /api/my/orders                – buyer's order history
- * GET    /api/my/store/products        – list my store's shop products
- * POST   /api/my/store/products        – add a product to my store
- * PATCH  /api/my/store/products/:id   – update a shop product in my store
- * DELETE /api/my/store/products/:id   – remove a product from my store
+ * GET    /api/my/store                       – seller's primary store
+ * GET    /api/my/store/stats                 – seller's store dashboard stats
+ * GET    /api/my/store/orders                – orders for the seller's store
+ * GET    /api/my/orders                      – buyer's order history
+ * GET    /api/my/store/products              – list my store's shop products
+ * POST   /api/my/store/products              – add a product to my store
+ * POST   /api/my/store/products/bulk         – add multiple products to my store at once
+ * PATCH  /api/my/store/products/:id          – update a shop product in my store
+ * DELETE /api/my/store/products/:id          – remove a product from my store
  */
 
 const express = require('express');
@@ -44,6 +47,106 @@ router.get(
   }
 );
 
+// ─── GET /api/my/store/stats – seller's store dashboard stats ────────────────
+
+router.get(
+  '/store/stats',
+  authenticate,
+  requireRole('seller', 'owner', 'admin'),
+  async (req, res) => {
+    try {
+      const storeResult = await db.query(
+        'SELECT id FROM stores WHERE owner_id = $1 ORDER BY created_at ASC LIMIT 1',
+        [req.user.id]
+      );
+      const store = storeResult.rows[0];
+      if (!store) {
+        return res.status(404).json({ error: 'Nie masz jeszcze sklepu' });
+      }
+      const storeId = store.id;
+
+      const [orderStats, productCount, customerCount] = await Promise.all([
+        db.query(
+          `SELECT COUNT(*) AS order_count,
+                  COALESCE(SUM(total), 0) AS revenue,
+                  COALESCE(SUM(platform_commission), 0) AS platform_commission,
+                  COALESCE(SUM(seller_revenue), 0) AS seller_earnings
+           FROM orders WHERE store_id = $1`,
+          [storeId]
+        ),
+        db.query(
+          'SELECT COUNT(*) FROM shop_products WHERE store_id = $1',
+          [storeId]
+        ),
+        db.query(
+          'SELECT COUNT(DISTINCT buyer_id) FROM orders WHERE store_id = $1',
+          [storeId]
+        ),
+      ]);
+
+      const stats = orderStats.rows[0];
+      return res.json({
+        order_count:         parseInt(stats.order_count, 10),
+        revenue:             parseFloat(stats.revenue),
+        platform_commission: parseFloat(stats.platform_commission),
+        seller_earnings:     parseFloat(stats.seller_earnings),
+        product_count:       parseInt(productCount.rows[0].count, 10),
+        customer_count:      parseInt(customerCount.rows[0].count, 10),
+      });
+    } catch (err) {
+      console.error('my store stats error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── GET /api/my/store/orders – store orders for seller ───────────────────────
+
+router.get(
+  '/store/orders',
+  authenticate,
+  requireRole('seller', 'owner', 'admin'),
+  async (req, res) => {
+    try {
+      const storeResult = await db.query(
+        'SELECT id FROM stores WHERE owner_id = $1 ORDER BY created_at ASC LIMIT 1',
+        [req.user.id]
+      );
+      const store = storeResult.rows[0];
+      if (!store) {
+        return res.status(404).json({ error: 'Nie masz jeszcze sklepu' });
+      }
+      const storeId = store.id;
+
+      const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
+      const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
+      const offset = (page - 1) * limit;
+
+      const countResult = await db.query(
+        'SELECT COUNT(*) FROM orders WHERE store_id = $1',
+        [storeId]
+      );
+      const total = parseInt(countResult.rows[0].count, 10);
+
+      const result = await db.query(
+        `SELECT o.id, o.order_number, o.status, o.total, o.created_at,
+                o.buyer_id, o.shipping_address, o.notes,
+                o.seller_revenue, o.platform_commission
+         FROM orders o
+         WHERE o.store_id = $1
+         ORDER BY o.created_at DESC
+         LIMIT $2 OFFSET $3`,
+        [storeId, limit, offset]
+      );
+
+      return res.json({ total, page, limit, orders: result.rows });
+    } catch (err) {
+      console.error('my store orders error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
 // ─── PATCH /api/my/store – update seller's primary store ─────────────────────
 
 router.patch(
@@ -54,6 +157,7 @@ router.patch(
     body('name').optional().trim().notEmpty(),
     body('description').optional().trim(),
     body('logo_url').optional().isURL(),
+    body('banner_url').optional().isURL(),
     body('margin').optional().isFloat({ min: 0, max: 100 }),
   ],
   validate,
@@ -68,22 +172,24 @@ router.patch(
         return res.status(404).json({ error: 'Nie masz jeszcze sklepu' });
       }
 
-      const { name, description, logo_url, margin } = req.body;
+      const { name, description, logo_url, banner_url, margin } = req.body;
 
       const result = await db.query(
         `UPDATE stores SET
            name        = COALESCE($1, name),
            description = COALESCE($2, description),
            logo_url    = COALESCE($3, logo_url),
-           margin      = COALESCE($4, margin),
+           banner_url  = COALESCE($4, banner_url),
+           margin      = COALESCE($5, margin),
            updated_at  = NOW()
-         WHERE id = $5
+         WHERE id = $6
          RETURNING *`,
         [
-          name      !== undefined ? name      : null,
+          name        !== undefined ? name        : null,
           description !== undefined ? description : null,
-          logo_url  !== undefined ? logo_url  : null,
-          margin    !== undefined ? margin    : null,
+          logo_url    !== undefined ? logo_url    : null,
+          banner_url  !== undefined ? banner_url  : null,
+          margin      !== undefined ? margin      : null,
           store.id,
         ]
       );
@@ -234,24 +340,22 @@ router.post(
       }
 
       const productResult = await db.query(
-        'SELECT id, platform_price, price_gross FROM products WHERE id = $1',
+        'SELECT id, platform_price, min_selling_price, selling_price FROM products WHERE id = $1',
         [product_id]
       );
       if (!productResult.rows[0]) return res.status(404).json({ error: 'Produkt nie znaleziony' });
 
-      // Validate selling price against platform minimum price
       const product = productResult.rows[0];
-      if (product.platform_price != null && (price_override != null || margin_override != null)) {
-        let effectivePrice;
-        if (price_override != null) {
-          effectivePrice = parseFloat(price_override);
-        } else if (margin_type === 'fixed') {
-          effectivePrice = parseFloat(product.price_gross) + parseFloat(margin_override);
-        } else {
-          effectivePrice = parseFloat(product.price_gross) * (1 + parseFloat(margin_override) / 100);
-        }
-        if (effectivePrice < parseFloat(product.platform_price)) {
-          return res.status(422).json({ error: 'selling_price_below_platform_price' });
+      const basePlatformPrice = parseFloat(product.platform_price || product.selling_price || 0);
+      const minPrice = parseFloat(product.min_selling_price || product.platform_price || product.selling_price || 0);
+
+      if (price_override !== null && price_override < minPrice) {
+        return res.status(422).json({ error: 'Cena nie może być niższa niż cena platformy', min_selling_price: minPrice });
+      }
+      if (margin_type === 'fixed' && margin_override !== null) {
+        const computedPrice = parseFloat((basePlatformPrice + parseFloat(margin_override)).toFixed(2));
+        if (computedPrice < minPrice) {
+          return res.status(422).json({ error: 'Cena sprzedaży nie może być niższa niż cena platformy', min_selling_price: minPrice });
         }
       }
 
@@ -282,6 +386,90 @@ router.post(
   }
 );
 
+// ─── POST /api/my/store/products/bulk – add multiple products to my store ──────
+
+router.post(
+  '/store/products/bulk',
+  authenticate,
+  requireRole('seller', 'owner', 'admin'),
+  [
+    body('store_id').isUUID(),
+    body('product_ids').isArray({ min: 1 }),
+    body('product_ids.*').isUUID(),
+  ],
+  validate,
+  requireActiveSubscription,
+  async (req, res) => {
+    const { store_id, product_ids } = req.body;
+
+    try {
+      const storeResult = await db.query('SELECT owner_id FROM stores WHERE id = $1', [store_id]);
+      const store = storeResult.rows[0];
+      if (!store) return res.status(404).json({ error: 'Sklep nie znaleziony' });
+
+      const isAdmin = ['owner', 'admin'].includes(req.user.role);
+      if (!isAdmin && store.owner_id !== req.user.id) {
+        return res.status(403).json({ error: 'Brak uprawnień do tego sklepu' });
+      }
+
+      // Check product limit from subscription (set by requireActiveSubscription middleware)
+      const sub = req.subscription;
+      if (sub && sub.product_limit !== null && sub.product_limit !== undefined) {
+        const countResult = await db.query(
+          'SELECT COUNT(*) FROM shop_products WHERE store_id = $1',
+          [store_id]
+        );
+        const currentCount = parseInt(countResult.rows[0].count, 10);
+        if (currentCount + product_ids.length > sub.product_limit) {
+          return res.status(403).json({ error: 'product_limit_reached' });
+        }
+      }
+
+      const DEFAULT_MARGIN = 20;
+      const added = [];
+      const skipped = [];
+
+      // Fetch all requested products in one query to avoid N+1 lookups
+      const productsResult = await db.query(
+        'SELECT id, selling_price FROM products WHERE id = ANY($1)',
+        [product_ids]
+      );
+      const foundProducts = new Set(productsResult.rows.map((p) => p.id));
+
+      for (const product_id of product_ids) {
+        if (!foundProducts.has(product_id)) {
+          skipped.push({ product_id, reason: 'not_found' });
+          continue;
+        }
+
+        const id = uuidv4();
+        const result = await db.query(
+          `INSERT INTO shop_products
+             (id, store_id, product_id, margin_type, margin_override, active, sort_order, created_at)
+           VALUES ($1, $2, $3, 'percent', $4, true, 0, NOW())
+           ON CONFLICT (store_id, product_id) DO UPDATE SET
+             margin_type     = EXCLUDED.margin_type,
+             margin_override = EXCLUDED.margin_override,
+             updated_at      = NOW()
+           RETURNING *`,
+          [id, store_id, product_id, DEFAULT_MARGIN]
+        );
+        added.push(result.rows[0]);
+      }
+
+      return res.status(201).json({
+        added: added.length,
+        skipped: skipped.length,
+        results: added,
+        skipped_ids: skipped,
+      });
+    } catch (err) {
+      console.error('my store bulk add products error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
 // ─── PATCH /api/my/store/products/:id – update a shop product ─────────────────
 
 router.patch(
@@ -302,9 +490,11 @@ router.patch(
   async (req, res) => {
     try {
       const spResult = await db.query(
-        `SELECT sp.*, s.owner_id
+        `SELECT sp.*, s.owner_id,
+                p.platform_price, p.min_selling_price, p.selling_price AS product_selling_price
          FROM shop_products sp
          JOIN stores s ON sp.store_id = s.id
+         JOIN products p ON sp.product_id = p.id
          WHERE sp.id = $1`,
         [req.params.id]
       );
@@ -321,30 +511,17 @@ router.patch(
         margin_override, price_override, active, sort_order,
       } = req.body;
 
-      // Validate selling price against platform minimum price (only when price fields are being changed)
-      if (price_override !== undefined || margin_override !== undefined) {
-        const prodResult = await db.query(
-          'SELECT platform_price, price_gross FROM products WHERE id = $1',
-          [sp.product_id]
-        );
-        const product = prodResult.rows[0];
-        if (product && product.platform_price != null) {
-          const finalPriceOverride = price_override != null ? price_override : sp.price_override;
-          const finalMarginOverride = margin_override != null ? margin_override : sp.margin_override;
-          const finalMarginType = margin_type != null ? margin_type : sp.margin_type;
-          let effectivePrice;
-          if (finalPriceOverride != null) {
-            effectivePrice = parseFloat(finalPriceOverride);
-          } else if (finalMarginOverride != null) {
-            if (finalMarginType === 'fixed') {
-              effectivePrice = parseFloat(product.price_gross) + parseFloat(finalMarginOverride);
-            } else {
-              effectivePrice = parseFloat(product.price_gross) * (1 + parseFloat(finalMarginOverride) / 100);
-            }
-          }
-          if (effectivePrice !== undefined && effectivePrice < parseFloat(product.platform_price)) {
-            return res.status(422).json({ error: 'selling_price_below_platform_price' });
-          }
+      const basePlatformPrice = parseFloat(sp.platform_price || sp.product_selling_price || 0);
+      const minPrice = parseFloat(sp.min_selling_price || sp.platform_price || sp.product_selling_price || 0);
+
+      if (price_override !== undefined && price_override !== null && price_override < minPrice) {
+        return res.status(422).json({ error: 'Cena nie może być niższa niż cena platformy', min_selling_price: minPrice });
+      }
+      const effectiveMarginType = margin_type ?? sp.margin_type;
+      if (effectiveMarginType === 'fixed' && margin_override !== undefined && margin_override !== null) {
+        const computedPrice = parseFloat((basePlatformPrice + parseFloat(margin_override)).toFixed(2));
+        if (computedPrice < minPrice) {
+          return res.status(422).json({ error: 'Cena sprzedaży nie może być niższa niż cena platformy', min_selling_price: minPrice });
         }
       }
 
