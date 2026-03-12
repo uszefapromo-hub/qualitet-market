@@ -4258,52 +4258,373 @@
     // ── PRODUCTS TAB ──
     const productsTbody = document.querySelector('[data-products-tbody]');
     if(productsTbody){
-      const suppliersSet = [...new Set(products.map(product => product.supplier).filter(Boolean))];
-      const supplierFilter = document.querySelector('[data-products-supplier-filter]');
-      if(supplierFilter){
-        suppliersSet.forEach(supplierName => {
-          const opt = document.createElement('option');
-          opt.value = supplierName;
-          opt.textContent = supplierName;
-          supplierFilter.appendChild(opt);
-        });
-      }
-      const buildProductRow = product => {
-        const productStore = storeMap.get(product.storeId);
+      // State for API-loaded products
+      let apiProducts = null; // null = not loaded yet, [] = loaded but empty
+      // WeakMap to track filter event handlers for proper cleanup on re-render
+      const filterHandlers = new WeakMap();
+
+      const buildProductRowFromApi = (product) => {
+        const tr = document.createElement('tr');
+        const sku = product.sku || String(product.id).slice(0, 8);
+        const supplier = product.supplier_name || product.supplier || '—';
+        const buyPrice = parseFloat(product.supplier_price || product.price_gross || 0);
+        const sellPrice = parseFloat(product.selling_price || product.platform_price || 0);
+        const stockVal = product.stock != null ? product.stock : '—';
+        const statusVal = product.status || 'active';
+        const productId = escapeHtml(String(product.id));
+        tr.innerHTML = `
+          <td class="cell-mono">${escapeHtml(sku)}</td>
+          <td><strong>${escapeHtml(product.name)}</strong>${product.description ? `<br><small class="cell-muted">${escapeHtml(product.description.slice(0, 60))}${product.description.length > 60 ? '\u2026' : ''}</small>` : ''}</td>
+          <td>${escapeHtml(product.category || '—')}</td>
+          <td>${escapeHtml(supplier)}</td>
+          <td>${formatCurrency(buyPrice)}</td>
+          <td>${formatCurrency(sellPrice)}</td>
+          <td>${escapeHtml(String(stockVal))}</td>
+          <td>${statusPill(statusVal)}</td>
+          <td>
+            <button class="btn btn-secondary btn-sm" type="button" data-product-edit="${productId}">Edytuj</button>
+            <button class="btn btn-secondary btn-sm" type="button" data-product-delete="${productId}" style="margin-left:4px">Usuń</button>
+          </td>
+        `;
+        return tr;
+      };
+
+      const buildProductRowFromLocal = (product) => {
         const pricing = calculateTieredPricing(product.cost || 0, {
           userMargin: product.margin,
-          store: productStore,
+          store: storeMap.get(product.storeId),
           settings: loadStoreSettings(),
           product
         });
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td class="cell-mono">${escapeHtml(product.id)}</td>
+          <td class="cell-mono">${escapeHtml(product.sku || product.id)}</td>
           <td><strong>${escapeHtml(product.name)}</strong></td>
+          <td>${escapeHtml(product.category || '—')}</td>
           <td>${escapeHtml(product.supplier || '—')}</td>
           <td>${formatCurrency(product.cost || 0)}</td>
-          <td>${pricing.userMarginPct || product.margin || 0}%</td>
           <td>${formatCurrency(pricing.finalPrice)}</td>
-          <td>${product.sales || 0}</td>
+          <td>${product.stock != null ? product.stock : '—'}</td>
           <td>${statusPill('active')}</td>
+          <td><span class="hint" style="font-size:11px">demo</span></td>
         `;
         return tr;
       };
-      products.map(buildProductRow).forEach(row => productsTbody.appendChild(row));
 
-      const productsSearch = document.querySelector('[data-products-search]');
-      const applyProductsFilter = () => {
-        const searchQuery = (productsSearch ? productsSearch.value.toLowerCase() : '');
-        const supplier = supplierFilter ? supplierFilter.value : '';
-        productsTbody.innerHTML = '';
-        products.filter(product => {
-          const matchQ = !searchQuery || (product.name || '').toLowerCase().includes(searchQuery);
-          const matchS = !supplier || (product.supplier || '') === supplier;
-          return matchQ && matchS;
-        }).map(buildProductRow).forEach(row => productsTbody.appendChild(row));
+      const renderProductsTable = (list, isFromApi) => {
+        const supplierFilter = document.querySelector('[data-products-supplier-filter]');
+        const statusFilter = document.querySelector('[data-products-status-filter]');
+        const productsSearch = document.querySelector('[data-products-search]');
+        const apiSourceEl = document.querySelector('[data-products-api-source]');
+
+        if(apiSourceEl) apiSourceEl.hidden = !isFromApi;
+
+        // Populate supplier filter from list
+        if(supplierFilter && isFromApi){
+          // Remove non-default options
+          while(supplierFilter.options.length > 1) supplierFilter.remove(1);
+          const suppliersSet = [...new Set(list.map(p => p.supplier_name || p.supplier).filter(Boolean))];
+          suppliersSet.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = s;
+            supplierFilter.appendChild(opt);
+          });
+        }
+
+        const applyFilter = () => {
+          const q = productsSearch ? productsSearch.value.toLowerCase() : '';
+          const sup = supplierFilter ? supplierFilter.value : '';
+          const st = statusFilter ? statusFilter.value : '';
+          productsTbody.innerHTML = '';
+          const filtered = list.filter(p => {
+            const matchQ = !q || (p.name || '').toLowerCase().includes(q) || (p.sku || '').toLowerCase().includes(q);
+            const matchSup = !sup || ((p.supplier_name || p.supplier || '') === sup);
+            const matchSt = !st || (p.status || 'active') === st;
+            return matchQ && matchSup && matchSt;
+          });
+          if(!filtered.length){
+            const row = document.createElement('tr');
+            row.innerHTML = '<td colspan="9" style="text-align:center;padding:24px;color:var(--muted)">Brak produktów spełniających kryteria</td>';
+            productsTbody.appendChild(row);
+          } else {
+            filtered.forEach(p => productsTbody.appendChild(isFromApi ? buildProductRowFromApi(p) : buildProductRowFromLocal(p)));
+          }
+        };
+
+        applyFilter();
+
+        // Store filter function in a WeakMap to allow proper listener cleanup
+        if(productsSearch){
+          if(filterHandlers.has(productsSearch)) productsSearch.removeEventListener('input', filterHandlers.get(productsSearch));
+          filterHandlers.set(productsSearch, applyFilter);
+          productsSearch.addEventListener('input', applyFilter);
+        }
+        if(supplierFilter){
+          if(filterHandlers.has(supplierFilter)) supplierFilter.removeEventListener('change', filterHandlers.get(supplierFilter));
+          filterHandlers.set(supplierFilter, applyFilter);
+          supplierFilter.addEventListener('change', applyFilter);
+        }
+        if(statusFilter){
+          if(filterHandlers.has(statusFilter)) statusFilter.removeEventListener('change', filterHandlers.get(statusFilter));
+          filterHandlers.set(statusFilter, applyFilter);
+          statusFilter.addEventListener('change', applyFilter);
+        }
       };
-      if(productsSearch) productsSearch.addEventListener('input', applyProductsFilter);
-      if(supplierFilter) supplierFilter.addEventListener('change', applyProductsFilter);
+
+      // Load products from API
+      const loadProductsFromApi = () => {
+        const loadingEl = document.querySelector('[data-products-loading]');
+        if(loadingEl) loadingEl.hidden = false;
+        productsTbody.innerHTML = '';
+
+        const api = window.QMApi;
+        if(api && api.Admin && api.Auth && api.Auth.isLoggedIn && api.Auth.isLoggedIn()){
+          api.Admin.products({ limit: 100, page: 1 })
+            .then(resp => {
+              const rows = (resp && resp.products) ? resp.products : (Array.isArray(resp) ? resp : []);
+              apiProducts = rows;
+              if(loadingEl) loadingEl.hidden = true;
+              if(rows.length){
+                renderProductsTable(rows, true);
+                // Update overview counter with real count
+                const counter = document.querySelector('[data-owner-products]');
+                if(counter) setCounterValue(counter, rows.length);
+              } else {
+                // Fall back to local data
+                renderProductsTable(products, false);
+              }
+            })
+            .catch(() => {
+              if(loadingEl) loadingEl.hidden = true;
+              renderProductsTable(products, false);
+            });
+        } else {
+          if(loadingEl) loadingEl.hidden = true;
+          renderProductsTable(products, false);
+        }
+      };
+
+      // Initial load
+      loadProductsFromApi();
+
+      // Reload button
+      const reloadBtn = document.querySelector('[data-products-reload-btn]');
+      if(reloadBtn) reloadBtn.addEventListener('click', () => loadProductsFromApi());
+
+      // ── Product CRUD Modal ──
+      const productModal = document.querySelector('[data-product-modal]');
+      const productForm = document.querySelector('[data-product-form]');
+      const productModalTitle = document.querySelector('[data-product-modal-title]');
+      const productIdField = document.querySelector('[data-product-id]');
+      const productFormMsg = document.querySelector('[data-product-form-msg]');
+
+      const openProductModal = (editProduct = null) => {
+        if(!productModal || !productForm) return;
+        productForm.reset();
+        if(productFormMsg){ productFormMsg.hidden = true; productFormMsg.textContent = ''; }
+        if(editProduct){
+          if(productModalTitle) productModalTitle.textContent = 'Edytuj produkt';
+          if(productIdField) productIdField.value = editProduct.id || '';
+          const f = (s) => productForm.querySelector(s);
+          if(f('[data-pf-name]')) f('[data-pf-name]').value = editProduct.name || '';
+          if(f('[data-pf-sku]')) f('[data-pf-sku]').value = editProduct.sku || '';
+          if(f('[data-pf-category]')) f('[data-pf-category]').value = editProduct.category || '';
+          if(f('[data-pf-description]')) f('[data-pf-description]').value = editProduct.description || '';
+          if(f('[data-pf-price-net]')) f('[data-pf-price-net]').value = editProduct.price_net || '';
+          if(f('[data-pf-tax-rate]')) f('[data-pf-tax-rate]').value = editProduct.tax_rate != null ? editProduct.tax_rate : 23;
+          if(f('[data-pf-stock]')) f('[data-pf-stock]').value = editProduct.stock != null ? editProduct.stock : 0;
+          if(f('[data-pf-status]')) f('[data-pf-status]').value = editProduct.status || 'active';
+          if(f('[data-pf-image-url]')) f('[data-pf-image-url]').value = editProduct.image_url || '';
+        } else {
+          if(productModalTitle) productModalTitle.textContent = 'Dodaj produkt';
+          if(productIdField) productIdField.value = '';
+        }
+        productModal.hidden = false;
+        productModal.querySelector('input,textarea,select')?.focus();
+      };
+
+      const closeProductModal = () => {
+        if(productModal) productModal.hidden = true;
+      };
+
+      // Open "Add" modal
+      const addProductBtn = document.querySelector('[data-products-add-btn]');
+      if(addProductBtn) addProductBtn.addEventListener('click', () => openProductModal(null));
+
+      // Close modal buttons
+      document.querySelectorAll('[data-product-modal-close]').forEach(btn => {
+        btn.addEventListener('click', closeProductModal);
+      });
+      if(productModal){
+        productModal.addEventListener('click', (e) => {
+          if(e.target === productModal) closeProductModal();
+        });
+      }
+
+      // Edit/Delete via event delegation on tbody
+      productsTbody.addEventListener('click', (e) => {
+        // Edit
+        const editBtn = e.target.closest('[data-product-edit]');
+        if(editBtn){
+          const productId = editBtn.dataset.productEdit;
+          const productData = apiProducts && apiProducts.find(p => String(p.id) === String(productId));
+          if(productData) openProductModal(productData);
+          return;
+        }
+        // Delete
+        const deleteBtn = e.target.closest('[data-product-delete]');
+        if(deleteBtn){
+          const productId = deleteBtn.dataset.productDelete;
+          if(!productId) return;
+          if(!window.confirm('Czy na pewno usunąć ten produkt?')) return;
+          const api = window.QMApi;
+          if(!api || !api.Admin){ alert('Brak połączenia z API'); return; }
+          api.Admin.deleteProduct(productId)
+            .then(() => { loadProductsFromApi(); })
+            .catch(err => alert('Błąd usuwania: ' + (err.message || 'Nieznany błąd')));
+        }
+      });
+
+      // Save product form
+      if(productForm){
+        productForm.addEventListener('submit', (e) => {
+          e.preventDefault();
+          const api = window.QMApi;
+          if(!api || !api.Admin){
+            if(productFormMsg){ productFormMsg.textContent = 'Brak połączenia z API. Zaloguj się jako admin.'; productFormMsg.hidden = false; }
+            return;
+          }
+          const f = (s) => productForm.querySelector(s);
+          const id = productIdField ? productIdField.value : '';
+          const data = {
+            name: (f('[data-pf-name]') ? f('[data-pf-name]').value : '').trim(),
+            sku: (f('[data-pf-sku]') ? f('[data-pf-sku]').value : '').trim() || undefined,
+            category: (f('[data-pf-category]') ? f('[data-pf-category]').value : '').trim() || undefined,
+            description: (f('[data-pf-description]') ? f('[data-pf-description]').value : '').trim() || undefined,
+            price_net: parseFloat(f('[data-pf-price-net]') ? f('[data-pf-price-net]').value : 0),
+            tax_rate: parseFloat(f('[data-pf-tax-rate]') ? f('[data-pf-tax-rate]').value : 23),
+            stock: parseInt(f('[data-pf-stock]') ? f('[data-pf-stock]').value : 0, 10),
+            status: f('[data-pf-status]') ? f('[data-pf-status]').value : 'active',
+            image_url: (f('[data-pf-image-url]') ? f('[data-pf-image-url]').value : '').trim() || undefined,
+            is_central: true,
+          };
+          const submitBtn = productForm.querySelector('[data-product-submit]');
+          if(submitBtn) submitBtn.disabled = true;
+          const action = id ? api.Admin.updateProduct(id, data) : api.Admin.createProduct(data);
+          action
+            .then(() => {
+              closeProductModal();
+              loadProductsFromApi();
+            })
+            .catch(err => {
+              if(productFormMsg){
+                productFormMsg.textContent = 'Błąd: ' + (err.message || 'Nieznany błąd');
+                productFormMsg.hidden = false;
+              }
+            })
+            .finally(() => {
+              if(submitBtn) submitBtn.disabled = false;
+            });
+        });
+      }
+    }
+
+    // ── IMPORT PRODUCTS TAB ──
+    const importFileForm = document.querySelector('[data-import-file-form]');
+    const importSyncForm = document.querySelector('[data-import-sync-form]');
+    const importSupplierSelect = document.querySelector('[data-import-supplier-select]');
+    const importResult = document.querySelector('[data-import-result]');
+    const importResultMsg = document.querySelector('[data-import-result-msg]');
+
+    // Populate supplier select
+    if(importSupplierSelect && suppliers.length){
+      suppliers.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = s.name;
+        importSupplierSelect.appendChild(opt);
+      });
+    } else if(importSupplierSelect){
+      // Try to load from API
+      const api = window.QMApi;
+      if(api && api.Admin){
+        api.Admin.suppliers().then(resp => {
+          const rows = (resp && resp.suppliers) ? resp.suppliers : (Array.isArray(resp) ? resp : []);
+          rows.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = s.name;
+            importSupplierSelect.appendChild(opt);
+          });
+        }).catch(() => {});
+      }
+    }
+
+    if(importFileForm){
+      importFileForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const api = window.QMApi;
+        const fileInput = importFileForm.querySelector('[data-import-file]');
+        const msgEl = document.querySelector('[data-import-file-msg]');
+        const submitBtn = importFileForm.querySelector('[data-import-file-submit]');
+        if(!fileInput || !fileInput.files || !fileInput.files[0]){
+          if(msgEl){ msgEl.textContent = 'Wybierz plik CSV lub XML.'; msgEl.hidden = false; }
+          return;
+        }
+        if(!api || !api.Admin){
+          if(msgEl){ msgEl.textContent = 'Brak połączenia z API. Zaloguj się jako admin.'; msgEl.hidden = false; }
+          return;
+        }
+        if(submitBtn) submitBtn.disabled = true;
+        if(msgEl){ msgEl.textContent = 'Importowanie…'; msgEl.hidden = false; }
+        api.Admin.importProducts(fileInput.files[0])
+          .then(resp => {
+            const count = resp.count || resp.imported || 0;
+            if(importResult) importResult.hidden = false;
+            if(importResultMsg) importResultMsg.textContent = `✅ Zaimportowano ${count} produktów do katalogu centralnego.`;
+            if(msgEl){ msgEl.textContent = ''; msgEl.hidden = true; }
+          })
+          .catch(err => {
+            if(msgEl){ msgEl.textContent = 'Błąd: ' + (err.message || 'Nieznany błąd'); msgEl.hidden = false; }
+          })
+          .finally(() => {
+            if(submitBtn) submitBtn.disabled = false;
+          });
+      });
+    }
+
+    if(importSyncForm){
+      importSyncForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const api = window.QMApi;
+        const msgEl = document.querySelector('[data-import-sync-msg]');
+        const submitBtn = importSyncForm.querySelector('[data-import-sync-submit]');
+        const supplierId = importSupplierSelect ? importSupplierSelect.value : '';
+        if(!supplierId){
+          if(msgEl){ msgEl.textContent = 'Wybierz hurtownię.'; msgEl.hidden = false; }
+          return;
+        }
+        if(!api || !api.Admin){
+          if(msgEl){ msgEl.textContent = 'Brak połączenia z API. Zaloguj się jako admin.'; msgEl.hidden = false; }
+          return;
+        }
+        if(submitBtn) submitBtn.disabled = true;
+        if(msgEl){ msgEl.textContent = 'Synchronizacja w toku…'; msgEl.hidden = false; }
+        api.Admin.syncSupplier(supplierId)
+          .then(resp => {
+            const count = (resp && resp.count) || 0;
+            if(importResult) importResult.hidden = false;
+            if(importResultMsg) importResultMsg.textContent = `✅ Zsynchronizowano ${count} produktów z hurtownią.`;
+            if(msgEl){ msgEl.textContent = ''; msgEl.hidden = true; }
+          })
+          .catch(err => {
+            if(msgEl){ msgEl.textContent = 'Błąd: ' + (err.message || 'Nieznany błąd'); msgEl.hidden = false; }
+          })
+          .finally(() => {
+            if(submitBtn) submitBtn.disabled = false;
+          });
+      });
     }
 
     // ── ORDERS TAB ──

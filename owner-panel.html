@@ -54,6 +54,7 @@
         <a href="#" data-owner-tab="partners">🤝 Partnerzy</a>
         <a href="#" data-owner-tab="stores">🏪 Sklepy</a>
         <a href="#" data-owner-tab="products">📦 Produkty</a>
+        <a href="#" data-owner-tab="import-products">📥 Import produktów</a>
         <a href="#" data-owner-tab="warehouses">🏭 Hurtownie</a>
         <a href="#" data-owner-tab="supplier-apps">📋 Zgłoszenia dostawców</a>
         <a href="#" data-owner-tab="orders">🛒 Zamówienia</a>
@@ -137,6 +138,9 @@
               </button>
               <button class="owner-tile" data-owner-tab-trigger="products">
                 <span class="tile-icon">📦</span><span class="tile-label">Produkty</span>
+              </button>
+              <button class="owner-tile" data-owner-tab-trigger="import-products">
+                <span class="tile-icon">📥</span><span class="tile-label">Import produktów</span>
               </button>
               <button class="owner-tile" data-owner-tab-trigger="orders">
                 <span class="tile-icon">🛒</span><span class="tile-label">Zamówienia</span>
@@ -447,26 +451,155 @@
             </div>
             <div class="owner-toolbar">
               <input class="owner-search" type="search" placeholder="Szukaj produktu…" data-products-search aria-label="Szukaj produktu">
+              <select class="owner-filter" data-products-status-filter aria-label="Filtruj po statusie">
+                <option value="">Wszystkie statusy</option>
+                <option value="active">Aktywne</option>
+                <option value="draft">Szkic</option>
+                <option value="archived">Archiwum</option>
+              </select>
               <select class="owner-filter" data-products-supplier-filter aria-label="Filtruj po hurtowni">
                 <option value="">Wszystkie hurtownie</option>
               </select>
+              <button class="btn btn-primary" type="button" data-products-add-btn>+ Dodaj produkt</button>
+              <button class="btn btn-secondary" type="button" data-products-reload-btn title="Odśwież listę">↺ Odśwież</button>
             </div>
+            <p class="hint" data-products-loading hidden>Wczytywanie produktów…</p>
+            <p class="hint" data-products-api-source hidden style="color:var(--success,#16a34a);font-weight:600">✓ Dane z API</p>
             <div class="owner-table-wrap">
               <table class="owner-table" data-products-table>
                 <thead>
                   <tr>
-                    <th>ID</th>
+                    <th>SKU</th>
                     <th>Nazwa produktu</th>
+                    <th>Kategoria</th>
                     <th>Hurtownia</th>
                     <th>Cena zakupu</th>
-                    <th>Marża</th>
                     <th>Cena sprzedaży</th>
-                    <th>Sprzedaże</th>
+                    <th>Stan</th>
                     <th>Status</th>
+                    <th>Akcje</th>
                   </tr>
                 </thead>
                 <tbody data-products-tbody></tbody>
               </table>
+            </div>
+            <p class="hint" style="margin-top:8px" data-products-pagination></p>
+          </section>
+
+          <!-- Add/Edit Product Modal -->
+          <div class="owner-modal" data-product-modal hidden aria-modal="true" role="dialog" aria-label="Formularz produktu">
+            <div class="owner-modal-box">
+              <button class="owner-modal-close" type="button" data-product-modal-close aria-label="Zamknij">&times;</button>
+              <h3 data-product-modal-title>Dodaj produkt</h3>
+              <form data-product-form style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
+                <input type="hidden" data-product-id>
+                <div class="form-field">
+                  <label>Nazwa produktu *</label>
+                  <input type="text" name="name" placeholder="Nazwa produktu" required data-pf-name>
+                </div>
+                <div class="form-field">
+                  <label>SKU</label>
+                  <input type="text" name="sku" placeholder="Kod SKU" data-pf-sku>
+                </div>
+                <div class="form-field">
+                  <label>Kategoria</label>
+                  <input type="text" name="category" placeholder="Kategoria" data-pf-category>
+                </div>
+                <div class="form-field">
+                  <label>Opis</label>
+                  <textarea name="description" rows="3" placeholder="Opis produktu" data-pf-description></textarea>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                  <div class="form-field">
+                    <label>Cena netto (zł) *</label>
+                    <input type="number" name="price_net" step="0.01" min="0" placeholder="0.00" required data-pf-price-net>
+                  </div>
+                  <div class="form-field">
+                    <label>Stawka VAT (%)</label>
+                    <input type="number" name="tax_rate" step="1" min="0" max="100" value="23" data-pf-tax-rate>
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                  <div class="form-field">
+                    <label>Stan magazynowy</label>
+                    <input type="number" name="stock" step="1" min="0" value="0" data-pf-stock>
+                  </div>
+                  <div class="form-field">
+                    <label>Status</label>
+                    <select name="status" data-pf-status>
+                      <option value="active">Aktywny</option>
+                      <option value="draft">Szkic</option>
+                      <option value="archived">Archiwum</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-field">
+                  <label>URL zdjęcia</label>
+                  <input type="url" name="image_url" placeholder="https://…" data-pf-image-url>
+                </div>
+                <p data-product-form-msg class="hint" hidden></p>
+                <div class="cta-row">
+                  <button class="btn btn-primary" type="submit" data-product-submit>Zapisz produkt</button>
+                  <button class="btn btn-secondary" type="button" data-product-modal-close>Anuluj</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: IMPORT PRODUKTÓW -->
+        <div class="owner-tab-panel" data-owner-tab-panel="import-products" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Import produktów</span>
+              <h2>Importuj produkty do katalogu</h2>
+              <p class="hint">Zaimportuj produkty z pliku CSV lub XML, lub zsynchronizuj z hurtownią.</p>
+            </div>
+
+            <!-- Import from file -->
+            <div class="panel-card" style="margin-top:16px">
+              <h3>Import z pliku CSV / XML</h3>
+              <p class="hint">Wybierz plik CSV lub XML i zaimportuj produkty do katalogu centralnego.</p>
+              <form data-import-file-form style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
+                <div class="form-field">
+                  <label for="import-file-input">Plik CSV lub XML</label>
+                  <input id="import-file-input" type="file" accept=".csv,.xml" data-import-file required aria-label="Plik CSV lub XML do importu produktów" aria-describedby="import-file-hint">
+                  <small id="import-file-hint" class="hint">Obsługiwane formaty: .csv, .xml. Kolumny: nazwa, sku, cena_netto, kategoria, opis, stan.</small>
+                </div>
+                <p data-import-file-msg class="hint" hidden></p>
+                <div class="cta-row">
+                  <button class="btn btn-primary" type="submit" data-import-file-submit>📥 Importuj produkty</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Sync from supplier -->
+            <div class="panel-card" style="margin-top:16px">
+              <h3>Synchronizacja z hurtownią</h3>
+              <p class="hint">Wybierz hurtownię i pobierz aktualne produkty z jej API.</p>
+              <form data-import-sync-form style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
+                <div class="form-field">
+                  <label for="import-supplier-select">Hurtownia</label>
+                  <select id="import-supplier-select" data-import-supplier-select required>
+                    <option value="">Wybierz hurtownię…</option>
+                  </select>
+                </div>
+                <p data-import-sync-msg class="hint" hidden></p>
+                <div class="cta-row">
+                  <button class="btn btn-primary" type="submit" data-import-sync-submit>🔄 Synchronizuj produkty</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Import result -->
+            <div data-import-result hidden style="margin-top:16px">
+              <div class="panel-card">
+                <h3>Wynik importu</h3>
+                <p data-import-result-msg class="hint"></p>
+                <div class="cta-row" style="margin-top:8px">
+                  <button class="btn btn-secondary" type="button" data-owner-tab-trigger="products">📦 Przejdź do produktów</button>
+                </div>
+              </div>
             </div>
           </section>
         </div>
@@ -1288,97 +1421,7 @@
           </section>
         </div>
 
-        <!-- TAB: SCRIPTS -->
-        <div class="owner-tab-panel" data-owner-tab-panel="scripts" hidden>
-          <section class="panel-card dashboard-welcome">
-            <span class="eyebrow">Skrypty systemowe</span>
-            <h2>Zarządzanie skryptami</h2>
-            <p class="hint">Uruchamiaj i zarządzaj skryptami automatyzacji platformy — synchronizacja danych, import hurtowni, przeliczanie cen i inne zadania systemowe.</p>
-          </section>
-
-          <section class="stats-grid stats-g3">
-            <div class="stat-card">
-              <span>Aktywne skrypty</span>
-              <strong data-scripts-active>0</strong>
-            </div>
-            <div class="stat-card">
-              <span>Uruchomienia dziś</span>
-              <strong data-scripts-runs-today>0</strong>
-            </div>
-            <div class="stat-card">
-              <span>Błędy</span>
-              <strong data-scripts-errors>0</strong>
-            </div>
-          </section>
-
-          <section class="panel-card">
-            <div class="section-head">
-              <span class="eyebrow">Skrypty systemowe</span>
-              <h2>Dostępne skrypty</h2>
-            </div>
-            <div class="owner-table-wrap">
-              <table class="owner-table">
-                <thead>
-                  <tr>
-                    <th>Nazwa skryptu</th>
-                    <th>Opis</th>
-                    <th>Ostatnie uruchomienie</th>
-                    <th>Status</th>
-                    <th>Akcja</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td><strong>Synchronizacja hurtowni</strong></td>
-                    <td>Pobiera aktualne dane produktów ze wszystkich hurtowni</td>
-                    <td data-script-run-warehouse>—</td>
-                    <td><span class="status-pill is-ready">Gotowy</span></td>
-                    <td><button class="btn btn-secondary" type="button" data-script-run="warehouse-sync">▶ Uruchom</button></td>
-                  </tr>
-                  <tr>
-                    <td><strong>Przeliczenie cen</strong></td>
-                    <td>Aktualizuje ceny sprzedażowe wg aktualnych progów marży</td>
-                    <td data-script-run-prices>—</td>
-                    <td><span class="status-pill is-ready">Gotowy</span></td>
-                    <td><button class="btn btn-secondary" type="button" data-script-run="recalculate-prices">▶ Uruchom</button></td>
-                  </tr>
-                  <tr>
-                    <td><strong>Import produktów CSV</strong></td>
-                    <td>Importuje produkty z pliku CSV do katalogu centralnego</td>
-                    <td data-script-run-import>—</td>
-                    <td><span class="status-pill is-ready">Gotowy</span></td>
-                    <td><button class="btn btn-secondary" type="button" data-script-run="csv-import">▶ Uruchom</button></td>
-                  </tr>
-                  <tr>
-                    <td><strong>Czyszczenie nieaktywnych kont</strong></td>
-                    <td>Oznacza wygasłe konta trial bez aktywności (>30 dni)</td>
-                    <td data-script-run-cleanup>—</td>
-                    <td><span class="status-pill is-pending">Oczekujący</span></td>
-                    <td><button class="btn btn-secondary" type="button" data-script-run="cleanup-accounts">▶ Uruchom</button></td>
-                  </tr>
-                  <tr>
-                    <td><strong>Eksport raportów finansowych</strong></td>
-                    <td>Generuje raport przychodów i prowizji za wybrany okres</td>
-                    <td data-script-run-report>—</td>
-                    <td><span class="status-pill is-ready">Gotowy</span></td>
-                    <td><button class="btn btn-secondary" type="button" data-script-run="export-report">▶ Uruchom</button></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-            <p class="hint" data-script-result style="margin-top:12px"></p>
-          </section>
-
-          <section class="panel-card">
-            <div class="section-head">
-              <span class="eyebrow">Historia</span>
-              <h2>Ostatnie uruchomienia</h2>
-            </div>
-            <div class="list-cards" data-scripts-log-list>
-              <p class="hint">Brak historii uruchomień.</p>
-            </div>
-          </section>
-        </div>
+        <!-- TAB: SCRIPTS is defined above (first occurrence) -->
 
       </div>
 

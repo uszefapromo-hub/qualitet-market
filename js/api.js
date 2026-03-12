@@ -409,8 +409,49 @@
     /** Change shop status: 'active' | 'inactive' | 'suspended' | 'pending' | 'banned'. */
     updateStoreStatus(id, status) { return patch(`/admin/stores/${id}/status`, { status }); },
     products(params)           { return get('/admin/products', params); },
+    /** Create a product in the central catalogue. POST /api/products */
+    createProduct(data)        { return post('/products', data); },
+    /** Update a product. PUT /api/products/:id */
+    updateProduct(id, data)    { return put(`/products/${id}`, data); },
+    /** Delete a product. DELETE /api/products/:id */
+    deleteProduct(id)          { return del(`/products/${id}`); },
     /** Change product status: 'draft' | 'pending' | 'active' | 'archived'. */
     updateProductStatus(id, status) { return patch(`/admin/products/${id}/status`, { status }); },
+    /** Set platform minimum price for a product. PATCH /api/admin/products/:id/platform-price */
+    updateProductPlatformPrice(id, price) { return patch(`/admin/products/${id}/platform-price`, { platform_price: price }); },
+    /**
+     * Import products from a CSV or XML file into the central catalogue.
+     * POST /api/admin/products/import
+     * @param {File} file – browser File object (CSV or XML)
+     */
+    importProducts(file) {
+      if (!(file instanceof File)) {
+        return Promise.reject(new Error('Nieprawidłowy plik – wymagany obiekt File'));
+      }
+      const allowedTypes = ['text/csv', 'text/xml', 'application/xml', 'text/plain'];
+      const allowedExts  = ['.csv', '.xml'];
+      const ext = file.name ? file.name.slice(file.name.lastIndexOf('.')).toLowerCase() : '';
+      if (!allowedTypes.includes(file.type) && !allowedExts.includes(ext)) {
+        return Promise.reject(new Error('Dozwolone są tylko pliki CSV lub XML'));
+      }
+      const token = getToken();
+      const form  = new FormData();
+      form.append('file', file);
+      return fetch(`${API_BASE}/admin/products/import`, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      }).then(async (res) => {
+        const body = await res.json();
+        if (!res.ok) {
+          const err = new Error(body.error || `HTTP ${res.status}`);
+          err.status = res.status;
+          err.body   = body;
+          throw err;
+        }
+        return body;
+      });
+    },
     /** List suppliers via admin endpoint. GET /api/admin/suppliers */
     suppliers(params)          { return get('/admin/suppliers', params); },
     /**
