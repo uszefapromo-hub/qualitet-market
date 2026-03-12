@@ -417,42 +417,248 @@
       .catch(function () { return []; });
   };
 
-  // ─── 8. Store Panel – product management ─────────────────────────────────────
+  // ─── 8. Seller Panel (panel-sklepu) ──────────────────────────────────────────
 
   function initPanelSklepuFlow() {
     var a = api();
     if (!a || !isLoggedInApi()) return;
 
-    // Update real product count from API
+    // Load store info first, then populate the panel
     a.MyStore.get()
       .then(function (store) {
-        if (!store || !store.id) return;
-        return a.MyStore.products(store.id, { limit: 1 })
-          .then(function (data) {
-            var countEl = document.querySelector('[data-store-products]');
-            if (countEl && data && data.total != null) {
-              countEl.textContent = data.total;
-            }
-          });
+        if (!store) return;
+        window._panelStore = store;
+
+        // Update header store name
+        var nameEls = document.querySelectorAll('[data-store-name]');
+        nameEls.forEach(function (el) { el.textContent = store.name || 'Sklep'; });
+
+        // Update plan badge
+        var planEl = document.querySelector('[data-store-plan]');
+        if (planEl) planEl.textContent = (store.plan || 'basic').toUpperCase();
+
+        // Populate settings form
+        var nameInput = document.querySelector('[data-settings-name]');
+        if (nameInput) nameInput.value = store.name || '';
+        var descInput = document.querySelector('[data-settings-desc]');
+        if (descInput) descInput.value = store.description || '';
+        var logoInput = document.querySelector('[data-settings-logo]');
+        if (logoInput) logoInput.value = store.logo_url || '';
+        var bannerInput = document.querySelector('[data-settings-banner]');
+        if (bannerInput) bannerInput.value = store.banner_url || '';
+
+        // Load stats
+        return a.MyStore.stats()
+          .then(function (stats) {
+            var orderCountEl = document.querySelector('[data-stat-orders]');
+            if (orderCountEl) orderCountEl.textContent = stats.order_count || 0;
+
+            var revenueEl = document.querySelector('[data-stat-revenue]');
+            if (revenueEl) revenueEl.textContent = formatPrice(stats.revenue || 0);
+
+            var prodCountEl = document.querySelector('[data-stat-products]');
+            if (prodCountEl) prodCountEl.textContent = stats.product_count || 0;
+
+            var custCountEl = document.querySelector('[data-stat-customers]');
+            if (custCountEl) custCountEl.textContent = stats.customer_count || 0;
+
+            // Earnings
+            var earningsRevenueEl = document.querySelector('[data-earnings-revenue]');
+            if (earningsRevenueEl) earningsRevenueEl.textContent = formatPrice(stats.revenue || 0);
+            var earningsCommEl = document.querySelector('[data-earnings-commission]');
+            if (earningsCommEl) earningsCommEl.textContent = formatPrice(stats.platform_commission || 0);
+            var earningsSellerEl = document.querySelector('[data-earnings-seller]');
+            if (earningsSellerEl) earningsSellerEl.textContent = formatPrice(stats.seller_earnings || 0);
+          })
+          .catch(function () {});
+      })
+      .catch(function () {
+        var emptyEl = document.querySelector('[data-store-empty]');
+        var contentEl = document.querySelector('[data-store-content]');
+        if (emptyEl) emptyEl.hidden = false;
+        if (contentEl) contentEl.hidden = true;
+      });
+
+    // Load store products — depends on store id; resolved from cached _panelStore or a fresh call
+    Promise.resolve(window._panelStore || a.MyStore.get())
+      .then(function (store) {
+        if (!store) return;
+        window._panelStore = store;
+        return a.MyStore.products(store.id, { limit: 50 });
+      })
+      .then(function (data) {
+        if (!data) return;
+        var products = data.products || [];
+        renderSellerProducts(products);
       })
       .catch(function () {});
 
-    // Wire "Dodaj produkt" button
-    var addBtn = document.querySelector('[data-add-store-product]');
-    if (!addBtn) return;
+    // Load store orders
+    a.MyStore.storeOrders({ limit: 20 })
+      .then(function (data) {
+        var orders = (data && data.orders) ? data.orders : [];
+        renderSellerOrders(orders);
+      })
+      .catch(function () {});
 
-    addBtn.addEventListener('click', function () {
-      a.MyStore.get()
-        .then(function (store) {
-          if (!store || !store.id) {
-            alert('Nie znaleziono aktywnego sklepu. Zaloguj się lub utwórz sklep.');
-            return;
+    // Wire "Dodaj produkt" button (in Products tab)
+    var addBtn = document.querySelector('[data-add-store-product]');
+    if (addBtn) {
+      addBtn.addEventListener('click', function () {
+        Promise.resolve(window._panelStore || a.MyStore.get())
+          .then(function (store) {
+            if (!store || !store.id) {
+              alert('Nie znaleziono aktywnego sklepu. Zaloguj się lub utwórz sklep.');
+              return;
+            }
+            openAddProductDialog(a, store.id);
+          })
+          .catch(function () {
+            alert('Nie udało się załadować danych sklepu. Sprawdź połączenie.');
+          });
+      });
+    }
+
+    // Settings form submission
+    var settingsForm = document.querySelector('[data-settings-form]');
+    if (settingsForm) {
+      settingsForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var nameInput   = settingsForm.querySelector('[data-settings-name]');
+        var descInput   = settingsForm.querySelector('[data-settings-desc]');
+        var logoInput   = settingsForm.querySelector('[data-settings-logo]');
+        var bannerInput = settingsForm.querySelector('[data-settings-banner]');
+        var saveBtn     = settingsForm.querySelector('[data-settings-save]');
+
+        var payload = {};
+        if (nameInput   && nameInput.value.trim())   payload.name        = nameInput.value.trim();
+        if (descInput   && descInput.value.trim())   payload.description = descInput.value.trim();
+        if (logoInput   && logoInput.value.trim())   payload.logo_url    = logoInput.value.trim();
+        if (bannerInput && bannerInput.value.trim()) payload.banner_url  = bannerInput.value.trim();
+
+        if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Zapisywanie…'; }
+
+        a.MyStore.update(payload)
+          .then(function () {
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Zapisz zmiany'; }
+            var msg = document.querySelector('[data-settings-msg]');
+            if (msg) { msg.textContent = 'Zapisano pomyślnie.'; msg.hidden = false; }
+          })
+          .catch(function () {
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Zapisz zmiany'; }
+            var msg = document.querySelector('[data-settings-msg]');
+            if (msg) { msg.textContent = 'Błąd zapisu. Sprawdź dane.'; msg.hidden = false; }
+          });
+      });
+    }
+  }
+
+  function renderSellerProducts(products) {
+    var tbody = document.querySelector('[data-products-tbody]');
+    if (!tbody) return;
+    var emptyEl = document.querySelector('[data-products-empty]');
+    var loadingEl = document.querySelector('[data-products-loading]');
+    if (loadingEl) loadingEl.hidden = true;
+
+    if (!products.length) {
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+    if (emptyEl) emptyEl.hidden = true;
+
+    tbody.innerHTML = '';
+    products.forEach(function (p) {
+      var row = document.createElement('tr');
+      var activeLabel = p.active !== false ? 'Aktywny' : 'Wyłączony';
+      var activePill  = p.active !== false ? 'pill-active' : 'pill-inactive';
+      row.innerHTML =
+        '<td>' + escHtml(p.name || p.custom_title || '—') + '</td>' +
+        '<td>' + formatPrice(p.price || p.base_price || 0) + '</td>' +
+        '<td>' + escHtml(String(p.margin_override != null ? p.margin_override : (p.base_margin || 0))) + '%</td>' +
+        '<td><span class="' + activePill + '">' + activeLabel + '</span></td>' +
+        '<td>' +
+          '<button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" ' +
+            'data-toggle-product-id="' + escHtml(p.id || '') + '" ' +
+            'data-toggle-product-active="' + (p.active !== false ? 'true' : 'false') + '">' +
+            (p.active !== false ? 'Wyłącz' : 'Włącz') +
+          '</button>' +
+        '</td>';
+      tbody.appendChild(row);
+    });
+
+    // Wire toggle buttons
+    tbody.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-toggle-product-id]');
+      if (!btn) return;
+      var id     = btn.getAttribute('data-toggle-product-id');
+      var active = btn.getAttribute('data-toggle-product-active') !== 'true';
+      var a2 = api();
+      if (!a2) return;
+      btn.disabled = true;
+      a2.MyStore.updateProduct(id, { active: active })
+        .then(function () {
+          btn.setAttribute('data-toggle-product-active', active ? 'true' : 'false');
+          btn.textContent = active ? 'Wyłącz' : 'Włącz';
+          var pill = btn.closest('tr').querySelector('.pill-active,.pill-inactive');
+          if (pill) {
+            pill.className = active ? 'pill-active' : 'pill-inactive';
+            pill.textContent = active ? 'Aktywny' : 'Wyłączony';
           }
-          openAddProductDialog(a, store.id);
+          btn.disabled = false;
         })
-        .catch(function () {
-          alert('Nie udało się załadować danych sklepu. Sprawdź połączenie.');
-        });
+        .catch(function () { btn.disabled = false; });
+    });
+  }
+
+  function renderSellerOrders(orders) {
+    var tbody = document.querySelector('[data-orders-tbody]');
+    if (!tbody) return;
+    var emptyEl   = document.querySelector('[data-seller-orders-empty]');
+    var loadingEl = document.querySelector('[data-seller-orders-loading]');
+    if (loadingEl) loadingEl.hidden = true;
+
+    if (!orders.length) {
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+    if (emptyEl) emptyEl.hidden = true;
+
+    var STATUSES = ['new', 'processing', 'shipped', 'completed'];
+
+    tbody.innerHTML = '';
+    orders.forEach(function (o) {
+      var row = document.createElement('tr');
+      var num = escHtml(o.order_number || (o.id || '').slice(0, 8) || '—');
+      var date = o.created_at ? new Date(o.created_at).toLocaleDateString('pl-PL') : '—';
+      var status = o.status || 'new';
+
+      var selectHtml = '<select class="owner-filter" style="padding:4px 8px;font-size:12px" ' +
+        'data-order-status-id="' + escHtml(o.id || '') + '">';
+      STATUSES.forEach(function (s) {
+        selectHtml += '<option value="' + s + '"' + (s === status ? ' selected' : '') + '>' + s + '</option>';
+      });
+      selectHtml += '</select>';
+
+      row.innerHTML =
+        '<td class="cell-mono">' + num + '</td>' +
+        '<td class="cell-muted">' + escHtml(date) + '</td>' +
+        '<td>' + escHtml(o.shipping_address || '—') + '</td>' +
+        '<td>' + selectHtml + '</td>';
+      tbody.appendChild(row);
+    });
+
+    // Wire status dropdowns
+    tbody.addEventListener('change', function (e) {
+      var sel = e.target.closest('[data-order-status-id]');
+      if (!sel) return;
+      var id     = sel.getAttribute('data-order-status-id');
+      var status = sel.value;
+      var a2 = api();
+      if (!a2) return;
+      sel.disabled = true;
+      a2.Orders.updateStatus(id, status)
+        .then(function () { sel.disabled = false; })
+        .catch(function () { sel.disabled = false; });
     });
   }
 

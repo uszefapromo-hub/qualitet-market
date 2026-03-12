@@ -4,6 +4,8 @@
  * "My" routes – user-facing endpoints for the currently authenticated user.
  *
  * GET    /api/my/store                       – seller's primary store
+ * GET    /api/my/store/stats                 – seller's store dashboard stats
+ * GET    /api/my/store/orders                – orders for the seller's store
  * GET    /api/my/orders                      – buyer's order history
  * GET    /api/my/store/products              – list my store's shop products
  * POST   /api/my/store/products              – add a product to my store
@@ -45,6 +47,106 @@ router.get(
   }
 );
 
+// ─── GET /api/my/store/stats – seller's store dashboard stats ────────────────
+
+router.get(
+  '/store/stats',
+  authenticate,
+  requireRole('seller', 'owner', 'admin'),
+  async (req, res) => {
+    try {
+      const storeResult = await db.query(
+        'SELECT id FROM stores WHERE owner_id = $1 ORDER BY created_at ASC LIMIT 1',
+        [req.user.id]
+      );
+      const store = storeResult.rows[0];
+      if (!store) {
+        return res.status(404).json({ error: 'Nie masz jeszcze sklepu' });
+      }
+      const storeId = store.id;
+
+      const [orderStats, productCount, customerCount] = await Promise.all([
+        db.query(
+          `SELECT COUNT(*) AS order_count,
+                  COALESCE(SUM(total), 0) AS revenue,
+                  COALESCE(SUM(platform_commission), 0) AS platform_commission,
+                  COALESCE(SUM(seller_revenue), 0) AS seller_earnings
+           FROM orders WHERE store_id = $1`,
+          [storeId]
+        ),
+        db.query(
+          'SELECT COUNT(*) FROM shop_products WHERE store_id = $1',
+          [storeId]
+        ),
+        db.query(
+          'SELECT COUNT(DISTINCT buyer_id) FROM orders WHERE store_id = $1',
+          [storeId]
+        ),
+      ]);
+
+      const stats = orderStats.rows[0];
+      return res.json({
+        order_count:         parseInt(stats.order_count, 10),
+        revenue:             parseFloat(stats.revenue),
+        platform_commission: parseFloat(stats.platform_commission),
+        seller_earnings:     parseFloat(stats.seller_earnings),
+        product_count:       parseInt(productCount.rows[0].count, 10),
+        customer_count:      parseInt(customerCount.rows[0].count, 10),
+      });
+    } catch (err) {
+      console.error('my store stats error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── GET /api/my/store/orders – store orders for seller ───────────────────────
+
+router.get(
+  '/store/orders',
+  authenticate,
+  requireRole('seller', 'owner', 'admin'),
+  async (req, res) => {
+    try {
+      const storeResult = await db.query(
+        'SELECT id FROM stores WHERE owner_id = $1 ORDER BY created_at ASC LIMIT 1',
+        [req.user.id]
+      );
+      const store = storeResult.rows[0];
+      if (!store) {
+        return res.status(404).json({ error: 'Nie masz jeszcze sklepu' });
+      }
+      const storeId = store.id;
+
+      const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
+      const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
+      const offset = (page - 1) * limit;
+
+      const countResult = await db.query(
+        'SELECT COUNT(*) FROM orders WHERE store_id = $1',
+        [storeId]
+      );
+      const total = parseInt(countResult.rows[0].count, 10);
+
+      const result = await db.query(
+        `SELECT o.id, o.order_number, o.status, o.total, o.created_at,
+                o.buyer_id, o.shipping_address, o.notes,
+                o.seller_revenue, o.platform_commission
+         FROM orders o
+         WHERE o.store_id = $1
+         ORDER BY o.created_at DESC
+         LIMIT $2 OFFSET $3`,
+        [storeId, limit, offset]
+      );
+
+      return res.json({ total, page, limit, orders: result.rows });
+    } catch (err) {
+      console.error('my store orders error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
 // ─── PATCH /api/my/store – update seller's primary store ─────────────────────
 
 router.patch(
@@ -55,6 +157,7 @@ router.patch(
     body('name').optional().trim().notEmpty(),
     body('description').optional().trim(),
     body('logo_url').optional().isURL(),
+    body('banner_url').optional().isURL(),
     body('margin').optional().isFloat({ min: 0, max: 100 }),
   ],
   validate,
@@ -69,22 +172,24 @@ router.patch(
         return res.status(404).json({ error: 'Nie masz jeszcze sklepu' });
       }
 
-      const { name, description, logo_url, margin } = req.body;
+      const { name, description, logo_url, banner_url, margin } = req.body;
 
       const result = await db.query(
         `UPDATE stores SET
            name        = COALESCE($1, name),
            description = COALESCE($2, description),
            logo_url    = COALESCE($3, logo_url),
-           margin      = COALESCE($4, margin),
+           banner_url  = COALESCE($4, banner_url),
+           margin      = COALESCE($5, margin),
            updated_at  = NOW()
-         WHERE id = $5
+         WHERE id = $6
          RETURNING *`,
         [
-          name      !== undefined ? name      : null,
+          name        !== undefined ? name        : null,
           description !== undefined ? description : null,
-          logo_url  !== undefined ? logo_url  : null,
-          margin    !== undefined ? margin    : null,
+          logo_url    !== undefined ? logo_url    : null,
+          banner_url  !== undefined ? banner_url  : null,
+          margin      !== undefined ? margin      : null,
           store.id,
         ]
       );

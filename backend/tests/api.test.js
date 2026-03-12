@@ -1762,6 +1762,87 @@ describe('PATCH /api/my/store', () => {
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Updated Store');
   });
+
+  it('accepts banner_url field', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] })  // find store
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID, banner_url: 'https://example.com/banner.jpg' }] }); // UPDATE
+
+    const res = await request(app)
+      .patch('/api/my/store')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ banner_url: 'https://example.com/banner.jpg' });
+    expect(res.status).toBe(200);
+    expect(res.body.banner_url).toBe('https://example.com/banner.jpg');
+  });
+});
+
+// ─── GET /api/my/store/stats ──────────────────────────────────────────────────
+
+describe('GET /api/my/store/stats', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/my/store/stats');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 when seller has no store', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // no store found
+    const res = await request(app)
+      .get('/api/my/store/stats')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns stats for seller store', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] }) // find store
+      .mockResolvedValueOnce({ rows: [{ order_count: '3', revenue: '450.00', platform_commission: '45.00', seller_earnings: '405.00' }] }) // orderStats
+      .mockResolvedValueOnce({ rows: [{ count: '12' }] }) // productCount
+      .mockResolvedValueOnce({ rows: [{ count: '2' }] }); // customerCount
+
+    const res = await request(app)
+      .get('/api/my/store/stats')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.order_count).toBe(3);
+    expect(res.body.revenue).toBe(450);
+    expect(res.body.platform_commission).toBe(45);
+    expect(res.body.seller_earnings).toBe(405);
+    expect(res.body.product_count).toBe(12);
+    expect(res.body.customer_count).toBe(2);
+  });
+});
+
+// ─── GET /api/my/store/orders ─────────────────────────────────────────────────
+
+describe('GET /api/my/store/orders', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/my/store/orders');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 when seller has no store', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // no store found
+    const res = await request(app)
+      .get('/api/my/store/orders')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns paginated orders for seller store', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] }) // find store
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] }) // count
+      .mockResolvedValueOnce({ rows: [{ id: ORDER_ID, order_number: 'ORD-001', status: 'created', total: 141.45 }] }); // orders
+
+    const res = await request(app)
+      .get('/api/my/store/orders')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(1);
+    expect(res.body.orders).toHaveLength(1);
+    expect(res.body.orders[0].id).toBe(ORDER_ID);
+  });
 });
 
 // ─── GET /api/admin/dashboard ─────────────────────────────────────────────────
