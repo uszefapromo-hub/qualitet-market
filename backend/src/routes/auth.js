@@ -20,6 +20,7 @@ const { validate } = require('../middleware/validate');
 const { PLAN_CONFIG } = require('./subscriptions');
 const { nameToSlug, uniqueSlug } = require('../helpers/slug');
 const { getPromoTier } = require('../helpers/promo');
+const { ensureReferralCode } = require('./referral');
 
 const router = express.Router();
 
@@ -84,6 +85,9 @@ router.post(
            VALUES ($1, $2, 'trial', 'active', $3, $4, NOW(), $5, NOW())`,
           [uuidv4(), shopId, trialConfig.product_limit, trialConfig.commission_rate, subExpiresAt]
         );
+
+        // Auto-create referral code for every new seller (non-blocking; failure is safe to ignore)
+        ensureReferralCode(id).catch((err) => console.error('auto referral code error:', err.message));
       }
 
       // ── Record referral use (non-blocking) ────────────────────────────────
@@ -93,8 +97,8 @@ router.post(
             const refRow = codeResult.rows[0];
             if (!refRow || refRow.user_id === id) return;
             await db.query(
-              `INSERT INTO referral_uses (id, referral_code_id, referrer_id, new_user_id, bonus_months, created_at)
-               VALUES ($1, $2, $3, $4, $5, NOW())
+              `INSERT INTO referral_uses (id, code_id, referral_code_id, referrer_id, new_user_id, bonus_months, created_at)
+               VALUES ($1, $2, $2, $3, $4, $5, NOW())
                ON CONFLICT DO NOTHING`,
               [uuidv4(), refRow.id, refRow.user_id, id, promoTier.bonusMonths]
             );

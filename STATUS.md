@@ -203,6 +203,9 @@ Seller ma dostęp przez `/api/my/...`:
 | `010_payments_provider.sql` | Pole payment_provider w payments |
 | `011_platform_commission.sql` | Tabela platform_settings, prowizja platformy |
 | `012_initial_products_seed.sql` | Seed 200+ produktów do katalogu centralnego |
+| `013_owner_phone.sql` | Pole phone w users |
+| `014_referral_analytics_scripts.sql` | Tabele referral_codes (discount), referral_uses, scripts, analytics_snapshots |
+| `015_referral_promo.sql` | Kolumny promo systemu: user_id w referral_codes; referral_code_id / referrer_id / new_user_id / bonus_months w referral_uses; referred_by_code w users |
 
 ---
 
@@ -210,7 +213,7 @@ Seller ma dostęp przez `/api/my/...`:
 
 ```
 Test Suites: 1 passed
-Tests:       239 passed
+Tests:       319 passed
 ```
 
 Pokrycie testami obejmuje wszystkie kluczowe endpointy:
@@ -222,6 +225,8 @@ Pokrycie testami obejmuje wszystkie kluczowe endpointy:
 - System cen i marż (platform_price, min_selling_price, seller_margin)
 - Prowizja platformy (commission_rate, seller_revenue)
 - Subskrypcje i limity produktów
+- System polecający promo (referral/my, referral/admin, promo tiers, ensureReferralCode)
+- Analytics i scripts
 
 ---
 
@@ -239,8 +244,9 @@ Pokrycie testami obejmuje wszystkie kluczowe endpointy:
 8. **Panel sprzedawcy** – dashboard z produktami, zamówieniami, statystykami
 9. **Import z hurtowni** – CSV, XML, API, auto-sync co 12h
 10. **Frontend PWA** – podłączony do backend API przez QMApi
-11. **Migracje** – kompletna historia schematu bazy danych
-12. **Testy** – 239 testów przechodzi
+11. **Migracje** – kompletna historia schematu bazy danych (001–015)
+12. **Testy** – 319 testów przechodzi
+13. **System polecający promo** – `ensureReferralCode` auto-tworzy kod QM- dla każdego sprzedawcy przy rejestracji; schemat DB rozszerzony (migacja 015) o user_id / referral_code_id / referrer_id / new_user_id / bonus_months
 
 ### Co jeszcze warto poprawić (opcjonalne usprawnienia)
 
