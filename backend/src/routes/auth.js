@@ -93,29 +93,45 @@ router.post(
 );
 
 // ─── POST /api/auth/login ─────────────────────────────────────────────────────
+// Accepts either { email, password } or { phone, password }.
 
 router.post(
   '/login',
   [
-    body('email').isEmail().normalizeEmail(),
+    body('email').optional().isEmail().normalizeEmail(),
+    body('phone').optional().isMobilePhone(),
     body('password').notEmpty(),
+    body().custom((_, { req }) => {
+      if (!req.body.email && !req.body.phone) {
+        throw new Error('Podaj e-mail lub numer telefonu');
+      }
+      return true;
+    }),
   ],
   validate,
   async (req, res) => {
-    const { email, password } = req.body;
+    const { email, phone, password } = req.body;
     try {
-      const result = await db.query(
-        'SELECT id, email, password_hash, name, role, plan, trial_ends_at FROM users WHERE email = $1',
-        [email]
-      );
+      let result;
+      if (email) {
+        result = await db.query(
+          'SELECT id, email, password_hash, name, role, plan, trial_ends_at FROM users WHERE email = $1',
+          [email]
+        );
+      } else {
+        result = await db.query(
+          'SELECT id, email, password_hash, name, role, plan, trial_ends_at FROM users WHERE phone = $1',
+          [phone]
+        );
+      }
       const user = result.rows[0];
       if (!user) {
-        return res.status(401).json({ error: 'Nieprawidłowy e-mail lub hasło' });
+        return res.status(401).json({ error: 'Nieprawidłowy e-mail/telefon lub hasło' });
       }
 
       const valid = await bcrypt.compare(password, user.password_hash);
       if (!valid) {
-        return res.status(401).json({ error: 'Nieprawidłowy e-mail lub hasło' });
+        return res.status(401).json({ error: 'Nieprawidłowy e-mail/telefon lub hasło' });
       }
 
       const token = signToken({ id: user.id, email: user.email, role: user.role });
