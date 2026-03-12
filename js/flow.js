@@ -237,7 +237,125 @@
     });
   }
 
-  // ─── 3. Product catalogue ─────────────────────────────────────────────────────
+  // ─── 3. Product catalogue (sklep.html grid) ──────────────────────────────────
+
+  var _sklep_page = 1;
+  var _sklep_total = 0;
+  var _sklep_limit = 24;
+  var _sklep_category = '';
+  var _sklep_search = '';
+
+  function renderProductCard(product) {
+    var card = document.createElement('article');
+    card.className = 'product-card product-tile';
+
+    var mediaDiv = document.createElement('div');
+    mediaDiv.className = 'product-media';
+    if (product.image_url) {
+      var img = document.createElement('img');
+      img.src = product.image_url;
+      img.alt = product.name || '';
+      img.addEventListener('error', function () { this.style.display = 'none'; });
+      mediaDiv.appendChild(img);
+    } else {
+      var icon = document.createElement('span');
+      icon.setAttribute('aria-hidden', 'true');
+      icon.textContent = '📦';
+      mediaDiv.appendChild(icon);
+    }
+
+    card.innerHTML =
+      '<div class="product-details">' +
+        '<span class="tag">' + escHtml(product.category || 'Produkt') + '</span>' +
+        '<h3>' + escHtml(product.name || '') + '</h3>' +
+        '<p class="hint">' + escHtml(product.description || '') + '</p>' +
+        '<div class="product-meta">' +
+          '<span class="price">' + formatPrice(product.price_gross) + '</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="cta-row product-actions">' +
+        '<button class="btn btn-primary" type="button"' +
+          ' data-add-to-cart' +
+          ' data-product-id="' + escHtml(product.id || '') + '"' +
+          ' data-product-name="' + escHtml(product.name || '') + '"' +
+          ' data-product-price="' + escHtml(String(product.price_gross || 0)) + '">' +
+          'Do koszyka' +
+        '</button>' +
+        '<a class="btn btn-secondary" href="listing.html">Szczegóły</a>' +
+      '</div>';
+
+    card.insertBefore(mediaDiv, card.firstChild);
+    return card;
+  }
+
+  function loadSklepProducts(page) {
+    var a = api();
+    if (!a) return;
+
+    var grid = document.querySelector('[data-store-products-grid]');
+    if (!grid) return;
+
+    var params = { status: 'active', limit: _sklep_limit, page: page || 1 };
+    if (_sklep_category) params.category = _sklep_category;
+    if (_sklep_search)   params.search   = _sklep_search;
+
+    a.Products.list(params)
+      .then(function (data) {
+        var products = Array.isArray(data) ? data
+          : (data && Array.isArray(data.products)) ? data.products : [];
+        _sklep_total = (data && data.total) ? data.total : products.length;
+        _sklep_page  = page || 1;
+
+        if (!products.length && _sklep_page === 1) {
+          var emptyState = document.querySelector('[data-store-products-empty]');
+          if (emptyState) emptyState.hidden = false;
+          grid.innerHTML = '';
+          return;
+        }
+
+        grid.innerHTML = '';
+        var emptyState = document.querySelector('[data-store-products-empty]');
+        if (emptyState) emptyState.hidden = true;
+
+        products.forEach(function (product) {
+          grid.appendChild(renderProductCard(product));
+        });
+
+        updateSklepPagination();
+      })
+      .catch(function () { /* keep existing demo products */ });
+  }
+
+  function updateSklepPagination() {
+    var wrap = document.querySelector('[data-sklep-pagination]');
+    if (!wrap) return;
+
+    var totalPages = Math.ceil(_sklep_total / _sklep_limit) || 1;
+    wrap.innerHTML = '';
+    if (totalPages <= 1) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+
+    if (_sklep_page > 1) {
+      var prev = document.createElement('button');
+      prev.className = 'btn btn-secondary';
+      prev.textContent = '← Poprzednia';
+      prev.addEventListener('click', function () { loadSklepProducts(_sklep_page - 1); });
+      wrap.appendChild(prev);
+    }
+
+    var info = document.createElement('span');
+    info.className = 'pagination-info';
+    info.textContent = 'Strona ' + _sklep_page + ' / ' + totalPages;
+    wrap.appendChild(info);
+
+    if (_sklep_page < totalPages) {
+      var next = document.createElement('button');
+      next.className = 'btn btn-secondary';
+      next.textContent = 'Następna →';
+      next.addEventListener('click', function () { loadSklepProducts(_sklep_page + 1); });
+      wrap.appendChild(next);
+    }
+  }
 
   function initProductsFlow() {
     var a = api();
@@ -246,65 +364,315 @@
     var grid = document.querySelector('[data-store-products-grid]');
     if (!grid) return;
 
-    a.Products.list({ status: 'active', limit: 24 })
+    // Search input
+    var searchInput = document.querySelector('[data-sklep-search]');
+    if (searchInput) {
+      searchInput.addEventListener('input', function () {
+        _sklep_search = this.value.trim();
+        loadSklepProducts(1);
+      });
+    }
+
+    // Category filter
+    var catFilter = document.querySelector('[data-sklep-category]');
+    if (catFilter) {
+      catFilter.addEventListener('change', function () {
+        _sklep_category = this.value;
+        loadSklepProducts(1);
+      });
+    }
+
+    // Populate category select from API
+    if (catFilter) {
+      a.Categories.list()
+        .then(function (data) {
+          var cats = Array.isArray(data) ? data
+            : (data && Array.isArray(data.categories)) ? data.categories : [];
+          cats.forEach(function (c) {
+            var opt = document.createElement('option');
+            opt.value = c.name || c.id;
+            opt.textContent = escHtml(c.name || c.id);
+            catFilter.appendChild(opt);
+          });
+        })
+        .catch(function () {});
+    }
+
+    loadSklepProducts(1);
+  }
+
+  // ─── 3b. Shop page (shop slug → products) ────────────────────────────────────
+
+  function initShopFlow() {
+    var a = api();
+    if (!a) return;
+
+    // Resolve slug from URL param or data attribute
+    var params = new URLSearchParams(
+      typeof location !== 'undefined' ? location.search : ''
+    );
+    var slug = params.get('slug')
+      || (document.body && document.body.dataset.shopSlug)
+      || null;
+
+    if (!slug) return;
+
+    // Populate shop header fields
+    a.Shops.getBySlug(slug)
+      .then(function (shop) {
+        if (!shop) return;
+        var nameEls = document.querySelectorAll('[data-store-name]');
+        nameEls.forEach(function (el) { el.textContent = escHtml(shop.name || ''); });
+
+        var descEls = document.querySelectorAll('[data-store-description]');
+        descEls.forEach(function (el) { el.textContent = escHtml(shop.description || ''); });
+
+        var slugEls = document.querySelectorAll('[data-store-slug]');
+        slugEls.forEach(function (el) { el.textContent = escHtml(shop.slug || ''); });
+
+        var planEls = document.querySelectorAll('[data-store-plan]');
+        planEls.forEach(function (el) {
+          el.textContent = shop.plan ? 'Plan: ' + escHtml(shop.plan.toUpperCase()) : 'Plan: Basic';
+        });
+      })
+      .catch(function () {});
+
+    // Load shop products into [data-store-products-grid]
+    a.Shops.products(slug, { limit: 24 })
       .then(function (data) {
         var products = Array.isArray(data) ? data
           : (data && Array.isArray(data.products)) ? data.products : [];
 
         if (!products.length) return;
 
-        // Replace the demo/localStorage product grid with API products
-        grid.innerHTML = '';
+        var grid = document.querySelector('[data-store-products-grid]');
+        if (!grid) return;
 
+        grid.innerHTML = '';
         var emptyState = document.querySelector('[data-store-products-empty]');
         if (emptyState) emptyState.hidden = true;
 
         products.forEach(function (product) {
-          var card = document.createElement('article');
-          card.className = 'product-card product-tile';
-
-          // Build media element first so we can attach error listener via JS
-          var mediaDiv = document.createElement('div');
-          mediaDiv.className = 'product-media';
-          if (product.image_url) {
-            var img = document.createElement('img');
-            img.src = product.image_url;
-            img.alt = product.name || '';
-            img.addEventListener('error', function () { this.style.display = 'none'; });
-            mediaDiv.appendChild(img);
-          } else {
-            var icon = document.createElement('span');
-            icon.setAttribute('aria-hidden', 'true');
-            icon.textContent = '📦';
-            mediaDiv.appendChild(icon);
-          }
-
-          card.innerHTML =
-            '<div class="product-details">' +
-              '<span class="tag">' + escHtml(product.category || 'Produkt') + '</span>' +
-              '<h3>' + escHtml(product.name || '') + '</h3>' +
-              '<p class="hint">' + escHtml(product.description || '') + '</p>' +
-              '<div class="product-meta">' +
-                '<span class="price">' + formatPrice(product.price_gross) + '</span>' +
-              '</div>' +
-            '</div>' +
-            '<div class="cta-row product-actions">' +
-              '<button class="btn btn-primary" type="button"' +
-                ' data-add-to-cart' +
-                ' data-product-id="' + escHtml(product.id || '') + '"' +
-                ' data-product-name="' + escHtml(product.name || '') + '"' +
-                ' data-product-price="' + escHtml(String(product.price_gross || 0)) + '">' +
-                'Do koszyka' +
-              '</button>' +
-              '<a class="btn btn-secondary" href="listing.html">Szczegóły</a>' +
-            '</div>';
-
-          card.insertBefore(mediaDiv, card.firstChild);
-
-          grid.appendChild(card);
+          grid.appendChild(renderProductCard(product));
         });
       })
-      .catch(function () { /* keep existing demo products */ });
+      .catch(function () {});
+  }
+
+  // ─── 3c. Listing page (listing.html) ─────────────────────────────────────────
+
+  var _listing_page  = 1;
+  var _listing_total = 0;
+  var _listing_limit = 20;
+  var _listing_category = '';
+  var _listing_search   = '';
+
+  function loadListingProducts(page) {
+    var a = api();
+    if (!a) return;
+
+    var tbody = document.querySelector('[data-listing-tbody]');
+    if (!tbody) return;
+
+    var loader = document.querySelector('[data-listing-loader]');
+    if (loader) loader.hidden = false;
+
+    var params = { status: 'active', limit: _listing_limit, page: page || 1 };
+    if (_listing_category) params.category = _listing_category;
+    if (_listing_search)   params.search   = _listing_search;
+
+    a.Products.list(params)
+      .then(function (data) {
+        var products = Array.isArray(data) ? data
+          : (data && Array.isArray(data.products)) ? data.products : [];
+        _listing_total = (data && data.total) ? data.total : products.length;
+        _listing_page  = page || 1;
+
+        if (loader) loader.hidden = true;
+
+        tbody.innerHTML = '';
+
+        if (!products.length) {
+          var tr = document.createElement('tr');
+          tr.innerHTML = '<td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Brak produktów</td>';
+          tbody.appendChild(tr);
+          updateListingPagination();
+          return;
+        }
+
+        products.forEach(function (p) {
+          var tr = document.createElement('tr');
+          var price = p.price_gross != null ? formatPrice(p.price_gross) : '—';
+          var margin = p.margin_percent != null ? p.margin_percent + '%' : '—';
+          var status = escHtml(p.status || 'active');
+          var statusClass = p.status === 'active' ? 'status-active'
+            : p.status === 'pending' ? 'status-pending' : 'status-draft';
+          var statusLabel = p.status === 'active' ? '✓ Opublikowany'
+            : p.status === 'pending' ? '⏳ Oczekujący' : '○ Szkic';
+          tr.innerHTML =
+            '<td><strong>' + escHtml(p.name || '—') + '</strong></td>' +
+            '<td>' + escHtml(p.category || '—') + '</td>' +
+            '<td>' + escHtml(p.supplier_name || p.supplier_id || '—') + '</td>' +
+            '<td>' + escHtml(price) + '</td>' +
+            '<td>' + escHtml(margin) + '</td>' +
+            '<td><span class="' + statusClass + '">' + statusLabel + '</span></td>';
+          tbody.appendChild(tr);
+        });
+
+        updateListingPagination();
+      })
+      .catch(function () {
+        if (loader) loader.hidden = true;
+      });
+  }
+
+  function updateListingPagination() {
+    var wrap = document.querySelector('[data-listing-pagination]');
+    if (!wrap) return;
+
+    var totalPages = Math.ceil(_listing_total / _listing_limit) || 1;
+    wrap.innerHTML = '';
+    if (totalPages <= 1) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+
+    if (_listing_page > 1) {
+      var prev = document.createElement('button');
+      prev.className = 'btn btn-secondary';
+      prev.textContent = '← Poprzednia';
+      prev.addEventListener('click', function () { loadListingProducts(_listing_page - 1); });
+      wrap.appendChild(prev);
+    }
+
+    var info = document.createElement('span');
+    info.className = 'pagination-info';
+    info.textContent = 'Strona ' + _listing_page + ' / ' + totalPages;
+    wrap.appendChild(info);
+
+    if (_listing_page < totalPages) {
+      var next = document.createElement('button');
+      next.className = 'btn btn-secondary';
+      next.textContent = 'Następna →';
+      next.addEventListener('click', function () { loadListingProducts(_listing_page + 1); });
+      wrap.appendChild(next);
+    }
+  }
+
+  function initListingFlow() {
+    var a = api();
+    if (!a) return;
+
+    var tbody = document.querySelector('[data-listing-tbody]');
+    if (!tbody) return;
+
+    // Search input
+    var searchInput = document.querySelector('[data-listing-search]');
+    if (searchInput) {
+      var searchTimer = null;
+      searchInput.addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        var val = this.value.trim();
+        searchTimer = setTimeout(function () {
+          _listing_search = val;
+          loadListingProducts(1);
+        }, 320);
+      });
+    }
+
+    // Category filter
+    var catFilter = document.querySelector('[data-listing-category]');
+    if (catFilter) {
+      catFilter.addEventListener('change', function () {
+        _listing_category = this.value;
+        loadListingProducts(1);
+      });
+
+      // Populate options from API
+      a.Categories.list()
+        .then(function (data) {
+          var cats = Array.isArray(data) ? data
+            : (data && Array.isArray(data.categories)) ? data.categories : [];
+          cats.forEach(function (c) {
+            var opt = document.createElement('option');
+            opt.value = c.name || c.id;
+            opt.textContent = escHtml(c.name || c.id);
+            catFilter.appendChild(opt);
+          });
+        })
+        .catch(function () {});
+    }
+
+    loadListingProducts(1);
+  }
+
+  // ─── 6. Store panel (panel-sklepu.html) ──────────────────────────────────────
+
+  function initPanelSklepuFlow() {
+    var a = api();
+    if (!a || !isLoggedInApi()) return;
+
+    a.MyStore.get()
+      .then(function (store) {
+        if (!store) return;
+
+        var nameEls = document.querySelectorAll('[data-store-name]');
+        nameEls.forEach(function (el) { el.textContent = escHtml(store.name || 'Panel sklepu'); });
+
+        var planEl = document.querySelector('[data-store-plan]');
+        if (planEl) planEl.textContent = escHtml((store.plan || 'basic').toUpperCase());
+
+        var marginEl = document.querySelector('[data-store-margin]');
+        if (marginEl) marginEl.textContent = escHtml(String(store.margin_default || 0)) + '%';
+
+        // Load products count
+        return a.MyStore.products(store.id, { limit: 1 })
+          .then(function (pd) {
+            var total = (pd && pd.total) ? pd.total
+              : (Array.isArray(pd) ? pd.length : 0);
+            var prodEl = document.querySelector('[data-store-products]');
+            if (prodEl) prodEl.textContent = total;
+            return total;
+          })
+          .catch(function () {});
+      })
+      .catch(function () {
+        var emptyEl = document.querySelector('[data-store-empty]');
+        var contentEl = document.querySelector('[data-store-content]');
+        if (emptyEl) emptyEl.hidden = false;
+        if (contentEl) contentEl.hidden = true;
+      });
+  }
+
+  // ─── 6b. Owner / Superadmin panel (owner-panel.html) ─────────────────────────
+
+  function initOwnerPanelFlow() {
+    var a = api();
+    if (!a || !isLoggedInApi()) return;
+
+    a.Admin.dashboard()
+      .then(function (d) {
+        if (!d) return;
+
+        function setMetric(sel, val) {
+          var el = document.querySelector(sel);
+          if (el) el.textContent = val != null ? String(val) : '—';
+        }
+
+        setMetric('[data-owner-users]',         d.users_total   || d.total_users   || 0);
+        setMetric('[data-owner-stores]',        d.stores_total  || d.total_stores  || 0);
+        setMetric('[data-owner-products]',      d.products_total|| d.total_products|| 0);
+        setMetric('[data-owner-orders]',        d.orders_total  || d.total_orders  || 0);
+        setMetric('[data-owner-revenue]',       d.revenue_total || d.total_revenue || 0);
+        setMetric('[data-owner-platform-margin]', d.platform_commission_total || 0);
+        setMetric('[data-owner-active-subs]',   d.active_subscriptions || 0);
+        setMetric('[data-owner-revenue-today]', d.revenue_today  != null ? formatPrice(d.revenue_today)  : '—');
+        setMetric('[data-owner-revenue-month]', d.revenue_month  != null ? formatPrice(d.revenue_month)  : '—');
+        setMetric('[data-owner-reg-today]',     d.registrations_today != null ? d.registrations_today  : '—');
+        setMetric('[data-owner-reg-month]',     d.registrations_month != null ? d.registrations_month  : '—');
+        setMetric('[data-owner-plan-basic]',    d.plan_basic  || 0);
+        setMetric('[data-owner-plan-pro]',      d.plan_pro    || 0);
+        setMetric('[data-owner-plan-elite]',    d.plan_elite  || 0);
+      })
+      .catch(function () { /* admin endpoint needs superadmin role */ });
   }
 
   // ─── 4 + 5. Cart ──────────────────────────────────────────────────────────────
@@ -418,10 +786,13 @@
       if (a) a.Auth.me().catch(function () {});
     }
 
-    if (page === 'login')     initLoginFlow();
-    if (page === 'dashboard') initDashboardFlow();
-    if (page === 'sklep')     initProductsFlow();
-    if (page === 'koszyk')    initCartFlow();
+    if (page === 'login')          initLoginFlow();
+    if (page === 'dashboard')      initDashboardFlow();
+    if (page === 'sklep')          { initShopFlow(); initProductsFlow(); }
+    if (page === 'koszyk')         initCartFlow();
+    if (page === 'listing')        initListingFlow();
+    if (page === 'panel-sklepu')   initPanelSklepuFlow();
+    if (page === 'owner-panel')    initOwnerPanelFlow();
   });
 
 }());

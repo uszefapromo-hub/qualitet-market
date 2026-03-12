@@ -9,7 +9,18 @@
     return CURRENCY_FMT.format(Number(value) || 0);
   }
 
-  function getCart(){
+  // ─── API helpers ─────────────────────────────────────────────────────────────
+
+  function apiClient(){ return window.QMApi || null; }
+
+  function isApiLoggedIn(){
+    var a = apiClient();
+    return a ? a.Auth.isLoggedIn() : false;
+  }
+
+  // ─── LocalStorage fallback ───────────────────────────────────────────────────
+
+  function getCartLS(){
     try{
       return JSON.parse(localStorage.getItem(CART_KEY) || '[]');
     }catch(e){
@@ -17,8 +28,18 @@
     }
   }
 
+  function saveCartLS(items){
+    try{ localStorage.setItem(CART_KEY, JSON.stringify(items)); }catch(_){}
+  }
+
+  // ─── Cart state (kept in memory, synced to LS as fallback) ───────────────────
+
+  function getCart(){
+    return getCartLS();
+  }
+
   function saveCart(items){
-    localStorage.setItem(CART_KEY, JSON.stringify(items));
+    saveCartLS(items);
   }
 
   function getCartCount(cart){
@@ -37,6 +58,8 @@
     });
   }
 
+  // ─── Add to cart (API-first, LS fallback) ────────────────────────────────────
+
   function addToCart(product){
     var cart = getCart();
     var existing = cart.filter(function(i){ return i.id === product.id; })[0];
@@ -47,6 +70,13 @@
     }
     saveCart(cart);
     updateCartBadge();
+
+    // Fire-and-forget: also add to backend cart when logged in
+    var a = apiClient();
+    if(a && isApiLoggedIn() && product.shopProductId){
+      a.Cart.addByShopProduct(product.shopProductId, 1).catch(function(){});
+    }
+
     return cart;
   }
 
@@ -54,6 +84,9 @@
     var cart = getCart().filter(function(i){ return i.id !== productId; });
     saveCart(cart);
     updateCartBadge();
+    // Note: we cannot call Cart.removeItemById here because we only have the
+    // product ID, not the backend cart item UUID.  The backend cart will be
+    // reconciled when the cart page loads via initCartFlow().
     return cart;
   }
 
@@ -68,9 +101,12 @@
   }
 
   function clearCart(){
-    saveCart([]);
+    // Remove localStorage cart
+    try{ localStorage.removeItem(CART_KEY); }catch(_){}
     updateCartBadge();
   }
+
+  // ─── Save order (localStorage fallback only when API unavailable) ─────────────
 
   function saveOrder(formData, cart){
     var orders = [];
@@ -97,7 +133,10 @@
       createdAt: now
     };
     orders.push(order);
-    localStorage.setItem(CART_ORDERS_KEY, JSON.stringify(orders));
+    // Do NOT store in localStorage.orders when API is available — kept for fallback only
+    if(!isApiLoggedIn()){
+      try{ localStorage.setItem(CART_ORDERS_KEY, JSON.stringify(orders)); }catch(_){}
+    }
     return order;
   }
 
@@ -125,8 +164,9 @@
       var name = btn.dataset.productName;
       var price = parseFloat(btn.dataset.productPrice);
       var img = btn.dataset.productImg || '';
+      var shopProductId = btn.dataset.shopProductId || null;
       if(!id || !name || isNaN(price)) return;
-      QMCart.addToCart({id: id, name: name, price: price, img: img});
+      QMCart.addToCart({id: id, name: name, price: price, img: img, shopProductId: shopProductId});
       var origText = btn.textContent;
       btn.textContent = '✓ Dodano';
       btn.disabled = true;
