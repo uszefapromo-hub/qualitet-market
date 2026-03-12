@@ -100,7 +100,39 @@ router.post(
          RETURNING *`,
         [id, ownerId, name, slug, description, margin, plan]
       );
-      return res.status(201).json(result.rows[0]);
+      const store = result.rows[0];
+
+      // ─── Auto-seed up to 100 central products into the new store ─────────────
+      // SEED_LIMIT: maximum number of central products to add to a new store
+      const SEED_LIMIT = 100;
+      // DEFAULT_SELLER_MARGIN: percentage margin applied to every auto-seeded product
+      const DEFAULT_SELLER_MARGIN = 20;
+      try {
+        const centralProducts = await db.query(
+          `SELECT id FROM products WHERE is_central = true ORDER BY created_at ASC LIMIT $1`,
+          [SEED_LIMIT]
+        );
+        if (centralProducts.rows.length > 0) {
+          const values = [];
+          const placeholders = centralProducts.rows.map((product, i) => {
+            const base = i * 4;
+            values.push(uuidv4(), id, product.id, DEFAULT_SELLER_MARGIN);
+            return `($${base + 1}, $${base + 2}, $${base + 3}, 'percent', $${base + 4}, true, 0, NOW())`;
+          });
+          await db.query(
+            `INSERT INTO shop_products
+               (id, store_id, product_id, margin_type, margin_override, active, sort_order, created_at)
+             VALUES ${placeholders.join(', ')}
+             ON CONFLICT (store_id, product_id) DO NOTHING`,
+            values
+          );
+        }
+      } catch (seedErr) {
+        console.error('auto-seed products error:', seedErr.message);
+        // Non-fatal – store was created successfully
+      }
+
+      return res.status(201).json(store);
     } catch (err) {
       console.error('create store error:', err.message);
       return res.status(500).json({ error: 'Błąd serwera' });

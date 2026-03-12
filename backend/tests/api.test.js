@@ -538,7 +538,9 @@ describe('POST /api/stores', () => {
   it('creates a store for seller', async () => {
     db.query
       .mockResolvedValueOnce({ rows: [] })  // slug check
-      .mockResolvedValueOnce({ rows: [{ id: 'new-store', name: 'New Store', slug: 'new-store', owner_id: SELLER_ID }] });
+      .mockResolvedValueOnce({ rows: [{ id: 'new-store', name: 'New Store', slug: 'new-store', owner_id: SELLER_ID }] })  // insert store
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })  // select central products for auto-seed
+      .mockResolvedValueOnce({ rows: [] });  // batch insert shop_products
 
     const res = await request(app)
       .post('/api/stores')
@@ -546,6 +548,33 @@ describe('POST /api/stores', () => {
       .send({ name: 'New Store', slug: 'new-store' });
     expect(res.status).toBe(201);
     expect(res.body.name).toBe('New Store');
+  });
+
+  it('auto-seeds 100 central products into new store with 20% seller margin', async () => {
+    const centralProducts = Array.from({ length: 5 }, (_, i) => ({ id: `prod-${i}` }));
+    db.query
+      .mockResolvedValueOnce({ rows: [] })  // slug check
+      .mockResolvedValueOnce({ rows: [{ id: 'seeded-store', name: 'Seeded Shop', slug: 'seeded-shop', owner_id: SELLER_ID }] })  // insert store
+      .mockResolvedValueOnce({ rows: centralProducts })  // select central products
+      .mockResolvedValueOnce({ rows: [] });  // batch insert shop_products
+
+    const res = await request(app)
+      .post('/api/stores')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ name: 'Seeded Shop', slug: 'seeded-shop' });
+    expect(res.status).toBe(201);
+
+    // Verify the batch shop_products insert was called with correct margin params
+    const calls = db.query.mock.calls;
+    const seedInsertCall = calls.find(
+      ([sql]) => sql && sql.includes('INSERT INTO shop_products') && sql.includes("'percent'")
+    );
+    expect(seedInsertCall).toBeDefined();
+    // margin_override values (every 4th param starting at index 3) should all be 20
+    const seedParams = seedInsertCall[1];
+    for (let paramIndex = 3; paramIndex < seedParams.length; paramIndex += 4) {
+      expect(seedParams[paramIndex]).toBe(20);
+    }
   });
 });
 
