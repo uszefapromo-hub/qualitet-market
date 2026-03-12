@@ -81,10 +81,27 @@ router.post(
         return res.status(403).json({ error: 'Brak uprawnień do tego sklepu' });
       }
 
-      // Verify product exists in central catalogue
-      const productResult = await db.query('SELECT id FROM products WHERE id = $1', [product_id]);
+      // Verify product exists in central catalogue (fetch platform_price for min-price validation)
+      const productResult = await db.query(
+        'SELECT id, platform_price, price_gross FROM products WHERE id = $1',
+        [product_id]
+      );
       if (!productResult.rows[0]) {
         return res.status(404).json({ error: 'Produkt nie znaleziony' });
+      }
+
+      // Validate selling price against platform minimum price
+      const product = productResult.rows[0];
+      if (product.platform_price != null && (price_override != null || margin_override != null)) {
+        let effectivePrice;
+        if (price_override != null) {
+          effectivePrice = parseFloat(price_override);
+        } else {
+          effectivePrice = parseFloat(product.price_gross) * (1 + parseFloat(margin_override) / 100);
+        }
+        if (effectivePrice < parseFloat(product.platform_price)) {
+          return res.status(422).json({ error: 'selling_price_below_platform_price' });
+        }
       }
 
       const id = uuidv4();
@@ -139,6 +156,33 @@ router.put(
       const isAdmin = ['owner', 'admin'].includes(req.user.role);
       if (!isAdmin && sp.owner_id !== req.user.id) {
         return res.status(403).json({ error: 'Brak uprawnień' });
+      }
+
+      // Validate selling price against platform minimum price (only when price fields are being changed)
+      if (price_override !== undefined || margin_override !== undefined) {
+        const prodResult = await db.query(
+          'SELECT platform_price, price_gross FROM products WHERE id = $1',
+          [sp.product_id]
+        );
+        const product = prodResult.rows[0];
+        if (product && product.platform_price != null) {
+          const finalPriceOverride = price_override != null ? price_override : sp.price_override;
+          const finalMarginOverride = margin_override != null ? margin_override : sp.margin_override;
+          const finalMarginType = sp.margin_type || 'percent';
+          let effectivePrice;
+          if (finalPriceOverride != null) {
+            effectivePrice = parseFloat(finalPriceOverride);
+          } else if (finalMarginOverride != null) {
+            if (finalMarginType === 'fixed') {
+              effectivePrice = parseFloat(product.price_gross) + parseFloat(finalMarginOverride);
+            } else {
+              effectivePrice = parseFloat(product.price_gross) * (1 + parseFloat(finalMarginOverride) / 100);
+            }
+          }
+          if (effectivePrice !== undefined && effectivePrice < parseFloat(product.platform_price)) {
+            return res.status(422).json({ error: 'selling_price_below_platform_price' });
+          }
+        }
       }
 
       const result = await db.query(

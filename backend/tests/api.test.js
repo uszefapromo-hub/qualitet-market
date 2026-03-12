@@ -1104,6 +1104,32 @@ describe('POST /api/shop-products', () => {
     expect(res.status).toBe(201);
     expect(res.body.store_id).toBe(STORE_ID);
   });
+
+  it('rejects price_override below platform_price', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] }) // store
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, platform_price: '100.00', price_gross: '80.00' }] }); // product
+
+    const res = await request(app)
+      .post('/api/shop-products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, price_override: 50 });
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe('selling_price_below_platform_price');
+  });
+
+  it('allows price_override equal to platform_price', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] }) // store
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, platform_price: '100.00', price_gross: '80.00' }] }) // product
+      .mockResolvedValueOnce({ rows: [{ id: 'sp-1', store_id: STORE_ID, product_id: PRODUCT_ID, active: true, price_override: 100 }] }); // insert
+
+    const res = await request(app)
+      .post('/api/shop-products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, price_override: 100 });
+    expect(res.status).toBe(201);
+  });
 });
 
 // ─── 404 ───────────────────────────────────────────────────────────────────────
@@ -1320,6 +1346,19 @@ describe('PUT /api/shop-products/:id', () => {
     expect(res.status).toBe(200);
     expect(res.body.active).toBe(false);
   });
+
+  it('rejects price_override below platform_price', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true, owner_id: SELLER_ID, price_override: null, margin_override: null }] }) // shop product
+      .mockResolvedValueOnce({ rows: [{ platform_price: '100.00', price_gross: '80.00' }] }); // product
+
+    const res = await request(app)
+      .put(`/api/shop-products/${SHOP_PROD_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ price_override: 50 });
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe('selling_price_below_platform_price');
+  });
 });
 
 describe('DELETE /api/shop-products/:id', () => {
@@ -1505,6 +1544,36 @@ describe('POST /api/my/store/products', () => {
     expect(res.status).toBe(201);
     expect(res.body.custom_title).toBe('Mój Fotel');
   });
+
+  it('rejects price_override below platform_price', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 100, commission_rate: 0.10, status: 'active' }] }) // requireActiveSubscription
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
+      .mockResolvedValueOnce({ rows: [{ count: '5' }] })           // product count (limit check)
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, platform_price: '100.00', price_gross: '80.00' }] }); // product
+
+    const res = await request(app)
+      .post('/api/my/store/products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, price_override: 50 });
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe('selling_price_below_platform_price');
+  });
+
+  it('rejects fixed margin_override resulting in price below platform_price', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 100, commission_rate: 0.10, status: 'active' }] }) // requireActiveSubscription
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
+      .mockResolvedValueOnce({ rows: [{ count: '5' }] })           // product count (limit check)
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, platform_price: '100.00', price_gross: '80.00' }] }); // product
+
+    const res = await request(app)
+      .post('/api/my/store/products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, margin_type: 'fixed', margin_override: 5 });
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe('selling_price_below_platform_price');
+  });
 });
 
 describe('PATCH /api/my/store/products/:id', () => {
@@ -1549,6 +1618,19 @@ describe('PATCH /api/my/store/products/:id', () => {
       .set('Authorization', `Bearer ${otherSeller}`)
       .send({ active: false });
     expect(res.status).toBe(403);
+  });
+
+  it('rejects price_override below platform_price on update', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, owner_id: SELLER_ID, product_id: PRODUCT_ID, price_override: null, margin_override: null, margin_type: 'percent' }] }) // shop product
+      .mockResolvedValueOnce({ rows: [{ platform_price: '100.00', price_gross: '80.00' }] }); // product
+
+    const res = await request(app)
+      .patch(`/api/my/store/products/${SHOP_PROD_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ price_override: 50 });
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe('selling_price_below_platform_price');
   });
 });
 
