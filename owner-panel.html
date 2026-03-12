@@ -1046,6 +1046,29 @@
             </form>
           </section>
           <section class="panel-card">
+            <div class="section-head"><span class="eyebrow">Ceny platformy</span><h2>Progi marży — cena dostawcy → cena platformy</h2></div>
+            <p class="hint">Ustaw progi cenowe i odpowiadające im marże platformy. Ostatni próg (bez limitu) stosuje się do wszystkich produktów powyżej podanych granic.</p>
+            <div class="owner-table-wrap" style="margin-bottom:12px">
+              <table class="owner-table" data-margin-tiers-table>
+                <thead>
+                  <tr>
+                    <th>Cena maks. dostawcy (zł)</th>
+                    <th>Marża platformy (%)</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody data-margin-tiers-tbody></tbody>
+              </table>
+            </div>
+            <div class="cta-row" style="margin-bottom:12px">
+              <button class="btn btn-secondary" type="button" data-margin-tier-add>+ Dodaj próg</button>
+            </div>
+            <div class="cta-row">
+              <button class="btn btn-primary" type="button" data-margin-tiers-save>Zapisz progi marży</button>
+              <span class="hint" data-margin-tiers-saved hidden>✅ Zapisano!</span>
+            </div>
+          </section>
+          <section class="panel-card">
             <div class="section-head"><span class="eyebrow">Integracje</span><h2>Systemy zewnętrzne</h2></div>
             <div class="roles-grid">
               <div class="role-card">

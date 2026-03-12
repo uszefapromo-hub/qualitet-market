@@ -452,6 +452,10 @@
     syncSupplier(supplierId)   { return post('/admin/suppliers/sync', { supplier_id: supplierId }); },
     subscriptions(params)      { return get('/admin/subscriptions', params); },
     auditLogs(params)          { return get('/admin/audit-logs', params); },
+    /** Get platform margin tiers. GET /api/admin/platform-margins */
+    platformMargins(params)    { return get('/admin/platform-margins', params); },
+    /** Replace platform margin tiers. PUT /api/admin/platform-margins */
+    updatePlatformMargins(data){ return put('/admin/platform-margins', data); },
   };
 
   // ─── My Store (seller convenience) ──────────────────────────────────────────
