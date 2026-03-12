@@ -14,6 +14,7 @@ const { validate } = require('../middleware/validate');
 const { PLAN_CONFIG } = require('./subscriptions');
 const { upsertSupplierProducts, fetchSupplierProducts } = require('../services/supplier-import');
 const { computePlatformPrice, dbTiersToArray, DEFAULT_PLATFORM_TIERS } = require('../helpers/pricing');
+const { getPromoSlots } = require('../helpers/promo');
 
 const router = express.Router();
 
@@ -44,6 +45,8 @@ router.get('/dashboard', authenticate, requireRole('owner', 'admin'), async (req
       activeShopProductsResult,
       // revenue
       revenueResult,
+      dailyRevenueResult,
+      monthlyRevenueResult,
     ] = await Promise.all([
       db.query(`SELECT COUNT(*) FROM users WHERE role = 'seller'`),
       db.query(`SELECT COUNT(*) FROM stores WHERE status = 'active'`),
@@ -57,11 +60,16 @@ router.get('/dashboard', authenticate, requireRole('owner', 'admin'), async (req
       db.query(`SELECT COUNT(*) FROM products`),
       db.query(`SELECT COUNT(*) FROM shop_products WHERE active = true`),
       db.query(`SELECT COALESCE(SUM(total), 0) AS revenue FROM orders WHERE status != 'cancelled'`),
+      db.query(`SELECT COALESCE(SUM(total), 0) AS revenue FROM orders WHERE status != 'cancelled' AND created_at >= CURRENT_DATE`),
+      db.query(`SELECT COALESCE(SUM(total), 0) AS revenue FROM orders WHERE status != 'cancelled' AND created_at >= date_trunc('month', NOW())`),
     ]);
+
+    const totalSellers = parseInt(totalSellersResult.rows[0].count, 10);
+    const promoSlots   = getPromoSlots(totalSellers);
 
     return res.json({
       sellers: {
-        total_registrations:       parseInt(totalSellersResult.rows[0].count, 10),
+        total_registrations:       totalSellers,
         active_shops:              parseInt(activeShopsResult.rows[0].count, 10),
         shops_with_products:       parseInt(shopsWithProductsResult.rows[0].count, 10),
         shops_with_orders:         parseInt(shopsWithOrdersResult.rows[0].count, 10),
@@ -78,6 +86,9 @@ router.get('/dashboard', authenticate, requireRole('owner', 'admin'), async (req
         active_shop_products:      parseInt(activeShopProductsResult.rows[0].count, 10),
       },
       revenue:                     parseFloat(revenueResult.rows[0].revenue),
+      revenue_today:               parseFloat(dailyRevenueResult.rows[0].revenue),
+      revenue_this_month:          parseFloat(monthlyRevenueResult.rows[0].revenue),
+      promo_slots:                 promoSlots,
     });
   } catch (err) {
     console.error('admin dashboard error:', err.message);
@@ -1177,3 +1188,144 @@ router.post(
     }
   }
 );
+
+// ─── GET /api/admin/scripts – list system scripts with last-run info ──────────
+
+const SYSTEM_SCRIPTS = [
+  { id: 'warehouse-sync',     name: 'Synchronizacja hurtowni',        description: 'Pobiera aktualne dane produktów ze wszystkich aktywnych hurtowni' },
+  { id: 'recalculate-prices', name: 'Przeliczenie cen',               description: 'Aktualizuje ceny sprzedażowe wg aktualnych progów marży' },
+  { id: 'csv-import',         name: 'Import produktów CSV',           description: 'Importuje produkty z pliku CSV do katalogu centralnego' },
+  { id: 'cleanup-accounts',   name: 'Czyszczenie nieaktywnych kont',  description: 'Oznacza wygasłe konta trial bez aktywności (>30 dni)' },
+  { id: 'export-report',      name: 'Eksport raportów finansowych',   description: 'Generuje raport przychodów i prowizji za bieżący miesiąc' },
+];
+
+router.get('/scripts', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT script_id, status, last_run_at, last_result, run_count
+       FROM script_runs
+       ORDER BY last_run_at DESC`
+    );
+    const byId = {};
+    for (const row of result.rows) {
+      byId[row.script_id] = row;
+    }
+
+    const scripts = SYSTEM_SCRIPTS.map((s) => ({
+      ...s,
+      status:      byId[s.id]?.status      || 'idle',
+      last_run_at: byId[s.id]?.last_run_at || null,
+      last_result: byId[s.id]?.last_result || null,
+      run_count:   byId[s.id]?.run_count   || 0,
+    }));
+
+    return res.json({ scripts });
+  } catch (_err) {
+    // Gracefully degrade when script_runs table does not yet exist
+    const scripts = SYSTEM_SCRIPTS.map((s) => ({
+      ...s, status: 'idle', last_run_at: null, last_result: null, run_count: 0,
+    }));
+    return res.json({ scripts });
+  }
+});
+
+// ─── POST /api/admin/scripts/:id/run – trigger a system script ────────────────
+
+router.post('/scripts/:id/run', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+  const scriptId = req.params.id;
+  const script = SYSTEM_SCRIPTS.find((s) => s.id === scriptId);
+  if (!script) {
+    return res.status(404).json({ error: 'Skrypt nie istnieje' });
+  }
+
+  const startedAt = new Date();
+  let resultMessage = '';
+  let ok = true;
+
+  try {
+    // ── Execute the corresponding system action ───────────────────────────
+    if (scriptId === 'warehouse-sync') {
+      const { importSupplierProducts } = require('../services/supplier-import');
+      const supplierRows = await db.query(
+        `SELECT id FROM suppliers WHERE status = 'active' AND (api_url IS NOT NULL OR xml_endpoint IS NOT NULL OR csv_endpoint IS NOT NULL)`
+      );
+      let totalSynced = 0;
+      for (const row of supplierRows.rows) {
+        try {
+          const count = await importSupplierProducts(row.id);
+          totalSynced += count;
+        } catch (err) {
+          console.error(`[script] warehouse-sync supplier ${row.id}:`, err.message);
+        }
+      }
+      resultMessage = `Zsynchronizowano ${totalSynced} produktów z ${supplierRows.rows.length} hurtowni`;
+
+    } else if (scriptId === 'recalculate-prices') {
+      // Re-apply platform margin tiers to all products
+      const tiersResult = await db.query('SELECT * FROM platform_margin_config ORDER BY min_price ASC');
+      const tiers = tiersResult.rows.length > 0 ? dbTiersToArray(tiersResult.rows) : DEFAULT_PLATFORM_TIERS;
+      const products = await db.query('SELECT id, price_net, tax_rate FROM products WHERE active = true');
+      let updated = 0;
+      for (const p of products.rows) {
+        const newPrice = computePlatformPrice(p.price_net, p.tax_rate || 23, tiers);
+        await db.query('UPDATE products SET platform_price = $1, updated_at = NOW() WHERE id = $2', [newPrice, p.id]);
+        updated++;
+      }
+      resultMessage = `Przeliczono ceny ${updated} produktów`;
+
+    } else if (scriptId === 'cleanup-accounts') {
+      const result = await db.query(
+        `UPDATE users SET plan = 'expired'
+         WHERE plan = 'trial'
+           AND trial_ends_at < NOW() - INTERVAL '30 days'
+           AND id NOT IN (SELECT DISTINCT buyer_id FROM orders WHERE buyer_id IS NOT NULL)
+         RETURNING id`
+      );
+      resultMessage = `Oznaczono ${result.rows.length} nieaktywnych kont`;
+
+    } else if (scriptId === 'export-report') {
+      const report = await db.query(
+        `SELECT COUNT(*) AS order_count,
+                COALESCE(SUM(total), 0) AS total_revenue
+         FROM orders
+         WHERE status != 'cancelled'
+           AND created_at >= date_trunc('month', NOW())`
+      );
+      const { order_count, total_revenue } = report.rows[0];
+      resultMessage = `Raport za bieżący miesiąc: ${order_count} zamówień, ${parseFloat(total_revenue).toFixed(2)} zł przychodu`;
+
+    } else {
+      resultMessage = `Skrypt "${script.name}" uruchomiony`;
+    }
+  } catch (err) {
+    ok = false;
+    resultMessage = `Błąd: ${err.message}`;
+    console.error(`[script] ${scriptId} error:`, err.message);
+  }
+
+  // Persist run log (best-effort)
+  try {
+    await db.query(
+      `INSERT INTO script_runs (id, script_id, status, last_run_at, last_result, run_count, created_at)
+       VALUES ($1, $2, $3, $4, $5, 1, NOW())
+       ON CONFLICT (script_id) DO UPDATE SET
+         status      = EXCLUDED.status,
+         last_run_at = EXCLUDED.last_run_at,
+         last_result = EXCLUDED.last_result,
+         run_count   = script_runs.run_count + 1,
+         updated_at  = NOW()`,
+      [uuidv4(), scriptId, ok ? 'ok' : 'error', startedAt, resultMessage]
+    );
+  } catch (_err) {
+    // Non-critical – ignore if table doesn't exist yet
+  }
+
+  return res.json({
+    script_id:   scriptId,
+    name:        script.name,
+    ok,
+    result:      resultMessage,
+    started_at:  startedAt,
+    finished_at: new Date(),
+  });
+});

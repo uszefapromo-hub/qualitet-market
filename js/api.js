@@ -456,6 +456,21 @@
     platformMargins(params)    { return get('/admin/platform-margins', params); },
     /** Replace platform margin tiers. PUT /api/admin/platform-margins */
     updatePlatformMargins(data){ return put('/admin/platform-margins', data); },
+    /** List all referral codes with stats. GET /api/admin/referrals */
+    referrals(params)          { return get('/referral/admin', params); },
+    /** List system scripts. GET /api/admin/scripts */
+    scripts()                  { return get('/admin/scripts'); },
+    /** Run a system script. POST /api/admin/scripts/:id/run */
+    runScript(id)              { return post(`/admin/scripts/${id}/run`, {}); },
+  };
+
+  // ─── Referral ─────────────────────────────────────────────────────────────────
+
+  const Referral = {
+    /** Get or auto-create the authenticated user's referral code. GET /api/referral/my */
+    my()                       { return get('/referral/my'); },
+    /** Record that the current user used a referral code. POST /api/referral/use */
+    use(data)                  { return post('/referral/use', data); },
   };
 
   // ─── My Store (seller convenience) ──────────────────────────────────────────
@@ -512,6 +527,7 @@
     Suppliers,
     Admin,
     MyStore,
+    Referral,
     health,
     /** Expose for advanced use cases. */
     _request: request,

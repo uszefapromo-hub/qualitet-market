@@ -358,6 +358,23 @@
     api.Auth.me()
       .then(function (user) {
         updateDashboardUser(user);
+
+        // Load promo slots for admin/owner users
+        if (user.role === 'owner' || user.role === 'admin') {
+          api.Admin.dashboard()
+            .then(function (data) {
+              var slots = data && data.promo_slots;
+              if (Array.isArray(slots)) {
+                var tier1El = document.querySelector('[data-promo-slot-tier1]');
+                var tier2El = document.querySelector('[data-promo-slot-tier2]');
+                var tier3El = document.querySelector('[data-promo-slot-tier3]');
+                if (tier1El && slots[0]) tier1El.textContent = slots[0].slotsLeft;
+                if (tier2El && slots[1]) tier2El.textContent = slots[1].slotsLeft;
+                if (tier3El && slots[2]) tier3El.textContent = slots[2].slotsLeft;
+              }
+            })
+            .catch(function () {});
+        }
       })
       .catch(function (err) {
         if (err && err.status === 401) {
@@ -544,6 +561,138 @@
       .catch(function (err) {
         console.warn('[pwa-connect] owner-panel: could not load store data', err);
       });
+
+    // Load referral data for the referrals tab
+    api.Admin.referrals({ limit: 50 })
+      .then(function (data) {
+        var rows = (data && data.referrals) || [];
+        var tbody = document.querySelector('[data-ref-tbody]');
+        var totalReferrers = rows.length;
+        var totalReferred = 0;
+        var totalActiveStores = 0;
+        var totalBonusMonths = 0;
+
+        rows.forEach(function (r) {
+          totalReferred     += r.total_referred      || 0;
+          totalActiveStores += r.active_stores        || 0;
+          totalBonusMonths  += r.total_bonus_months   || 0;
+        });
+
+        function setText(sel, val) {
+          var el = document.querySelector(sel);
+          if (el) el.textContent = val;
+        }
+        setText('[data-ref-total-referrers]',  totalReferrers);
+        setText('[data-ref-total-referred]',   totalReferred);
+        setText('[data-ref-active-stores]',    totalActiveStores);
+        setText('[data-ref-commissions]',      totalBonusMonths + ' mies.');
+        setText('[data-owner-referrals-count]', totalReferred);
+
+        if (tbody) {
+          tbody.innerHTML = '';
+          rows.forEach(function (r) {
+            var tr = document.createElement('tr');
+            tr.innerHTML =
+              '<td>' + (r.referrer_name || r.referrer_email || '—') + '</td>' +
+              '<td><code>' + (r.code || '—') + '</code></td>' +
+              '<td>' + (r.total_referred || 0) + '</td>' +
+              '<td>' + (r.active_stores || 0) + '</td>' +
+              '<td>' + (r.total_bonus_months || 0) + ' mies.</td>' +
+              '<td><span class="status-pill is-ready">Aktywny</span></td>';
+            tbody.appendChild(tr);
+          });
+          if (!rows.length) {
+            var tr = document.createElement('tr');
+            tr.innerHTML = '<td colspan="6" class="hint" style="text-align:center">Brak poleceń</td>';
+            tbody.appendChild(tr);
+          }
+        }
+      })
+      .catch(function (err) {
+        console.warn('[pwa-connect] owner-panel: could not load referrals', err);
+      });
+
+    // Load referral code for owner (link box)
+    api.Referral.my()
+      .then(function (data) {
+        var linkEl = document.querySelector('[data-owner-referral-link]');
+        if (linkEl && data && data.code) {
+          var baseUrl = window.location.origin + '/login.html';
+          linkEl.value = baseUrl + '?ref=' + data.code;
+        }
+      })
+      .catch(function () {});
+
+    // Load admin dashboard (promo slots + revenue)
+    api.Admin.dashboard()
+      .then(function (data) {
+        function setText(sel, val) {
+          var el = document.querySelector(sel);
+          if (el) el.textContent = val;
+        }
+        if (data.promo_slots && Array.isArray(data.promo_slots)) {
+          var slots = data.promo_slots;
+          if (slots[0]) setText('[data-promo-slot-tier1]', slots[0].slotsLeft);
+          if (slots[1]) setText('[data-promo-slot-tier2]', slots[1].slotsLeft);
+          if (slots[2]) setText('[data-promo-slot-tier3]', slots[2].slotsLeft);
+        }
+        if (data.revenue_today != null)      setText('[data-owner-revenue-today]',  data.revenue_today.toFixed(2) + ' zł');
+        if (data.revenue_this_month != null) setText('[data-owner-revenue-month]',  data.revenue_this_month.toFixed(2) + ' zł');
+        if (data.sellers) {
+          setText('[data-owner-users]',  data.sellers.total_registrations);
+          setText('[data-owner-stores]', data.sellers.active_shops);
+        }
+        if (data.products) {
+          setText('[data-owner-products]', data.products.global_products);
+        }
+        if (data.customers) {
+          setText('[data-owner-orders]', data.customers.total_orders);
+        }
+        if (data.revenue != null) {
+          setText('[data-owner-revenue]', data.revenue.toFixed(2) + ' zł');
+        }
+      })
+      .catch(function () {});
+
+    // Load script stats for scripts tab
+    api.Admin.scripts()
+      .then(function (data) {
+        var scripts = (data && data.scripts) || [];
+        var active = scripts.filter(function (s) { return s.status === 'ok'; }).length;
+        function setText(sel, val) {
+          var el = document.querySelector(sel);
+          if (el) el.textContent = val;
+        }
+        setText('[data-scripts-active]', active);
+      })
+      .catch(function () {});
+
+    // Wire script run buttons to real API
+    document.querySelectorAll('[data-script-run]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var scriptId = btn.dataset.scriptRun;
+        var originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '⏳ Uruchamianie…';
+        api.Admin.runScript(scriptId)
+          .then(function (result) {
+            btn.disabled = false;
+            btn.textContent = originalText;
+            var resultEl = document.querySelector('[data-script-result]');
+            if (resultEl) {
+              resultEl.textContent = (result.ok ? '✅ ' : '❌ ') + (result.result || result.name);
+            }
+          })
+          .catch(function (err) {
+            btn.disabled = false;
+            btn.textContent = originalText;
+            var resultEl = document.querySelector('[data-script-result]');
+            if (resultEl) {
+              resultEl.textContent = '❌ Błąd: ' + (err && err.message ? err.message : 'Nieznany błąd');
+            }
+          });
+      });
+    });
   }
 
   // ─── Entry point ─────────────────────────────────────────────────────────────
