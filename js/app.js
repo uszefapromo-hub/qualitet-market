@@ -2894,8 +2894,8 @@
     const year = new Date().getFullYear();
     const maxSeq = orders.reduce((max, o) => {
       const match = o.number && o.number.match(/QM-\d{4}-(\d+)/);
-      const n = match ? parseInt(match[1], 10) : 0;
-      return n > max ? n : max;
+      const sequenceNumber = match ? parseInt(match[1], 10) : 0;
+      return sequenceNumber > max ? sequenceNumber : max;
     }, 0);
     const seq = String(maxSeq + 1).padStart(3, '0');
     const randomSuffix = Math.floor(Math.random() * 900 + 100);
@@ -3603,7 +3603,7 @@
     const announcer = document.getElementById('billing-announcer');
     buttons.forEach(function(btn){
       btn.addEventListener('click', function(){
-        buttons.forEach(function(b){ b.classList.remove('is-active'); });
+        buttons.forEach(function(billingBtn){ billingBtn.classList.remove('is-active'); });
         btn.classList.add('is-active');
         const isYearly = btn.dataset.billing === 'yearly';
         document.body.classList.toggle('billing-yearly', isYearly);
@@ -3873,8 +3873,8 @@
   }
 
   function escapeHtml(str){
-    const s = str == null ? '' : String(str);
-    return s
+    const stringValue = str == null ? '' : String(str);
+    return stringValue
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
@@ -3994,12 +3994,12 @@
     const activeSubscriptions = subscriptions.filter(s => s.status === 'active');
     const planCounts = {basic: 0, pro: 0, elite: 0};
     activeSubscriptions.forEach(s => {
-      const p = normalizePlan(s.plan);
-      if(p && planCounts[p] !== undefined) planCounts[p] += 1;
+      const normalizedPlan = normalizePlan(s.plan);
+      if(normalizedPlan && planCounts[normalizedPlan] !== undefined) planCounts[normalizedPlan] += 1;
     });
     const revenue = activeSubscriptions.reduce((sum, s) => {
-      const a = Number.parseFloat(s.amount);
-      return sum + (Number.isNaN(a) ? 0 : a);
+      const parsedAmount = Number.parseFloat(s.amount);
+      return sum + (Number.isNaN(parsedAmount) ? 0 : parsedAmount);
     }, 0);
     const platformMarginRate = 0.15;
     const platformMargin = revenue * platformMarginRate;
@@ -4180,12 +4180,12 @@
       const usersRoleFilter = document.querySelector('[data-users-role-filter]');
       const usersPlanFilter = document.querySelector('[data-users-plan-filter]');
       const applyUsersFilter = () => {
-        const q = (usersSearch ? usersSearch.value.toLowerCase() : '');
+        const searchQuery = (usersSearch ? usersSearch.value.toLowerCase() : '');
         const role = usersRoleFilter ? usersRoleFilter.value : '';
         const plan = usersPlanFilter ? usersPlanFilter.value : '';
         usersTbody.innerHTML = '';
         users.filter(u => {
-          const matchQ = !q || (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q) || (u.country || '').toLowerCase().includes(q);
+          const matchQ = !searchQuery || (u.name || '').toLowerCase().includes(searchQuery) || (u.email || '').toLowerCase().includes(searchQuery) || (u.country || '').toLowerCase().includes(searchQuery);
           const matchRole = !role || (u.role || 'client') === role;
           const matchPlan = !plan || normalizePlan(u.plan) === plan;
           return matchQ && matchRole && matchPlan;
@@ -4203,10 +4203,10 @@
           const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
           const blob = new Blob([csv], {type: 'text/csv'});
           const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'uzytkownicy.csv';
-          a.click();
+          const downloadLink = document.createElement('a');
+          downloadLink.href = url;
+          downloadLink.download = 'uzytkownicy.csv';
+          downloadLink.click();
           URL.revokeObjectURL(url);
         });
       }
@@ -4241,11 +4241,11 @@
       const storesSearch = document.querySelector('[data-stores-search]');
       const storesStatusFilter = document.querySelector('[data-stores-status-filter]');
       const applyStoresFilter = () => {
-        const q = (storesSearch ? storesSearch.value.toLowerCase() : '');
+        const searchQuery = (storesSearch ? storesSearch.value.toLowerCase() : '');
         const status = storesStatusFilter ? storesStatusFilter.value : '';
         storesTbody.innerHTML = '';
         stores.filter(s => {
-          const matchQ = !q || (s.name || '').toLowerCase().includes(q);
+          const matchQ = !searchQuery || (s.name || '').toLowerCase().includes(searchQuery);
           const storeStatus = s.trial ? 'trial' : 'active';
           const matchStatus = !status || storeStatus === status || (!s.trial && status === 'active');
           return matchQ && matchStatus;
@@ -4258,13 +4258,13 @@
     // ── PRODUCTS TAB ──
     const productsTbody = document.querySelector('[data-products-tbody]');
     if(productsTbody){
-      const suppliersSet = [...new Set(products.map(p => p.supplier).filter(Boolean))];
+      const suppliersSet = [...new Set(products.map(product => product.supplier).filter(Boolean))];
       const supplierFilter = document.querySelector('[data-products-supplier-filter]');
       if(supplierFilter){
-        suppliersSet.forEach(s => {
+        suppliersSet.forEach(supplierName => {
           const opt = document.createElement('option');
-          opt.value = s;
-          opt.textContent = s;
+          opt.value = supplierName;
+          opt.textContent = supplierName;
           supplierFilter.appendChild(opt);
         });
       }
@@ -4293,12 +4293,12 @@
 
       const productsSearch = document.querySelector('[data-products-search]');
       const applyProductsFilter = () => {
-        const q = (productsSearch ? productsSearch.value.toLowerCase() : '');
+        const searchQuery = (productsSearch ? productsSearch.value.toLowerCase() : '');
         const supplier = supplierFilter ? supplierFilter.value : '';
         productsTbody.innerHTML = '';
-        products.filter(p => {
-          const matchQ = !q || (p.name || '').toLowerCase().includes(q);
-          const matchS = !supplier || (p.supplier || '') === supplier;
+        products.filter(product => {
+          const matchQ = !searchQuery || (product.name || '').toLowerCase().includes(searchQuery);
+          const matchS = !supplier || (product.supplier || '') === supplier;
           return matchQ && matchS;
         }).map(buildProductRow).forEach(row => productsTbody.appendChild(row));
       };
@@ -4327,12 +4327,12 @@
       const ordersSearch = document.querySelector('[data-orders-search]');
       const ordersStatusFilter = document.querySelector('[data-orders-status-filter]');
       const applyOrdersFilter = () => {
-        const q = (ordersSearch ? ordersSearch.value.toLowerCase() : '');
+        const searchQuery = (ordersSearch ? ordersSearch.value.toLowerCase() : '');
         const status = ordersStatusFilter ? ordersStatusFilter.value : '';
         ordersTbody.innerHTML = '';
-        orders.filter(o => {
-          const matchQ = !q || (o.number || '').toLowerCase().includes(q) || (o.client || '').toLowerCase().includes(q) || (o.storeName || '').toLowerCase().includes(q);
-          const matchStatus = !status || o.status === status;
+        orders.filter(order => {
+          const matchQ = !searchQuery || (order.number || '').toLowerCase().includes(searchQuery) || (order.client || '').toLowerCase().includes(searchQuery) || (order.storeName || '').toLowerCase().includes(searchQuery);
+          const matchStatus = !status || order.status === status;
           return matchQ && matchStatus;
         }).map(buildOrderRow).forEach(row => ordersTbody.appendChild(row));
       };
@@ -4381,9 +4381,9 @@
     if(dailyChartEl){
       const days = [];
       for(let i = 6; i >= 0; i--){
-        const d = new Date(now);
-        d.setDate(d.getDate() - i);
-        days.push(d.toISOString().slice(0, 10));
+        const dayDate = new Date(now);
+        dayDate.setDate(dayDate.getDate() - i);
+        days.push(dayDate.toISOString().slice(0, 10));
       }
       const dailyRevenue = days.map(day => ({
         day,
@@ -4402,8 +4402,8 @@
     if(monthlyChartEl){
       const months = [];
       for(let i = 5; i >= 0; i--){
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        months.push(d.toISOString().slice(0, 7));
+        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push(monthDate.toISOString().slice(0, 7));
       }
       const monthlyRevenue = months.map(m => ({
         month: m,
@@ -4420,11 +4420,11 @@
 
     const marginByPlan = {basic: 0, pro: 0, elite: 0};
     activeSubscriptions.forEach(s => {
-      const p = normalizePlan(s.plan);
-      if(p && marginByPlan[p] !== undefined){
-        const rate = PLAN_DEFAULT_MARGINS[p] / 100;
-        const a = Number.parseFloat(s.amount) || 0;
-        marginByPlan[p] += a * rate;
+      const normalizedPlan = normalizePlan(s.plan);
+      if(normalizedPlan && marginByPlan[normalizedPlan] !== undefined){
+        const rate = PLAN_DEFAULT_MARGINS[normalizedPlan] / 100;
+        const parsedAmount = Number.parseFloat(s.amount) || 0;
+        marginByPlan[normalizedPlan] += parsedAmount * rate;
       }
     });
     const totalMargin = Object.values(marginByPlan).reduce((s, v) => s + v, 0) || 1;
@@ -4662,8 +4662,8 @@
 
     if(warehousesSearch){
       warehousesSearch.addEventListener('input', () => {
-        const q = warehousesSearch.value.trim().toLowerCase();
-        renderWarehousesTable(q ? suppliers.filter(s => (s.name + (s.country || '')).toLowerCase().includes(q)) : suppliers);
+        const searchQuery = warehousesSearch.value.trim().toLowerCase();
+        renderWarehousesTable(searchQuery ? suppliers.filter(supplier => (supplier.name + (supplier.country || '')).toLowerCase().includes(searchQuery)) : suppliers);
       });
     }
 
@@ -4719,14 +4719,14 @@
     renderSupplierAppsTable(supplierApps);
 
     function filterSupplierApps(){
-      const q = supplierAppsSearch ? supplierAppsSearch.value.trim().toLowerCase() : '';
-      const st = supplierAppsStatusFilter ? supplierAppsStatusFilter.value : '';
+      const searchQuery = supplierAppsSearch ? supplierAppsSearch.value.trim().toLowerCase() : '';
+      const statusFilter = supplierAppsStatusFilter ? supplierAppsStatusFilter.value : '';
       let list = supplierApps;
-      if(q){
-        list = list.filter(a => (a.companyName + a.email).toLowerCase().includes(q));
+      if(searchQuery){
+        list = list.filter(supplierApp => (supplierApp.companyName + supplierApp.email).toLowerCase().includes(searchQuery));
       }
-      if(st){
-        list = list.filter(a => a.status === st);
+      if(statusFilter){
+        list = list.filter(supplierApp => supplierApp.status === statusFilter);
       }
       renderSupplierAppsTable(list);
     }
@@ -4850,10 +4850,10 @@
         const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
         const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${type}_raport_${new Date().toISOString().slice(0, 10)}.csv`;
-        a.click();
+        const downloadLink = document.createElement('a');
+        downloadLink.href = url;
+        downloadLink.download = `${type}_raport_${new Date().toISOString().slice(0, 10)}.csv`;
+        downloadLink.click();
         URL.revokeObjectURL(url);
       });
     });
@@ -4867,9 +4867,9 @@
       type: 'Subskrypcja',
       status: sub.status || 'paid'
     }));
-    const totalPayments = paymentRows.reduce((s, p) => s + p.amount, 0);
-    const pendingPayments = paymentRows.filter(p => p.status === 'pending').reduce((s, p) => s + p.amount, 0);
-    const overduePayments = paymentRows.filter(p => p.status === 'overdue').reduce((s, p) => s + p.amount, 0);
+    const totalPayments = paymentRows.reduce((sum, payment) => sum + payment.amount, 0);
+    const pendingPayments = paymentRows.filter(payment => payment.status === 'pending').reduce((sum, payment) => sum + payment.amount, 0);
+    const overduePayments = paymentRows.filter(payment => payment.status === 'overdue').reduce((sum, payment) => sum + payment.amount, 0);
     setText('[data-payments-total]', formatCurrency(totalPayments));
     setText('[data-payments-pending]', formatCurrency(pendingPayments));
     setText('[data-payments-overdue]', formatCurrency(overduePayments));
@@ -4889,15 +4889,15 @@
         paymentsTbody.appendChild(tr);
         return;
       }
-      list.forEach(p => {
+      list.forEach(payment => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td class="cell-muted">${formatDate(p.date)}</td>
-          <td>${escapeHtml(p.user)}</td>
-          <td>${statusPill(p.plan)}</td>
-          <td><strong>${formatCurrency(p.amount)}</strong></td>
-          <td>${escapeHtml(p.type)}</td>
-          <td>${statusPill(p.status)}</td>
+          <td class="cell-muted">${formatDate(payment.date)}</td>
+          <td>${escapeHtml(payment.user)}</td>
+          <td>${statusPill(payment.plan)}</td>
+          <td><strong>${formatCurrency(payment.amount)}</strong></td>
+          <td>${escapeHtml(payment.type)}</td>
+          <td>${statusPill(payment.status)}</td>
         `;
         paymentsTbody.appendChild(tr);
       });
@@ -4905,14 +4905,14 @@
     renderPaymentsTable(paymentRows);
 
     function filterPayments(){
-      const q = paymentsSearch ? paymentsSearch.value.trim().toLowerCase() : '';
-      const st = paymentsStatusFilter ? paymentsStatusFilter.value : '';
+      const searchQuery = paymentsSearch ? paymentsSearch.value.trim().toLowerCase() : '';
+      const statusFilter = paymentsStatusFilter ? paymentsStatusFilter.value : '';
       let list = paymentRows;
-      if(q){
-        list = list.filter(p => p.user.toLowerCase().includes(q));
+      if(searchQuery){
+        list = list.filter(payment => payment.user.toLowerCase().includes(searchQuery));
       }
-      if(st){
-        list = list.filter(p => p.status === st);
+      if(statusFilter){
+        list = list.filter(payment => payment.status === statusFilter);
       }
       renderPaymentsTable(list);
     }
@@ -5036,7 +5036,7 @@
     function renderTiersTable(tiers) {
       if (!tiersTbody) return;
       tiersTbody.innerHTML = '';
-      tiers.forEach(t => tiersTbody.appendChild(buildTierRow(t)));
+      tiers.forEach(tier => tiersTbody.appendChild(buildTierRow(tier)));
     }
 
     if (tiersTbody) {

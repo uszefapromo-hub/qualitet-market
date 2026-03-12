@@ -45,8 +45,8 @@ function sanitizeDeep(data) {
   if (Array.isArray(data)) return data.map(sanitizeDeep);
   if (data && typeof data === 'object') {
     const sanitized = {};
-    for (const [key, val] of Object.entries(data)) {
-      sanitized[key] = sanitizeDeep(val);
+    for (const [key, value] of Object.entries(data)) {
+      sanitized[key] = sanitizeDeep(value);
     }
     return sanitized;
   }

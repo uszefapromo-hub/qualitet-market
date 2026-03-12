@@ -241,15 +241,15 @@ function parseCsvProducts(content) {
     skip_empty_lines: true,
     trim: true,
   });
-  return records.map((r) => ({
-    sku: r.sku || r.SKU || r.id || null,
-    name: r.name || r.nazwa || r.Name || '',
-    price_net: parseFloat(r.price_net || r.cena_netto || r.price || 0),
-    tax_rate: parseFloat(r.tax_rate || r.vat || r.VAT || 23),
-    stock: parseInt(r.stock || r.stan || 0, 10),
-    category: r.category || r.kategoria || null,
-    description: r.description || r.opis || '',
-    image_url: r.image_url || r.zdjecie || r.image || null,
+  return records.map((csvRecord) => ({
+    sku: csvRecord.sku || csvRecord.SKU || csvRecord.id || null,
+    name: csvRecord.name || csvRecord.nazwa || csvRecord.Name || '',
+    price_net: parseFloat(csvRecord.price_net || csvRecord.cena_netto || csvRecord.price || 0),
+    tax_rate: parseFloat(csvRecord.tax_rate || csvRecord.vat || csvRecord.VAT || 23),
+    stock: parseInt(csvRecord.stock || csvRecord.stan || 0, 10),
+    category: csvRecord.category || csvRecord.kategoria || null,
+    description: csvRecord.description || csvRecord.opis || '',
+    image_url: csvRecord.image_url || csvRecord.zdjecie || csvRecord.image || null,
   }));
 }
 

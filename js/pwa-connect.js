@@ -285,8 +285,8 @@
         fd.get('phone') ? 'Tel: ' + fd.get('phone') : ''
       ].filter(Boolean).join('; ');
 
-      var orderItems = items.map(function (i) {
-        return { product_id: i.id, quantity: Number(i.qty) || 1 };
+      var orderItems = items.map(function (item) {
+        return { product_id: item.id, quantity: Number(item.qty) || 1 };
       });
 
       var storeId = null;

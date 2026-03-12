@@ -45,7 +45,7 @@ async function cartWithItems(cartId) {
     [cartId]
   );
   const items = itemsResult.rows;
-  const total = items.reduce((sum, i) => sum + parseFloat(i.unit_price) * i.quantity, 0);
+  const total = items.reduce((sum, item) => sum + parseFloat(item.unit_price) * item.quantity, 0);
   return { ...cart, items, total: parseFloat(total.toFixed(2)) };
 }
 

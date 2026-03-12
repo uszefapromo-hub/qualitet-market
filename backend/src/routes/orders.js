@@ -101,7 +101,7 @@ router.post(
 
       // Fetch products via shop_products (supports central catalog and store-scoped products).
       // The effective selling_price respects any per-store price_override / margin_override.
-      const productIds = items.map((i) => i.product_id);
+      const productIds = items.map((item) => item.product_id);
       const productResult = await db.query(
         `SELECT p.id, p.name, p.stock,
                 COALESCE(sp.margin_override, p.margin) AS margin,
@@ -118,7 +118,7 @@ router.post(
          WHERE sp.store_id = $2 AND sp.active = true AND p.id = ANY($1::uuid[])`,
         [productIds, store_id]
       );
-      const productMap = Object.fromEntries(productResult.rows.map((p) => [p.id, p]));
+      const productMap = Object.fromEntries(productResult.rows.map((product) => [product.id, product]));
 
       // Validate all products found and have stock
       for (const item of items) {

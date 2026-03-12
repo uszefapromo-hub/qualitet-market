@@ -14,7 +14,7 @@ function nameToSlug(name) {
   };
   return name
     .split('')
-    .map((ch) => map[ch] || ch)
+    .map((char) => map[char] || char)
     .join('')
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, '')

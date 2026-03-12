@@ -47,9 +47,9 @@ function computePlatformPrice(supplierPrice, tiers = DEFAULT_PLATFORM_TIERS) {
  * @returns {Array}
  */
 function dbTiersToArray(rows) {
-  return rows.map((r) => ({
-    maxPrice:      r.threshold_max !== null ? parseFloat(r.threshold_max) : null,
-    marginPercent: parseFloat(r.margin_percent),
+  return rows.map((configRow) => ({
+    maxPrice:      configRow.threshold_max !== null ? parseFloat(configRow.threshold_max) : null,
+    marginPercent: parseFloat(configRow.margin_percent),
   }));
 }
 

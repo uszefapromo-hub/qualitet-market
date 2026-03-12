@@ -230,14 +230,14 @@
 
     listEl.innerHTML = '';
 
-    orders.forEach(function (o) {
+    orders.forEach(function (order) {
       var row = document.createElement('div');
       row.className = 'order-row';
-      var date = o.created_at ? new Date(o.created_at).toLocaleDateString('pl-PL') : '—';
-      var total = o.total_amount != null ? formatPrice(o.total_amount) : '—';
-      var status = escHtml(o.status || '—');
+      var date = order.created_at ? new Date(order.created_at).toLocaleDateString('pl-PL') : '—';
+      var total = order.total_amount != null ? formatPrice(order.total_amount) : '—';
+      var status = escHtml(order.status || '—');
       row.innerHTML =
-        '<span class="order-num">' + escHtml(o.order_number || (o.id || '').slice(0, 8) || '—') + '</span>' +
+        '<span class="order-num">' + escHtml(order.order_number || (order.id || '').slice(0, 8) || '—') + '</span>' +
         '<span class="order-date">' + escHtml(date) + '</span>' +
         '<span class="order-total">' + escHtml(total) + '</span>' +
         '<span class="order-status badge-pill">' + status + '</span>';
@@ -391,8 +391,8 @@
 
         return a.Orders.create({
           store_id: storeId,
-          items: cartItems.map(function (i) {
-            return { product_id: i.id, quantity: Number(i.qty) || 1 };
+          items: cartItems.map(function (cartItem) {
+            return { product_id: cartItem.id, quantity: Number(cartItem.qty) || 1 };
           }),
           shipping_address: formData.address || '',
           notes: notes,
@@ -570,24 +570,24 @@
     if (emptyEl) emptyEl.hidden = true;
 
     tbody.innerHTML = '';
-    products.forEach(function (p) {
-      var activeLabel = p.active !== false ? 'Aktywny' : 'Wyłączony';
-      var activePill = p.active !== false ? 'pill-active' : 'pill-inactive';
-      var currentMargin = p.margin_override != null ? p.margin_override : (p.base_margin || 0);
-      var currentPrice = p.price_override != null ? p.price_override : (p.price || p.base_price || 0);
-      var basePrice = p.base_price || p.price || 0;
+    products.forEach(function (product) {
+      var activeLabel = product.active !== false ? 'Aktywny' : 'Wyłączony';
+      var activePill = product.active !== false ? 'pill-active' : 'pill-inactive';
+      var currentMargin = product.margin_override != null ? product.margin_override : (product.base_margin || 0);
+      var currentPrice = product.price_override != null ? product.price_override : (product.price || product.base_price || 0);
+      var basePrice = product.base_price || product.price || 0;
 
       var row = document.createElement('tr');
-      row.setAttribute('data-shop-product-id', p.id || '');
+      row.setAttribute('data-shop-product-id', product.id || '');
       row.innerHTML =
-        '<td>' + escHtml(p.name || p.custom_title || '—') + '</td>' +
+        '<td>' + escHtml(product.name || product.custom_title || '—') + '</td>' +
         '<td>' + formatPrice(basePrice) + '</td>' +
         '<td>' +
           '<input type="number" min="0" max="200" step="0.1" class="owner-input" ' +
             'style="width:80px;padding:4px 8px;font-size:13px" ' +
             'value="' + escHtml(String(currentMargin)) + '" ' +
             'data-edit-margin ' +
-            'aria-label="Marża dla ' + escHtml(p.name || '') + '">' +
+            'aria-label="Marża dla ' + escHtml(product.name || '') + '">' +
           '%' +
         '</td>' +
         '<td>' +
@@ -595,19 +595,19 @@
             'style="width:100px;padding:4px 8px;font-size:13px" ' +
             'value="' + escHtml(String(parseFloat(currentPrice).toFixed(2))) + '" ' +
             'data-edit-price ' +
-            'aria-label="Cena dla ' + escHtml(p.name || '') + '">' +
+            'aria-label="Cena dla ' + escHtml(product.name || '') + '">' +
           ' zł' +
         '</td>' +
         '<td><span class="' + activePill + '">' + activeLabel + '</span></td>' +
         '<td style="white-space:nowrap">' +
           '<button class="btn btn-primary" style="padding:4px 10px;font-size:12px;margin-right:4px" ' +
-            'data-save-product-id="' + escHtml(p.id || '') + '">' +
+            'data-save-product-id="' + escHtml(product.id || '') + '">' +
             'Zapisz' +
           '</button>' +
           '<button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" ' +
-            'data-toggle-product-id="' + escHtml(p.id || '') + '" ' +
-            'data-toggle-product-active="' + (p.active !== false ? 'true' : 'false') + '">' +
-            (p.active !== false ? 'Wyłącz' : 'Włącz') +
+            'data-toggle-product-id="' + escHtml(product.id || '') + '" ' +
+            'data-toggle-product-active="' + (product.active !== false ? 'true' : 'false') + '">' +
+            (product.active !== false ? 'Wyłącz' : 'Włącz') +
           '</button>' +
         '</td>';
       tbody.appendChild(row);
@@ -790,23 +790,23 @@
     var STATUSES = ['new', 'processing', 'shipped', 'completed'];
 
     tbody.innerHTML = '';
-    orders.forEach(function (o) {
+    orders.forEach(function (order) {
       var row = document.createElement('tr');
-      var num = escHtml(o.order_number || (o.id || '').slice(0, 8) || '—');
-      var date = o.created_at ? new Date(o.created_at).toLocaleDateString('pl-PL') : '—';
-      var status = o.status || 'new';
+      var num = escHtml(order.order_number || (order.id || '').slice(0, 8) || '—');
+      var date = order.created_at ? new Date(order.created_at).toLocaleDateString('pl-PL') : '—';
+      var status = order.status || 'new';
 
       var selectHtml = '<select class="owner-filter" style="padding:4px 8px;font-size:12px" ' +
-        'data-order-status-id="' + escHtml(o.id || '') + '">';
-      STATUSES.forEach(function (s) {
-        selectHtml += '<option value="' + s + '"' + (s === status ? ' selected' : '') + '>' + s + '</option>';
+        'data-order-status-id="' + escHtml(order.id || '') + '">';
+      STATUSES.forEach(function (statusOption) {
+        selectHtml += '<option value="' + statusOption + '"' + (statusOption === status ? ' selected' : '') + '>' + statusOption + '</option>';
       });
       selectHtml += '</select>';
 
       row.innerHTML =
         '<td class="cell-mono">' + num + '</td>' +
         '<td class="cell-muted">' + escHtml(date) + '</td>' +
-        '<td>' + escHtml(o.shipping_address || '—') + '</td>' +
+        '<td>' + escHtml(order.shipping_address || '—') + '</td>' +
         '<td>' + selectHtml + '</td>';
       tbody.appendChild(row);
     });

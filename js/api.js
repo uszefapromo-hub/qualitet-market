@@ -86,8 +86,8 @@
     });
 
     let body;
-    const ct = res.headers.get('content-type') || '';
-    body = ct.includes('application/json') ? await res.json() : await res.text();
+    const contentType = res.headers.get('content-type') || '';
+    body = contentType.includes('application/json') ? await res.json() : await res.text();
 
     if (!res.ok) {
       const err = new Error(
