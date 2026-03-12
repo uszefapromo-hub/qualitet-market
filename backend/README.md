@@ -53,6 +53,11 @@ docker compose up --build
 |------|------|
 | `001_initial_schema.sql` | Podstawowy schemat: `users`, `subscriptions`, `suppliers`, `stores`, `products`, `orders`, `order_items` |
 | `002_extended_schema.sql` | Rozszerzony schemat marketplace: `categories`, `product_images`, `shop_products`, `carts`, `cart_items`, `payments`, `audit_logs` + kolumna `category_id` w `products` |
+| `003_product_status.sql` | Kolumna `status` (draft/pending/active/archived) w `products` oraz dodatkowe pola w `shop_products` |
+| `003_central_catalog.sql` | `store_id` opcjonalny w `products`; flaga `is_central` dla produktów zarządzanych przez platformę (równoległa migracja 003) |
+| `004_central_catalog.sql` | Uzupełnienie centralnego katalogu: `store_id` nullable, indeksy na `is_central` |
+| `005_performance_indexes.sql` | Indeksy wydajnościowe i rozszerzenie schematu dla 1 000+ sprzedawców i 100 000+ produktów |
+| `006_subscription_marketplace.sql` | Subskrypcje oparte na sklepie (`shop_id`), limity produktów, prowizja, daty start/end |
 
 Uruchomienie wszystkich migracji:
 ```bash
@@ -71,17 +76,25 @@ backend/
 ├── migrations/
 │   ├── migrate.js              # runner migracji
 │   ├── 001_initial_schema.sql
-│   └── 002_extended_schema.sql
+│   ├── 002_extended_schema.sql
+│   ├── 003_product_status.sql
+│   ├── 003_central_catalog.sql
+│   ├── 004_central_catalog.sql
+│   ├── 005_performance_indexes.sql
+│   └── 006_subscription_marketplace.sql
 ├── src/
 │   ├── app.js                  # główna aplikacja Express
 │   ├── config/
 │   │   └── database.js         # pula połączeń PostgreSQL
 │   ├── middleware/
-│   │   ├── auth.js             # JWT authenticate + requireRole
+│   │   ├── auth.js             # JWT authenticate + requireRole + requireActiveSubscription
 │   │   └── validate.js         # express-validator wrapper
 │   └── routes/
+│       ├── auth.js             # /api/auth  (kanoniczne endpointy onboardingu)
 │       ├── users.js            # /api/users
 │       ├── stores.js           # /api/stores
+│       ├── shops.js            # /api/shops (publiczny profil sklepu)
+│       ├── my.js               # /api/my    (widok sprzedawcy)
 │       ├── products.js         # /api/products  (centralny katalog)
 │       ├── shop-products.js    # /api/shop-products (produkt w sklepie)
 │       ├── categories.js       # /api/categories
@@ -107,7 +120,22 @@ Wszystkie chronione endpointy wymagają nagłówka:
 ```
 Authorization: Bearer <token>
 ```
-Token JWT zwracany po `POST /api/users/register` lub `POST /api/users/login`.
+Token JWT zwracany po `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/users/register` lub `POST /api/users/login`.
+
+---
+
+### Autoryzacja (onboarding) `/api/auth`
+
+Kanoniczne endpointy używane przez flow rejestracji i logowania. Domyślna rola nowego konta to `seller`.
+
+| Metoda | Ścieżka     | Opis                                          | Auth |
+|--------|-------------|-----------------------------------------------|------|
+| POST   | `/register` | Rejestracja (domyślna rola: seller)           | nie  |
+| POST   | `/login`    | Logowanie, zwraca token JWT                   | nie  |
+| GET    | `/me`       | Profil zalogowanego użytkownika               | tak  |
+| PUT    | `/me`       | Aktualizacja profilu (name, phone)            | tak  |
+
+Odpowiedź `POST /register` zawiera pole `next_step: "create_shop"` – jest ono zawsze zwracane dla tej ścieżki (domyślna rola to `seller`), wskazując kolejny krok onboardingu.
 
 ---
 
@@ -133,6 +161,34 @@ Token JWT zwracany po `POST /api/users/register` lub `POST /api/users/login`.
 | POST   | `/`     | Utwórz sklep         | seller/owner/admin |
 | PUT    | `/:id`  | Aktualizuj sklep     | właściciel/admin   |
 | DELETE | `/:id`  | Usuń sklep           | admin/owner        |
+
+---
+
+### Sklepy (onboarding) `/api/shops`
+
+Uproszczone endpointy do tworzenia sklepu i przeglądania publicznego profilu.
+
+| Metoda | Ścieżka              | Opis                                              | Auth               |
+|--------|----------------------|---------------------------------------------------|--------------------|
+| POST   | `/`                  | Utwórz sklep (auto-tworzy trial subskrypcję)      | seller/owner/admin |
+| GET    | `/:slug`             | Publiczny profil sklepu                           | nie                |
+| GET    | `/:slug/products`    | Publiczny listing produktów sklepu                | nie                |
+
+---
+
+### Mój sklep (sprzedawca) `/api/my`
+
+Endpointy widoku sprzedawcy – dostęp tylko dla zalogowanego właściciela sklepu.
+
+| Metoda | Ścieżka                  | Opis                                       | Auth                |
+|--------|--------------------------|--------------------------------------------|---------------------|
+| GET    | `/store`                 | Pobierz swój główny sklep                  | seller/owner/admin  |
+| PATCH  | `/store`                 | Aktualizuj dane swojego sklepu             | seller/owner/admin  |
+| GET    | `/orders`                | Historia zamówień kupującego               | tak                 |
+| GET    | `/store/products`        | Lista produktów w moim sklepie             | seller/owner/admin  |
+| POST   | `/store/products`        | Dodaj produkt do swojego sklepu            | seller/owner/admin  |
+| PATCH  | `/store/products/:id`    | Aktualizuj produkt w moim sklepie          | seller/owner/admin  |
+| DELETE | `/store/products/:id`    | Usuń produkt z mojego sklepu               | seller/owner/admin  |
 
 ---
 
@@ -177,15 +233,19 @@ Seller dodaje produkty z centralnego katalogu do swojego sklepu.
 
 ### Koszyk `/api/cart`
 
-| Metoda | Ścieżka              | Opis                    | Auth |
-|--------|----------------------|-------------------------|------|
-| GET    | `/`                  | Pobierz koszyk          | tak  |
-| POST   | `/items`             | Dodaj produkt do koszyka| tak  |
-| PUT    | `/items/:productId`  | Zmień ilość             | tak  |
-| DELETE | `/items/:productId`  | Usuń produkt z koszyka  | tak  |
-| DELETE | `/`                  | Wyczyść koszyk          | tak  |
+| Metoda | Ścieżka              | Opis                                             | Auth |
+|--------|----------------------|--------------------------------------------------|------|
+| GET    | `/`                  | Pobierz koszyk (`?store_id=` wymagane)           | tak  |
+| POST   | `/`                  | Dodaj produkt do koszyka (przez `shop_product_id`)| tak  |
+| POST   | `/items`             | Dodaj produkt do koszyka (legacy: przez `product_id`)| tak |
+| PUT    | `/items/:productId`  | Zmień ilość produktu                             | tak  |
+| DELETE | `/items/:itemId`     | Usuń element koszyka po UUID elementu            | tak  |
+| DELETE | `/items/:productId`  | Usuń element koszyka po UUID produktu (legacy)   | tak  |
+| DELETE | `/`                  | Wyczyść koszyk (`store_id` wymagane w body)      | tak  |
 
-Params: `store_id` (wymagany dla GET, w body dla pozostałych)
+**Preferowany flow (nowy):** `POST /api/cart` z `{ shop_product_id, quantity }` oraz `DELETE /api/cart/items/:itemId`.
+
+**Legacy flow:** `POST /api/cart/items` z `{ store_id, product_id, quantity }` (nadal obsługiwane).
 
 ---
 
@@ -285,7 +345,7 @@ npm test
 ```
 
 Testy używają mocków bazy danych – nie wymagają połączenia z PostgreSQL.
-42 testów pokrywa: users, stores, products, categories, cart, orders, payments, shop-products, admin stats, subscriptions, suppliers.
+124 testów pokrywa: users, auth, stores, shops, my store/products, products, categories, cart, orders, payments, shop-products, admin stats, subscriptions, suppliers.
 
 ---
 
@@ -301,14 +361,16 @@ Testy używają mocków bazy danych – nie wymagają połączenia z PostgreSQL.
 
 | Funkcja frontend | Endpoint API | Uwagi |
 |-----------------|--------------|-------|
-| Logowanie / rejestracja | `POST /api/users/login`, `POST /api/users/register` | Zastąp mock auth |
-| Profil użytkownika | `GET /api/users/me` | Zastąp `localStorage.getItem('qm_user')` |
+| Logowanie / rejestracja | `POST /api/auth/login`, `POST /api/auth/register` | Kanoniczny flow onboardingu |
+| Logowanie / rejestracja (alternatywny) | `POST /api/users/login`, `POST /api/users/register` | Starszy endpoint |
+| Profil użytkownika | `GET /api/auth/me` | Zastąp `localStorage.getItem('qm_user')` |
+| Tworzenie sklepu (onboarding) | `POST /api/shops` | Po rejestracji (`next_step: "create_shop"`) |
 | Lista sklepów | `GET /api/stores` | `StoreManager` → API |
-| Tworzenie sklepu | `POST /api/stores` | `generator-sklepu.html` |
+| Mój sklep | `GET /api/my/store` | Widok sprzedawcy |
 | Produkty sklepu | `GET /api/shop-products?store_id=…` | Listing produktów |
-| Koszyk | `GET/POST/PUT/DELETE /api/cart` | Zastąp `localStorage` koszyk |
+| Koszyk | `GET /api/cart`, `POST /api/cart`, `DELETE /api/cart/items/:itemId` | Nowy flow z `shop_product_id` |
 | Składanie zamówień | `POST /api/orders` | `sklep.html` checkout |
-| Status zamówień | `GET /api/orders` | Panel kupującego |
+| Historia zamówień | `GET /api/my/orders` | Panel kupującego |
 | Subskrypcja | `POST /api/subscriptions` | `cennik.html` |
 | Kategorie | `GET /api/categories` | Filtry na listingu |
 | Panel admina | `GET /api/admin/stats` | `owner-panel.html` |
@@ -316,14 +378,14 @@ Testy używają mocków bazy danych – nie wymagają połączenia z PostgreSQL.
 ### Koszyk (priorytet)
 
 ```js
-// Przykład: dodaj do koszyka
-const res = await fetch(`${API_BASE_URL}/cart/items`, {
+// Przykład: dodaj do koszyka (nowy flow – przez shop_product_id)
+const res = await fetch(`${API_BASE_URL}/cart`, {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${localStorage.getItem('qm_token')}`,
   },
-  body: JSON.stringify({ store_id, product_id, quantity: 1 }),
+  body: JSON.stringify({ shop_product_id, quantity: 1 }),
 });
 const cart = await res.json();
 ```
@@ -331,8 +393,8 @@ const cart = await res.json();
 ### Uwierzytelnianie
 
 ```js
-// Przykład: login
-const res = await fetch(`${API_BASE_URL}/users/login`, {
+// Przykład: login (kanoniczny endpoint)
+const res = await fetch(`${API_BASE_URL}/auth/login`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ email, password }),
