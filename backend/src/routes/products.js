@@ -7,8 +7,25 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { computePlatformPrice, dbTiersToArray, DEFAULT_PLATFORM_TIERS } = require('../helpers/pricing');
 
 const router = express.Router();
+
+// ─── Helper: load platform margin tiers ────────────────────────────────────────
+
+async function loadPlatformTiers() {
+  try {
+    const result = await db.query(
+      `SELECT threshold_max, margin_percent FROM platform_margin_config
+       WHERE category IS NULL ORDER BY threshold_max ASC NULLS LAST`
+    );
+    if (result.rows.length > 0) return dbTiersToArray(result.rows);
+  } catch (err) {
+    // Table may not exist yet during early migrations – fall back to defaults.
+    if (err.code !== '42P01') console.error('platform_margin_config error:', err.message);
+  }
+  return DEFAULT_PLATFORM_TIERS;
+}
 
 // ─── List products ─────────────────────────────────────────────────────────────
 // Public endpoint – anyone can browse products.
@@ -136,15 +153,23 @@ router.post(
       const price_gross = parseFloat(price_net) * (1 + parseFloat(tax_rate) / 100);
       const selling_price = price_gross * (1 + margin / 100);
 
+      // Compute platform pricing tiers for the new product
+      const tiers = await loadPlatformTiers();
+      const supplierPrice = parseFloat(price_gross.toFixed(2));
+      const platformPrice = computePlatformPrice(supplierPrice, tiers);
+      const minSellingPrice = platformPrice;
+
       const id = uuidv4();
       const result = await db.query(
         `INSERT INTO products
            (id, store_id, is_central, supplier_id, name, sku, price_net, tax_rate, price_gross,
+            supplier_price, platform_price, min_selling_price,
             selling_price, margin, category, description, stock, image_url, status, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW())
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,NOW())
          RETURNING *`,
         [id, store_id, isCentral, supplier_id, name, sku, price_net, tax_rate,
-         price_gross.toFixed(2), selling_price.toFixed(2), margin,
+         supplierPrice.toFixed(2), supplierPrice.toFixed(2), platformPrice, minSellingPrice,
+         selling_price.toFixed(2), margin,
          category, description, stock, image_url, status]
       );
       return res.status(201).json(result.rows[0]);
@@ -205,29 +230,39 @@ router.put(
       // Recalculate prices if price_net or tax_rate changes
       let newPriceGross = null;
       let newSellingPrice = null;
+      let newSupplierPrice = null;
+      let newPlatformPrice = null;
+      let newMinSellingPrice = null;
       if (price_net !== undefined || tax_rate !== undefined) {
         const pn = parseFloat(price_net !== undefined ? price_net : product.price_net);
         const tr = parseFloat(tax_rate !== undefined ? tax_rate : product.tax_rate);
         const margin = parseFloat(product.margin);
         newPriceGross = (pn * (1 + tr / 100)).toFixed(2);
         newSellingPrice = (pn * (1 + tr / 100) * (1 + margin / 100)).toFixed(2);
+        // Recompute platform pricing tiers when supplier price changes
+        const tiers = await loadPlatformTiers();
+        newSupplierPrice = parseFloat(newPriceGross);
+        newPlatformPrice = computePlatformPrice(newSupplierPrice, tiers);
+        newMinSellingPrice = newPlatformPrice;
       }
 
       const result = await db.query(
         `UPDATE products SET
-           name          = COALESCE($1, name),
-           price_net     = COALESCE($2, price_net),
-           tax_rate      = COALESCE($3, tax_rate),
-           price_gross   = COALESCE($4, price_gross),
-           selling_price = COALESCE($5, selling_price),
-           stock         = COALESCE($6, stock),
-           category      = COALESCE($7, category),
-           description   = COALESCE($8, description),
-           image_url     = COALESCE($9, image_url),
-           status        = COALESCE($10, status),
-           platform_price = COALESCE($11, platform_price),
-           updated_at    = NOW()
-         WHERE id = $12
+           name              = COALESCE($1, name),
+           price_net         = COALESCE($2, price_net),
+           tax_rate          = COALESCE($3, tax_rate),
+           price_gross       = COALESCE($4, price_gross),
+           selling_price     = COALESCE($5, selling_price),
+           supplier_price    = COALESCE($6, supplier_price),
+           platform_price    = COALESCE($7, platform_price),
+           min_selling_price = COALESCE($8, min_selling_price),
+           stock             = COALESCE($9, stock),
+           category          = COALESCE($10, category),
+           description       = COALESCE($11, description),
+           image_url         = COALESCE($12, image_url),
+           status            = COALESCE($13, status),
+           updated_at        = NOW()
+         WHERE id = $14
          RETURNING *`,
         [
           name || null,
@@ -235,12 +270,15 @@ router.put(
           tax_rate !== undefined ? tax_rate : null,
           newPriceGross,
           newSellingPrice,
+          newSupplierPrice,
+          // Explicit admin platform_price override always wins; auto-compute from tiers when price changes
+          platform_price !== undefined ? platform_price : (newPlatformPrice !== null ? newPlatformPrice : null),
+          platform_price !== undefined ? platform_price : (newMinSellingPrice !== null ? newMinSellingPrice : null),
           stock !== undefined ? stock : null,
           category || null,
           description !== undefined ? description : null,
           image_url || null,
           status || null,
-          platform_price !== undefined ? platform_price : null,
           req.params.id,
         ]
       );
