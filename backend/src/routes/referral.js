@@ -37,30 +37,14 @@ router.get('/my', authenticate, async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      // Auto-create a referral code with collision detection
-      let code;
-      let attempts = 0;
-      do {
-        code = _generateCode();
-        const existing = await db.query('SELECT id FROM referral_codes WHERE code = $1', [code]);
-        if (existing.rows.length === 0) break;
-        attempts++;
-      } while (attempts < 5);
-
-      const id = uuidv4();
-      await db.query(
-        `INSERT INTO referral_codes (id, user_id, code, created_at)
-         VALUES ($1, $2, $3, NOW())`,
-        [id, req.user.id, code]
-      );
-      result = await db.query(
-        `SELECT rc.id, rc.code, rc.user_id,
-                0::int AS total_referred,
-                0::int AS bonus_months_given
-         FROM referral_codes rc
-         WHERE rc.id = $1`,
-        [id]
-      );
+      const created = await ensureReferralCode(req.user.id);
+      return res.json({
+        id:                created.id,
+        code:              created.code,
+        user_id:           req.user.id,
+        total_referred:    0,
+        bonus_months_given: 0,
+      });
     }
 
     return res.json(result.rows[0]);
@@ -111,8 +95,8 @@ router.post(
 
       const id = uuidv4();
       const result = await db.query(
-        `INSERT INTO referral_uses (id, referral_code_id, referrer_id, new_user_id, bonus_months, created_at)
-         VALUES ($1, $2, $3, $4, $5, NOW())
+        `INSERT INTO referral_uses (id, code_id, referral_code_id, referrer_id, new_user_id, bonus_months, created_at)
+         VALUES ($1, $2, $2, $3, $4, $5, NOW())
          RETURNING *`,
         [id, referral_code_id, referrer_id, new_user_id, bonus_months]
       );
@@ -185,4 +169,44 @@ function _generateCode() {
   return code;
 }
 
-module.exports = router;
+/**
+ * Ensure the given user has a promo referral code, creating one if absent.
+ * Returns { id, code } of the (existing or newly created) code.
+ *
+ * owner_id and user_id are both set to userId so both the discount system
+ * (referrals.js, uses owner_id) and the promo system (referral.js, uses user_id)
+ * can look up the code without schema conflicts.
+ *
+ * @param {string} userId
+ * @returns {Promise<{ id: string, code: string }>}
+ */
+async function ensureReferralCode(userId) {
+  const existing = await db.query(
+    'SELECT id, code FROM referral_codes WHERE user_id = $1 LIMIT 1',
+    [userId]
+  );
+  if (existing.rows[0]) return existing.rows[0];
+
+  // Generate a collision-free code
+  let code;
+  let attempts = 0;
+  do {
+    code = _generateCode();
+    const collision = await db.query('SELECT id FROM referral_codes WHERE code = $1', [code]);
+    if (collision.rows.length === 0) break;
+    attempts++;
+    if (attempts >= 5) {
+      throw new Error('Nie udało się wygenerować unikalnego kodu polecającego');
+    }
+  } while (true);
+
+  const id = uuidv4();
+  await db.query(
+    `INSERT INTO referral_codes (id, owner_id, user_id, code, created_at)
+     VALUES ($1, $2, $2, $3, NOW())`,
+    [id, userId, code]
+  );
+  return { id, code };
+}
+
+module.exports = { router, ensureReferralCode };
