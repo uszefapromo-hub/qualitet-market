@@ -111,7 +111,7 @@ app.get('/api/readiness', async (_req, res) => {
 
   // Cart & order flow
   checks.cart_order_flow = {
-    add_to_cart:   'POST /api/cart/items',
+    add_to_cart:   'POST /api/cart',
     create_order:  'POST /api/orders',
     order_status:  'PATCH /api/orders/:id/status',
   };

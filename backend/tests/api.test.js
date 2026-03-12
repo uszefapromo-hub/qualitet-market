@@ -3354,10 +3354,11 @@ describe('GET /api/readiness', () => {
 // register → login → create store → add product → cart → order → payment
 
 describe('E2E – full user flow', () => {
-  it('completes the full flow: register → login → store → product → cart → order → payment', async () => {
-    const E2E_EMAIL = 'e2eflow@test.pl';
-    const E2E_ORDER_ID = 'e2e00000-0000-4000-8000-000000000001';
+  const E2E_EMAIL = 'e2eflow@test.pl';
+  const E2E_ORDER_ID = 'e2e00000-0000-4000-8000-000000000001';
+  const E2E_PRODUCT_PRICE = 141.45;
 
+  it('completes the full flow: register → login → store → product → cart → order → payment', async () => {
     // ── Step 1: Register ──────────────────────────────────────────────────────
     const regRes = await request(app)
       .post('/api/users/register')
@@ -3415,11 +3416,11 @@ describe('E2E – full user flow', () => {
     db.query
       .mockResolvedValueOnce({ rows: [{ id: newStoreId, owner_id: e2eUser.id, margin: 15 }] })   // store
       .mockResolvedValueOnce({ rows: [{ value: '0.08' }] })                                       // commission_rate
-      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', selling_price: 141.45, stock: 10, margin: 15 }] }) // products
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', selling_price: E2E_PRODUCT_PRICE, stock: 10, margin: 15 }] }) // products
       .mockResolvedValueOnce({ rows: [] })  // INSERT INTO orders
       .mockResolvedValueOnce({ rows: [] })  // INSERT INTO order_items
       .mockResolvedValueOnce({ rows: [] })  // UPDATE products stock
-      .mockResolvedValueOnce({ rows: [{ id: E2E_ORDER_ID, store_id: newStoreId, order_total: 141.45, total: 141.45, platform_commission: 11.32, seller_revenue: 130.13, status: 'created' }] }) // SELECT order
+      .mockResolvedValueOnce({ rows: [{ id: E2E_ORDER_ID, store_id: newStoreId, order_total: E2E_PRODUCT_PRICE, total: E2E_PRODUCT_PRICE, platform_commission: 11.32, seller_revenue: 130.13, status: 'created' }] }) // SELECT order
       .mockResolvedValueOnce({ rows: [] }); // SELECT order_items
 
     const orderRes = await request(app)
@@ -3432,14 +3433,14 @@ describe('E2E – full user flow', () => {
       });
     expect(orderRes.status).toBe(201);
     expect(orderRes.body.status).toBe('created');
-    expect(orderRes.body).toHaveProperty('total', 141.45);
+    expect(orderRes.body).toHaveProperty('total', E2E_PRODUCT_PRICE);
     expect(orderRes.body).toHaveProperty('platform_commission', 11.32);
     expect(orderRes.body).toHaveProperty('seller_revenue', 130.13);
 
     // ── Step 7: Initiate payment ──────────────────────────────────────────────
     // Mock the order lookup for the payment initiation step.
     db.query.mockResolvedValueOnce({
-      rows: [{ id: E2E_ORDER_ID, buyer_id: e2eUser.id, total: 141.45, status: 'created' }],
+      rows: [{ id: E2E_ORDER_ID, buyer_id: e2eUser.id, total: E2E_PRODUCT_PRICE, status: 'created' }],
     });
     const payRes = await request(app)
       .post(`/api/payments/${E2E_ORDER_ID}/initiate`)
