@@ -515,8 +515,13 @@
         if (slugEl && store.slug) slugEl.textContent = store.slug;
       })
       .catch(function () {
-        if (contentEl) contentEl.hidden = true;
-        if (emptyEl) emptyEl.hidden = false;
+        // Keep whatever the localStorage-based shop.js already rendered;
+        // only show the empty state when there is genuinely no store data.
+        var hasLocalStore = window.StoreManager && window.StoreManager.getActiveStore();
+        if (!hasLocalStore) {
+          if (contentEl) contentEl.hidden = true;
+          if (emptyEl) emptyEl.hidden = false;
+        }
       });
   }
 

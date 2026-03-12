@@ -417,6 +417,169 @@
       .catch(function () { return []; });
   };
 
+  // ─── 8. Store Panel – product management ─────────────────────────────────────
+
+  function initPanelSklepuFlow() {
+    var a = api();
+    if (!a || !isLoggedInApi()) return;
+
+    // Update real product count from API
+    a.MyStore.get()
+      .then(function (store) {
+        if (!store || !store.id) return;
+        return a.MyStore.products(store.id, { limit: 1 })
+          .then(function (data) {
+            var countEl = document.querySelector('[data-store-products]');
+            if (countEl && data && data.total != null) {
+              countEl.textContent = data.total;
+            }
+          });
+      })
+      .catch(function () {});
+
+    // Wire "Dodaj produkt" button
+    var addBtn = document.querySelector('[data-add-store-product]');
+    if (!addBtn) return;
+
+    addBtn.addEventListener('click', function () {
+      a.MyStore.get()
+        .then(function (store) {
+          if (!store || !store.id) {
+            alert('Nie znaleziono aktywnego sklepu. Zaloguj się lub utwórz sklep.');
+            return;
+          }
+          openAddProductDialog(a, store.id);
+        })
+        .catch(function () {
+          alert('Nie udało się załadować danych sklepu. Sprawdź połączenie.');
+        });
+    });
+  }
+
+  function openAddProductDialog(a, storeId) {
+    var existing = document.getElementById('qm-add-product-dialog');
+    if (existing) existing.remove();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'qm-add-product-dialog';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Dodaj produkt do sklepu');
+    overlay.style.cssText = [
+      'position:fixed', 'inset:0', 'background:rgba(0,0,0,.55)', 'z-index:9000',
+      'display:flex', 'align-items:center', 'justify-content:center', 'padding:16px'
+    ].join(';');
+
+    var box = document.createElement('div');
+    box.style.cssText = [
+      'background:#fff', 'border-radius:12px', 'width:100%', 'max-width:540px',
+      'max-height:80vh', 'overflow:auto', 'padding:24px'
+    ].join(';');
+
+    box.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">' +
+        '<h3 style="margin:0;font-size:1.1rem;font-weight:700">Wybierz produkt do sklepu</h3>' +
+        '<button type="button" id="qm-dlg-close" aria-label="Zamknij" style="border:none;background:none;font-size:1.5rem;cursor:pointer;line-height:1;padding:0 4px">×</button>' +
+      '</div>' +
+      '<p id="qm-dlg-status" role="alert" style="color:#c53030;font-size:.875rem;margin-bottom:12px;display:none"></p>' +
+      '<div id="qm-dlg-list" style="display:flex;flex-direction:column;gap:10px"></div>';
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    box.querySelector('#qm-dlg-close').addEventListener('click', function () {
+      overlay.remove();
+    });
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) overlay.remove();
+    });
+
+    var listEl = box.querySelector('#qm-dlg-list');
+    var statusEl = box.querySelector('#qm-dlg-status');
+
+    listEl.innerHTML = '<p style="color:#718096;font-size:.9rem">Ładowanie katalogu produktów…</p>';
+
+    a.Products.list({ status: 'active', limit: 24 })
+      .then(function (data) {
+        var products = Array.isArray(data) ? data
+          : (data && Array.isArray(data.products)) ? data.products : [];
+
+        if (!products.length) {
+          listEl.innerHTML = '<p style="color:#718096;font-size:.9rem">Brak dostępnych produktów w katalogu.</p>';
+          return;
+        }
+
+        listEl.innerHTML = '';
+
+        products.forEach(function (product) {
+          var row = document.createElement('div');
+          row.style.cssText = [
+            'display:flex', 'align-items:center', 'gap:12px', 'padding:10px',
+            'border:1px solid #e2e8f0', 'border-radius:8px'
+          ].join(';');
+
+          var mediaHtml = product.image_url
+            ? '<img src="' + escHtml(product.image_url) + '" alt="' + escHtml(product.name || 'Zdjęcie produktu') + '" style="width:52px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0" onerror="this.style.display=\'none\'">'
+            : '<span aria-hidden="true" style="width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:#f7fafc;border-radius:6px;flex-shrink:0">📦</span>';
+
+          var price = product.price_gross || product.selling_price || product.platform_price || 0;
+
+          row.innerHTML =
+            mediaHtml +
+            '<div style="flex:1;min-width:0">' +
+              '<div style="font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escHtml(product.name || '') + '</div>' +
+              '<div style="font-size:.78rem;color:#718096;margin-top:2px">' +
+                escHtml(product.category || '') +
+                (price ? ' · ' + formatPrice(price) : '') +
+              '</div>' +
+            '</div>' +
+            '<button type="button" style="flex-shrink:0;padding:6px 16px;font-size:.82rem;border-radius:6px;border:none;background:#3182ce;color:#fff;cursor:pointer;font-weight:600" data-pid="' + escHtml(product.id || '') + '">Dodaj</button>';
+
+          listEl.appendChild(row);
+        });
+
+        listEl.addEventListener('click', function (e) {
+          var btn = e.target.closest('[data-pid]');
+          if (!btn) return;
+          var productId = btn.dataset.pid;
+          if (!productId) return;
+
+          btn.disabled = true;
+          btn.textContent = '…';
+          statusEl.style.display = 'none';
+
+          a.MyStore.addProduct({ store_id: storeId, product_id: productId })
+            .then(function () {
+              btn.textContent = 'Dodano ✓';
+              btn.style.background = '#276749';
+
+              // Refresh product count
+              a.MyStore.products(storeId, { limit: 1 })
+                .then(function (d) {
+                  var countEl = document.querySelector('[data-store-products]');
+                  if (countEl && d && d.total != null) countEl.textContent = d.total;
+                })
+                .catch(function () {});
+            })
+            .catch(function (err) {
+              btn.disabled = false;
+              btn.textContent = 'Dodaj';
+              var code = err && err.body && err.body.error;
+              var msg = code === 'product_limit_reached'
+                ? 'Osiągnięto limit produktów w planie. Ulepsz subskrypcję, aby dodać więcej.'
+                : code === 'subscription_expired'
+                ? 'Subskrypcja wygasła. Odnów plan, aby dodawać produkty.'
+                : code || 'Nie udało się dodać produktu. Spróbuj ponownie.';
+              statusEl.textContent = msg;
+              statusEl.style.display = '';
+            });
+        });
+      })
+      .catch(function () {
+        listEl.innerHTML = '<p style="color:#c53030;font-size:.9rem">Nie udało się załadować katalogu produktów.</p>';
+      });
+  }
+
   // ─── Initialisation ───────────────────────────────────────────────────────────
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -428,10 +591,11 @@
       if (a) a.Auth.me().catch(function () {});
     }
 
-    if (page === 'login')     initLoginFlow();
-    if (page === 'dashboard') initDashboardFlow();
-    if (page === 'sklep')     initProductsFlow();
-    if (page === 'koszyk')    initCartFlow();
+    if (page === 'login')         initLoginFlow();
+    if (page === 'dashboard')     initDashboardFlow();
+    if (page === 'sklep')         initProductsFlow();
+    if (page === 'koszyk')        initCartFlow();
+    if (page === 'panel-sklepu')  initPanelSklepuFlow();
   });
 
 }());
