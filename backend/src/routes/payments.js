@@ -11,8 +11,11 @@ const { validate } = require('../middleware/validate');
 
 const router = express.Router();
 
-const VALID_METHODS  = ['transfer', 'card', 'blik', 'p24'];
-const VALID_STATUSES = ['pending', 'completed', 'failed', 'refunded'];
+const VALID_METHODS    = ['transfer', 'card', 'blik', 'p24', 'stripe'];
+const VALID_PROVIDERS  = ['p24', 'stripe'];         // external payment providers
+const VALID_STATUSES   = ['pending', 'paid', 'failed', 'refunded'];
+// 'completed' kept as alias for backward compatibility with existing integrations
+const ALL_VALID_STATUSES = [...VALID_STATUSES, 'completed'];
 
 // ─── List payments ─────────────────────────────────────────────────────────────
 
@@ -89,12 +92,13 @@ router.post(
       }
 
       const id = uuidv4();
+      const provider = VALID_PROVIDERS.includes(method) ? method : null;
       const result = await db.query(
         `INSERT INTO payments
-           (id, order_id, user_id, amount, currency, method, status, external_ref, created_at)
-         VALUES ($1, $2, $3, $4, 'PLN', $5, 'pending', $6, NOW())
+           (id, order_id, user_id, amount, currency, method, payment_provider, status, external_ref, created_at)
+         VALUES ($1, $2, $3, $4, 'PLN', $5, $6, 'pending', $7, NOW())
          RETURNING *`,
-        [id, order_id, req.user.id, amount, method, external_ref]
+        [id, order_id, req.user.id, amount, method, provider, external_ref]
       );
       return res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -112,7 +116,7 @@ router.put(
   requireRole('owner', 'admin'),
   [
     param('id').isUUID(),
-    body('status').isIn(VALID_STATUSES),
+    body('status').isIn(ALL_VALID_STATUSES),
     body('external_ref').optional().trim(),
   ],
   validate,
@@ -120,7 +124,8 @@ router.put(
     const { status, external_ref } = req.body;
 
     try {
-      const paidAt = status === 'completed' ? new Date() : null;
+      const isPaid = status === 'paid' || status === 'completed';
+      const paidAt = isPaid ? new Date() : null;
 
       const result = await db.query(
         `UPDATE payments SET
@@ -134,10 +139,10 @@ router.put(
       );
       if (!result.rows[0]) return res.status(404).json({ error: 'Płatność nie znaleziona' });
 
-      // When payment completes, confirm the order
-      if (status === 'completed') {
+      // When payment is paid/completed, mark the order as paid
+      if (isPaid) {
         await db.query(
-          `UPDATE orders SET status = 'confirmed', updated_at = NOW() WHERE id = $1 AND status = 'pending'`,
+          `UPDATE orders SET status = 'paid', updated_at = NOW() WHERE id = $1 AND status IN ('pending','created')`,
           [result.rows[0].order_id]
         );
       }
@@ -153,7 +158,7 @@ router.put(
 // ─── POST /api/payments/webhook – provider callback (P24, Stripe, BLIK, etc.) ─
 
 const WEBHOOK_SECRET = process.env.PAYMENT_WEBHOOK_SECRET || '';
-const WEBHOOK_VALID_STATUSES = ['completed', 'failed', 'refunded'];
+const WEBHOOK_VALID_STATUSES = ['paid', 'failed', 'refunded', 'completed'];
 
 function verifyWebhookSignature(paymentId, status, signature) {
   // If no secret is configured, reject all webhook requests to prevent unauthorized access.
@@ -203,7 +208,8 @@ router.post(
         return res.json({ ok: true, idempotent: true });
       }
 
-      const paidAt = status === 'completed' ? new Date() : null;
+      const isPaid = status === 'paid' || status === 'completed';
+      const paidAt = isPaid ? new Date() : null;
 
       const updated = await db.query(
         `UPDATE payments SET
@@ -217,9 +223,9 @@ router.post(
       );
 
       // Propagate status change to the linked order
-      if (status === 'completed') {
+      if (isPaid) {
         await db.query(
-          `UPDATE orders SET status = 'confirmed', updated_at = NOW() WHERE id = $1 AND status IN ('pending','created')`,
+          `UPDATE orders SET status = 'paid', updated_at = NOW() WHERE id = $1 AND status IN ('pending','created')`,
           [payment.order_id]
         );
       } else if (status === 'failed') {
@@ -274,12 +280,13 @@ router.post(
       }
 
       const paymentId = uuidv4();
+      const provider = VALID_PROVIDERS.includes(method) ? method : null;
       const result = await db.query(
         `INSERT INTO payments
-           (id, order_id, user_id, amount, currency, method, status, created_at)
-         VALUES ($1, $2, $3, $4, 'PLN', $5, 'pending', NOW())
+           (id, order_id, user_id, amount, currency, method, payment_provider, status, created_at)
+         VALUES ($1, $2, $3, $4, 'PLN', $5, $6, 'pending', NOW())
          RETURNING *`,
-        [paymentId, orderId, req.user.id, order.total, method]
+        [paymentId, orderId, req.user.id, order.total, method, provider]
       );
 
       const providerData = buildProviderPayload(method, result.rows[0], return_url);
@@ -298,31 +305,56 @@ router.post(
 /**
  * Build the minimal provider payload for redirecting the user to the payment page.
  *
- * PRODUCTION TODO: Replace card/p24 and blik branches with real SDK calls:
- *   - Stripe: create a CheckoutSession via stripe.checkout.sessions.create()
- *   - P24: use the official Przelewy24 Node.js SDK
- *   - BLIK: create a BLIK code challenge via the bank/acquirer API
+ * Supported providers:
+ *   - stripe: create a CheckoutSession via stripe.checkout.sessions.create()
+ *   - p24 (Przelewy24): use the official Przelewy24 Node.js SDK
+ *   - blik: create a BLIK code challenge via the bank/acquirer API
+ *   - transfer: manual bank transfer
+ *   - card: generic card payment
  */
 function buildProviderPayload(method, payment, returnUrl) {
   const base = process.env.APP_URL || 'https://uszefaqualitet.pl';
   const successUrl = returnUrl || `${base}/koszyk.html?payment=success&payment_id=${payment.id}`;
   const cancelUrl  = `${base}/koszyk.html?payment=cancel`;
 
-  if (method === 'card' || method === 'p24') {
-    const hasPaymentProvider = Boolean(process.env.STRIPE_SECRET_KEY || process.env.P24_MERCHANT_ID);
-    if (!hasPaymentProvider) {
-      return {
-        provider: method,
-        payment_id: payment.id,
-        sandbox_mode: true,
-        redirect_url: successUrl,
-        warning: 'Bramka płatności nie jest skonfigurowana. Ustaw STRIPE_SECRET_KEY lub P24_MERCHANT_ID w .env.',
-      };
-    }
+  if (method === 'stripe') {
+    const hasStripe = Boolean(process.env.STRIPE_SECRET_KEY);
     return {
-      provider: method,
+      provider: 'stripe',
       payment_id: payment.id,
+      sandbox_mode: !hasStripe,
       redirect_url: successUrl,
+      cancel_url: cancelUrl,
+      ...(hasStripe
+        ? {}
+        : { warning: 'Bramka Stripe nie jest skonfigurowana. Ustaw STRIPE_SECRET_KEY w .env.' }),
+    };
+  }
+
+  if (method === 'p24') {
+    const hasP24 = Boolean(process.env.P24_MERCHANT_ID);
+    return {
+      provider: 'p24',
+      payment_id: payment.id,
+      sandbox_mode: !hasP24,
+      redirect_url: successUrl,
+      cancel_url: cancelUrl,
+      ...(hasP24
+        ? {}
+        : { warning: 'Bramka Przelewy24 nie jest skonfigurowana. Ustaw P24_MERCHANT_ID w .env.' }),
+    };
+  }
+
+  if (method === 'card') {
+    const hasPaymentProvider = Boolean(process.env.STRIPE_SECRET_KEY || process.env.P24_MERCHANT_ID);
+    return {
+      provider: 'card',
+      payment_id: payment.id,
+      sandbox_mode: !hasPaymentProvider,
+      redirect_url: successUrl,
+      ...(hasPaymentProvider
+        ? {}
+        : { warning: 'Bramka płatności kartą nie jest skonfigurowana. Ustaw STRIPE_SECRET_KEY lub P24_MERCHANT_ID w .env.' }),
     };
   }
 

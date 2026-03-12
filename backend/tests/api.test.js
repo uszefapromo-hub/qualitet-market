@@ -2641,3 +2641,115 @@ describe('PUT /api/shop-products/:id – seller_margin enforcement', () => {
     expect(res.body.selling_price).toBe(120);
   });
 });
+
+// ─── Payments – Przelewy24 & Stripe providers ─────────────────────────────────
+
+describe('POST /api/payments – provider support', () => {
+  it('creates payment with stripe provider and stores payment_provider', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: ORDER_ID, buyer_id: SELLER_ID, total: 141.45 }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'pay-stripe', order_id: ORDER_ID, user_id: SELLER_ID, amount: 141.45, method: 'stripe', payment_provider: 'stripe', status: 'pending' }] });
+
+    const res = await request(app)
+      .post('/api/payments')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ order_id: ORDER_ID, amount: 141.45, method: 'stripe' });
+    expect(res.status).toBe(201);
+    expect(res.body.method).toBe('stripe');
+    expect(res.body.payment_provider).toBe('stripe');
+    expect(res.body.status).toBe('pending');
+  });
+
+  it('creates payment with p24 (Przelewy24) provider', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: ORDER_ID, buyer_id: SELLER_ID, total: 141.45 }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'pay-p24', order_id: ORDER_ID, user_id: SELLER_ID, amount: 141.45, method: 'p24', payment_provider: 'p24', status: 'pending' }] });
+
+    const res = await request(app)
+      .post('/api/payments')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ order_id: ORDER_ID, amount: 141.45, method: 'p24' });
+    expect(res.status).toBe(201);
+    expect(res.body.payment_provider).toBe('p24');
+    expect(res.body.status).toBe('pending');
+  });
+
+  it('rejects unsupported provider name', async () => {
+    const res = await request(app)
+      .post('/api/payments')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ order_id: ORDER_ID, amount: 141.45, method: 'paypal' });
+    expect(res.status).toBe(422);
+  });
+});
+
+describe('POST /api/payments/:orderId/initiate – stripe & p24', () => {
+  it('initiates stripe payment and returns provider payload', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: ORDER_ID, buyer_id: SELLER_ID, total: 141.45, status: 'created' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'pay-stripe', order_id: ORDER_ID, user_id: SELLER_ID, amount: 141.45, method: 'stripe', payment_provider: 'stripe', status: 'pending' }] });
+
+    const res = await request(app)
+      .post(`/api/payments/${ORDER_ID}/initiate`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ method: 'stripe' });
+    expect(res.status).toBe(201);
+    expect(res.body.provider).toBe('stripe');
+    expect(res.body.payment).toBeDefined();
+    expect(res.body.payment_id).toBeDefined();
+  });
+
+  it('initiates p24 (Przelewy24) payment and returns provider payload', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: ORDER_ID, buyer_id: SELLER_ID, total: 141.45, status: 'created' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'pay-p24', order_id: ORDER_ID, user_id: SELLER_ID, amount: 141.45, method: 'p24', payment_provider: 'p24', status: 'pending' }] });
+
+    const res = await request(app)
+      .post(`/api/payments/${ORDER_ID}/initiate`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ method: 'p24' });
+    expect(res.status).toBe(201);
+    expect(res.body.provider).toBe('p24');
+  });
+});
+
+describe('PUT /api/payments/:id/status – paid status', () => {
+  it('accepts paid status and updates order to paid', async () => {
+    const PAY_ID = 'a0000000-0000-4000-8000-000000000098';
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: PAY_ID, status: 'paid', order_id: ORDER_ID }] })
+      .mockResolvedValueOnce({ rows: [] }); // update order
+
+    const res = await request(app)
+      .put(`/api/payments/${PAY_ID}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'paid' });
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('paid');
+  });
+
+  it('rejects invalid status', async () => {
+    const PAY_ID = 'a0000000-0000-4000-8000-000000000097';
+    const res = await request(app)
+      .put(`/api/payments/${PAY_ID}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'approved' });
+    expect(res.status).toBe(422);
+  });
+});
+
+describe('POST /api/payments/webhook – paid status', () => {
+  it('rejects webhook with invalid status', async () => {
+    const res = await request(app)
+      .post('/api/payments/webhook')
+      .send({ payment_id: ORDER_ID, status: 'approved', signature: 'abc' });
+    expect(res.status).toBe(422);
+  });
+
+  it('rejects webhook with missing signature', async () => {
+    const res = await request(app)
+      .post('/api/payments/webhook')
+      .send({ payment_id: ORDER_ID, status: 'paid' });
+    expect(res.status).toBe(422);
+  });
+});
