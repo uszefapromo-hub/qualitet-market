@@ -7,7 +7,8 @@ body{
 
 /* ── Owner tab navigation ── */
 .sidebar-sep{border:none;border-top:1px solid var(--stroke);margin:10px 0}
-.owner-tab-panel[hidden]{display:none}
+.owner-tab-panel[hidden],.operator-tab-panel[hidden]{display:none}
+.sidebar-operator-link{color:var(--accent-cyan,#35d9ff)!important;font-weight:700}
 
 /* ── Owner quick navigation tiles ── */
 .owner-quick-nav-section{margin-bottom:4px}
@@ -20,7 +21,9 @@ body{
 .owner-tile .tile-label{font-size:13px;font-weight:600;line-height:1.3;color:var(--text)}
 .owner-tile--primary{background:rgba(53,217,255,.12);border-color:rgba(53,217,255,.5)}
 .owner-tile--primary:hover{background:rgba(53,217,255,.22);border-color:var(--accent-cyan,#35d9ff)}
-.owner-operator-cta{margin-top:4px}
+.owner-tile-operator{border-color:rgba(53,217,255,.35)!important;background:rgba(53,217,255,.07)!important}
+.owner-tile-operator:hover{background:rgba(53,217,255,.18)!important;border-color:rgba(53,217,255,.6)!important}
+.owner-operator-cta{margin-top:4px;border-color:rgba(53,217,255,.35)!important;background:rgba(53,217,255,.05)!important}
 .owner-operator-cta .store-summary-head{align-items:center;gap:24px}
 @media(max-width:640px){
   .owner-quick-nav{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}

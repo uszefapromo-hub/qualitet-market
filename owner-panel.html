@@ -57,7 +57,8 @@
         <a href="#" data-owner-tab="warehouses">🏭 Hurtownie</a>
         <a href="#" data-owner-tab="supplier-apps">📋 Zgłoszenia dostawców</a>
         <a href="#" data-owner-tab="orders">🛒 Zamówienia</a>
-        <a href="#" data-owner-tab="subscriptions">💳 Subskrypcje</a>
+        <a href="#" data-owner-tab="subscriptions">💳 Subskrypcje i płatności</a>
+        <a href="#" data-owner-tab="scripts">📜 Skrypty</a>
         <a href="#" data-owner-tab="finances">💰 Marże i Prowizje</a>
         <a href="#" data-owner-tab="referrals">🔗 Polecenia</a>
         <a href="#" data-owner-tab="ranking">🏆 Ranking</a>
@@ -66,10 +67,9 @@
         <a href="#" data-owner-tab="payments">💵 Płatności</a>
         <a href="#" data-owner-tab="settings">⚙️ Ustawienia systemu</a>
         <a href="#" data-owner-tab="security">🔒 Bezpieczeństwo</a>
-        <a href="#" data-owner-tab="scripts">💻 Skrypty</a>
         <hr class="sidebar-sep">
-        <a href="dashboard.html">🏠 Dashboard</a>
-        <a href="panel-sklepu.html">🛠 Panel Operatora</a>
+        <a href="dashboard.html">📊 Dashboard</a>
+        <a href="operator-panel.html" class="sidebar-operator-link">🛠 Panel operatora</a>
         <a href="zostan-dostawca.html">Zostań dostawcą</a>
         <a href="crm.html">CRM</a>
       </nav>
@@ -110,15 +110,27 @@
             </div>
           </section>
 
+          <!-- OPERATOR PANEL QUICK ACCESS -->
+          <section class="panel-card owner-operator-cta">
+            <div class="store-summary-head">
+              <div>
+                <span class="eyebrow">Dostęp modułowy</span>
+                <h2>Panel operatora</h2>
+                <p class="hint">Dedykowany panel dla operatorów z dostępem do zarządzania użytkownikami, sklepami, produktami i zamówieniami.</p>
+              </div>
+              <a class="btn btn-primary" href="operator-panel.html">Otwórz panel operatora</a>
+            </div>
+          </section>
+
           <!-- QUICK NAVIGATION TILES -->
           <section class="panel-card owner-quick-nav-section">
             <div class="section-head">
-              <span class="eyebrow">Centrum dowodzenia</span>
-              <h2>Szybki dostęp — wszystkie moduły systemu</h2>
+              <span class="eyebrow">Szybka nawigacja</span>
+              <h2>Centrum dowodzenia — wszystkie moduły</h2>
             </div>
             <div class="owner-quick-nav">
-              <a class="owner-tile owner-tile--primary" href="dashboard.html">
-                <span class="tile-icon">🏠</span><span class="tile-label">Dashboard</span>
+              <a class="owner-tile owner-tile-link" href="dashboard.html">
+                <span class="tile-icon">📊</span><span class="tile-label">Dashboard</span>
               </a>
               <button class="owner-tile" data-owner-tab-trigger="users">
                 <span class="tile-icon">👥</span><span class="tile-label">Użytkownicy</span>
@@ -136,7 +148,7 @@
                 <span class="tile-icon">💳</span><span class="tile-label">Subskrypcje i płatności</span>
               </button>
               <button class="owner-tile" data-owner-tab-trigger="scripts">
-                <span class="tile-icon">💻</span><span class="tile-label">Skrypty</span>
+                <span class="tile-icon">📜</span><span class="tile-label">Skrypty</span>
               </button>
               <button class="owner-tile" data-owner-tab-trigger="settings">
                 <span class="tile-icon">⚙️</span><span class="tile-label">Ustawienia systemu</span>
@@ -165,24 +177,13 @@
               <button class="owner-tile" data-owner-tab-trigger="reports">
                 <span class="tile-icon">📊</span><span class="tile-label">Raporty</span>
               </button>
+
               <button class="owner-tile" data-owner-tab-trigger="security">
                 <span class="tile-icon">🔒</span><span class="tile-label">Bezpieczeństwo</span>
               </button>
-            </div>
-          </section>
-
-          <!-- OPERATOR PANEL CTA -->
-          <section class="panel-card owner-operator-cta">
-            <div class="store-summary-head">
-              <div>
-                <span class="eyebrow">Panel Operatora</span>
-                <h2>Moduł operatora systemu</h2>
-                <p class="hint">Bezpośredni dostęp do panelu operatora — zarządzanie sklepami, użytkownikami i zamówieniami w swoim zakresie.</p>
-              </div>
-              <div class="cta-row">
-                <a class="btn btn-primary" href="panel-sklepu.html">🛠 Panel Operatora</a>
-                <button class="btn btn-secondary" data-owner-tab-trigger="operators">Zarządzaj operatorami</button>
-              </div>
+              <a class="owner-tile owner-tile-link owner-tile-operator" href="operator-panel.html">
+                <span class="tile-icon">🎛</span><span class="tile-label">Panel operatora</span>
+              </a>
             </div>
           </section>
 
@@ -1108,6 +1109,162 @@
               </div>
             </div>
           </section>
+          <section class="panel-card">
+            <div class="section-head"><span class="eyebrow">Tryb produkcyjny</span><h2>Widoczność funkcji i tryb systemu</h2></div>
+            <p class="hint">Włącz pełną widoczność wszystkich funkcji i ustaw system w trybie produkcyjnym. W trybie demo część modułów jest ograniczona.</p>
+            <div class="owner-toolbar" style="align-items:center;gap:20px;flex-wrap:wrap">
+              <label class="form-field" style="flex-direction:row;align-items:center;gap:12px">
+                <strong>Tryb systemu</strong>
+                <select class="owner-filter" name="systemMode" data-system-mode-select>
+                  <option value="production" selected>Produkcyjny — wszystkie funkcje aktywne</option>
+                  <option value="maintenance">Serwisowy — panel wyłączony dla użytkowników</option>
+                  <option value="demo">Demo — funkcje ograniczone</option>
+                </select>
+              </label>
+              <label class="form-field" style="flex-direction:row;align-items:center;gap:12px">
+                <strong>Pełna widoczność modułów</strong>
+                <input type="checkbox" name="fullVisibility" data-full-visibility-toggle checked style="width:18px;height:18px">
+              </label>
+            </div>
+            <div class="cta-row" style="margin-top:12px">
+              <button class="btn btn-primary" type="button" data-system-mode-save>Zastosuj tryb systemu</button>
+              <span class="hint" data-system-mode-saved hidden>✅ Tryb systemu zaktualizowany!</span>
+            </div>
+          </section>
+        </div>
+        <div class="owner-tab-panel" data-owner-tab-panel="scripts" hidden>
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Skrypty systemowe</span>
+            <h2>Zarządzanie skryptami</h2>
+            <p class="hint">Uruchamiaj i zarządzaj skryptami automatyzacji platformy. Każdy skrypt możesz uruchomić jednym kliknięciem lub zaplanować jego cykliczne wykonanie.</p>
+            <div class="dashboard-meta">
+              <div><span>Dostępne skrypty</span><strong data-scripts-total>—</strong></div>
+              <div><span>Ostatnie uruchomienie</span><strong data-scripts-last-run>—</strong></div>
+              <div><span>Tryb systemu</span><strong class="status-pill is-ready" data-system-mode>Produkcyjny</strong></div>
+            </div>
+          </section>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Skrypty importu i synchronizacji</span>
+              <h2>Import danych</h2>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table">
+                <thead>
+                  <tr>
+                    <th>Nazwa skryptu</th>
+                    <th>Opis</th>
+                    <th>Ostatnie uruchomienie</th>
+                    <th>Status</th>
+                    <th>Akcja</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Synchronizacja hurtowni</strong></td>
+                    <td class="cell-muted">Aktualizuje produkty ze wszystkich podłączonych hurtowni</td>
+                    <td class="cell-muted" data-script-run-time="sync-warehouses">—</td>
+                    <td><span class="pill-active" data-script-status="sync-warehouses">Aktywny</span></td>
+                    <td><button class="btn btn-secondary" type="button" data-run-script="sync-warehouses">▶ Uruchom</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Import produktów CSV/XML</strong></td>
+                    <td class="cell-muted">Importuje produkty z pliku CSV lub XML do katalogu platformy</td>
+                    <td class="cell-muted" data-script-run-time="import-products">—</td>
+                    <td><span class="pill-active" data-script-status="import-products">Aktywny</span></td>
+                    <td><button class="btn btn-secondary" type="button" data-run-script="import-products">▶ Uruchom</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Przeliczenie cen i marż</strong></td>
+                    <td class="cell-muted">Przelicza ceny sprzedaży na podstawie aktualnych marż platformy</td>
+                    <td class="cell-muted" data-script-run-time="recalc-prices">—</td>
+                    <td><span class="pill-active" data-script-status="recalc-prices">Aktywny</span></td>
+                    <td><button class="btn btn-secondary" type="button" data-run-script="recalc-prices">▶ Uruchom</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Skrypty zarządzania</span>
+              <h2>Operacje systemu</h2>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table">
+                <thead>
+                  <tr>
+                    <th>Nazwa skryptu</th>
+                    <th>Opis</th>
+                    <th>Ostatnie uruchomienie</th>
+                    <th>Status</th>
+                    <th>Akcja</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Czyszczenie wygasłych subskrypcji</strong></td>
+                    <td class="cell-muted">Dezaktywuje subskrypcje, którym minął termin ważności</td>
+                    <td class="cell-muted" data-script-run-time="cleanup-subscriptions">—</td>
+                    <td><span class="pill-active" data-script-status="cleanup-subscriptions">Aktywny</span></td>
+                    <td><button class="btn btn-secondary" type="button" data-run-script="cleanup-subscriptions">▶ Uruchom</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Generowanie raportów miesięcznych</strong></td>
+                    <td class="cell-muted">Tworzy zestawienia finansowe i sprzedażowe za bieżący miesiąc</td>
+                    <td class="cell-muted" data-script-run-time="gen-reports">—</td>
+                    <td><span class="pill-active" data-script-status="gen-reports">Aktywny</span></td>
+                    <td><button class="btn btn-secondary" type="button" data-run-script="gen-reports">▶ Uruchom</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Wysyłka powiadomień e-mail</strong></td>
+                    <td class="cell-muted">Wysyła zaległe powiadomienia do użytkowników platformy</td>
+                    <td class="cell-muted" data-script-run-time="send-notifications">—</td>
+                    <td><span class="pill-active" data-script-status="send-notifications">Aktywny</span></td>
+                    <td><button class="btn btn-secondary" type="button" data-run-script="send-notifications">▶ Uruchom</button></td>
+                  </tr>
+                  <tr>
+                    <td><strong>Backup bazy danych</strong></td>
+                    <td class="cell-muted">Tworzy kopię zapasową wszystkich danych platformy</td>
+                    <td class="cell-muted" data-script-run-time="db-backup">—</td>
+                    <td><span class="pill-active" data-script-status="db-backup">Aktywny</span></td>
+                    <td><button class="btn btn-secondary" type="button" data-run-script="db-backup">▶ Uruchom</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Historia wykonania</span>
+              <h2>Logi skryptów</h2>
+            </div>
+            <div class="owner-toolbar">
+              <input class="owner-search" type="search" placeholder="Szukaj w logach…" aria-label="Szukaj w logach skryptów">
+              <select class="owner-filter" aria-label="Filtruj status">
+                <option value="">Wszystkie statusy</option>
+                <option value="success">Sukces</option>
+                <option value="error">Błąd</option>
+                <option value="running">W trakcie</option>
+              </select>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table">
+                <thead>
+                  <tr>
+                    <th>Czas</th>
+                    <th>Skrypt</th>
+                    <th>Czas trwania</th>
+                    <th>Status</th>
+                    <th>Komunikat</th>
+                  </tr>
+                </thead>
+                <tbody data-scripts-log-tbody>
+                  <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Brak wpisów w historii. Uruchom skrypt, aby zobaczyć log.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
 
         <!-- TAB: SCRIPTS -->
@@ -1203,8 +1360,6 @@
         </div>
 
       </div>
-    </main>
-  </div>
 
   <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
     <a href="index.html" rel="nofollow noreferrer" data-nav="index">

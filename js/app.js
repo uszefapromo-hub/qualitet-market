@@ -4668,7 +4668,7 @@
     }
 
     // ── SUPPLIER APPS TAB ──
-    const supplierApps = getStoredList(OWNER_STORAGE_KEYS.supplierApps);
+    const supplierApps = getStoredList(OWNER_STORAGE_KEYS.supplierApps) || [];
     const pendingApps = supplierApps.filter(a => a.status === 'pending');
     const acceptedApps = supplierApps.filter(a => a.status === 'accepted');
     setText('[data-supplier-apps-total]', supplierApps.length);
@@ -5140,6 +5140,221 @@
         });
       });
     }
+  }
+
+  function initOperatorPanel(){
+    if(document.body.dataset.page !== 'operator-panel'){
+      return;
+    }
+    const logged = isAppLoggedIn();
+    if(!logged){
+      window.location.replace('login.html');
+      return;
+    }
+    const role = getStoredUserRole();
+    const hasAccess = role === 'owner' || role === 'superadmin' || role === 'operator';
+    const lockedPanel = document.querySelector('[data-operator-locked]');
+    const content = document.querySelector('[data-operator-content]');
+    if(!hasAccess){
+      if(lockedPanel) lockedPanel.hidden = false;
+      if(content) content.hidden = true;
+      return;
+    }
+    if(lockedPanel) lockedPanel.hidden = true;
+    if(content) content.hidden = false;
+
+    const tabNav = document.querySelector('[data-operator-tab-nav]');
+    const tabPanels = document.querySelectorAll('[data-operator-tab-panel]');
+    function showTab(tabId){
+      tabPanels.forEach(panel => {
+        panel.hidden = panel.dataset.operatorTabPanel !== tabId;
+      });
+      if(tabNav){
+        tabNav.querySelectorAll('[data-operator-tab]').forEach(link => {
+          link.classList.toggle('active', link.dataset.operatorTab === tabId);
+        });
+      }
+    }
+    if(tabNav){
+      tabNav.addEventListener('click', event => {
+        const link = event.target.closest('[data-operator-tab]');
+        if(!link) return;
+        event.preventDefault();
+        showTab(link.dataset.operatorTab);
+      });
+    }
+    document.querySelectorAll('[data-operator-tab-trigger]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const tabId = btn.dataset.operatorTabTrigger;
+        if(tabId) showTab(tabId);
+      });
+    });
+    showTab('overview');
+
+    const data = ensureFinalStorage();
+    const users = data.users || [];
+    const stores = data.stores || [];
+    const products = data.products || [];
+    const orders = data.orders || [];
+    const suppliers = data.suppliers || [];
+
+    const setTxt = (sel, val) => { const el = document.querySelector(sel); if(el) el.textContent = val; };
+    setTxt('[data-op-users]', users.length);
+    setTxt('[data-op-stores]', stores.length);
+    setTxt('[data-op-products]', products.length);
+    setTxt('[data-op-orders]', orders.length);
+    setTxt('[data-operator-partners-count]', users.filter(u => u.role === 'partner').length);
+    setTxt('[data-operator-tasks-count]', 0);
+    setTxt('[data-operator-role]', role === 'superadmin' ? 'Superadmin' : 'Operator');
+
+    function renderEmptyRow(colspan, msg){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="${colspan}" style="text-align:center;color:var(--muted);padding:24px">${escapeHtml(msg)}</td>`;
+      return tr;
+    }
+
+    const opUsersTbody = document.querySelector('[data-op-users-tbody]');
+    if(opUsersTbody){
+      opUsersTbody.innerHTML = '';
+      if(!users.length){
+        opUsersTbody.appendChild(renderEmptyRow(7, 'Brak użytkowników.'));
+      } else {
+        users.forEach(u => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td class="cell-mono">${escapeHtml(u.id)}</td><td><strong>${escapeHtml(u.name)}</strong></td><td>${escapeHtml(u.email)}</td><td>${statusPill(u.role || 'client')}</td><td>${statusPill(normalizePlan(u.plan) || 'trial')}</td><td>${statusPill(u.status || 'active')}</td><td class="cell-muted">${escapeHtml(u.createdAt || '—')}</td>`;
+          opUsersTbody.appendChild(tr);
+        });
+      }
+    }
+
+    const opStoresTbody = document.querySelector('[data-op-stores-tbody]');
+    if(opStoresTbody){
+      opStoresTbody.innerHTML = '';
+      if(!stores.length){
+        opStoresTbody.appendChild(renderEmptyRow(8, 'Brak sklepów.'));
+      } else {
+        stores.forEach(s => {
+          const owner = users.find(u => u.id === s.userId);
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td class="cell-mono">${escapeHtml(s.id)}</td><td><strong>${escapeHtml(s.name)}</strong></td><td>${escapeHtml(owner ? owner.name : '—')}</td><td>${statusPill(normalizePlan(s.plan) || 'trial')}</td><td>${s.products || 0}</td><td>${s.orders || 0}</td><td>${statusPill(s.status || 'active')}</td><td><button class="btn btn-secondary" style="font-size:12px;padding:4px 10px" type="button">Szczegóły</button></td>`;
+          opStoresTbody.appendChild(tr);
+        });
+      }
+    }
+
+    const opProductsTbody = document.querySelector('[data-op-products-tbody]');
+    if(opProductsTbody){
+      opProductsTbody.innerHTML = '';
+      if(!products.length){
+        opProductsTbody.appendChild(renderEmptyRow(7, 'Brak produktów.'));
+      } else {
+        products.slice(0, 50).forEach(p => {
+          const tr = document.createElement('tr');
+          const price = typeof p.price === 'number' ? p.price.toFixed(2) + ' zł' : (p.price || '—');
+          tr.innerHTML = `<td class="cell-mono">${escapeHtml(p.id || '—')}</td><td><strong>${escapeHtml(p.name || '—')}</strong></td><td class="cell-mono">${escapeHtml(p.sku || '—')}</td><td>${escapeHtml(price)}</td><td>${escapeHtml(p.supplier || '—')}</td><td>${statusPill(p.status || 'active')}</td><td><button class="btn btn-secondary" style="font-size:12px;padding:4px 10px" type="button">Podgląd</button></td>`;
+          opProductsTbody.appendChild(tr);
+        });
+      }
+    }
+
+    const opOrdersTbody = document.querySelector('[data-op-orders-tbody]');
+    if(opOrdersTbody){
+      opOrdersTbody.innerHTML = '';
+      if(!orders.length){
+        opOrdersTbody.appendChild(renderEmptyRow(7, 'Brak zamówień.'));
+      } else {
+        orders.slice(0, 50).forEach(o => {
+          const store = stores.find(s => s.id === o.storeId);
+          const tr = document.createElement('tr');
+          const amount = typeof o.total === 'number' ? o.total.toFixed(2) + ' zł' : (o.total || '—');
+          tr.innerHTML = `<td class="cell-mono">${escapeHtml(o.id || '—')}</td><td>${escapeHtml(o.customerName || '—')}</td><td>${escapeHtml(store ? store.name : '—')}</td><td>${escapeHtml(amount)}</td><td>${statusPill(o.status || 'pending')}</td><td class="cell-muted">${escapeHtml(o.createdAt || '—')}</td><td><button class="btn btn-secondary" style="font-size:12px;padding:4px 10px" type="button">Szczegóły</button></td>`;
+          opOrdersTbody.appendChild(tr);
+        });
+      }
+    }
+
+    const opWarehousesTbody = document.querySelector('[data-op-warehouses-tbody]');
+    if(opWarehousesTbody){
+      opWarehousesTbody.innerHTML = '';
+      if(!suppliers.length){
+        opWarehousesTbody.appendChild(renderEmptyRow(7, 'Brak hurtowni.'));
+      } else {
+        suppliers.forEach(s => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td class="cell-mono">${escapeHtml(s.id || '—')}</td><td><strong>${escapeHtml(s.name || '—')}</strong></td><td>${escapeHtml(s.country || '—')}</td><td>${s.products || 0}</td><td>${escapeHtml(s.type || 'API')}</td><td>${statusPill(s.status || 'active')}</td><td><a class="btn btn-secondary" style="font-size:12px;padding:4px 10px" href="hurtownie.html">Szczegóły</a></td>`;
+          opWarehousesTbody.appendChild(tr);
+        });
+      }
+    }
+  }
+
+  function initScriptsTab(){
+    if(document.body.dataset.page !== 'owner-panel'){
+      return;
+    }
+    document.querySelectorAll('[data-run-script]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const scriptId = btn.dataset.runScript;
+        const now = new Date().toLocaleString('pl-PL');
+        const timeEl = document.querySelector(`[data-script-run-time="${scriptId}"]`);
+        const statusEl = document.querySelector(`[data-script-status="${scriptId}"]`);
+        if(timeEl) timeEl.textContent = now;
+        if(statusEl){
+          statusEl.className = 'pill-trial';
+          statusEl.textContent = 'Uruchamianie…';
+        }
+        btn.disabled = true;
+        btn.textContent = '⏳ Działanie…';
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = '▶ Uruchom';
+          if(statusEl){
+            statusEl.className = 'pill-active';
+            statusEl.textContent = 'Aktywny';
+          }
+          const logTbody = document.querySelector('[data-scripts-log-tbody]');
+          if(logTbody){
+            const scriptNames = {
+              'sync-warehouses': 'Synchronizacja hurtowni',
+              'import-products': 'Import produktów CSV/XML',
+              'recalc-prices': 'Przeliczenie cen i marż',
+              'cleanup-subscriptions': 'Czyszczenie wygasłych subskrypcji',
+              'gen-reports': 'Generowanie raportów miesięcznych',
+              'send-notifications': 'Wysyłka powiadomień e-mail',
+              'db-backup': 'Backup bazy danych'
+            };
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td class="cell-muted">${escapeHtml(now)}</td><td><strong>${escapeHtml(scriptNames[scriptId] || scriptId)}</strong></td><td class="cell-muted">~2s</td><td><span class="pill-active">Sukces</span></td><td class="cell-muted">Zakończono pomyślnie.</td>`;
+            const emptyRow = logTbody.querySelector('td[colspan]');
+            if(emptyRow) emptyRow.closest('tr').remove();
+            logTbody.insertBefore(tr, logTbody.firstChild);
+          }
+        }, 1800);
+      });
+    });
+
+    const systemModeSave = document.querySelector('[data-system-mode-save]');
+    if(systemModeSave){
+      systemModeSave.addEventListener('click', () => {
+        const modeSelect = document.querySelector('[data-system-mode-select]');
+        const savedMsg = document.querySelector('[data-system-mode-saved]');
+        if(modeSelect){
+          localStorage.setItem('qm_system_mode', modeSelect.value);
+        }
+        if(savedMsg){
+          savedMsg.hidden = false;
+          setTimeout(() => { savedMsg.hidden = true; }, 3000);
+        }
+      });
+    }
+    const savedMode = localStorage.getItem('qm_system_mode');
+    if(savedMode){
+      const modeSelect = document.querySelector('[data-system-mode-select]');
+      if(modeSelect) modeSelect.value = savedMode;
+    }
+    const scriptCount = document.querySelectorAll('[data-run-script]').length;
+    const totalEl = document.querySelector('[data-scripts-total]');
+    if(totalEl) totalEl.textContent = scriptCount;
   }
 
   function initSuppliersModule(){
@@ -6605,6 +6820,8 @@
     ensureFinalStorage();
     trackSalesLinkClick();
     initOwnerPanel();
+    initOperatorPanel();
+    initScriptsTab();
     initSuppliersModule();
     initStorefrontProducts();
     initSalesLinksPage();

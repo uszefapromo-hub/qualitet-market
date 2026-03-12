@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Panel Operatora — HurtDetal Uszefa QUALITET</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body data-page="operator-panel" class="dashboard-page has-bottom-nav">
+  <div class="app-splash" data-app-splash>
+    <div class="app-splash-card">
+      <div class="app-splash-logo">
+        <img src="assets/icons/icon-192.svg" alt="UszefaQualitet">
+      </div>
+      <div class="app-splash-title">
+        <strong>UszefaQualitet</strong>
+        <span>QualitetMarket</span>
+      </div>
+      <div class="app-splash-loader"></div>
+    </div>
+  </div>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>UszefaQualitet</strong>
+          <span>QualitetMarket</span>
+          <span class="brand-tag">U SZEFA</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Główna nawigacja">
+        <a href="index.html">Start</a>
+        <a href="operator-panel.html" class="active">Panel operatora</a>
+        <a href="owner-panel.html">Centrum dowodzenia</a>
+        <a href="dashboard.html">Dashboard</a>
+      </nav>
+      <a class="btn btn-primary topbar-cta" href="owner-panel.html">Centrum dowodzenia</a>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <div class="dashboard-shell owner-shell">
+    <aside class="sidebar">
+      <nav class="sidebar-nav owner-tab-nav" aria-label="Menu operatora" data-operator-tab-nav>
+        <a class="active" href="#" data-operator-tab="overview">🎛 Panel operatora</a>
+        <a href="#" data-operator-tab="users">👥 Użytkownicy</a>
+        <a href="#" data-operator-tab="stores">🏪 Sklepy</a>
+        <a href="#" data-operator-tab="products">📦 Produkty</a>
+        <a href="#" data-operator-tab="orders">🛒 Zamówienia</a>
+        <a href="#" data-operator-tab="warehouses">🏭 Hurtownie</a>
+        <a href="#" data-operator-tab="supplier-apps">📋 Zgłoszenia dostawców</a>
+        <hr class="sidebar-sep">
+        <a href="owner-panel.html">🏠 Centrum dowodzenia</a>
+        <a href="dashboard.html">📊 Dashboard użytkownika</a>
+      </nav>
+    </aside>
+
+    <main class="dashboard-main">
+      <section class="panel-card owner-locked" data-operator-locked hidden>
+        <span class="eyebrow">Brak dostępu</span>
+        <h2>Panel operatora jest zastrzeżony</h2>
+        <p class="hint">Ten widok jest dostępny tylko dla operatorów i administratorów platformy.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="dashboard.html">Wróć do panelu</a>
+          <a class="btn btn-secondary" href="login.html">Zaloguj się</a>
+        </div>
+      </section>
+
+      <div data-operator-content>
+
+        <!-- TAB: OVERVIEW -->
+        <div class="operator-tab-panel" data-operator-tab-panel="overview">
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Panel operatora</span>
+            <h1>Moduł operatora</h1>
+            <p class="hint">Zarządzaj użytkownikami, sklepami, produktami i zamówieniami w swoim zakresie uprawnień.</p>
+            <div class="dashboard-meta">
+              <div>
+                <span>Rola</span>
+                <strong class="status-pill is-ready" data-operator-role>Operator</strong>
+              </div>
+              <div>
+                <span>Przypisani partnerzy</span>
+                <strong data-operator-partners-count>—</strong>
+              </div>
+              <div>
+                <span>Aktywne zadania</span>
+                <strong data-operator-tasks-count>—</strong>
+              </div>
+            </div>
+          </section>
+
+          <!-- QUICK NAVIGATION TILES -->
+          <section class="panel-card owner-quick-nav-section">
+            <div class="section-head">
+              <span class="eyebrow">Szybka nawigacja</span>
+              <h2>Moduły operatora</h2>
+            </div>
+            <div class="owner-quick-nav">
+              <button class="owner-tile" data-operator-tab-trigger="users">
+                <span class="tile-icon">👥</span><span class="tile-label">Użytkownicy</span>
+              </button>
+              <button class="owner-tile" data-operator-tab-trigger="stores">
+                <span class="tile-icon">🏪</span><span class="tile-label">Sklepy</span>
+              </button>
+              <button class="owner-tile" data-operator-tab-trigger="products">
+                <span class="tile-icon">📦</span><span class="tile-label">Produkty</span>
+              </button>
+              <button class="owner-tile" data-operator-tab-trigger="orders">
+                <span class="tile-icon">🛒</span><span class="tile-label">Zamówienia</span>
+              </button>
+              <button class="owner-tile" data-operator-tab-trigger="warehouses">
+                <span class="tile-icon">🏭</span><span class="tile-label">Hurtownie</span>
+              </button>
+              <button class="owner-tile" data-operator-tab-trigger="supplier-apps">
+                <span class="tile-icon">📋</span><span class="tile-label">Zgłoszenia dostawców</span>
+              </button>
+              <a class="owner-tile owner-tile-link" href="owner-panel.html">
+                <span class="tile-icon">🏠</span><span class="tile-label">Centrum dowodzenia</span>
+              </a>
+            </div>
+          </section>
+
+          <section class="stats-grid owner-metrics">
+            <div class="stat-card">
+              <span>Użytkownicy</span>
+              <strong data-counter data-counter-format="grouped" data-op-users>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Sklepy</span>
+              <strong data-counter data-counter-format="grouped" data-op-stores>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Produkty</span>
+              <strong data-counter data-counter-format="grouped" data-op-products>0</strong>
+            </div>
+            <div class="stat-card">
+              <span>Zamówienia</span>
+              <strong data-counter data-counter-format="grouped" data-op-orders>0</strong>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: USERS -->
+        <div class="operator-tab-panel" data-operator-tab-panel="users" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Wykaz użytkowników</span>
+              <h2>Zarządzanie użytkownikami</h2>
+              <p class="hint">Przeglądaj i zarządzaj użytkownikami przypisanymi do Twojego zakresu operatora.</p>
+            </div>
+            <div class="owner-toolbar">
+              <input class="owner-search" type="search" placeholder="Szukaj po nazwie, e-mail…" data-op-users-search aria-label="Szukaj użytkownika">
+              <select class="owner-filter" data-op-users-role-filter aria-label="Filtruj po roli">
+                <option value="">Wszystkie role</option>
+                <option value="partner">Partner</option>
+                <option value="client">Klient</option>
+              </select>
+              <select class="owner-filter" data-op-users-plan-filter aria-label="Filtruj po planie">
+                <option value="">Wszystkie plany</option>
+                <option value="elite">Elite</option>
+                <option value="pro">Pro</option>
+                <option value="basic">Basic</option>
+                <option value="trial">Trial</option>
+              </select>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table" data-op-users-table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nazwa</th>
+                    <th>E-mail</th>
+                    <th>Rola</th>
+                    <th>Plan</th>
+                    <th>Status</th>
+                    <th>Rejestracja</th>
+                  </tr>
+                </thead>
+                <tbody data-op-users-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: STORES -->
+        <div class="operator-tab-panel" data-operator-tab-panel="stores" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Wykaz sklepów</span>
+              <h2>Zarządzanie sklepami</h2>
+              <p class="hint">Przeglądaj i zarządzaj sklepami w swoim zakresie operatora.</p>
+            </div>
+            <div class="owner-toolbar">
+              <input class="owner-search" type="search" placeholder="Szukaj sklepu…" data-op-stores-search aria-label="Szukaj sklepu">
+              <select class="owner-filter" data-op-stores-status-filter aria-label="Filtruj po statusie">
+                <option value="">Wszystkie statusy</option>
+                <option value="active">Aktywny</option>
+                <option value="trial">Trial</option>
+                <option value="inactive">Nieaktywny</option>
+              </select>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table" data-op-stores-table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nazwa sklepu</th>
+                    <th>Właściciel</th>
+                    <th>Plan</th>
+                    <th>Produkty</th>
+                    <th>Zamówienia</th>
+                    <th>Status</th>
+                    <th>Akcje</th>
+                  </tr>
+                </thead>
+                <tbody data-op-stores-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: PRODUCTS -->
+        <div class="operator-tab-panel" data-operator-tab-panel="products" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Katalog produktów</span>
+              <h2>Zarządzanie produktami</h2>
+              <p class="hint">Przeglądaj i moderuj produkty w katalogu marketplace.</p>
+            </div>
+            <div class="owner-toolbar">
+              <input class="owner-search" type="search" placeholder="Szukaj produktu…" data-op-products-search aria-label="Szukaj produktu">
+              <select class="owner-filter" data-op-products-status-filter aria-label="Filtruj po statusie">
+                <option value="">Wszystkie</option>
+                <option value="active">Aktywne</option>
+                <option value="inactive">Nieaktywne</option>
+                <option value="pending">Oczekujące</option>
+              </select>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table" data-op-products-table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nazwa</th>
+                    <th>SKU</th>
+                    <th>Cena</th>
+                    <th>Hurtownia</th>
+                    <th>Status</th>
+                    <th>Akcje</th>
+                  </tr>
+                </thead>
+                <tbody data-op-products-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: ORDERS -->
+        <div class="operator-tab-panel" data-operator-tab-panel="orders" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Zarządzanie zamówieniami</span>
+              <h2>Zamówienia</h2>
+              <p class="hint">Przeglądaj zamówienia, aktualizuj statusy i obsługuj reklamacje.</p>
+            </div>
+            <div class="owner-toolbar">
+              <input class="owner-search" type="search" placeholder="Szukaj zamówienia…" data-op-orders-search aria-label="Szukaj zamówienia">
+              <select class="owner-filter" data-op-orders-status-filter aria-label="Filtruj status">
+                <option value="">Wszystkie statusy</option>
+                <option value="pending">Oczekujące</option>
+                <option value="paid">Opłacone</option>
+                <option value="shipped">Wysłane</option>
+                <option value="delivered">Dostarczone</option>
+                <option value="cancelled">Anulowane</option>
+              </select>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table" data-op-orders-table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Klient</th>
+                    <th>Sklep</th>
+                    <th>Kwota</th>
+                    <th>Status</th>
+                    <th>Data</th>
+                    <th>Akcje</th>
+                  </tr>
+                </thead>
+                <tbody data-op-orders-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: WAREHOUSES -->
+        <div class="operator-tab-panel" data-operator-tab-panel="warehouses" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Wszystkie hurtownie</span>
+              <h2>Hurtownie i dostawcy</h2>
+              <p class="hint">Lista wszystkich hurtowni zintegrowanych z platformą. Kliknij na hurtownię, aby zobaczyć szczegóły i produkty.</p>
+            </div>
+            <div class="owner-toolbar">
+              <input class="owner-search" type="search" placeholder="Szukaj po nazwie, kraju…" data-op-warehouses-search aria-label="Szukaj hurtowni">
+              <select class="owner-filter" data-op-warehouses-status-filter aria-label="Filtruj status">
+                <option value="">Wszystkie statusy</option>
+                <option value="active">Aktywne</option>
+                <option value="inactive">Nieaktywne</option>
+              </select>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table" data-op-warehouses-table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Nazwa hurtowni</th>
+                    <th>Kraj</th>
+                    <th>Liczba produktów</th>
+                    <th>Typ integracji</th>
+                    <th>Status</th>
+                    <th>Szczegóły</th>
+                  </tr>
+                </thead>
+                <tbody data-op-warehouses-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: SUPPLIER APPLICATIONS -->
+        <div class="operator-tab-panel" data-operator-tab-panel="supplier-apps" hidden>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Zgłoszenia dostawców</span>
+              <h2>Nowe wnioski od dostawców</h2>
+              <p class="hint">Zarządzaj zgłoszeniami firm zainteresowanych współpracą jako dostawcy platformy.</p>
+            </div>
+            <div class="stats-grid stats-g3">
+              <div class="stat-card"><span>Wszystkie zgłoszenia</span><strong data-op-supplier-apps-total>0</strong></div>
+              <div class="stat-card"><span>Oczekujące</span><strong data-op-supplier-apps-pending>0</strong></div>
+              <div class="stat-card"><span>Zaakceptowane</span><strong data-op-supplier-apps-accepted>0</strong></div>
+            </div>
+            <div class="owner-toolbar" style="margin-top:16px">
+              <input class="owner-search" type="search" placeholder="Szukaj po nazwie firmy, email…" data-op-supplier-apps-search aria-label="Szukaj zgłoszenia">
+              <select class="owner-filter" data-op-supplier-apps-status-filter aria-label="Filtruj po statusie">
+                <option value="">Wszystkie statusy</option>
+                <option value="pending">Oczekujące</option>
+                <option value="accepted">Zaakceptowane</option>
+                <option value="rejected">Odrzucone</option>
+              </select>
+            </div>
+            <div class="owner-table-wrap">
+              <table class="owner-table">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Firma</th>
+                    <th>Email</th>
+                    <th>Kraj</th>
+                    <th>Status</th>
+                    <th>Akcje</th>
+                  </tr>
+                </thead>
+                <tbody data-op-supplier-apps-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
+    <a href="index.html" rel="nofollow noreferrer" data-nav="index">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 11.5L12 4l9 7.5"></path>
+        <path d="M5 10.5V20h14v-9.5"></path>
+      </svg>
+      <span>Start</span>
+    </a>
+    <a href="sklep.html" rel="nofollow noreferrer" data-nav="sklep">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 9h18l-1.5 11H4.5L3 9z"></path>
+        <path d="M7 9V7a5 5 0 0 1 10 0v2"></path>
+      </svg>
+      <span>Sklep</span>
+    </a>
+    <a href="hurtownie.html" rel="nofollow noreferrer" data-nav="hurtownie">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="7" width="7" height="10" rx="1.4"></rect>
+        <rect x="14" y="7" width="7" height="10" rx="1.4"></rect>
+        <path d="M6.5 7V5.5a1.5 1.5 0 0 1 3 0V7"></path>
+      </svg>
+      <span>Hurtownie</span>
+    </a>
+    <a href="operator-panel.html" rel="nofollow noreferrer" data-nav="operator-panel" class="active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="14" width="7" height="7" rx="1.2"></rect>
+        <rect x="3" y="14" width="7" height="7" rx="1.2"></rect>
+      </svg>
+      <span>Operator</span>
+    </a>
+    <a href="login.html" rel="nofollow noreferrer" data-nav="login">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4 20c2-3.5 6-5 8-5s6 1.5 8 5"></path>
+      </svg>
+      <span>Konto</span>
+    </a>
+  </nav>
+
+  <script src="js/api.js" defer></script>
+  <script src="js/pwa-connect.js" defer></script>
+  <script src="js/flow.js" defer></script>
+  <script src="js/app.js" defer></script>
+</body>
+</html>
