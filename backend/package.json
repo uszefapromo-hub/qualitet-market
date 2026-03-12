@@ -7,6 +7,7 @@
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
     "migrate": "node migrations/migrate.js",
+    "seed:owner": "node scripts/seed-owner.js",
     "test": "jest --forceExit"
   },
   "dependencies": {

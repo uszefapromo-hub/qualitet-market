@@ -45,6 +45,11 @@ function setupDbMock() {
       const row = mockDb.users.find((u) => u.email === email);
       return { rows: row ? [row] : [] };
     }
+    if (s.startsWith('select') && s.includes('from users where phone')) {
+      const phone = params[0];
+      const row = mockDb.users.find((u) => u.phone === phone);
+      return { rows: row ? [row] : [] };
+    }
     if (s.startsWith('select') && s.includes('from users where id')) {
       const id = params[0];
       const row = mockDb.users.find((u) => u.id === id);
@@ -1807,6 +1812,29 @@ describe('POST /api/auth/login', () => {
     const res = await request(app).post('/api/auth/login').send({ email: 'seller@test.pl', password: 'Password123!' });
     expect(res.status).toBe(200);
     expect(res.body.token).toBeDefined();
+  });
+
+  it('returns 422 when neither email nor phone is provided', async () => {
+    const res = await request(app).post('/api/auth/login').send({ password: 'Password123!' });
+    expect(res.status).toBe(422);
+  });
+
+  it('returns token when logging in with phone number', async () => {
+    const hash = await bcrypt.hash('Password123!', 12);
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: ADMIN_ID, email: 'owner@test.pl', phone: '+48882914429', password_hash: hash, name: 'Owner', role: 'owner', plan: 'elite' }],
+    });
+
+    const res = await request(app).post('/api/auth/login').send({ phone: '+48882914429', password: 'Password123!' });
+    expect(res.status).toBe(200);
+    expect(res.body.token).toBeDefined();
+    expect(res.body.user.role).toBe('owner');
+  });
+
+  it('returns 401 for wrong password on phone login', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).post('/api/auth/login').send({ phone: '+48501234567', password: 'wrong' });
+    expect(res.status).toBe(401);
   });
 });
 
