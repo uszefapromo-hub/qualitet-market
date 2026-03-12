@@ -1989,6 +1989,118 @@ describe('POST /api/my/store/products – subscription checks', () => {
   });
 });
 
+// ─── POST /api/my/store/products/bulk ─────────────────────────────────────────
+
+describe('POST /api/my/store/products/bulk', () => {
+  const PRODUCT_ID_2 = 'a0000000-0000-4000-8000-000000000010';
+
+  it('requires seller role', async () => {
+    const { signToken } = require('../src/middleware/auth');
+    const buyerToken = signToken({ id: 'buyer-id', email: 'buyer@test.pl', role: 'buyer' });
+
+    const res = await request(app)
+      .post('/api/my/store/products/bulk')
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ store_id: STORE_ID, product_ids: [PRODUCT_ID] });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects missing product_ids', async () => {
+    const res = await request(app)
+      .post('/api/my/store/products/bulk')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID });
+    expect(res.status).toBe(422);
+  });
+
+  it('rejects empty product_ids array', async () => {
+    const res = await request(app)
+      .post('/api/my/store/products/bulk')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_ids: [] });
+    expect(res.status).toBe(422);
+  });
+
+  it('blocks when subscription is expired', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // no active subscription
+
+    const res = await request(app)
+      .post('/api/my/store/products/bulk')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_ids: [PRODUCT_ID] });
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('subscription_expired');
+  });
+
+  it('blocks when product_limit would be exceeded by bulk add', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 10, commission_rate: 0.10, status: 'active' }] }) // subscription
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
+      .mockResolvedValueOnce({ rows: [{ count: '9' }] });           // current count = 9, adding 2 would exceed limit 10
+
+    const res = await request(app)
+      .post('/api/my/store/products/bulk')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_ids: [PRODUCT_ID, PRODUCT_ID_2] });
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('product_limit_reached');
+  });
+
+  it('adds multiple products and returns results', async () => {
+    mockDb.products.push({ id: PRODUCT_ID_2, store_id: null, name: 'Produkt 2', selling_price: 200, stock: 5 });
+
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 100, commission_rate: 0.10, status: 'active' }] }) // subscription
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })   // store ownership
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] })             // product count
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, selling_price: 141.45 }, { id: PRODUCT_ID_2, selling_price: 200 }] }) // batch products fetch
+      .mockResolvedValueOnce({ rows: [{ id: 'sp-bulk-1', store_id: STORE_ID, product_id: PRODUCT_ID, margin_override: 20, active: true }] }) // insert 1
+      .mockResolvedValueOnce({ rows: [{ id: 'sp-bulk-2', store_id: STORE_ID, product_id: PRODUCT_ID_2, margin_override: 20, active: true }] }); // insert 2
+
+    const res = await request(app)
+      .post('/api/my/store/products/bulk')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_ids: [PRODUCT_ID, PRODUCT_ID_2] });
+    expect(res.status).toBe(201);
+    expect(res.body.added).toBe(2);
+    expect(res.body.skipped).toBe(0);
+    expect(Array.isArray(res.body.results)).toBe(true);
+  });
+
+  it('skips products that do not exist', async () => {
+    const MISSING_ID = 'a0000000-0000-4000-8000-000000000099';
+
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: null, commission_rate: 0.05, status: 'active' }] }) // elite subscription
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })   // store ownership
+      // no count query for null limit
+      .mockResolvedValueOnce({ rows: [] }); // batch products fetch – none found → skipped
+
+    const res = await request(app)
+      .post('/api/my/store/products/bulk')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_ids: [MISSING_ID] });
+    expect(res.status).toBe(201);
+    expect(res.body.added).toBe(0);
+    expect(res.body.skipped).toBe(1);
+  });
+
+  it('uses 20% default margin for added products', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: null, commission_rate: 0.05, status: 'active' }] })
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, selling_price: 100 }] }) // batch products fetch
+      .mockResolvedValueOnce({ rows: [{ id: 'sp-new', store_id: STORE_ID, product_id: PRODUCT_ID, margin_type: 'percent', margin_override: 20, active: true }] });
+
+    const res = await request(app)
+      .post('/api/my/store/products/bulk')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_ids: [PRODUCT_ID] });
+    expect(res.status).toBe(201);
+    expect(res.body.results[0].margin_override).toBe(20);
+  });
+});
+
 describe('POST /api/orders – commission calculation', () => {
   it('uses subscription commission_rate for platform_commission', async () => {
     const NEW_ORDER_ID = 'b0000000-0000-4000-8000-000000000098';

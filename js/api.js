@@ -471,6 +471,11 @@
     products(storeId, params)  { return get('/my/store/products', { store_id: storeId, ...params }); },
     /** Add a product to seller's store. */
     addProduct(data)           { return post('/my/store/products', data); },
+    /**
+     * Add multiple products to seller's store in one request.
+     * @param {{ store_id: string, product_ids: string[] }} data
+     */
+    bulkAddProducts(data)      { return post('/my/store/products/bulk', data); },
     /** Update a shop product in seller's store. */
     updateProduct(id, data)    { return patch(`/my/store/products/${id}`, data); },
     /** Remove a product from seller's store. */

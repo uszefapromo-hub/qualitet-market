@@ -3,12 +3,13 @@
 /**
  * "My" routes – user-facing endpoints for the currently authenticated user.
  *
- * GET    /api/my/store                 – seller's primary store
- * GET    /api/my/orders                – buyer's order history
- * GET    /api/my/store/products        – list my store's shop products
- * POST   /api/my/store/products        – add a product to my store
- * PATCH  /api/my/store/products/:id   – update a shop product in my store
- * DELETE /api/my/store/products/:id   – remove a product from my store
+ * GET    /api/my/store                       – seller's primary store
+ * GET    /api/my/orders                      – buyer's order history
+ * GET    /api/my/store/products              – list my store's shop products
+ * POST   /api/my/store/products              – add a product to my store
+ * POST   /api/my/store/products/bulk         – add multiple products to my store at once
+ * PATCH  /api/my/store/products/:id          – update a shop product in my store
+ * DELETE /api/my/store/products/:id          – remove a product from my store
  */
 
 const express = require('express');
@@ -258,6 +259,90 @@ router.post(
       return res.status(201).json(result.rows[0]);
     } catch (err) {
       console.error('my store add product error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── POST /api/my/store/products/bulk – add multiple products to my store ──────
+
+router.post(
+  '/store/products/bulk',
+  authenticate,
+  requireRole('seller', 'owner', 'admin'),
+  [
+    body('store_id').isUUID(),
+    body('product_ids').isArray({ min: 1 }),
+    body('product_ids.*').isUUID(),
+  ],
+  validate,
+  requireActiveSubscription,
+  async (req, res) => {
+    const { store_id, product_ids } = req.body;
+
+    try {
+      const storeResult = await db.query('SELECT owner_id FROM stores WHERE id = $1', [store_id]);
+      const store = storeResult.rows[0];
+      if (!store) return res.status(404).json({ error: 'Sklep nie znaleziony' });
+
+      const isAdmin = ['owner', 'admin'].includes(req.user.role);
+      if (!isAdmin && store.owner_id !== req.user.id) {
+        return res.status(403).json({ error: 'Brak uprawnień do tego sklepu' });
+      }
+
+      // Check product limit from subscription (set by requireActiveSubscription middleware)
+      const sub = req.subscription;
+      if (sub && sub.product_limit !== null && sub.product_limit !== undefined) {
+        const countResult = await db.query(
+          'SELECT COUNT(*) FROM shop_products WHERE store_id = $1',
+          [store_id]
+        );
+        const currentCount = parseInt(countResult.rows[0].count, 10);
+        if (currentCount + product_ids.length > sub.product_limit) {
+          return res.status(403).json({ error: 'product_limit_reached' });
+        }
+      }
+
+      const DEFAULT_MARGIN = 20;
+      const added = [];
+      const skipped = [];
+
+      // Fetch all requested products in one query to avoid N+1 lookups
+      const productsResult = await db.query(
+        'SELECT id, selling_price FROM products WHERE id = ANY($1)',
+        [product_ids]
+      );
+      const foundProducts = new Set(productsResult.rows.map((p) => p.id));
+
+      for (const product_id of product_ids) {
+        if (!foundProducts.has(product_id)) {
+          skipped.push({ product_id, reason: 'not_found' });
+          continue;
+        }
+
+        const id = uuidv4();
+        const result = await db.query(
+          `INSERT INTO shop_products
+             (id, store_id, product_id, margin_type, margin_override, active, sort_order, created_at)
+           VALUES ($1, $2, $3, 'percent', $4, true, 0, NOW())
+           ON CONFLICT (store_id, product_id) DO UPDATE SET
+             margin_type     = EXCLUDED.margin_type,
+             margin_override = EXCLUDED.margin_override,
+             updated_at      = NOW()
+           RETURNING *`,
+          [id, store_id, product_id, DEFAULT_MARGIN]
+        );
+        added.push(result.rows[0]);
+      }
+
+      return res.status(201).json({
+        added: added.length,
+        skipped: skipped.length,
+        results: added,
+        skipped_ids: skipped,
+      });
+    } catch (err) {
+      console.error('my store bulk add products error:', err.message);
       return res.status(500).json({ error: 'Błąd serwera' });
     }
   }
