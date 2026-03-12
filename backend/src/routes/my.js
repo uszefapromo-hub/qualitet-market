@@ -267,7 +267,8 @@ router.get(
                 sp.price_override, sp.margin_override, sp.created_at, sp.updated_at,
                 p.name, p.sku, p.description, p.category, p.image_url, p.stock,
                 p.selling_price AS base_price, p.margin AS base_margin,
-                COALESCE(sp.price_override, p.selling_price) AS price
+                p.supplier_price, p.platform_price, p.min_selling_price,
+                COALESCE(sp.price_override, p.platform_price, p.selling_price) AS price
          FROM shop_products sp
          JOIN products p ON sp.product_id = p.id
          WHERE sp.store_id = $1

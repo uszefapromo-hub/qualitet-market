@@ -376,6 +376,12 @@ function setupDbMock() {
       return { rows: mockDb.audit_logs };
     }
 
+    // ── platform_margin_config (pricing tiers) ──
+    if (s.includes('from platform_margin_config')) {
+      // Return empty rows so loadPlatformTiers falls back to DEFAULT_PLATFORM_TIERS
+      return { rows: [] };
+    }
+
     // Catch-all
     return { rows: [] };
   });
@@ -630,6 +636,31 @@ describe('POST /api/products', () => {
       .set('Authorization', `Bearer ${sellerToken}`)
       .send({ store_id: STORE_ID, name: 'Fotel', price_net: 100 });
     expect(res.status).toBe(201);
+  });
+
+  it('sets supplier_price, platform_price and min_selling_price on creation', async () => {
+    // price_net=100, tax_rate=23 → price_gross=123 → supplier_price=123
+    // DEFAULT_PLATFORM_TIERS: price in 100–300 tier → 25% margin → platform_price = 123 * 1.25 = 153.75
+    let capturedParams;
+    db.query
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID, margin: 15 }] }) // store lookup
+      .mockResolvedValueOnce({ rows: [] }) // loadPlatformTiers → DEFAULT_PLATFORM_TIERS
+      .mockImplementationOnce(async (_sql, params) => {
+        capturedParams = params;
+        return { rows: [{ id: 'prod-new', store_id: STORE_ID, name: 'Biurko',
+                          supplier_price: params[9], platform_price: params[10], min_selling_price: params[11] }] };
+      });
+
+    const res = await request(app)
+      .post('/api/products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, name: 'Biurko', price_net: 100, tax_rate: 23 });
+    expect(res.status).toBe(201);
+    // supplier_price = price_gross = 100 * 1.23 = 123
+    expect(parseFloat(res.body.supplier_price)).toBeCloseTo(123, 1);
+    // platform_price: 123 is in 100–300 tier → 25% → 123 * 1.25 = 153.75
+    expect(parseFloat(res.body.platform_price)).toBeCloseTo(153.75, 1);
+    expect(parseFloat(res.body.min_selling_price)).toBeCloseTo(153.75, 1);
   });
 });
 
@@ -3228,6 +3259,30 @@ describe('PUT /api/products/:id – platform_price', () => {
       .set('Authorization', `Bearer ${sellerToken}`)
       .send({ platform_price: 120 });
     expect(res.status).toBe(403);
+  });
+
+  it('recomputes supplier_price, platform_price and min_selling_price when price_net changes', async () => {
+    // price_net=200, tax_rate=23 → price_gross=246 → supplier_price=246
+    // DEFAULT_PLATFORM_TIERS: price in 100–300 tier → 25% → platform_price = 246 * 1.25 = 307.50
+    let capturedParams;
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, store_id: null, is_central: true, owner_id: null, price_net: '100.00', tax_rate: '23.00', price_gross: '123.00', selling_price: '141.45', margin: 15 }] }) // fetch
+      .mockResolvedValueOnce({ rows: [] }) // loadPlatformTiers → DEFAULT_PLATFORM_TIERS
+      .mockImplementationOnce(async (_sql, params) => {
+        capturedParams = params;
+        return { rows: [{ id: PRODUCT_ID, supplier_price: params[5], platform_price: params[6], min_selling_price: params[7] }] };
+      }); // update
+
+    const res = await request(app)
+      .put(`/api/products/${PRODUCT_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ price_net: 200 });
+    expect(res.status).toBe(200);
+    // price_gross = 200 * 1.23 = 246 → supplier_price = 246
+    expect(parseFloat(res.body.supplier_price)).toBeCloseTo(246, 1);
+    // platform_price: 246 in 100–300 tier → 25% → 246 * 1.25 = 307.50
+    expect(parseFloat(res.body.platform_price)).toBeCloseTo(307.5, 1);
+    expect(parseFloat(res.body.min_selling_price)).toBeCloseTo(307.5, 1);
   });
 });
 
