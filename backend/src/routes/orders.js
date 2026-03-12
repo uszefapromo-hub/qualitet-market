@@ -98,10 +98,12 @@ router.post(
         ? parseFloat(settingsResult.rows[0].value)
         : PLATFORM_COMMISSION_DEFAULT;
 
-      // Fetch products and verify stock
+      // Fetch products and verify stock.
+      // Central catalog products have store_id = NULL; match both store-specific and central.
       const productIds = items.map((i) => i.product_id);
       const productResult = await db.query(
-        `SELECT id, name, selling_price, stock, margin FROM products WHERE id = ANY($1::uuid[]) AND store_id = $2`,
+        `SELECT id, name, selling_price, stock, margin FROM products
+         WHERE id = ANY($1::uuid[]) AND (store_id = $2 OR store_id IS NULL)`,
         [productIds, store_id]
       );
       const productMap = Object.fromEntries(productResult.rows.map((p) => [p.id, p]));

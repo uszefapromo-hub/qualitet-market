@@ -3109,3 +3109,89 @@ describe('PUT /api/products/:id – platform_price', () => {
     expect(res.status).toBe(403);
   });
 });
+
+// ─── POST /api/cart – seller_margin pricing ───────────────────────────────────
+
+describe('POST /api/cart – seller_margin-based effective_price', () => {
+  it('uses sp.selling_price (seller_margin) when no price_override', async () => {
+    const CART_ID = 'c1000000-0000-4000-8000-000000000001';
+    const ITEM_ID = 'c1000000-0000-4000-8000-000000000002';
+
+    db.query
+      // resolve shop product – sp.selling_price = 160.00 (seller_margin applied), no price_override
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true, effective_price: 160.00, stock: 10, name: 'Fotel' }] })
+      // getOrCreateCart
+      .mockResolvedValueOnce({ rows: [{ id: CART_ID, user_id: SELLER_ID, store_id: STORE_ID, status: 'active' }] })
+      // no existing item
+      .mockResolvedValueOnce({ rows: [] })
+      // insert item
+      .mockResolvedValueOnce({ rows: [{ id: ITEM_ID }] })
+      // touch cart
+      .mockResolvedValueOnce({ rows: [] })
+      // cartWithItems – cart
+      .mockResolvedValueOnce({ rows: [{ id: CART_ID, user_id: SELLER_ID, store_id: STORE_ID, status: 'active' }] })
+      // cartWithItems – items
+      .mockResolvedValueOnce({ rows: [{ id: ITEM_ID, cart_id: CART_ID, product_id: PRODUCT_ID, quantity: 1, unit_price: 160.00, name: 'Fotel', image_url: null }] });
+
+    const res = await request(app)
+      .post('/api/cart')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ shop_product_id: SHOP_PROD_ID, quantity: 1 });
+    expect(res.status).toBe(201);
+    expect(res.body.items[0].unit_price).toBe(160.00);
+  });
+
+  it('uses platform_price as fallback when no price_override or sp.selling_price', async () => {
+    const CART_ID = 'c1000000-0000-4000-8000-000000000003';
+    const ITEM_ID = 'c1000000-0000-4000-8000-000000000004';
+
+    db.query
+      // resolve shop product – effective_price from platform_price fallback = 120.00
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true, effective_price: 120.00, stock: 5, name: 'Fotel' }] })
+      .mockResolvedValueOnce({ rows: [{ id: CART_ID, user_id: SELLER_ID, store_id: STORE_ID, status: 'active' }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ id: ITEM_ID }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ id: CART_ID, user_id: SELLER_ID, store_id: STORE_ID, status: 'active' }] })
+      .mockResolvedValueOnce({ rows: [{ id: ITEM_ID, cart_id: CART_ID, product_id: PRODUCT_ID, quantity: 1, unit_price: 120.00, name: 'Fotel', image_url: null }] });
+
+    const res = await request(app)
+      .post('/api/cart')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ shop_product_id: SHOP_PROD_ID, quantity: 1 });
+    expect(res.status).toBe(201);
+    expect(res.body.items[0].unit_price).toBe(120.00);
+  });
+});
+
+// ─── POST /api/orders – central catalog products ─────────────────────────────
+
+describe('POST /api/orders – central catalog products (store_id IS NULL)', () => {
+  it('creates an order for a central catalog product (store_id = NULL)', async () => {
+    const NEW_ORDER_ID = 'b1000000-0000-4000-8000-000000000001';
+    const CENTRAL_PRODUCT_ID = 'a0000000-0000-4000-8000-000000000099';
+
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID, owner_id: SELLER_ID, margin: 15 }] }) // store
+      .mockResolvedValueOnce({ rows: [{ value: '0.08' }] }) // platform_settings
+      // central product returned because (store_id = $2 OR store_id IS NULL) matches
+      .mockResolvedValueOnce({ rows: [{ id: CENTRAL_PRODUCT_ID, name: 'Centralny produkt', selling_price: 100.00, stock: 20, margin: 15 }] })
+      .mockResolvedValueOnce({ rows: [] }) // INSERT INTO orders
+      .mockResolvedValueOnce({ rows: [] }) // INSERT INTO order_items
+      .mockResolvedValueOnce({ rows: [] }) // UPDATE products stock
+      .mockResolvedValueOnce({ rows: [{ id: NEW_ORDER_ID, store_id: STORE_ID, order_total: 100.00, total: 100.00, platform_commission: 8.00, seller_revenue: 92.00, status: 'created' }] })
+      .mockResolvedValueOnce({ rows: [] }); // order_items
+
+    const res = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({
+        store_id: STORE_ID,
+        items: [{ product_id: CENTRAL_PRODUCT_ID, quantity: 1 }],
+        shipping_address: 'ul. Testowa 1, Warszawa',
+      });
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty('platform_commission', 8.00);
+    expect(res.body).toHaveProperty('seller_revenue', 92.00);
+  });
+});

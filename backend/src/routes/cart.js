@@ -87,10 +87,12 @@ router.post(
     const { shop_product_id, quantity } = req.body;
 
     try {
-      // Resolve shop product to get store, product, and effective price
+      // Resolve shop product to get store, product, and effective price.
+      // Price precedence: seller's price_override → seller_margin-based selling_price
+      //   → platform_price (minimum floor) → legacy selling_price
       const spResult = await db.query(
         `SELECT sp.id, sp.store_id, sp.product_id, sp.active,
-                COALESCE(sp.price_override, p.selling_price) AS effective_price,
+                COALESCE(sp.price_override, sp.selling_price, p.platform_price, p.selling_price) AS effective_price,
                 p.stock, p.name
          FROM shop_products sp
          JOIN products p ON sp.product_id = p.id
