@@ -221,10 +221,11 @@
     </a>
   </nav>
 
+  <script src="js/api.js" defer></script>
+  <script src="js/pwa-connect.js" defer></script>
+  <script src="js/flow.js" defer></script>
   <script src="js/app.js" defer></script>
   <script src="js/cart.js" defer></script>
-  <script src="js/api.js" defer></script>
-  <script src="js/flow.js" defer></script>
   <script>
     document.addEventListener('DOMContentLoaded', function(){
       var cart = window.QMCart;
@@ -239,6 +240,7 @@
       var summaryCount = document.querySelector('[data-summary-count]');
       var summaryTotal = document.querySelector('[data-summary-total]');
       var form = document.querySelector('[data-checkout-form]');
+      var submitBtn = document.querySelector('[data-checkout-btn]');
 
       function render(){
         var items = cart.getCart();
@@ -314,8 +316,55 @@
         });
       }
 
-      /* Re-render when flow.js syncs the API cart into localStorage */
-      document.addEventListener('qm:cart-synced', render);
+      if(form){
+        form.addEventListener('submit', function(e){
+          e.preventDefault();
+          var items = cart.getCart();
+          if(!items.length) return;
+          if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Składam zamówienie...'; }
+          var fd = new FormData(form);
+          var formData = {
+            name: fd.get('name') || '',
+            email: fd.get('email') || '',
+            phone: fd.get('phone') || '',
+            address: fd.get('address') || ''
+          };
+
+          function showSuccess(orderNum){
+            cart.clearCart();
+            var numEl = document.querySelector('[data-order-number]');
+            if(numEl){ numEl.textContent = 'Numer zamówienia: ' + (orderNum || '—'); }
+            if(contentEl) contentEl.hidden = true;
+            if(successEl) successEl.hidden = false;
+            window.scrollTo({top: 0, behavior: 'smooth'});
+            if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Złóż zamówienie'; }
+          }
+
+          function localOrder(){
+            var order = cart.saveOrder(formData, items);
+            try{ sessionStorage.setItem('qm_last_order', order.number); }catch(_){}
+            showSuccess(order.number);
+          }
+
+          // Flow 6: try API order creation first
+          if(typeof window.QM_API_CREATE_ORDER === 'function'){
+            window.QM_API_CREATE_ORDER(formData, items)
+              .then(function(apiOrder){
+                var num = apiOrder && (apiOrder.order_number || apiOrder.id || '');
+                try{ if(num) sessionStorage.setItem('qm_last_order', num); }catch(_){}
+                showSuccess(num);
+              })
+              .catch(function(){
+                // API unavailable or user not logged in – fall back
+                localOrder();
+              });
+          } else {
+            setTimeout(function(){
+              localOrder();
+            }, 400);
+          }
+        });
+      }
 
       render();
     });

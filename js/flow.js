@@ -1,574 +1,971 @@
 /**
- * flow.js – API integration layer for HurtDetalUszefaQUALITET PWA
+ * flow.js – Frontend ↔ Backend API flow coordinator
  *
- * Connects the following pages to the backend REST API (js/api.js / window.QMApi):
- *   • login.html  – POST /api/auth/login  (with legacy-flag sync + demo fallback)
- *   • sklep.html  – GET  /api/products    (replaces localStorage demo products)
- *   • koszyk.html – POST /api/orders      (replaces localStorage order when authenticated)
+ * Bridges the PWA frontend with the backend REST API (window.QMApi).
+ * Implements all 7 key user flows:
+ *   1. Login / Register      → QMApi.Auth.login() / QMApi.Auth.register()
+ *   2. Store data            → QMApi.MyStore.get()
+ *   3. Product catalogue     → QMApi.Products.list()
+ *   4. Add to cart           → QMApi.Cart.addByShopProduct()
+ *   5. Fetch cart            → QMApi.Cart.get()
+ *   6. Create order          → QMApi.Orders.create()
+ *   7. Order history         → QMApi.Orders.list()
  *
- * Loading order matters: this script must be listed AFTER js/app.js so its
- * DOMContentLoaded callback runs after app.js has set up its listeners.
- * Event-capture is used on forms so our handler fires before app.js bubble handlers.
+ * Loaded BEFORE app.js so that capture-phase event listeners on forms
+ * intercept submissions before app.js's bubble-phase handlers.
+ *
+ * Graceful degradation: every API call falls back to the existing
+ * localStorage-based behaviour when the backend is unreachable or the
+ * user is not authenticated.
  */
+
 (function () {
   'use strict';
 
-  /* ── Utility ────────────────────────────────────────────────────────────── */
+  // ─── Constants ────────────────────────────────────────────────────────────────
+
+  var LS_EMAIL  = 'app_user_email';
+  var LS_LOGGED = 'app_user_logged';
+  var LS_ROLE   = 'app_user_role';
+
+  var CURRENCY_FMT = new Intl.NumberFormat('pl-PL', {
+    style: 'currency', currency: 'PLN', maximumFractionDigits: 0
+  });
+
+  // ─── Utility helpers ─────────────────────────────────────────────────────────
 
   function api() { return window.QMApi || null; }
-  function page() { return (document.body && document.body.dataset.page) || ''; }
 
-  function escHtml(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+  function isLoggedInApi() {
+    var a = api();
+    return a ? a.Auth.isLoggedIn() : false;
   }
 
-  var CURRENCY = new Intl.NumberFormat('pl-PL', {
-    style: 'currency', currency: 'PLN', maximumFractionDigits: 0,
-  });
-  function fmt(v) { return CURRENCY.format(Number(v) || 0); }
+  function formatPrice(v) {
+    return CURRENCY_FMT.format(Number(v) || 0);
+  }
 
-  /* ── 1. Login (login.html) ──────────────────────────────────────────────── */
+  function escHtml(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g,  '&lt;')
+      .replace(/>/g,  '&gt;')
+      .replace(/"/g,  '&quot;');
+  }
 
-  function initApiLogin() {
-    if (page() !== 'login') return;
+  function lsSet(key, value) {
+    try { localStorage.setItem(key, value); } catch (_) {}
+  }
+
+  function lsGet(key) {
+    try { return localStorage.getItem(key); } catch (_) { return null; }
+  }
+
+  function lsRemove(key) {
+    try { localStorage.removeItem(key); } catch (_) {}
+  }
+
+  // ─── 1. Login / Register ──────────────────────────────────────────────────────
+
+  function setLegacyLoggedIn(email, role) {
+    lsSet(LS_EMAIL, email);
+    lsSet(LS_LOGGED, 'true');
+    if (role) {
+      lsSet(LS_ROLE, role);
+    } else {
+      lsRemove(LS_ROLE);
+    }
+  }
+
+  function initLoginFlow() {
     var a = api();
     if (!a) return;
 
     var form = document.querySelector('[data-login-form]');
     if (!form) return;
 
-    /* Error element – inserted before the .cta-row if not present */
-    var errorEl = form.querySelector('[data-login-error]');
-    if (!errorEl) {
-      errorEl = document.createElement('p');
-      errorEl.setAttribute('data-login-error', '');
-      errorEl.style.cssText = 'color:#ff7272;font-size:13px;margin-top:8px;display:none';
-      var ctaRow = form.querySelector('.cta-row');
-      if (ctaRow) { form.insertBefore(errorEl, ctaRow); }
-      else { form.appendChild(errorEl); }
-    }
-
-    /**
-     * Use capture so this handler fires BEFORE the app.js bubble listener.
-     * stopImmediatePropagation prevents the legacy localStorage handler from running
-     * on success; on demo-fallback we also redirect, so it never runs.
-     */
+    // Use the capture phase so this handler fires BEFORE app.js registers
+    // its bubble-phase handler on the same form element.
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       e.stopImmediatePropagation();
 
       var emailInput    = form.querySelector('input[name="email"]');
       var passwordInput = form.querySelector('input[name="password"]');
+      var submitBtn     = form.querySelector('[type="submit"]');
+
       var email    = emailInput    ? emailInput.value.trim() : '';
       var password = passwordInput ? passwordInput.value     : '';
 
-      var btn      = form.querySelector('[type="submit"]');
-      var origText = btn ? btn.textContent : 'Zaloguj';
-      if (btn) { btn.disabled = true; btn.textContent = 'Logowanie\u2026'; }
-      errorEl.style.display = 'none';
+      if (!email) return;
 
-      a.Auth.login(email, password)
-        .then(function () {
-          /* Sync legacy localStorage keys so app.js pages continue to work */
-          try {
-            localStorage.setItem('app_user_email',  email);
-            localStorage.setItem('app_user_logged', 'true');
-          } catch (_) { /* noop – storage might be unavailable */ }
+      var origText = submitBtn ? submitBtn.textContent : 'Zaloguj';
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Logowanie…'; }
+
+      function done() {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
+      }
+
+      function fallbackLogin() {
+        setLegacyLoggedIn(email, null);
+        window.location.href = 'dashboard.html';
+      }
+
+      if (password) {
+        a.Auth.login(email, password)
+          .then(function (data) {
+            var role = data && data.user && data.user.role;
+            setLegacyLoggedIn(email, role);
+            window.location.href = 'dashboard.html';
+          })
+          .catch(function (err) {
+            done();
+            // Only fall back to localStorage when the API is completely unreachable.
+            // A status code means the API responded (e.g. 401 wrong credentials) —
+            // in that case do NOT grant access via localStorage.
+            if (err && err.status) {
+              return; // pwa-connect.js will show an inline error; do nothing here
+            }
+            // Network/API unreachable – graceful degradation to localStorage
+            fallbackLogin();
+          });
+      } else {
+        // No password field filled — use localStorage-only (demo) login
+        fallbackLogin();
+      }
+    }, true); // capture = true
+
+    // Wire the "Utwórz konto" (register) button
+    var registerBtn = form.querySelector('[data-register-btn]');
+    if (!registerBtn) return;
+
+    registerBtn.addEventListener('click', function () {
+      var emailInput    = form.querySelector('input[name="email"]');
+      var passwordInput = form.querySelector('input[name="password"]');
+
+      var email    = emailInput    ? emailInput.value.trim() : '';
+      var password = passwordInput ? passwordInput.value     : '';
+
+      if (!email || !password) {
+        alert('Podaj adres e-mail i hasło, aby utworzyć konto.');
+        return;
+      }
+
+      var name = email.split('@')[0];
+
+      var origText = registerBtn.textContent;
+      registerBtn.disabled = true;
+      registerBtn.textContent = 'Rejestracja…';
+
+      a.Auth.register(email, password, name)
+        .then(function (data) {
+          var role = data && data.user && data.user.role;
+          setLegacyLoggedIn(email, role);
           window.location.href = 'dashboard.html';
         })
         .catch(function (err) {
-          if (btn) { btn.disabled = false; btn.textContent = origText; }
-
-          if (!err.status) {
-            /* Network / CORS error → demo-mode fallback so offline dev still works */
-            try {
-              localStorage.setItem('app_user_email',  email);
-              localStorage.setItem('app_user_logged', 'true');
-            } catch (_) { /* noop */ }
-            window.location.href = 'dashboard.html';
-            return;
-          }
-
-          var msg =
-            err.status === 401 ? 'Nieprawidłowy e-mail lub has\u0142o.' :
-            err.status === 422 ? 'Podaj poprawny e-mail i has\u0142o.' :
-            (err.message || 'B\u0142\u0105d logowania. Spr\u00f3buj ponownie.');
-          errorEl.textContent = msg;
-          errorEl.style.display = '';
+          registerBtn.disabled = false;
+          registerBtn.textContent = origText;
+          var msg = (err && err.body && err.body.error) || 'Nie udało się utworzyć konta. Spróbuj ponownie.';
+          alert('Rejestracja: ' + msg);
         });
-    }, true /* capture */);
-
-    /* Register button → show a simple registration form overlay */
-    var registerBtn = form.querySelector('[type="button"]');
-    if (registerBtn) {
-      registerBtn.addEventListener('click', function () {
-        showRegisterPanel(form, a, errorEl);
-      });
-    }
+    });
   }
 
-  function showRegisterPanel(loginForm, a, errorEl) {
-    var panel = document.querySelector('[data-register-panel]');
-    if (panel) {
-      panel.hidden = false;
-      loginForm.hidden = true;
+  // ─── 2. Store data ────────────────────────────────────────────────────────────
+
+  function initDashboardFlow() {
+    var a = api();
+    if (!a || !isLoggedInApi()) return;
+
+    // Flow 2: populate dashboard store fields from API
+    a.MyStore.get()
+      .then(function (store) {
+        if (!store) return;
+
+        var fields = {
+          '[data-store-name]':   store.name   || null,
+          '[data-store-status]': store.status || null,
+          '[data-store-style]':  store.plan   || null,
+          '[data-user-plan]':    store.plan   ? store.plan.toUpperCase() : null,
+          '[data-plan-name]':    store.plan   ? store.plan.toUpperCase() : null,
+        };
+
+        Object.keys(fields).forEach(function (sel) {
+          if (fields[sel] == null) return;
+          var el = document.querySelector(sel);
+          if (el) el.textContent = fields[sel];
+        });
+      })
+      .catch(function () { /* store not found – use existing localStorage display */ });
+
+    // Flow 7: load order history and render in the dashboard orders panel
+    a.Orders.list({ limit: 10 })
+      .then(function (data) {
+        var orders = Array.isArray(data) ? data
+          : (data && Array.isArray(data.orders)) ? data.orders : [];
+
+        window.QM_API_ORDERS = orders;
+        renderDashboardOrders(orders);
+      })
+      .catch(function () {});
+  }
+
+  function renderDashboardOrders(orders) {
+    var panel = document.querySelector('[data-api-orders]');
+    if (!panel) return;
+
+    var loadingEl = panel.querySelector('[data-orders-loading]');
+    if (loadingEl) loadingEl.hidden = true;
+
+    var listEl = panel.querySelector('[data-orders-list]');
+    var emptyEl = panel.querySelector('[data-orders-empty]');
+
+    if (!orders.length) {
+      if (emptyEl) emptyEl.hidden = false;
       return;
     }
 
-    /* Build a minimal inline registration form */
-    panel = document.createElement('div');
-    panel.setAttribute('data-register-panel', '');
-    panel.innerHTML =
-      '<h2 style="margin:0 0 16px;font-size:20px">Utwórz konto</h2>' +
-      '<div class="checkout-field" style="margin-bottom:10px">' +
-        '<label for="reg-name">Imię i nazwisko</label>' +
-        '<input id="reg-name" name="name" type="text" placeholder="Jan Kowalski" autocomplete="name" required>' +
-      '</div>' +
-      '<div class="checkout-field" style="margin-bottom:10px">' +
-        '<label for="reg-email">E-mail</label>' +
-        '<input id="reg-email" name="email" type="email" placeholder="email@domena.pl" autocomplete="email" required>' +
-      '</div>' +
-      '<div class="checkout-field" style="margin-bottom:10px">' +
-        '<label for="reg-pass">Hasło (min. 8 znaków)</label>' +
-        '<input id="reg-pass" name="password" type="password" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022" autocomplete="new-password" required>' +
-      '</div>' +
-      '<p data-reg-error style="color:#ff7272;font-size:13px;margin-bottom:8px;display:none"></p>' +
-      '<div class="cta-row">' +
-        '<button class="btn btn-primary" type="button" data-reg-submit>Zarejestruj się</button>' +
-        '<button class="btn btn-secondary" type="button" data-reg-back>Wróć do logowania</button>' +
-      '</div>';
+    if (!listEl) return;
 
-    loginForm.parentNode.insertBefore(panel, loginForm.nextSibling);
-    loginForm.hidden = true;
+    listEl.innerHTML = '';
 
-    var regError  = panel.querySelector('[data-reg-error]');
-    var submitBtn = panel.querySelector('[data-reg-submit]');
-    var backBtn   = panel.querySelector('[data-reg-back]');
-
-    backBtn.addEventListener('click', function () {
-      panel.hidden = true;
-      loginForm.hidden = false;
+    orders.forEach(function (o) {
+      var row = document.createElement('div');
+      row.className = 'order-row';
+      var date = o.created_at ? new Date(o.created_at).toLocaleDateString('pl-PL') : '—';
+      var total = o.total_amount != null ? formatPrice(o.total_amount) : '—';
+      var status = escHtml(o.status || '—');
+      row.innerHTML =
+        '<span class="order-num">' + escHtml(o.order_number || (o.id || '').slice(0, 8) || '—') + '</span>' +
+        '<span class="order-date">' + escHtml(date) + '</span>' +
+        '<span class="order-total">' + escHtml(total) + '</span>' +
+        '<span class="order-status badge-pill">' + status + '</span>';
+      listEl.appendChild(row);
     });
 
-    submitBtn.addEventListener('click', function () {
-      var name     = panel.querySelector('#reg-name').value.trim();
-      var email    = panel.querySelector('#reg-email').value.trim();
-      var password = panel.querySelector('#reg-pass').value;
-
-      if (!name || !email || password.length < 8) {
-        regError.textContent = 'Uzupełnij wszystkie pola (hasło min. 8 znaków).';
-        regError.style.display = '';
-        return;
-      }
-      regError.style.display = 'none';
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Tworzę konto\u2026';
-
-      a.Auth.register(email, password, name, 'seller')
-        .then(function () {
-          try {
-            localStorage.setItem('app_user_email',  email);
-            localStorage.setItem('app_user_logged', 'true');
-          } catch (_) { /* noop */ }
-          window.location.href = 'dashboard.html';
-        })
-        .catch(function (err) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Zarejestruj się';
-          if (!err.status) {
-            /* network error – allow demo mode */
-            try {
-              localStorage.setItem('app_user_email',  email);
-              localStorage.setItem('app_user_logged', 'true');
-            } catch (_) { /* noop */ }
-            window.location.href = 'dashboard.html';
-            return;
-          }
-          regError.textContent = err.message || 'Błąd rejestracji.';
-          regError.style.display = '';
-        });
-    });
+    if (emptyEl) emptyEl.hidden = true;
   }
 
-  /* ── 2. Products (sklep.html) ───────────────────────────────────────────── */
+  // ─── 3. Product catalogue ─────────────────────────────────────────────────────
 
-  function initApiProducts() {
-    if (page() !== 'sklep') return;
+  function initProductsFlow() {
     var a = api();
     if (!a) return;
 
     var grid = document.querySelector('[data-store-products-grid]');
     if (!grid) return;
 
-    /*
-     * GET /api/products is a public endpoint – no auth required.
-     * We request active products; the response is { total, page, limit, products }.
-     */
-    a.Products.list({ status: 'active', limit: 30 })
+    a.Products.list({ status: 'active', limit: 24 })
       .then(function (data) {
         var products = Array.isArray(data) ? data
-          : (data && Array.isArray(data.products) ? data.products : []);
+          : (data && Array.isArray(data.products)) ? data.products : [];
 
-        if (!products.length) return; /* keep demo products from app.js */
+        if (!products.length) return;
 
-        /* Replace demo grid with API products */
-        renderApiProducts(products, grid);
+        // Replace the demo/localStorage product grid with API products
+        grid.innerHTML = '';
 
         var emptyState = document.querySelector('[data-store-products-empty]');
         if (emptyState) emptyState.hidden = true;
 
-        /* Update store description/name if a store context is attached */
-        var storeDesc = document.querySelector('[data-store-description]');
-        if (storeDesc && !storeDesc.textContent.trim()) {
-          storeDesc.textContent = 'Produkty z platformy QualitetMarket';
-        }
+        products.forEach(function (product) {
+          var card = document.createElement('article');
+          card.className = 'product-card product-tile';
+
+          // Build media element first so we can attach error listener via JS
+          var mediaDiv = document.createElement('div');
+          mediaDiv.className = 'product-media';
+          if (product.image_url) {
+            var img = document.createElement('img');
+            img.src = product.image_url;
+            img.alt = product.name || '';
+            img.addEventListener('error', function () { this.style.display = 'none'; });
+            mediaDiv.appendChild(img);
+          } else {
+            var icon = document.createElement('span');
+            icon.setAttribute('aria-hidden', 'true');
+            icon.textContent = '📦';
+            mediaDiv.appendChild(icon);
+          }
+
+          card.innerHTML =
+            '<div class="product-details">' +
+              '<span class="tag">' + escHtml(product.category || 'Produkt') + '</span>' +
+              '<h3>' + escHtml(product.name || '') + '</h3>' +
+              '<p class="hint">' + escHtml(product.description || '') + '</p>' +
+              '<div class="product-meta">' +
+                '<span class="price">' + formatPrice(product.price_gross) + '</span>' +
+              '</div>' +
+            '</div>' +
+            '<div class="cta-row product-actions">' +
+              '<button class="btn btn-primary" type="button"' +
+                ' data-add-to-cart' +
+                ' data-product-id="' + escHtml(product.id || '') + '"' +
+                ' data-product-name="' + escHtml(product.name || '') + '"' +
+                ' data-product-price="' + escHtml(String(product.price_gross || 0)) + '">' +
+                'Do koszyka' +
+              '</button>' +
+              '<a class="btn btn-secondary" href="listing.html">Szczegóły</a>' +
+            '</div>';
+
+          card.insertBefore(mediaDiv, card.firstChild);
+
+          grid.appendChild(card);
+        });
       })
-      .catch(function () {
-        /* API unavailable – demo data from app.js stays, no action needed */
-      });
+      .catch(function () { /* keep existing demo products */ });
   }
 
-  function renderApiProducts(products, grid) {
-    grid.innerHTML = '';
+  // ─── 4 + 5. Cart ──────────────────────────────────────────────────────────────
 
-    products.forEach(function (product) {
-      var sellingPrice = product.price_override != null
-        ? parseFloat(product.price_override)
-        : parseFloat(product.selling_price || product.price_gross || 0);
-
-      var card = document.createElement('article');
-      card.className = 'product-card product-tile';
-
-      /* Media */
-      var media = document.createElement('div');
-      media.className = 'product-media';
-      var imgEl = document.createElement('img');
-      imgEl.src     = product.image_url || 'assets/images/demo/category-electronics.svg';
-      imgEl.alt     = escHtml(product.name || 'Produkt');
-      imgEl.loading = 'lazy';
-      media.appendChild(imgEl);
-
-      /* Details */
-      var details = document.createElement('div');
-      details.className = 'product-details';
-
-      var catTag = document.createElement('span');
-      catTag.className   = 'tag';
-      catTag.textContent = product.category_name || product.category || 'Kategoria';
-
-      var title = document.createElement('h3');
-      title.textContent = product.name || 'Produkt';
-
-      var hint = document.createElement('p');
-      hint.className   = 'hint';
-      hint.textContent = product.description || '';
-
-      var meta = document.createElement('div');
-      meta.className = 'product-meta';
-      var priceEl = document.createElement('span');
-      priceEl.className   = 'price';
-      priceEl.textContent = fmt(sellingPrice);
-      meta.appendChild(priceEl);
-
-      /* Actions */
-      var actions = document.createElement('div');
-      actions.className = 'cta-row product-actions';
-
-      var addBtn = document.createElement('button');
-      addBtn.className = 'btn btn-primary';
-      addBtn.type      = 'button';
-      addBtn.textContent = 'Do koszyka';
-
-      /* Store product data on the button for QMCart data-add-to-cart handler */
-      addBtn.dataset.addToCart    = '';
-      addBtn.dataset.productId    = String(product.id || '');
-      addBtn.dataset.productName  = String(product.name || '');
-      addBtn.dataset.productPrice = String(sellingPrice);
-      addBtn.dataset.productImg   = String(product.image_url || '');
-
-      addBtn.addEventListener('click', function () {
-        addToCartWithApiFirst(product, sellingPrice, addBtn);
-      });
-
-      var detailsLink = document.createElement('a');
-      detailsLink.className   = 'btn btn-secondary';
-      detailsLink.href        = 'listing.html';
-      detailsLink.textContent = 'Szczegóły';
-
-      actions.appendChild(addBtn);
-      actions.appendChild(detailsLink);
-
-      details.appendChild(catTag);
-      details.appendChild(title);
-      details.appendChild(hint);
-      details.appendChild(meta);
-      details.appendChild(actions);
-
-      card.appendChild(media);
-      card.appendChild(details);
-      grid.appendChild(card);
-    });
+  function resolveApiStoreId() {
+    // Try user object first
+    var a = api();
+    if (a) {
+      var user = a.Auth.currentUser();
+      if (user && user.store_id) return user.store_id;
+    }
+    // Fall back to StoreManager (localStorage-backed)
+    var sm = window.StoreManager;
+    if (sm) {
+      var active = sm.getActiveStore();
+      if (active && active.id) return active.id;
+    }
+    return null;
   }
+
+  function initCartFlow() {
+    var a = api();
+    if (!a || !isLoggedInApi()) return;
+
+    var storeId = resolveApiStoreId();
+    if (!storeId) return;
+
+    // Flow 5: fetch cart from API; keep result for later use
+    a.Cart.get(storeId)
+      .then(function (cartData) {
+        window.QM_API_CART = cartData || null;
+      })
+      .catch(function () {});
+  }
+
+  // ─── 6. Create order (exposed globally for koszyk.html inline script) ─────────
 
   /**
-   * Add a product to the cart.
-   * Primary:  POST /api/cart { shop_product_id } when product.shop_product_id is present
-   *           and the user is authenticated.
-   * Fallback: localStorage QMCart (always available for guests).
+   * Attempt to create an order via the backend API.
+   * Returns a Promise that resolves to the created order object.
+   * Falls back gracefully if the user is not logged in or the call fails.
+   *
+   * @param {{ name, email, phone, address }} formData
+   * @param {Array<{ id, name, price, qty }>}  cartItems
+   * @returns {Promise<object>}
    */
-  function addToCartWithApiFirst(product, price, btn) {
+  window.QM_API_CREATE_ORDER = function (formData, cartItems) {
     var a = api();
-    var origText = btn ? btn.textContent : 'Do koszyka';
-
-    var doLocalCart = function () {
-      if (window.QMCart) {
-        window.QMCart.addToCart({
-          id:    String(product.id   || ''),
-          name:  String(product.name || 'Produkt'),
-          price: price,
-          img:   String(product.image_url || ''),
-        });
-      }
-      if (btn) {
-        btn.textContent = '\u2713 Dodano';
-        btn.disabled    = true;
-        setTimeout(function () {
-          btn.textContent = origText;
-          btn.disabled    = false;
-        }, 1500);
-      }
-    };
-
-    if (a && a.Auth.isLoggedIn() && product.shop_product_id != null) {
-      if (btn) { btn.disabled = true; btn.textContent = 'Dodawanie…'; }
-      a.Cart.addByShopProduct(String(product.shop_product_id), 1)
-        .then(function () {
-          if (btn) {
-            btn.textContent = '\u2713 Dodano';
-            setTimeout(function () {
-              btn.textContent = origText;
-              btn.disabled    = false;
-            }, 1500);
-          }
-        })
-        .catch(function () {
-          /* API cart failed – still save to localStorage */
-          doLocalCart();
-        });
-    } else {
-      doLocalCart();
+    if (!a || !isLoggedInApi()) {
+      return Promise.reject(new Error('not_logged_in'));
     }
+
+    // store_id: try to find the seller store the buyer is shopping at.
+    // For MVP, use the authenticated user's own store.
+    return a.MyStore.get()
+      .then(function (store) {
+        var storeId = store && store.id;
+
+        // Fallback: list all stores and use the first one
+        if (!storeId) {
+          return a.Stores.list().then(function (stores) {
+            var list = Array.isArray(stores) ? stores
+              : (stores && Array.isArray(stores.stores)) ? stores.stores : [];
+            storeId = list.length ? list[0].id : null;
+            if (!storeId) return Promise.reject(new Error('no_store'));
+            return storeId;
+          });
+        }
+        return storeId;
+      })
+      .then(function (storeId) {
+        var notes = [formData.name, formData.email, formData.phone]
+          .filter(Boolean).join(', ');
+
+        return a.Orders.create({
+          store_id: storeId,
+          items: cartItems.map(function (i) {
+            return { product_id: i.id, quantity: Number(i.qty) || 1 };
+          }),
+          shipping_address: formData.address || '',
+          notes: notes,
+        });
+      });
+  };
+
+  // ─── 7. Order history (exposed globally) ─────────────────────────────────────
+
+  /**
+   * Returns a Promise<Array> of the authenticated user's orders from the API.
+   * Resolves to an empty array when the user is not logged in.
+   */
+  window.QM_API_ORDERS_LIST = function (params) {
+    var a = api();
+    if (!a || !isLoggedInApi()) return Promise.resolve([]);
+    return a.Orders.list(params || {})
+      .then(function (data) {
+        return Array.isArray(data) ? data
+          : (data && Array.isArray(data.orders)) ? data.orders : [];
+      })
+      .catch(function () { return []; });
+  };
+
+  // ─── 8. Seller Panel (panel-sklepu) ──────────────────────────────────────────
+
+  function initPanelSklepuFlow() {
+    var a = api();
+    if (!a || !isLoggedInApi()) return;
+
+    // Load store info first, then populate the panel
+    a.MyStore.get()
+      .then(function (store) {
+        if (!store) return;
+        window._panelStore = store;
+
+        // Update header store name
+        var nameEls = document.querySelectorAll('[data-store-name]');
+        nameEls.forEach(function (el) { el.textContent = store.name || 'Sklep'; });
+
+        // Update plan badge
+        var planEl = document.querySelector('[data-store-plan]');
+        if (planEl) planEl.textContent = (store.plan || 'basic').toUpperCase();
+
+        // Populate settings form
+        var nameInput = document.querySelector('[data-settings-name]');
+        if (nameInput) nameInput.value = store.name || '';
+        var descInput = document.querySelector('[data-settings-desc]');
+        if (descInput) descInput.value = store.description || '';
+        var logoInput = document.querySelector('[data-settings-logo]');
+        if (logoInput) logoInput.value = store.logo_url || '';
+        var bannerInput = document.querySelector('[data-settings-banner]');
+        if (bannerInput) bannerInput.value = store.banner_url || '';
+
+        // Load stats
+        return a.MyStore.stats()
+          .then(function (stats) {
+            var orderCountEl = document.querySelector('[data-stat-orders]');
+            if (orderCountEl) orderCountEl.textContent = stats.order_count || 0;
+
+            var revenueEl = document.querySelector('[data-stat-revenue]');
+            if (revenueEl) revenueEl.textContent = formatPrice(stats.revenue || 0);
+
+            var prodCountEl = document.querySelector('[data-stat-products]');
+            if (prodCountEl) prodCountEl.textContent = stats.product_count || 0;
+
+            var custCountEl = document.querySelector('[data-stat-customers]');
+            if (custCountEl) custCountEl.textContent = stats.customer_count || 0;
+
+            // Earnings
+            var earningsRevenueEl = document.querySelector('[data-earnings-revenue]');
+            if (earningsRevenueEl) earningsRevenueEl.textContent = formatPrice(stats.revenue || 0);
+            var earningsCommEl = document.querySelector('[data-earnings-commission]');
+            if (earningsCommEl) earningsCommEl.textContent = formatPrice(stats.platform_commission || 0);
+            var earningsSellerEl = document.querySelector('[data-earnings-seller]');
+            if (earningsSellerEl) earningsSellerEl.textContent = formatPrice(stats.seller_earnings || 0);
+          })
+          .catch(function () {});
+      })
+      .catch(function () {
+        var emptyEl = document.querySelector('[data-store-empty]');
+        var contentEl = document.querySelector('[data-store-content]');
+        if (emptyEl) emptyEl.hidden = false;
+        if (contentEl) contentEl.hidden = true;
+      });
+
+    // Load store products — depends on store id; resolved from cached _panelStore or a fresh call
+    Promise.resolve(window._panelStore || a.MyStore.get())
+      .then(function (store) {
+        if (!store) return;
+        window._panelStore = store;
+        return a.MyStore.products(store.id, { limit: 50 });
+      })
+      .then(function (data) {
+        if (!data) return;
+        var products = data.products || [];
+        renderSellerProducts(products);
+      })
+      .catch(function () {});
+
+    // Load store orders
+    a.MyStore.storeOrders({ limit: 20 })
+      .then(function (data) {
+        var orders = (data && data.orders) ? data.orders : [];
+        renderSellerOrders(orders);
+      })
+      .catch(function () {});
+
+    // Wire "Dodaj produkt" button (in Products tab)
+    var addBtn = document.querySelector('[data-add-store-product]');
+    if (addBtn) {
+      addBtn.addEventListener('click', function () {
+        Promise.resolve(window._panelStore || a.MyStore.get())
+          .then(function (store) {
+            if (!store || !store.id) {
+              alert('Nie znaleziono aktywnego sklepu. Zaloguj się lub utwórz sklep.');
+              return;
+            }
+            openAddProductDialog(a, store.id);
+          })
+          .catch(function () {
+            alert('Nie udało się załadować danych sklepu. Sprawdź połączenie.');
+          });
+      });
+    }
+
+    // Settings form submission
+    var settingsForm = document.querySelector('[data-settings-form]');
+    if (settingsForm) {
+      settingsForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var nameInput   = settingsForm.querySelector('[data-settings-name]');
+        var descInput   = settingsForm.querySelector('[data-settings-desc]');
+        var logoInput   = settingsForm.querySelector('[data-settings-logo]');
+        var bannerInput = settingsForm.querySelector('[data-settings-banner]');
+        var saveBtn     = settingsForm.querySelector('[data-settings-save]');
+
+        var payload = {};
+        if (nameInput   && nameInput.value.trim())   payload.name        = nameInput.value.trim();
+        if (descInput   && descInput.value.trim())   payload.description = descInput.value.trim();
+        if (logoInput   && logoInput.value.trim())   payload.logo_url    = logoInput.value.trim();
+        if (bannerInput && bannerInput.value.trim()) payload.banner_url  = bannerInput.value.trim();
+
+        if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Zapisywanie…'; }
+
+        a.MyStore.update(payload)
+          .then(function () {
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Zapisz zmiany'; }
+            var msg = document.querySelector('[data-settings-msg]');
+            if (msg) { msg.textContent = 'Zapisano pomyślnie.'; msg.hidden = false; }
+          })
+          .catch(function () {
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Zapisz zmiany'; }
+            var msg = document.querySelector('[data-settings-msg]');
+            if (msg) { msg.textContent = 'Błąd zapisu. Sprawdź dane.'; msg.hidden = false; }
+          });
+      });
+    }
+
+    // Wire catalog (add product from central catalog)
+    initCatalogFlow();
   }
 
-  /* ── 3. Checkout (koszyk.html) ──────────────────────────────────────────── */
+  function renderSellerProducts(products) {
+    var tbody = document.querySelector('[data-products-tbody]');
+    if (!tbody) return;
+    var emptyEl = document.querySelector('[data-products-empty]');
+    var loadingEl = document.querySelector('[data-products-loading]');
+    if (loadingEl) loadingEl.hidden = true;
 
-  function initApiCheckout() {
-    if (page() !== 'koszyk') return;
-    var a = api();
-    if (!a) return;
-
-    /* If authenticated, try to sync API cart into localStorage so the inline
-       script renders up-to-date items. */
-    if (a.Auth.isLoggedIn()) {
-      syncApiCartToLocal(a);
+    if (!products.length) {
+      if (emptyEl) emptyEl.hidden = false;
+      return;
     }
+    if (emptyEl) emptyEl.hidden = true;
 
-    var form = document.querySelector('[data-checkout-form]');
-    if (!form) return;
+    tbody.innerHTML = '';
+    products.forEach(function (p) {
+      var activeLabel = p.active !== false ? 'Aktywny' : 'Wyłączony';
+      var activePill = p.active !== false ? 'pill-active' : 'pill-inactive';
+      var currentMargin = p.margin_override != null ? p.margin_override : (p.base_margin || 0);
+      var currentPrice = p.price_override != null ? p.price_override : (p.price || p.base_price || 0);
+      var basePrice = p.base_price || p.price || 0;
 
-    /**
-     * Capture listener fires before the inline script's bubble listener.
-     * We always call e.preventDefault() + e.stopImmediatePropagation() and
-     * handle the full order flow here (API or localStorage fallback).
-     */
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      e.stopImmediatePropagation();
+      var row = document.createElement('tr');
+      row.setAttribute('data-shop-product-id', p.id || '');
+      row.innerHTML =
+        '<td>' + escHtml(p.name || p.custom_title || '—') + '</td>' +
+        '<td>' + formatPrice(basePrice) + '</td>' +
+        '<td>' +
+          '<input type="number" min="0" max="200" step="0.1" class="owner-input" ' +
+            'style="width:80px;padding:4px 8px;font-size:13px" ' +
+            'value="' + escHtml(String(currentMargin)) + '" ' +
+            'data-edit-margin ' +
+            'aria-label="Marża dla ' + escHtml(p.name || '') + '">' +
+          '%' +
+        '</td>' +
+        '<td>' +
+          '<input type="number" min="0" step="0.01" class="owner-input" ' +
+            'style="width:100px;padding:4px 8px;font-size:13px" ' +
+            'value="' + escHtml(String(parseFloat(currentPrice).toFixed(2))) + '" ' +
+            'data-edit-price ' +
+            'aria-label="Cena dla ' + escHtml(p.name || '') + '">' +
+          ' zł' +
+        '</td>' +
+        '<td><span class="' + activePill + '">' + activeLabel + '</span></td>' +
+        '<td style="white-space:nowrap">' +
+          '<button class="btn btn-primary" style="padding:4px 10px;font-size:12px;margin-right:4px" ' +
+            'data-save-product-id="' + escHtml(p.id || '') + '">' +
+            'Zapisz' +
+          '</button>' +
+          '<button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" ' +
+            'data-toggle-product-id="' + escHtml(p.id || '') + '" ' +
+            'data-toggle-product-active="' + (p.active !== false ? 'true' : 'false') + '">' +
+            (p.active !== false ? 'Wyłącz' : 'Włącz') +
+          '</button>' +
+        '</td>';
+      tbody.appendChild(row);
+    });
 
-      var cart = window.QMCart;
-      if (!cart) return;
+    // Wire save buttons (margin + price)
+    tbody.addEventListener('click', function (e) {
+      var saveBtn = e.target.closest('[data-save-product-id]');
+      if (saveBtn) {
+        var id  = saveBtn.getAttribute('data-save-product-id');
+        var row = saveBtn.closest('tr');
+        var marginInput = row.querySelector('[data-edit-margin]');
+        var priceInput  = row.querySelector('[data-edit-price]');
+        var a2 = api();
+        if (!a2) return;
 
-      var items = cart.getCart();
-      if (!items.length) return;
+        var payload = {};
+        if (marginInput) payload.margin_override = parseFloat(marginInput.value) || 0;
+        if (priceInput) payload.price_override = parseFloat(priceInput.value) || null;
 
-      var btn      = form.querySelector('[data-checkout-btn]');
-      var origText = btn ? btn.textContent : 'Złóż zamówienie';
-      if (btn) { btn.disabled = true; btn.textContent = 'Sk\u0142adam zam\u00f3wienie\u2026'; }
+        saveBtn.disabled = true;
+        saveBtn.textContent = '…';
 
-      var fd = new FormData(form);
-      var formData = {
-        name:    (fd.get('name')    || '').trim(),
-        email:   (fd.get('email')   || '').trim(),
-        phone:   (fd.get('phone')   || '').trim(),
-        address: (fd.get('address') || '').trim(),
-      };
-
-      /* Validation */
-      if (!formData.name || !formData.email || !formData.address) {
-        if (btn) { btn.disabled = false; btn.textContent = origText; }
-        showCheckoutError(form, 'Proszę uzupełnić wymagane pola: Imię i nazwisko, E-mail, Adres dostawy.');
+        a2.MyStore.updateProduct(id, payload)
+          .then(function () {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Zapisano';
+            setTimeout(function () { saveBtn.textContent = 'Zapisz'; }, 1500);
+          })
+          .catch(function () {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Błąd';
+            setTimeout(function () { saveBtn.textContent = 'Zapisz'; }, 1500);
+          });
         return;
       }
 
-      if (a.Auth.isLoggedIn()) {
-        placeApiOrder(a, items, formData, btn, origText, form, cart);
-      } else {
-        placeLocalOrder(items, formData, btn, cart);
-      }
-    }, true /* capture */);
+      // Wire toggle buttons
+      var toggleBtn = e.target.closest('[data-toggle-product-id]');
+      if (!toggleBtn) return;
+      var id     = toggleBtn.getAttribute('data-toggle-product-id');
+      var active = toggleBtn.getAttribute('data-toggle-product-active') !== 'true';
+      var a2 = api();
+      if (!a2) return;
+      toggleBtn.disabled = true;
+      a2.MyStore.updateProduct(id, { active: active })
+        .then(function () {
+          toggleBtn.setAttribute('data-toggle-product-active', active ? 'true' : 'false');
+          toggleBtn.textContent = active ? 'Wyłącz' : 'Włącz';
+          var pill = toggleBtn.closest('tr').querySelector('.pill-active,.pill-inactive');
+          if (pill) {
+            pill.className = active ? 'pill-active' : 'pill-inactive';
+            pill.textContent = active ? 'Aktywny' : 'Wyłączony';
+          }
+          toggleBtn.disabled = false;
+        })
+        .catch(function () { toggleBtn.disabled = false; });
+    });
   }
 
-  function placeApiOrder(a, items, formData, btn, origText, form, cart) {
-    /* Attempt to get the seller's store so we know the store_id required by
-       POST /api/orders. If the user is a buyer (no store), fall back. */
-    a.MyStore.get()
-      .then(function (store) {
-        if (!store || !store.id) {
-          placeLocalOrder(items, formData, btn, cart);
+  function initCatalogFlow() {
+    var searchInput   = document.querySelector('[data-catalog-search]');
+    var searchBtn     = document.querySelector('[data-catalog-load]');
+    var catalogLoading = document.querySelector('[data-catalog-loading]');
+    var catalogEmpty  = document.querySelector('[data-catalog-empty]');
+    var catalogWrap   = document.querySelector('[data-catalog-table-wrap]');
+    var catalogTbody  = document.querySelector('[data-catalog-tbody]');
+
+    if (!searchBtn || !catalogTbody) return;
+
+    function loadCatalog(query) {
+      var a = api();
+      if (!a) return;
+
+      if (catalogLoading) catalogLoading.hidden = false;
+      if (catalogEmpty)   catalogEmpty.hidden   = true;
+      if (catalogWrap)    catalogWrap.hidden    = true;
+
+      var params = { is_central: true, status: 'active', limit: 30 };
+      if (query) params.search = query;
+
+      a.Products.list(params)
+        .then(function (data) {
+          if (catalogLoading) catalogLoading.hidden = true;
+          var products = Array.isArray(data) ? data
+            : (data && Array.isArray(data.products)) ? data.products : [];
+
+          if (!products.length) {
+            if (catalogEmpty) catalogEmpty.hidden = false;
+            return;
+          }
+
+          catalogTbody.innerHTML = '';
+          products.forEach(function (p) {
+            var tr = document.createElement('tr');
+            tr.innerHTML =
+              '<td>' + escHtml(p.name || '—') + '</td>' +
+              '<td class="cell-muted">' + escHtml(p.category || '—') + '</td>' +
+              '<td>' + formatPrice(p.price_gross || p.selling_price || 0) + '</td>' +
+              '<td>' +
+                '<button class="btn btn-primary" style="padding:4px 10px;font-size:12px" ' +
+                  'data-add-catalog-product="' + escHtml(p.id || '') + '" ' +
+                  'data-add-catalog-name="' + escHtml(p.name || '') + '">' +
+                  '+ Dodaj' +
+                '</button>' +
+              '</td>';
+            catalogTbody.appendChild(tr);
+          });
+
+          if (catalogWrap) catalogWrap.hidden = false;
+        })
+        .catch(function () {
+          if (catalogLoading) catalogLoading.hidden = true;
+          if (catalogEmpty) { catalogEmpty.textContent = 'Błąd ładowania katalogu.'; catalogEmpty.hidden = false; }
+        });
+    }
+
+    searchBtn.addEventListener('click', function () {
+      loadCatalog(searchInput ? searchInput.value.trim() : '');
+    });
+
+    if (searchInput) {
+      searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') loadCatalog(searchInput.value.trim());
+      });
+    }
+
+    // Wire "Add to store" buttons
+    if (catalogTbody) {
+      catalogTbody.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-add-catalog-product]');
+        if (!btn) return;
+        var productId   = btn.getAttribute('data-add-catalog-product');
+        var productName = btn.getAttribute('data-add-catalog-name');
+        var a2 = api();
+        if (!a2) return;
+
+        var store = window._panelStore;
+        if (!store) {
+          alert('Błąd: brak aktywnego sklepu.');
           return;
         }
 
-        /* i.productId is the real product UUID stored by syncApiCartToLocal;
-           fall back to i.id for items added directly from the API products list. */
-        var orderItems = items.map(function (i) {
-          return { product_id: String(i.productId || i.id || ''), quantity: Number(i.qty) || 1 };
-        });
+        btn.disabled = true;
+        btn.textContent = '…';
 
-        var notes = formData.name
-          + (formData.email ? ' | ' + formData.email : '')
-          + (formData.phone ? ' | ' + formData.phone : '');
+        a2.MyStore.addProduct({ store_id: store.id, product_id: productId, active: true })
+          .then(function () {
+            btn.textContent = '✓ Dodano';
+            btn.disabled = true;
+            // Reload products list
+            return a2.MyStore.products(store.id, { limit: 50 });
+          })
+          .then(function (data) {
+            if (data) renderSellerProducts(data.products || []);
+          })
+          .catch(function (err) {
+            btn.disabled = false;
+            btn.textContent = '+ Dodaj';
+            var msg = (err && err.body && err.body.error) || 'Błąd dodawania produktu.';
+            alert(msg);
+          });
+      });
+    }
+  }
 
-        return a.Orders.create({
-          store_id:         store.id,
-          items:            orderItems,
-          shipping_address: formData.address,
-          notes:            notes,
-        });
-      })
-      .then(function (order) {
-        if (!order) return; /* already fell back */
+  function renderSellerOrders(orders) {
+    var tbody = document.querySelector('[data-orders-tbody]');
+    if (!tbody) return;
+    var emptyEl   = document.querySelector('[data-seller-orders-empty]');
+    var loadingEl = document.querySelector('[data-seller-orders-loading]');
+    if (loadingEl) loadingEl.hidden = true;
 
-        /* Clear the active cart; historical orders in localStorage are preserved. */
-        cart.clearCart();
+    if (!orders.length) {
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+    if (emptyEl) emptyEl.hidden = true;
 
-        var numEl     = document.querySelector('[data-order-number]');
-        var contentEl = document.querySelector('[data-cart-content]');
-        var successEl = document.querySelector('[data-order-success]');
-        if (numEl) {
-          numEl.textContent = 'Numer zam\u00f3wienia: ' + (order.order_number || order.id || '—');
-        }
-        if (contentEl) contentEl.hidden = true;
-        if (successEl) successEl.hidden = false;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      })
-      .catch(function (err) {
-        if (btn) { btn.disabled = false; btn.textContent = origText; }
+    var STATUSES = ['new', 'processing', 'shipped', 'completed'];
 
-        if (!err.status) {
-          /* Network error – fall back to localStorage order */
-          placeLocalOrder(items, formData, btn, cart);
+    tbody.innerHTML = '';
+    orders.forEach(function (o) {
+      var row = document.createElement('tr');
+      var num = escHtml(o.order_number || (o.id || '').slice(0, 8) || '—');
+      var date = o.created_at ? new Date(o.created_at).toLocaleDateString('pl-PL') : '—';
+      var status = o.status || 'new';
+
+      var selectHtml = '<select class="owner-filter" style="padding:4px 8px;font-size:12px" ' +
+        'data-order-status-id="' + escHtml(o.id || '') + '">';
+      STATUSES.forEach(function (s) {
+        selectHtml += '<option value="' + s + '"' + (s === status ? ' selected' : '') + '>' + s + '</option>';
+      });
+      selectHtml += '</select>';
+
+      row.innerHTML =
+        '<td class="cell-mono">' + num + '</td>' +
+        '<td class="cell-muted">' + escHtml(date) + '</td>' +
+        '<td>' + escHtml(o.shipping_address || '—') + '</td>' +
+        '<td>' + selectHtml + '</td>';
+      tbody.appendChild(row);
+    });
+
+    // Wire status dropdowns
+    tbody.addEventListener('change', function (e) {
+      var sel = e.target.closest('[data-order-status-id]');
+      if (!sel) return;
+      var id     = sel.getAttribute('data-order-status-id');
+      var status = sel.value;
+      var a2 = api();
+      if (!a2) return;
+      sel.disabled = true;
+      a2.Orders.updateStatus(id, status)
+        .then(function () { sel.disabled = false; })
+        .catch(function () { sel.disabled = false; });
+    });
+  }
+
+  function openAddProductDialog(a, storeId) {
+    var existing = document.getElementById('qm-add-product-dialog');
+    if (existing) existing.remove();
+
+    var overlay = document.createElement('div');
+    overlay.id = 'qm-add-product-dialog';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Dodaj produkt do sklepu');
+    overlay.style.cssText = [
+      'position:fixed', 'inset:0', 'background:rgba(0,0,0,.55)', 'z-index:9000',
+      'display:flex', 'align-items:center', 'justify-content:center', 'padding:16px'
+    ].join(';');
+
+    var box = document.createElement('div');
+    box.style.cssText = [
+      'background:#fff', 'border-radius:12px', 'width:100%', 'max-width:540px',
+      'max-height:80vh', 'overflow:auto', 'padding:24px'
+    ].join(';');
+
+    box.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">' +
+        '<h3 style="margin:0;font-size:1.1rem;font-weight:700">Wybierz produkt do sklepu</h3>' +
+        '<button type="button" id="qm-dlg-close" aria-label="Zamknij" style="border:none;background:none;font-size:1.5rem;cursor:pointer;line-height:1;padding:0 4px">×</button>' +
+      '</div>' +
+      '<p id="qm-dlg-status" role="alert" style="color:#c53030;font-size:.875rem;margin-bottom:12px;display:none"></p>' +
+      '<div id="qm-dlg-list" style="display:flex;flex-direction:column;gap:10px"></div>';
+
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    box.querySelector('#qm-dlg-close').addEventListener('click', function () {
+      overlay.remove();
+    });
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) overlay.remove();
+    });
+
+    var listEl = box.querySelector('#qm-dlg-list');
+    var statusEl = box.querySelector('#qm-dlg-status');
+
+    listEl.innerHTML = '<p style="color:#718096;font-size:.9rem">Ładowanie katalogu produktów…</p>';
+
+    a.Products.list({ status: 'active', limit: 24 })
+      .then(function (data) {
+        var products = Array.isArray(data) ? data
+          : (data && Array.isArray(data.products)) ? data.products : [];
+
+        if (!products.length) {
+          listEl.innerHTML = '<p style="color:#718096;font-size:.9rem">Brak dostępnych produktów w katalogu.</p>';
           return;
         }
 
-        /* API returned an error (e.g. products not found in store, stock issue) */
-        showCheckoutError(
-          form,
-          'B\u0142\u0105d zam\u00f3wienia: ' + (err.message || 'Spr\u00f3buj ponownie.')
-        );
+        listEl.innerHTML = '';
+
+        products.forEach(function (product) {
+          var row = document.createElement('div');
+          row.style.cssText = [
+            'display:flex', 'align-items:center', 'gap:12px', 'padding:10px',
+            'border:1px solid #e2e8f0', 'border-radius:8px'
+          ].join(';');
+
+          var mediaHtml = product.image_url
+            ? '<img src="' + escHtml(product.image_url) + '" alt="' + escHtml(product.name || 'Zdjęcie produktu') + '" style="width:52px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0" onerror="this.style.display=\'none\'">'
+            : '<span aria-hidden="true" style="width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:#f7fafc;border-radius:6px;flex-shrink:0">📦</span>';
+
+          var price = product.price_gross || product.selling_price || product.platform_price || 0;
+
+          row.innerHTML =
+            mediaHtml +
+            '<div style="flex:1;min-width:0">' +
+              '<div style="font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escHtml(product.name || '') + '</div>' +
+              '<div style="font-size:.78rem;color:#718096;margin-top:2px">' +
+                escHtml(product.category || '') +
+                (price ? ' · ' + formatPrice(price) : '') +
+              '</div>' +
+            '</div>' +
+            '<button type="button" style="flex-shrink:0;padding:6px 16px;font-size:.82rem;border-radius:6px;border:none;background:#3182ce;color:#fff;cursor:pointer;font-weight:600" data-pid="' + escHtml(product.id || '') + '">Dodaj</button>';
+
+          listEl.appendChild(row);
+        });
+
+        listEl.addEventListener('click', function (e) {
+          var btn = e.target.closest('[data-pid]');
+          if (!btn) return;
+          var productId = btn.dataset.pid;
+          if (!productId) return;
+
+          btn.disabled = true;
+          btn.textContent = '…';
+          statusEl.style.display = 'none';
+
+          a.MyStore.addProduct({ store_id: storeId, product_id: productId })
+            .then(function () {
+              btn.textContent = 'Dodano ✓';
+              btn.style.background = '#276749';
+
+              // Refresh product count
+              a.MyStore.products(storeId, { limit: 1 })
+                .then(function (d) {
+                  var countEl = document.querySelector('[data-store-products]');
+                  if (countEl && d && d.total != null) countEl.textContent = d.total;
+                })
+                .catch(function () {});
+            })
+            .catch(function (err) {
+              btn.disabled = false;
+              btn.textContent = 'Dodaj';
+              var code = err && err.body && err.body.error;
+              var msg = code === 'product_limit_reached'
+                ? 'Osiągnięto limit produktów w planie. Ulepsz subskrypcję, aby dodać więcej.'
+                : code === 'subscription_expired'
+                ? 'Subskrypcja wygasła. Odnów plan, aby dodawać produkty.'
+                : code || 'Nie udało się dodać produktu. Spróbuj ponownie.';
+              statusEl.textContent = msg;
+              statusEl.style.display = '';
+            });
+        });
+      })
+      .catch(function () {
+        listEl.innerHTML = '<p style="color:#c53030;font-size:.9rem">Nie udało się załadować katalogu produktów.</p>';
       });
   }
 
-  function placeLocalOrder(items, formData, btn, cart) {
-    /* Mirrors the inline script logic in koszyk.html */
-    if (btn) { btn.disabled = true; }
-    var order = cart.saveOrder(formData, items);
-    try { sessionStorage.setItem('qm_last_order', order.number); } catch (_) { /* noop */ }
-    setTimeout(function () {
-      cart.clearCart();
-      var numEl     = document.querySelector('[data-order-number]');
-      var contentEl = document.querySelector('[data-cart-content]');
-      var successEl = document.querySelector('[data-order-success]');
-      if (numEl) numEl.textContent = 'Numer zam\u00f3wienia: ' + order.number;
-      if (contentEl) contentEl.hidden = true;
-      if (successEl) successEl.hidden = false;
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 400);
-  }
-
-  function showCheckoutError(form, msg) {
-    var el = form.querySelector('[data-checkout-error]');
-    if (!el) {
-      el = document.createElement('p');
-      el.setAttribute('data-checkout-error', '');
-      el.style.cssText = 'color:#ff7272;font-size:13px;margin-top:8px';
-      var checkoutBtn = form.querySelector('[data-checkout-btn]');
-      if (checkoutBtn) { form.insertBefore(el, checkoutBtn); }
-      else { form.appendChild(el); }
-    }
-    el.textContent = msg;
-    el.hidden = false;
-  }
-
-  /**
-   * Fetch the API cart and populate localStorage QMCart so the existing inline
-   * koszyk.html script renders the correct items.
-   * Runs asynchronously; if it completes before the user interacts it will
-   * update the displayed cart via QMCart.saveCart + a custom DOM event.
-   */
-  function syncApiCartToLocal(a) {
-    a.MyStore.get()
-      .then(function (store) {
-        if (!store || !store.id) return null;
-        return a.Cart.get(store.id);
-      })
-      .then(function (cartData) {
-        if (!cartData) return;
-        var apiItems = Array.isArray(cartData.items) ? cartData.items : [];
-        if (!apiItems.length) return;
-
-        if (!window.QMCart) return;
-        var localItems = window.QMCart.getCart();
-
-        /*
-         * Only populate from the API when the local cart is empty.
-         * If the user added items offline we keep those to avoid silently
-         * discarding them; a merge UI is out of scope for this MVP.
-         */
-        if (!localItems.length) {
-          var mapped = apiItems.map(function (item) {
-            return {
-              /* productId stores the real UUID used by POST /api/orders */
-              productId: String(item.product_id || ''),
-              /* id is the display key used by QMCart quantity/remove controls */
-              id:        String(item.product_id || item.id || ''),
-              name:      String(item.name || item.product_name || 'Produkt'),
-              price:     parseFloat(item.unit_price || item.price || 0),
-              qty:       parseInt(item.quantity, 10) || 1,
-              img:       String(item.image_url || ''),
-              apiId:     String(item.id || ''), /* UUID for DELETE /api/cart/items/:id */
-            };
-          });
-          window.QMCart.saveCart(mapped);
-
-          /* Signal koszyk.html inline script to re-render */
-          try {
-            document.dispatchEvent(new CustomEvent('qm:cart-synced'));
-          } catch (_) { /* noop in old browsers */ }
-        }
-      })
-      .catch(function () { /* API unavailable – keep localStorage cart */ });
-  }
-
-  /* ── Bootstrap ──────────────────────────────────────────────────────────── */
+  // ─── Initialisation ───────────────────────────────────────────────────────────
 
   document.addEventListener('DOMContentLoaded', function () {
-    initApiLogin();
-    initApiProducts();
-    initApiCheckout();
+    var page = document.body && document.body.dataset.page;
+
+    // Refresh user profile in the background
+    if (isLoggedInApi()) {
+      var a = api();
+      if (a) a.Auth.me().catch(function () {});
+    }
+
+    if (page === 'login')         initLoginFlow();
+    if (page === 'dashboard')     initDashboardFlow();
+    if (page === 'sklep')         initProductsFlow();
+    if (page === 'koszyk')        initCartFlow();
+    if (page === 'panel-sklepu')  initPanelSklepuFlow();
   });
 
 }());
