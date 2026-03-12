@@ -306,12 +306,10 @@
         _sklep_total = (data && data.total) ? data.total : products.length;
         _sklep_page  = page || 1;
 
-        if (!products.length && _sklep_page === 1) {
-          var emptyState = document.querySelector('[data-store-products-empty]');
-          if (emptyState) emptyState.hidden = false;
-          grid.innerHTML = '';
-          return;
-        }
+        // Only replace the grid when the API actually returns products.
+        // If the API returns an empty array (no products in the backend yet),
+        // keep the existing demo products so the shop doesn't appear broken.
+        if (!products.length) { return; }
 
         grid.innerHTML = '';
         var emptyState = document.querySelector('[data-store-products-empty]');
@@ -490,15 +488,14 @@
 
         if (loader) loader.hidden = true;
 
-        tbody.innerHTML = '';
-
+        // Only replace the table when the API returns actual products.
+        // If the backend returns an empty array, keep the existing demo rows.
         if (!products.length) {
-          var tr = document.createElement('tr');
-          tr.innerHTML = '<td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Brak produktów</td>';
-          tbody.appendChild(tr);
           updateListingPagination();
           return;
         }
+
+        tbody.innerHTML = '';
 
         products.forEach(function (p) {
           var tr = document.createElement('tr');

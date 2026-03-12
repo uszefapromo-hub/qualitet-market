@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'app-shell-v1';
+const CACHE_VERSION = 'app-shell-v2';
 const PRECACHE_ASSETS = [
   './',
   'index.html',
@@ -14,9 +14,16 @@ const PRECACHE_ASSETS = [
   'panel-sklepu.html',
   'qualitetmarket.html',
   'sklep.html',
+  'koszyk.html',
   'css/style.css',
   'styles.css',
+  'panel.css',
+  'shop.css',
+  'landing.css',
   'js/app.js',
+  'js/api.js',
+  'js/flow.js',
+  'js/cart.js',
   'shop.js',
   'stores.js',
   'assets/images/logo-uszefa.svg',
