@@ -36,6 +36,7 @@ router.get('/', async (req, res) => {
   const limit = Math.min(100, parseInt(req.query.limit || '20', 10));
   const offset = (page - 1) * limit;
   const storeId = req.query.store_id || null;
+  const supplierId = req.query.supplier_id || null;
   const category = req.query.category || null;
   const search = req.query.search || null;
   const isCentral = req.query.is_central != null
@@ -49,6 +50,7 @@ router.get('/', async (req, res) => {
     let nextParamIndex = 1;
 
     if (storeId) { conditions.push(`store_id = $${nextParamIndex++}`); params.push(storeId); }
+    if (supplierId) { conditions.push(`supplier_id = $${nextParamIndex++}`); params.push(supplierId); }
     if (category) { conditions.push(`category = $${nextParamIndex++}`); params.push(category); }
     if (isCentral !== null) { conditions.push(`is_central = $${nextParamIndex++}`); params.push(isCentral); }
     if (status) { conditions.push(`status = $${nextParamIndex++}`); params.push(status); }

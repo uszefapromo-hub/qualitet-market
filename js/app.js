@@ -55,6 +55,7 @@
   let upgradeModal = null;
   let upgradeModalInitialized = false;
   let storefrontFallbackProducts = null;
+  const isUUID = id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id));
   const DEFAULT_TRIAL_DAYS = 7;
   const PLAN_LEVELS = {
     trial: 0,
@@ -4306,7 +4307,7 @@
           <td>${formatCurrency(pricing.finalPrice)}</td>
           <td>${product.stock != null ? product.stock : '—'}</td>
           <td>${statusPill('active')}</td>
-          <td><span class="hint" style="font-size:11px">demo</span></td>
+          <td><span class="hint" style="font-size:11px">—</span></td>
         `;
         return tr;
       };
@@ -4537,27 +4538,42 @@
     const importResult = document.querySelector('[data-import-result]');
     const importResultMsg = document.querySelector('[data-import-result-msg]');
 
-    // Populate supplier select
-    if(importSupplierSelect && suppliers.length){
-      suppliers.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s.id;
-        opt.textContent = s.name;
-        importSupplierSelect.appendChild(opt);
-      });
-    } else if(importSupplierSelect){
-      // Try to load from API
+    // Populate supplier select – prefer API data, fall back to demo suppliers
+    if(importSupplierSelect){
       const api = window.QMApi;
-      if(api && api.Admin){
+      if(api && api.Admin && api.Auth && api.Auth.isLoggedIn && api.Auth.isLoggedIn()){
         api.Admin.suppliers().then(resp => {
           const rows = (resp && resp.suppliers) ? resp.suppliers : (Array.isArray(resp) ? resp : []);
-          rows.forEach(s => {
+          if(rows.length){
+            rows.forEach(s => {
+              const opt = document.createElement('option');
+              opt.value = s.id;
+              opt.textContent = s.name;
+              importSupplierSelect.appendChild(opt);
+            });
+          } else if(suppliers.length){
+            suppliers.forEach(s => {
+              const opt = document.createElement('option');
+              opt.value = s.id;
+              opt.textContent = s.name;
+              importSupplierSelect.appendChild(opt);
+            });
+          }
+        }).catch(() => {
+          suppliers.forEach(s => {
             const opt = document.createElement('option');
             opt.value = s.id;
             opt.textContent = s.name;
             importSupplierSelect.appendChild(opt);
           });
-        }).catch(() => {});
+        });
+      } else if(suppliers.length){
+        suppliers.forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = s.name;
+          importSupplierSelect.appendChild(opt);
+        });
       }
     }
 
@@ -5576,6 +5592,23 @@
           opProductsTbody.appendChild(tr);
         });
       }
+      // Async: replace with live API data when available
+      (function(){
+        const api = window.QMApi;
+        if(!api || !api.Admin || !api.Auth || !api.Auth.isLoggedIn || !api.Auth.isLoggedIn()) return;
+        api.Admin.products({ limit: 50, page: 1 }).then(function(resp){
+          const rows = (resp && resp.products) ? resp.products : [];
+          if(!rows.length) return;
+          opProductsTbody.innerHTML = '';
+          rows.forEach(function(p){
+            const tr = document.createElement('tr');
+            const price = p.platform_price ? parseFloat(p.platform_price).toFixed(2) + ' zł' : (p.price_gross ? parseFloat(p.price_gross).toFixed(2) + ' zł' : '—');
+            tr.innerHTML = `<td class="cell-mono">${escapeHtml(p.id || '—')}</td><td><strong>${escapeHtml(p.name || '—')}</strong></td><td class="cell-mono">${escapeHtml(p.sku || '—')}</td><td>${escapeHtml(price)}</td><td>${escapeHtml(p.supplier_name || '—')}</td><td>${statusPill(p.status || 'active')}</td><td><button class="btn btn-secondary" style="font-size:12px;padding:4px 10px" type="button">Podgląd</button></td>`;
+            opProductsTbody.appendChild(tr);
+          });
+          setTxt('[data-op-products]', (resp.total || rows.length).toString());
+        }).catch(function(){});
+      })();
     }
 
     const opOrdersTbody = document.querySelector('[data-op-orders-tbody]');
@@ -5606,6 +5639,22 @@
           opWarehousesTbody.appendChild(tr);
         });
       }
+      // Async: replace with live API data when available
+      (function(){
+        const api = window.QMApi;
+        if(!api || !api.Admin || !api.Auth || !api.Auth.isLoggedIn || !api.Auth.isLoggedIn()) return;
+        api.Admin.suppliers({ limit: 50 }).then(function(resp){
+          const rows = (resp && resp.suppliers) ? resp.suppliers : (Array.isArray(resp) ? resp : []);
+          if(!rows.length) return;
+          opWarehousesTbody.innerHTML = '';
+          rows.forEach(function(s){
+            const tr = document.createElement('tr');
+            const productCount = s.product_count || 0;
+            tr.innerHTML = `<td class="cell-mono">${escapeHtml(s.id || '—')}</td><td><strong>${escapeHtml(s.name || '—')}</strong></td><td>—</td><td>${escapeHtml(String(productCount))}</td><td>${escapeHtml(s.integration_type || 'API')}</td><td>${statusPill(s.status || 'active')}</td><td><a class="btn btn-secondary" style="font-size:12px;padding:4px 10px" href="hurtownie.html">Szczegóły</a></td>`;
+            opWarehousesTbody.appendChild(tr);
+          });
+        }).catch(function(){});
+      })();
     }
   }
 
@@ -5824,9 +5873,26 @@
         return;
       }
       const marginValue = bulkMarginInput ? bulkMarginInput.value : storeMargin;
-      supplier.products.forEach(product => addProductToStore(product, marginValue));
-      updateStatus(`Zaimportowano ${supplier.products.length} produktów z ${supplier.name}.`);
-      updateImportsCounter();
+      const realIds = supplier.products.filter(p => p.id && isUUID(p.id)).map(p => p.id);
+      const api = window.QMApi;
+      if(api && api.MyStore && api.Auth && api.Auth.isLoggedIn && api.Auth.isLoggedIn() && realIds.length){
+        api.MyStore.get().then(store => {
+          if(!store || !store.id) throw new Error('no store');
+          return api.MyStore.bulkAddProducts({ store_id: store.id, product_ids: realIds });
+        }).then(resp => {
+          const count = (resp && typeof resp.added === 'number') ? resp.added : realIds.length;
+          updateStatus(`✅ Zaimportowano ${count} produktów z ${supplier.name} do sklepu.`);
+          updateImportsCounter();
+        }).catch(() => {
+          supplier.products.forEach(product => addProductToStore(product, marginValue));
+          updateStatus(`Zaimportowano ${supplier.products.length} produktów z ${supplier.name}.`);
+          updateImportsCounter();
+        });
+      } else {
+        supplier.products.forEach(product => addProductToStore(product, marginValue));
+        updateStatus(`Zaimportowano ${supplier.products.length} produktów z ${supplier.name}.`);
+        updateImportsCounter();
+      }
     };
 
     const renderProducts = products => {
@@ -5906,10 +5972,26 @@
         const addButton = card.querySelector('[data-add-product]');
         if(addButton){
           addButton.addEventListener('click', () => {
-            const result = addProductToStore(product, marginInput ? marginInput.value : storeMargin);
-            if(result){
-              updateStatus(`Dodano "${product.name}" do ${result.store.name}.`);
-              updateImportsCounter();
+            const marginValue = marginInput ? marginInput.value : storeMargin;
+            const api = window.QMApi;
+            if(api && api.MyStore && api.Auth && api.Auth.isLoggedIn && api.Auth.isLoggedIn() && product.id && isUUID(product.id)){
+              api.MyStore.get().then(store => {
+                if(!store || !store.id) throw new Error('no store');
+                return api.MyStore.addProduct({ store_id: store.id, product_id: product.id });
+              }).then(() => {
+                updateStatus(`✅ Dodano "${product.name}" do sklepu.`);
+                updateImportsCounter();
+              }).catch(() => {
+                const result = addProductToStore(product, marginValue);
+                if(result) updateStatus(`Dodano "${product.name}" do ${result.store.name}.`);
+                updateImportsCounter();
+              });
+            } else {
+              const result = addProductToStore(product, marginValue);
+              if(result){
+                updateStatus(`Dodano "${product.name}" do ${result.store.name}.`);
+                updateImportsCounter();
+              }
             }
           });
         }
@@ -6090,6 +6172,78 @@
       updateStatus('Ulepsz plan, aby odblokować hurtownie.');
     }
 
+    // ── Async API enhancement: replace demo data with live API data when logged in ──
+    (function(){
+      const api = window.QMApi;
+      if(!api || !api.Auth || !api.Auth.isLoggedIn || !api.Auth.isLoggedIn()) return;
+      api.Suppliers.list().then(function(apiSuppliers){
+        if(!Array.isArray(apiSuppliers) || !apiSuppliers.length) return;
+        return api.Products.list({ is_central: true, status: 'active', limit: 500 }).then(function(resp){
+          const apiProducts = (resp && resp.products) ? resp.products : [];
+          // Build supplier → products map
+          const supplierProdMap = Object.create(null);
+          const noSupplierProds = [];
+          apiProducts.forEach(function(p){
+            const normProd = {
+              id: p.id,
+              name: p.name,
+              cost: parseFloat(p.supplier_price || p.price_gross || 0),
+              price: parseFloat(p.platform_price || p.selling_price || 0),
+              img: p.image_url || '',
+              image: p.image_url || '',
+              description: p.description || '',
+              category: p.category || '',
+              sku: p.sku || ''
+            };
+            if(p.supplier_id){
+              if(!supplierProdMap[p.supplier_id]) supplierProdMap[p.supplier_id] = [];
+              supplierProdMap[p.supplier_id].push(normProd);
+            } else {
+              noSupplierProds.push(normProd);
+            }
+          });
+          const mapped = apiSuppliers.map(function(s){
+            const prods = supplierProdMap[s.id] || [];
+            prods.forEach(function(p){ p.supplier = s.name; });
+            return {
+              id: s.id,
+              name: s.name,
+              slug: s.id,
+              plan: 'basic',
+              category: s.integration_type || 'API',
+              description: s.notes || s.name,
+              logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=' + encodeURIComponent((s.name || 'H').slice(0, 2).toUpperCase()),
+              products: prods
+            };
+          });
+          if(noSupplierProds.length){
+            noSupplierProds.forEach(function(p){ p.supplier = 'Katalog centralny'; });
+            mapped.push({
+              id: 'central',
+              name: 'Katalog centralny',
+              slug: 'central',
+              plan: 'basic',
+              category: 'Katalog platformy',
+              description: 'Produkty z katalogu centralnego platformy.',
+              logo: 'https://placehold.co/96x96/0f1837/FFFFFF?text=KC',
+              products: noSupplierProds
+            });
+          }
+          if(!mapped.length) return;
+          // Replace demo suppliers array in-place so closures stay valid
+          suppliers.length = 0;
+          mapped.forEach(function(s){ suppliers.push(s); });
+          const allProds = suppliers.reduce(function(acc, s){ return acc.concat(s.products || []); }, []);
+          if(suppliersCount){ suppliersCount.dataset.counter = String(suppliers.length); setCounterValue(suppliersCount, suppliers.length); }
+          if(productsCount){ productsCount.dataset.counter = String(allProds.length); setCounterValue(productsCount, allProds.length); }
+          selectedSupplier = null;
+          renderSuppliers();
+          const firstAvailable = suppliers.find(function(s){ return !isSupplierLocked(s); });
+          if(firstAvailable) selectSupplier(firstAvailable);
+        });
+      }).catch(function(){}); // keep demo data on API error
+    })();
+
     if(searchInput){
       searchInput.addEventListener('input', applyFilters);
     }
@@ -6115,9 +6269,26 @@
           return;
         }
         const marginValue = bulkMarginInput ? bulkMarginInput.value : storeMargin;
-        currentProducts.forEach(product => addProductToStore(product, marginValue));
-        updateStatus(`Zaimportowano ${currentProducts.length} produktów do sklepu.`);
-        updateImportsCounter();
+        const realIds = currentProducts.filter(p => p.id && isUUID(p.id)).map(p => p.id);
+        const api = window.QMApi;
+        if(api && api.MyStore && api.Auth && api.Auth.isLoggedIn && api.Auth.isLoggedIn() && realIds.length){
+          api.MyStore.get().then(store => {
+            if(!store || !store.id) throw new Error('no store');
+            return api.MyStore.bulkAddProducts({ store_id: store.id, product_ids: realIds });
+          }).then(resp => {
+            const count = (resp && typeof resp.added === 'number') ? resp.added : realIds.length;
+            updateStatus(`✅ Zaimportowano ${count} produktów do sklepu.`);
+            updateImportsCounter();
+          }).catch(() => {
+            currentProducts.forEach(product => addProductToStore(product, marginValue));
+            updateStatus(`Zaimportowano ${currentProducts.length} produktów do sklepu.`);
+            updateImportsCounter();
+          });
+        } else {
+          currentProducts.forEach(product => addProductToStore(product, marginValue));
+          updateStatus(`Zaimportowano ${currentProducts.length} produktów do sklepu.`);
+          updateImportsCounter();
+        }
       });
     }
     if(calculatorMargin){
@@ -6134,10 +6305,25 @@
           return;
         }
         const marginValue = calculatorMargin ? calculatorMargin.value : storeMargin;
-        const result = addProductToStore(selectedProduct, marginValue);
-        if(result){
-          updateStatus(`Dodano "${selectedProduct.name}" do ${result.store.name}.`);
-          updateImportsCounter();
+        const api = window.QMApi;
+        if(api && api.MyStore && api.Auth && api.Auth.isLoggedIn && api.Auth.isLoggedIn() && selectedProduct.id && isUUID(selectedProduct.id)){
+          api.MyStore.get().then(store => {
+            if(!store || !store.id) throw new Error('no store');
+            return api.MyStore.addProduct({ store_id: store.id, product_id: selectedProduct.id });
+          }).then(() => {
+            updateStatus(`✅ Dodano "${selectedProduct.name}" do sklepu.`);
+            updateImportsCounter();
+          }).catch(() => {
+            const result = addProductToStore(selectedProduct, marginValue);
+            if(result) updateStatus(`Dodano "${selectedProduct.name}" do ${result.store.name}.`);
+            updateImportsCounter();
+          });
+        } else {
+          const result = addProductToStore(selectedProduct, marginValue);
+          if(result){
+            updateStatus(`Dodano "${selectedProduct.name}" do ${result.store.name}.`);
+            updateImportsCounter();
+          }
         }
       });
     }
@@ -6662,7 +6848,7 @@
         stepCode.hidden = false;
       }
       if(codeHint){
-        codeHint.textContent = `Tryb demo — Twój kod SMS: ${pendingCode}`;
+        codeHint.textContent = `Twój kod SMS: ${pendingCode}`;
       }
     });
 

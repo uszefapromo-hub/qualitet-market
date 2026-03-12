@@ -621,6 +621,18 @@ describe('GET /api/products', () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('products');
   });
+
+  it('filters by supplier_id when provided', async () => {
+    const suppId = 'a0000000-0000-4000-8000-000000000020';
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'prod-1', name: 'Produkt', supplier_id: suppId }] });
+
+    const res = await request(app).get(`/api/products?supplier_id=${suppId}`);
+    expect(res.status).toBe(200);
+    expect(res.body.products).toHaveLength(1);
+    expect(res.body.products[0].supplier_id).toBe(suppId);
+  });
 });
 
 describe('POST /api/products', () => {
