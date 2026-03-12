@@ -75,7 +75,7 @@
   };
   const OWNER_EMAIL = 'uszefaqualitetpromo@gmail.com';
   const OWNER_EMAIL_NORMALIZED = OWNER_EMAIL.trim().toLowerCase();
-  const OWNER_PHONE = '+48600000000';
+  const OWNER_PHONE = '+48882914429';
   const OWNER_PHONE_NORMALIZED = OWNER_PHONE.replace(/\s+/g, '');
   const PRICE_LINKS = {
     basic: 'https://buy.stripe.com/28E4gz3qP0er3AL2P0ak000',
