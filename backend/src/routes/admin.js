@@ -897,6 +897,32 @@ async function adminFetchApiProducts(supplier) {
   }));
 }
 
+/**
+ * Compute the platform selling price from the supplier (gross) price.
+ *
+ * Markup tiers:
+ *   supplier_price ≤ 20       → +60 %
+ *   20 < supplier_price ≤ 100 → +40 %
+ *   100 < supplier_price ≤ 300 → +25 %
+ *   supplier_price > 300       → +15 %
+ *
+ * Returns a number rounded to 2 decimal places.
+ */
+function computePlatformPrice(supplierPrice) {
+  const p = parseFloat(supplierPrice) || 0;
+  let markup;
+  if (p <= 20) {
+    markup = 0.60;
+  } else if (p <= 100) {
+    markup = 0.40;
+  } else if (p <= 300) {
+    markup = 0.25;
+  } else {
+    markup = 0.15;
+  }
+  return parseFloat((p * (1 + markup)).toFixed(2));
+}
+
 async function upsertCentralProducts(rawProducts, supplierId) {
   let count = 0;
 
@@ -910,6 +936,9 @@ async function upsertCentralProducts(rawProducts, supplierId) {
       : priceNet * (1 + DEFAULT_TAX_RATE / 100);
     const formattedPriceGross = parseFloat(priceGross).toFixed(2);
 
+    // Compute platform price using tiered markup on the supplier (gross) price
+    const platformPrice = computePlatformPrice(parseFloat(formattedPriceGross));
+
     if (raw.sku) {
       const existing = await db.query(
         'SELECT id FROM products WHERE is_central = true AND sku = $1',
@@ -921,18 +950,22 @@ async function upsertCentralProducts(rawProducts, supplierId) {
         // if not provided by the supplier (COALESCE keeps existing value when null)
         await db.query(
           `UPDATE products SET
-             name        = $1,
-             price_net   = $2,
-             price_gross = $3,
-             stock       = $4,
-             category    = COALESCE($5, category),
-             description = COALESCE($6, description),
-             image_url   = COALESCE($7, image_url),
-             supplier_id = $8,
-             status      = 'active',
-             updated_at  = NOW()
-           WHERE is_central = true AND sku = $9`,
-          [raw.name, priceNet, formattedPriceGross, raw.stock,
+             name              = $1,
+             price_net         = $2,
+             price_gross       = $3,
+             supplier_price    = $3,
+             platform_price    = $4,
+             min_selling_price = $4,
+             selling_price     = $4,
+             stock             = $5,
+             category          = COALESCE($6, category),
+             description       = COALESCE($7, description),
+             image_url         = COALESCE($8, image_url),
+             supplier_id       = $9,
+             status            = 'active',
+             updated_at        = NOW()
+           WHERE is_central = true AND sku = $10`,
+          [raw.name, priceNet, formattedPriceGross, platformPrice, raw.stock,
            raw.category, raw.description, raw.image_url, supplierId, raw.sku]
         );
         count++;
@@ -943,11 +976,12 @@ async function upsertCentralProducts(rawProducts, supplierId) {
     await db.query(
       `INSERT INTO products
          (id, store_id, supplier_id, name, sku, price_net, tax_rate, price_gross,
-          selling_price, margin, stock, category, description, image_url,
+          supplier_price, platform_price, min_selling_price, selling_price, margin,
+          stock, category, description, image_url,
           is_central, status, created_at)
-       VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, $7, 0, $8, $9, $10, $11, true, 'active', NOW())`,
+       VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, $7, $8, $8, $8, 0, $9, $10, $11, $12, true, 'active', NOW())`,
       [uuidv4(), supplierId, raw.name, raw.sku || null,
-       priceNet, DEFAULT_TAX_RATE, formattedPriceGross,
+       priceNet, DEFAULT_TAX_RATE, formattedPriceGross, platformPrice,
        raw.stock, raw.category, raw.description, raw.image_url]
     );
     count++;

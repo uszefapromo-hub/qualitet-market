@@ -959,6 +959,131 @@ describe('POST /api/admin/suppliers/import', () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('count', 1);
   });
+
+  it('computes platform_price and min_selling_price during import (price ≤ 20, +60%)', async () => {
+    // price_gross provided directly as 10 → platform_price = 10 * 1.60 = 16.00
+    const csv = 'sku,name,price_gross,price_net,stock\nPP-1,Tani Produkt,10,8,5\n';
+
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SUPPLIER_ID, name: 'Test', integration_type: 'csv' }] })
+      .mockResolvedValueOnce({ rows: [] })   // no existing SKU
+      .mockResolvedValueOnce({ rows: [] });  // insert
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/import')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .field('supplier_id', SUPPLIER_ID)
+      .attach('file', Buffer.from(csv), { filename: 'products.csv', contentType: 'text/csv' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('count', 1);
+
+    // Verify INSERT was called with platform_price = 16 (10 * 1.60)
+    const insertCall = db.query.mock.calls.find(
+      ([sql]) => typeof sql === 'string' && sql.toUpperCase().includes('INSERT INTO PRODUCTS')
+    );
+    expect(insertCall).toBeTruthy();
+    // params: $1=id, $2=supplierId, $3=name, $4=sku, $5=priceNet, $6=taxRate, $7=priceGross(supplier_price), $8=platformPrice
+    expect(insertCall[1][6]).toBe(16);
+  });
+
+  it('computes platform_price during import (20 < price ≤ 100, +40%)', async () => {
+    // price_gross = 50 → platform_price = 50 * 1.40 = 70.00
+    const csv = 'sku,name,price_gross,price_net,stock\nPP-2,Średni Produkt,50,40,5\n';
+
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SUPPLIER_ID, name: 'Test', integration_type: 'csv' }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/import')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .field('supplier_id', SUPPLIER_ID)
+      .attach('file', Buffer.from(csv), { filename: 'products.csv', contentType: 'text/csv' });
+
+    expect(res.status).toBe(200);
+
+    const insertCall = db.query.mock.calls.find(
+      ([sql]) => typeof sql === 'string' && sql.toUpperCase().includes('INSERT INTO PRODUCTS')
+    );
+    expect(insertCall).toBeTruthy();
+    expect(insertCall[1][6]).toBe(70);
+  });
+
+  it('computes platform_price during import (100 < price ≤ 300, +25%)', async () => {
+    // price_gross = 200 → platform_price = 200 * 1.25 = 250.00
+    const csv = 'sku,name,price_gross,price_net,stock\nPP-3,Droższy Produkt,200,162.60,3\n';
+
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SUPPLIER_ID, name: 'Test', integration_type: 'csv' }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/import')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .field('supplier_id', SUPPLIER_ID)
+      .attach('file', Buffer.from(csv), { filename: 'products.csv', contentType: 'text/csv' });
+
+    expect(res.status).toBe(200);
+
+    const insertCall = db.query.mock.calls.find(
+      ([sql]) => typeof sql === 'string' && sql.toUpperCase().includes('INSERT INTO PRODUCTS')
+    );
+    expect(insertCall).toBeTruthy();
+    expect(insertCall[1][6]).toBe(250);
+  });
+
+  it('computes platform_price during import (price > 300, +15%)', async () => {
+    // price_gross = 500 → platform_price = 500 * 1.15 = 575.00
+    const csv = 'sku,name,price_gross,price_net,stock\nPP-4,Drogi Produkt,500,406.50,1\n';
+
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SUPPLIER_ID, name: 'Test', integration_type: 'csv' }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/import')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .field('supplier_id', SUPPLIER_ID)
+      .attach('file', Buffer.from(csv), { filename: 'products.csv', contentType: 'text/csv' });
+
+    expect(res.status).toBe(200);
+
+    const insertCall = db.query.mock.calls.find(
+      ([sql]) => typeof sql === 'string' && sql.toUpperCase().includes('INSERT INTO PRODUCTS')
+    );
+    expect(insertCall).toBeTruthy();
+    expect(insertCall[1][6]).toBe(575);
+  });
+
+  it('updates platform_price and min_selling_price when updating existing product by SKU', async () => {
+    // price_gross = 100 → platform_price = 100 * 1.40 = 140.00
+    const csv = 'sku,name,price_gross,price_net,stock\nEXIST-2,Updated Product,100,81.30,10\n';
+    const EXISTING_PRODUCT_ID = 'a0000000-0000-4000-8000-000000000022';
+
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SUPPLIER_ID, name: 'Test', integration_type: 'csv' }] })
+      .mockResolvedValueOnce({ rows: [{ id: EXISTING_PRODUCT_ID }] }) // existing product by sku
+      .mockResolvedValueOnce({ rows: [] }); // update
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/import')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .field('supplier_id', SUPPLIER_ID)
+      .attach('file', Buffer.from(csv), { filename: 'products.csv', contentType: 'text/csv' });
+
+    expect(res.status).toBe(200);
+
+    const updateCall = db.query.mock.calls.find(
+      ([sql]) => typeof sql === 'string' && sql.toUpperCase().includes('UPDATE PRODUCTS SET')
+    );
+    expect(updateCall).toBeTruthy();
+    // UPDATE params: $1=name, $2=priceNet, $3=priceGross, $4=platformPrice, ...
+    expect(updateCall[1][1]).toBe(140);
+  });
 });
 
 describe('POST /api/admin/suppliers/sync', () => {
@@ -1103,6 +1228,32 @@ describe('POST /api/shop-products', () => {
       .send({ store_id: STORE_ID, product_id: PRODUCT_ID });
     expect(res.status).toBe(201);
     expect(res.body.store_id).toBe(STORE_ID);
+  });
+
+  it('rejects price_override below min_selling_price', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })                        // store
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, min_selling_price: 100 }] });    // product
+
+    const res = await request(app)
+      .post('/api/shop-products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, price_override: 50 });
+    expect(res.status).toBe(422);
+    expect(res.body.error).toMatch(/minimal/);
+  });
+
+  it('accepts price_override equal to min_selling_price', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, min_selling_price: 100 }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'sp-new', store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] });
+
+    const res = await request(app)
+      .post('/api/shop-products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, price_override: 100 });
+    expect(res.status).toBe(201);
   });
 });
 
@@ -1320,6 +1471,31 @@ describe('PUT /api/shop-products/:id', () => {
     expect(res.status).toBe(200);
     expect(res.body.active).toBe(false);
   });
+
+  it('rejects price_override below min_selling_price', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true, owner_id: SELLER_ID, min_selling_price: 140 }],
+    });
+
+    const res = await request(app)
+      .put(`/api/shop-products/${SHOP_PROD_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ price_override: 80 });
+    expect(res.status).toBe(422);
+    expect(res.body.error).toMatch(/minimal/);
+  });
+
+  it('accepts price_override above min_selling_price', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true, owner_id: SELLER_ID, min_selling_price: 140 }] })
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, price_override: 150 }] });
+
+    const res = await request(app)
+      .put(`/api/shop-products/${SHOP_PROD_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ price_override: 150 });
+    expect(res.status).toBe(200);
+  });
 });
 
 describe('DELETE /api/shop-products/:id', () => {
@@ -1505,6 +1681,21 @@ describe('POST /api/my/store/products', () => {
     expect(res.status).toBe(201);
     expect(res.body.custom_title).toBe('Mój Fotel');
   });
+
+  it('rejects price_override below min_selling_price', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 100, commission_rate: 0.10, status: 'active' }] })
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })
+      .mockResolvedValueOnce({ rows: [{ count: '2' }] })
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, min_selling_price: 70 }] }); // product with min price
+
+    const res = await request(app)
+      .post('/api/my/store/products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, price_override: 50 });
+    expect(res.status).toBe(422);
+    expect(res.body.error).toMatch(/minimal/);
+  });
 });
 
 describe('PATCH /api/my/store/products/:id', () => {
@@ -1549,6 +1740,31 @@ describe('PATCH /api/my/store/products/:id', () => {
       .set('Authorization', `Bearer ${otherSeller}`)
       .send({ active: false });
     expect(res.status).toBe(403);
+  });
+
+  it('rejects price_override below min_selling_price', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, owner_id: SELLER_ID, active: true, min_selling_price: 70 }],
+    });
+
+    const res = await request(app)
+      .patch(`/api/my/store/products/${SHOP_PROD_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ price_override: 40 });
+    expect(res.status).toBe(422);
+    expect(res.body.error).toMatch(/minimal/);
+  });
+
+  it('accepts price_override equal to min_selling_price', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, owner_id: SELLER_ID, active: true, min_selling_price: 70 }] })
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, price_override: 70 }] });
+
+    const res = await request(app)
+      .patch(`/api/my/store/products/${SHOP_PROD_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ price_override: 70 });
+    expect(res.status).toBe(200);
   });
 });
 

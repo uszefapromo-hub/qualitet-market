@@ -29,6 +29,34 @@ const db = require('../config/database');
 const DEFAULT_TAX_RATE = 23; // Polish standard VAT rate (%)
 const FETCH_TIMEOUT_MS = 15000; // 15 seconds
 
+// ─── Platform pricing ──────────────────────────────────────────────────────────
+
+/**
+ * Compute the platform selling price from the supplier (gross) price.
+ *
+ * Markup tiers:
+ *   supplier_price ≤ 20        → +60 %
+ *   20 < supplier_price ≤ 100  → +40 %
+ *   100 < supplier_price ≤ 300 → +25 %
+ *   supplier_price > 300        → +15 %
+ *
+ * Returns a number rounded to 2 decimal places.
+ */
+function computePlatformPrice(supplierPrice) {
+  const p = parseFloat(supplierPrice) || 0;
+  let markup;
+  if (p <= 20) {
+    markup = 0.60;
+  } else if (p <= 100) {
+    markup = 0.40;
+  } else if (p <= 300) {
+    markup = 0.25;
+  } else {
+    markup = 0.15;
+  }
+  return parseFloat((p * (1 + markup)).toFixed(2));
+}
+
 // ─── Field mapping ─────────────────────────────────────────────────────────────
 
 /**
@@ -129,6 +157,10 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
     if (!raw.name) continue;
 
     const priceGross = parseFloat(raw.price_gross) || 0;
+    const formattedPriceGross = priceGross.toFixed(2);
+
+    // Compute platform price using tiered markup on the supplier (gross) price
+    const platformPrice = computePlatformPrice(priceGross);
 
     if (raw.sku) {
       const existing = await db.query(
@@ -140,15 +172,20 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
         // Update mutable fields per spec (section 4)
         await db.query(
           `UPDATE products SET
-             price_gross = $1,
-             stock       = $2,
-             description = COALESCE($3, description),
-             image_url   = COALESCE($4, image_url),
-             status      = 'active',
-             updated_at  = NOW()
-           WHERE supplier_id = $5 AND sku = $6`,
+             price_gross       = $1,
+             supplier_price    = $1,
+             platform_price    = $2,
+             min_selling_price = $2,
+             selling_price     = $2,
+             stock             = $3,
+             description       = COALESCE($4, description),
+             image_url         = COALESCE($5, image_url),
+             status            = 'active',
+             updated_at        = NOW()
+           WHERE supplier_id = $6 AND sku = $7`,
           [
-            priceGross.toFixed(2),
+            formattedPriceGross,
+            platformPrice,
             raw.stock,
             raw.description || null,
             raw.image_url   || null,
@@ -165,16 +202,18 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
     await db.query(
       `INSERT INTO products
          (id, store_id, supplier_id, name, sku, price_net, tax_rate, price_gross,
-          selling_price, margin, stock, category, description, image_url,
+          supplier_price, platform_price, min_selling_price, selling_price, margin,
+          stock, category, description, image_url,
           is_central, status, created_at)
-       VALUES ($1, NULL, $2, $3, $4, 0, $5, $6, $6, 0, $7, $8, $9, $10, true, 'active', NOW())`,
+       VALUES ($1, NULL, $2, $3, $4, 0, $5, $6, $6, $7, $7, $7, 0, $8, $9, $10, $11, true, 'active', NOW())`,
       [
         uuidv4(),
         supplierId,
         raw.name,
         raw.sku      || null,
         DEFAULT_TAX_RATE,
-        priceGross.toFixed(2),
+        formattedPriceGross,
+        platformPrice,
         raw.stock,
         raw.category    || null,
         raw.description || null,

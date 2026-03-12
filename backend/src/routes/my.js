@@ -233,8 +233,14 @@ router.post(
         }
       }
 
-      const productResult = await db.query('SELECT id FROM products WHERE id = $1', [product_id]);
+      const productResult = await db.query('SELECT id, min_selling_price FROM products WHERE id = $1', [product_id]);
       if (!productResult.rows[0]) return res.status(404).json({ error: 'Produkt nie znaleziony' });
+
+      // Enforce minimum selling price set by the platform
+      const minPrice = productResult.rows[0].min_selling_price;
+      if (price_override != null && minPrice != null && price_override < minPrice) {
+        return res.status(422).json({ error: 'Cena nie może być niższa od ceny minimalnej platformy' });
+      }
 
       const id = uuidv4();
       const result = await db.query(
@@ -283,9 +289,10 @@ router.patch(
   async (req, res) => {
     try {
       const spResult = await db.query(
-        `SELECT sp.*, s.owner_id
+        `SELECT sp.*, s.owner_id, p.min_selling_price
          FROM shop_products sp
          JOIN stores s ON sp.store_id = s.id
+         JOIN products p ON sp.product_id = p.id
          WHERE sp.id = $1`,
         [req.params.id]
       );
@@ -301,6 +308,12 @@ router.patch(
         custom_title, custom_description, margin_type,
         margin_override, price_override, active, sort_order,
       } = req.body;
+
+      // Enforce minimum selling price set by the platform
+      const priceOverrideValue = price_override ?? null;
+      if (priceOverrideValue != null && sp.min_selling_price != null && priceOverrideValue < sp.min_selling_price) {
+        return res.status(422).json({ error: 'Cena nie może być niższa od ceny minimalnej platformy' });
+      }
 
       const result = await db.query(
         `UPDATE shop_products SET
