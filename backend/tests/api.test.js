@@ -1598,7 +1598,77 @@ describe('DELETE /api/my/store/products/:id', () => {
   });
 });
 
-// ─── Auth routes (POST /api/auth/register, /login, GET /api/auth/me) ──────────
+// ─── GET /api/my/store/stats ──────────────────────────────────────────────────
+
+describe('GET /api/my/store/stats', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/my/store/stats');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 when seller has no store', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // no store found
+
+    const res = await request(app)
+      .get('/api/my/store/stats')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns store stats for seller', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] }) // find store
+      .mockResolvedValueOnce({ rows: [{ order_count: '5', revenue: '1500.00', platform_commission: '225.00', seller_earnings: '1275.00' }] }) // order stats
+      .mockResolvedValueOnce({ rows: [{ count: '10' }] }) // product count
+      .mockResolvedValueOnce({ rows: [{ count: '3' }] }); // customer count
+
+    const res = await request(app)
+      .get('/api/my/store/stats')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('order_count', 5);
+    expect(res.body).toHaveProperty('revenue', 1500);
+    expect(res.body).toHaveProperty('platform_commission', 225);
+    expect(res.body).toHaveProperty('seller_earnings', 1275);
+    expect(res.body).toHaveProperty('product_count', 10);
+    expect(res.body).toHaveProperty('customer_count', 3);
+  });
+});
+
+// ─── GET /api/my/store/orders ─────────────────────────────────────────────────
+
+describe('GET /api/my/store/orders', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/my/store/orders');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 when seller has no store', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // no store found
+
+    const res = await request(app)
+      .get('/api/my/store/orders')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns store orders for seller', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] }) // find store
+      .mockResolvedValueOnce({ rows: [{ count: '2' }] })   // count
+      .mockResolvedValueOnce({ rows: [
+        { id: ORDER_ID, order_number: 'ORD-001', status: 'new', total: '99.00', created_at: new Date().toISOString(), buyer_id: 'buyer-1', shipping_address: 'ul. Testowa 1', seller_revenue: '84.15', platform_commission: '14.85' },
+      ]}); // orders
+
+    const res = await request(app)
+      .get('/api/my/store/orders')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('orders');
+    expect(res.body).toHaveProperty('total', 2);
+    expect(Array.isArray(res.body.orders)).toBe(true);
+  });
+});
 
 describe('POST /api/auth/register', () => {
   it('rejects invalid email', async () => {

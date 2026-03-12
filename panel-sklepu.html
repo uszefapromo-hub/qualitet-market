@@ -140,13 +140,38 @@
                 <thead>
                   <tr>
                     <th>Produkt</th>
-                    <th>Cena</th>
-                    <th>Marża</th>
+                    <th>Cena bazowa</th>
+                    <th>Marża (%)</th>
+                    <th>Cena końcowa</th>
                     <th>Status</th>
                     <th>Akcje</th>
                   </tr>
                 </thead>
                 <tbody data-products-tbody></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Add from central catalog -->
+          <section class="panel-card">
+            <h3>Dodaj produkt z katalogu</h3>
+            <div class="owner-toolbar">
+              <input type="search" class="owner-search" placeholder="Szukaj produktu…" data-catalog-search aria-label="Szukaj w katalogu">
+              <button class="btn btn-secondary" type="button" data-catalog-load>Szukaj</button>
+            </div>
+            <p data-catalog-loading class="hint" hidden>Ładowanie katalogu…</p>
+            <p data-catalog-empty class="hint" hidden>Brak produktów spełniających kryteria.</p>
+            <div class="owner-table-wrap" data-catalog-table-wrap hidden>
+              <table class="owner-table" aria-label="Katalog produktów">
+                <thead>
+                  <tr>
+                    <th>Produkt</th>
+                    <th>Kategoria</th>
+                    <th>Cena bazowa</th>
+                    <th>Akcja</th>
+                  </tr>
+                </thead>
+                <tbody data-catalog-tbody></tbody>
               </table>
             </div>
           </section>
