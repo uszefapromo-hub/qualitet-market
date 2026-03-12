@@ -234,8 +234,25 @@ router.post(
         }
       }
 
-      const productResult = await db.query('SELECT id FROM products WHERE id = $1', [product_id]);
+      const productResult = await db.query(
+        'SELECT id, platform_price, min_selling_price, selling_price FROM products WHERE id = $1',
+        [product_id]
+      );
       if (!productResult.rows[0]) return res.status(404).json({ error: 'Produkt nie znaleziony' });
+
+      const product = productResult.rows[0];
+      const basePlatformPrice = parseFloat(product.platform_price || product.selling_price || 0);
+      const minPrice = parseFloat(product.min_selling_price || product.platform_price || product.selling_price || 0);
+
+      if (price_override !== null && price_override < minPrice) {
+        return res.status(422).json({ error: 'Cena nie może być niższa niż cena platformy', min_selling_price: minPrice });
+      }
+      if (margin_type === 'fixed' && margin_override !== null) {
+        const computedPrice = parseFloat((basePlatformPrice + parseFloat(margin_override)).toFixed(2));
+        if (computedPrice < minPrice) {
+          return res.status(422).json({ error: 'Cena sprzedaży nie może być niższa niż cena platformy', min_selling_price: minPrice });
+        }
+      }
 
       const id = uuidv4();
       const result = await db.query(
@@ -368,9 +385,11 @@ router.patch(
   async (req, res) => {
     try {
       const spResult = await db.query(
-        `SELECT sp.*, s.owner_id
+        `SELECT sp.*, s.owner_id,
+                p.platform_price, p.min_selling_price, p.selling_price AS product_selling_price
          FROM shop_products sp
          JOIN stores s ON sp.store_id = s.id
+         JOIN products p ON sp.product_id = p.id
          WHERE sp.id = $1`,
         [req.params.id]
       );
@@ -386,6 +405,20 @@ router.patch(
         custom_title, custom_description, margin_type,
         margin_override, price_override, active, sort_order,
       } = req.body;
+
+      const basePlatformPrice = parseFloat(sp.platform_price || sp.product_selling_price || 0);
+      const minPrice = parseFloat(sp.min_selling_price || sp.platform_price || sp.product_selling_price || 0);
+
+      if (price_override !== undefined && price_override !== null && price_override < minPrice) {
+        return res.status(422).json({ error: 'Cena nie może być niższa niż cena platformy', min_selling_price: minPrice });
+      }
+      const effectiveMarginType = margin_type ?? sp.margin_type;
+      if (effectiveMarginType === 'fixed' && margin_override !== undefined && margin_override !== null) {
+        const computedPrice = parseFloat((basePlatformPrice + parseFloat(margin_override)).toFixed(2));
+        if (computedPrice < minPrice) {
+          return res.status(422).json({ error: 'Cena sprzedaży nie może być niższa niż cena platformy', min_selling_price: minPrice });
+        }
+      }
 
       const result = await db.query(
         `UPDATE shop_products SET

@@ -2642,6 +2642,77 @@ describe('PUT /api/shop-products/:id – seller_margin enforcement', () => {
   });
 });
 
+// ─── my/store/products: platform minimum price enforcement ────────────────────
+
+describe('POST /api/my/store/products – platform minimum price enforcement', () => {
+  it('rejects price_override below platform_price', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 100, commission_rate: 0.10, status: 'active' }] }) // requireActiveSubscription
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
+      .mockResolvedValueOnce({ rows: [{ count: '5' }] })           // product count
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, platform_price: 100, min_selling_price: 100, selling_price: 100 }] }); // product
+
+    const res = await request(app)
+      .post('/api/my/store/products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, price_override: 80 });
+    expect(res.status).toBe(422);
+    expect(res.body).toHaveProperty('min_selling_price');
+  });
+
+  it('accepts price_override equal to platform_price', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 100, commission_rate: 0.10, status: 'active' }] }) // requireActiveSubscription
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
+      .mockResolvedValueOnce({ rows: [{ count: '5' }] })           // product count
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, platform_price: 100, min_selling_price: 100, selling_price: 100 }] }) // product
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, price_override: 100, active: true }] }); // insert
+
+    const res = await request(app)
+      .post('/api/my/store/products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, price_override: 100 });
+    expect(res.status).toBe(201);
+  });
+});
+
+describe('PATCH /api/my/store/products/:id – platform minimum price enforcement', () => {
+  it('rejects price_override below platform_price', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{
+        id: SHOP_PROD_ID, store_id: STORE_ID, owner_id: SELLER_ID, active: true,
+        platform_price: 100, min_selling_price: 100, product_selling_price: 100,
+        margin_type: 'percent',
+      }],
+    });
+
+    const res = await request(app)
+      .patch(`/api/my/store/products/${SHOP_PROD_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ price_override: 50 });
+    expect(res.status).toBe(422);
+    expect(res.body).toHaveProperty('min_selling_price');
+  });
+
+  it('accepts price_override equal to platform_price', async () => {
+    db.query
+      .mockResolvedValueOnce({
+        rows: [{
+          id: SHOP_PROD_ID, store_id: STORE_ID, owner_id: SELLER_ID, active: true,
+          platform_price: 100, min_selling_price: 100, product_selling_price: 100,
+          margin_type: 'percent',
+        }],
+      })
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, price_override: 100, active: true }] });
+
+    const res = await request(app)
+      .patch(`/api/my/store/products/${SHOP_PROD_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ price_override: 100 });
+    expect(res.status).toBe(200);
+  });
+});
+
 // ─── Payments – Przelewy24 & Stripe providers ─────────────────────────────────
 
 describe('POST /api/payments – provider support', () => {
