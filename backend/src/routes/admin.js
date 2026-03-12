@@ -13,6 +13,7 @@ const { authenticate, requireRole, requireSuperAdmin } = require('../middleware/
 const { validate } = require('../middleware/validate');
 const { PLAN_CONFIG } = require('./subscriptions');
 const { upsertSupplierProducts, fetchSupplierProducts } = require('../services/supplier-import');
+const { computePlatformPrice, dbTiersToArray, DEFAULT_PLATFORM_TIERS } = require('../helpers/pricing');
 
 const router = express.Router();
 
@@ -822,6 +823,82 @@ router.get('/audit-logs', authenticate, requireRole('owner', 'admin'), async (re
   }
 });
 
+// ─── Platform margin config ────────────────────────────────────────────────────
+
+/**
+ * GET /api/admin/platform-margins
+ * Returns all platform margin tiers, optionally filtered by category.
+ */
+router.get('/platform-margins', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+  const { category } = req.query;
+  try {
+    let result;
+    if (category !== undefined) {
+      result = await db.query(
+        `SELECT * FROM platform_margin_config WHERE category = $1
+         ORDER BY threshold_max ASC NULLS LAST`,
+        [category || null]
+      );
+    } else {
+      result = await db.query(
+        `SELECT * FROM platform_margin_config
+         ORDER BY category ASC NULLS FIRST, threshold_max ASC NULLS LAST`
+      );
+    }
+    return res.json({ tiers: result.rows });
+  } catch (err) {
+    console.error('get platform margins error:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+/**
+ * PUT /api/admin/platform-margins
+ * Replace all tiers for a given category (or global if category omitted).
+ * Body: { category?: string|null, tiers: [{ threshold_max: number|null, margin_percent: number }] }
+ */
+router.put(
+  '/platform-margins',
+  authenticate,
+  requireRole('owner', 'admin'),
+  [
+    body('tiers').isArray({ min: 1 }),
+    body('tiers.*.margin_percent').isFloat({ min: 0, max: 999 }),
+    body('category').optional({ nullable: true }).isString(),
+  ],
+  validate,
+  async (req, res) => {
+    const { tiers, category = null } = req.body;
+    try {
+      // Delete existing tiers for this category scope
+      if (category) {
+        await db.query('DELETE FROM platform_margin_config WHERE category = $1', [category]);
+      } else {
+        await db.query('DELETE FROM platform_margin_config WHERE category IS NULL');
+      }
+
+      const inserted = [];
+      for (const tier of tiers) {
+        const maxPrice = tier.threshold_max != null ? parseFloat(tier.threshold_max) : null;
+        const marginPct = parseFloat(tier.margin_percent);
+        const id = uuidv4();
+        const row = await db.query(
+          `INSERT INTO platform_margin_config
+             (id, category, threshold_max, margin_percent, created_at)
+           VALUES ($1, $2, $3, $4, NOW())
+           RETURNING *`,
+          [id, category || null, maxPrice, marginPct]
+        );
+        inserted.push(row.rows[0]);
+      }
+      return res.json({ tiers: inserted });
+    } catch (err) {
+      console.error('put platform margins error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
 // ─── Import helpers ────────────────────────────────────────────────────────────
 
 const DEFAULT_TAX_RATE = 23; // Polish standard VAT rate (%)
@@ -900,6 +977,24 @@ async function adminFetchApiProducts(supplier) {
 async function upsertCentralProducts(rawProducts, supplierId) {
   let count = 0;
 
+  // Load current global platform margin tiers for pricing
+  let tiers = DEFAULT_PLATFORM_TIERS;
+  try {
+    const tiersResult = await db.query(
+      `SELECT threshold_max, margin_percent FROM platform_margin_config
+       WHERE category IS NULL ORDER BY threshold_max ASC NULLS LAST`
+    );
+    if (tiersResult.rows.length > 0) {
+      tiers = dbTiersToArray(tiersResult.rows);
+    }
+  } catch (err) {
+    // Table may not exist yet during early migrations – fall back to defaults.
+    // Only suppress the "table does not exist" error (42P01); re-throw others.
+    if (err.code !== '42P01') {
+      console.error('platform_margin_config query error:', err.message);
+    }
+  }
+
   for (const raw of rawProducts) {
     if (!raw.name) continue;
 
@@ -909,6 +1004,8 @@ async function upsertCentralProducts(rawProducts, supplierId) {
       ? raw.price_gross
       : priceNet * (1 + DEFAULT_TAX_RATE / 100);
     const formattedPriceGross = parseFloat(priceGross).toFixed(2);
+    const supplierPrice = parseFloat(formattedPriceGross);
+    const platformPrice = computePlatformPrice(supplierPrice, tiers);
 
     if (raw.sku) {
       const existing = await db.query(
@@ -921,18 +1018,21 @@ async function upsertCentralProducts(rawProducts, supplierId) {
         // if not provided by the supplier (COALESCE keeps existing value when null)
         await db.query(
           `UPDATE products SET
-             name        = $1,
-             price_net   = $2,
-             price_gross = $3,
-             stock       = $4,
-             category    = COALESCE($5, category),
-             description = COALESCE($6, description),
-             image_url   = COALESCE($7, image_url),
-             supplier_id = $8,
-             status      = 'active',
-             updated_at  = NOW()
-           WHERE is_central = true AND sku = $9`,
-          [raw.name, priceNet, formattedPriceGross, raw.stock,
+             name              = $1,
+             price_net         = $2,
+             price_gross       = $3,
+             supplier_price    = $3,
+             platform_price    = $4,
+             min_selling_price = $4,
+             stock             = $5,
+             category          = COALESCE($6, category),
+             description       = COALESCE($7, description),
+             image_url         = COALESCE($8, image_url),
+             supplier_id       = $9,
+             status            = 'active',
+             updated_at        = NOW()
+           WHERE is_central = true AND sku = $10`,
+          [raw.name, priceNet, formattedPriceGross, platformPrice, raw.stock,
            raw.category, raw.description, raw.image_url, supplierId, raw.sku]
         );
         count++;
@@ -943,11 +1043,15 @@ async function upsertCentralProducts(rawProducts, supplierId) {
     await db.query(
       `INSERT INTO products
          (id, store_id, supplier_id, name, sku, price_net, tax_rate, price_gross,
+          supplier_price, platform_price, min_selling_price,
           selling_price, margin, stock, category, description, image_url,
           is_central, status, created_at)
-       VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, $7, 0, $8, $9, $10, $11, true, 'active', NOW())`,
+       VALUES ($1, NULL, $2, $3, $4, $5, $6, $7,
+               $7, $8, $8,
+               $8, 0, $9, $10, $11, $12, true, 'active', NOW())`,
       [uuidv4(), supplierId, raw.name, raw.sku || null,
        priceNet, DEFAULT_TAX_RATE, formattedPriceGross,
+       platformPrice,
        raw.stock, raw.category, raw.description, raw.image_url]
     );
     count++;

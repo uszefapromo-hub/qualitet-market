@@ -2318,3 +2318,214 @@ describe('PATCH /api/admin/stores/:id/subdomain', () => {
     expect(res.status).toBe(404);
   });
 });
+
+// ─── Pricing helper: computePlatformPrice ─────────────────────────────────────
+
+describe('computePlatformPrice helper', () => {
+  const { computePlatformPrice, DEFAULT_PLATFORM_TIERS } = require('../src/helpers/pricing');
+
+  it('applies 60% margin for prices up to 20 zł', () => {
+    expect(computePlatformPrice(10)).toBe(16.00);
+    expect(computePlatformPrice(20)).toBe(32.00);
+  });
+
+  it('applies 40% margin for prices in 20–100 zł range', () => {
+    expect(computePlatformPrice(50)).toBe(70.00);
+    expect(computePlatformPrice(100)).toBe(140.00);
+  });
+
+  it('applies 25% margin for prices in 100–300 zł range', () => {
+    expect(computePlatformPrice(200)).toBe(250.00);
+    expect(computePlatformPrice(300)).toBe(375.00);
+  });
+
+  it('applies 15% margin for prices above 300 zł', () => {
+    expect(computePlatformPrice(400)).toBe(460.00);
+    expect(computePlatformPrice(1000)).toBe(1150.00);
+  });
+
+  it('accepts custom tiers override', () => {
+    const tiers = [{ maxPrice: 50, marginPercent: 10 }, { maxPrice: null, marginPercent: 5 }];
+    expect(computePlatformPrice(30, tiers)).toBe(33.00);
+    expect(computePlatformPrice(100, tiers)).toBe(105.00);
+  });
+
+  it('returns 0 for zero supplier price', () => {
+    expect(computePlatformPrice(0)).toBe(0);
+  });
+});
+
+// ─── Admin: platform margin config ────────────────────────────────────────────
+
+describe('GET /api/admin/platform-margins', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .get('/api/admin/platform-margins')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns all margin tiers as admin', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [
+        { id: 'tier-1', category: null, threshold_max: '20', margin_percent: '60' },
+        { id: 'tier-2', category: null, threshold_max: '100', margin_percent: '40' },
+        { id: 'tier-3', category: null, threshold_max: '300', margin_percent: '25' },
+        { id: 'tier-4', category: null, threshold_max: null,  margin_percent: '15' },
+      ],
+    });
+
+    const res = await request(app)
+      .get('/api/admin/platform-margins')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.tiers).toHaveLength(4);
+    expect(res.body.tiers[0].margin_percent).toBe('60');
+  });
+
+  it('filters by category when query param provided', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: 'tier-cat', category: 'Meble', threshold_max: '100', margin_percent: '35' }],
+    });
+
+    const res = await request(app)
+      .get('/api/admin/platform-margins?category=Meble')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.tiers[0].category).toBe('Meble');
+  });
+});
+
+describe('PUT /api/admin/platform-margins', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .put('/api/admin/platform-margins')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ tiers: [{ threshold_max: 20, margin_percent: 60 }] });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects empty tiers array', async () => {
+    const res = await request(app)
+      .put('/api/admin/platform-margins')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ tiers: [] });
+    expect(res.status).toBe(422);
+  });
+
+  it('replaces global tiers successfully', async () => {
+    const newTier = { id: 'new-tier', category: null, threshold_max: null, margin_percent: '20' };
+    db.query
+      .mockResolvedValueOnce({ rows: [] }) // DELETE
+      .mockResolvedValueOnce({ rows: [newTier] }); // INSERT
+
+    const res = await request(app)
+      .put('/api/admin/platform-margins')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ tiers: [{ threshold_max: null, margin_percent: 20 }] });
+    expect(res.status).toBe(200);
+    expect(res.body.tiers).toHaveLength(1);
+    expect(res.body.tiers[0].margin_percent).toBe('20');
+  });
+
+  it('replaces per-category tiers', async () => {
+    const catTier = { id: 'cat-tier', category: 'Sport', threshold_max: '50', margin_percent: '30' };
+    db.query
+      .mockResolvedValueOnce({ rows: [] }) // DELETE by category
+      .mockResolvedValueOnce({ rows: [catTier] }); // INSERT
+
+    const res = await request(app)
+      .put('/api/admin/platform-margins')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ category: 'Sport', tiers: [{ threshold_max: 50, margin_percent: 30 }] });
+    expect(res.status).toBe(200);
+    expect(res.body.tiers[0].category).toBe('Sport');
+  });
+});
+
+// ─── Shop products: seller_margin and min price enforcement ───────────────────
+
+describe('POST /api/shop-products – seller_margin and selling_price', () => {
+  it('computes selling_price from seller_margin', async () => {
+    const spRow = {
+      id: 'sp-new', store_id: STORE_ID, product_id: PRODUCT_ID,
+      seller_margin: 10, selling_price: 110.00, active: true,
+    };
+    db.query
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] }) // store
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, platform_price: 100, min_selling_price: 100, selling_price: 100 }] }) // product
+      .mockResolvedValueOnce({ rows: [spRow] }); // insert
+
+    const res = await request(app)
+      .post('/api/shop-products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, seller_margin: 10 });
+    expect(res.status).toBe(201);
+    expect(res.body.seller_margin).toBe(10);
+  });
+
+  it('rejects price_override below platform_price (min_selling_price)', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] }) // store
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, platform_price: 100, min_selling_price: 100, selling_price: 100 }] }); // product
+
+    const res = await request(app)
+      .post('/api/shop-products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, price_override: 80 });
+    expect(res.status).toBe(422);
+    expect(res.body).toHaveProperty('min_selling_price');
+  });
+
+  it('accepts price_override equal to platform_price', async () => {
+    const spRow = { id: 'sp-eq', store_id: STORE_ID, product_id: PRODUCT_ID, active: true };
+    db.query
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] }) // store
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, platform_price: 100, min_selling_price: 100, selling_price: 100 }] }) // product
+      .mockResolvedValueOnce({ rows: [spRow] }); // insert
+
+    const res = await request(app)
+      .post('/api/shop-products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID, price_override: 100 });
+    expect(res.status).toBe(201);
+  });
+});
+
+describe('PUT /api/shop-products/:id – seller_margin enforcement', () => {
+  it('rejects price_override below platform_price', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{
+        id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID,
+        owner_id: SELLER_ID, platform_price: 100, min_selling_price: 100, product_selling_price: 100,
+      }],
+    });
+
+    const res = await request(app)
+      .put(`/api/shop-products/${SHOP_PROD_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ price_override: 50 });
+    expect(res.status).toBe(422);
+    expect(res.body).toHaveProperty('min_selling_price');
+  });
+
+  it('accepts valid seller_margin', async () => {
+    db.query
+      .mockResolvedValueOnce({
+        rows: [{
+          id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID,
+          owner_id: SELLER_ID, platform_price: 100, min_selling_price: 100, product_selling_price: 100,
+        }],
+      })
+      .mockResolvedValueOnce({
+        rows: [{ id: SHOP_PROD_ID, seller_margin: 20, selling_price: 120, active: true }],
+      });
+
+    const res = await request(app)
+      .put(`/api/shop-products/${SHOP_PROD_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ seller_margin: 20 });
+    expect(res.status).toBe(200);
+    expect(res.body.selling_price).toBe(120);
+  });
+});
