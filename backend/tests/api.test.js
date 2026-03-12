@@ -2400,3 +2400,74 @@ describe('PATCH /api/admin/stores/:id/subdomain', () => {
     expect(res.status).toBe(404);
   });
 });
+
+// ─── Admin: product platform_price management ─────────────────────────────────
+
+describe('PATCH /api/admin/products/:id/platform-price', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .patch(`/api/admin/products/${PRODUCT_ID}/platform-price`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ platform_price: 100 });
+    expect(res.status).toBe(403);
+  });
+
+  it('sets platform_price as admin', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', platform_price: '100.00' }] });
+
+    const res = await request(app)
+      .patch(`/api/admin/products/${PRODUCT_ID}/platform-price`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ platform_price: 100 });
+    expect(res.status).toBe(200);
+    expect(res.body.platform_price).toBe('100.00');
+  });
+
+  it('clears platform_price when null is sent', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', platform_price: null }] });
+
+    const res = await request(app)
+      .patch(`/api/admin/products/${PRODUCT_ID}/platform-price`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ platform_price: null });
+    expect(res.status).toBe(200);
+    expect(res.body.platform_price).toBeNull();
+  });
+
+  it('returns 404 for non-existent product', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .patch(`/api/admin/products/${PRODUCT_ID}/platform-price`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ platform_price: 100 });
+    expect(res.status).toBe(404);
+  });
+});
+
+// ─── PUT /api/products/:id – platform_price via product update ────────────────
+
+describe('PUT /api/products/:id – platform_price', () => {
+  it('allows admin to set platform_price via product update', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, store_id: null, is_central: true, owner_id: null, price_net: '100.00', tax_rate: '23.00', price_gross: '123.00', selling_price: '141.45', margin: 15 }] }) // fetch
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', platform_price: '120.00' }] }); // update
+
+    const res = await request(app)
+      .put(`/api/products/${PRODUCT_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ platform_price: 120 });
+    expect(res.status).toBe(200);
+  });
+
+  it('blocks seller from setting platform_price', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, store_id: STORE_ID, is_central: false, owner_id: SELLER_ID, price_net: '100.00', tax_rate: '23.00', price_gross: '123.00', selling_price: '141.45', margin: 15 }] }); // fetch
+
+    const res = await request(app)
+      .put(`/api/products/${PRODUCT_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ platform_price: 120 });
+    expect(res.status).toBe(403);
+  });
+});

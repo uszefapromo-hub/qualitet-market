@@ -800,6 +800,33 @@ router.patch(
   }
 );
 
+// ─── PATCH /api/admin/products/:id/platform-price – set platform minimum price ─
+
+router.patch(
+  '/products/:id/platform-price',
+  authenticate,
+  requireRole('owner', 'admin'),
+  [
+    param('id').isUUID(),
+    body('platform_price').optional({ nullable: true }).isFloat({ min: 0 }),
+  ],
+  validate,
+  async (req, res) => {
+    try {
+      const { platform_price } = req.body;
+      const result = await db.query(
+        'UPDATE products SET platform_price = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+        [platform_price ?? null, req.params.id]
+      );
+      if (!result.rows[0]) return res.status(404).json({ error: 'Produkt nie znaleziony' });
+      return res.json(result.rows[0]);
+    } catch (err) {
+      console.error('admin update product platform_price error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
 // ─── GET /api/admin/audit-logs – audit log (paginated) ────────────────────────
 
 router.get('/audit-logs', authenticate, requireRole('owner', 'admin'), async (req, res) => {

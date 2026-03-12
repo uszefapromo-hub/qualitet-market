@@ -171,6 +171,7 @@ router.put(
     body('description').optional().trim(),
     body('image_url').optional().isURL(),
     body('status').optional().isIn(['draft', 'pending', 'active', 'archived']),
+    body('platform_price').optional({ nullable: true }).isFloat({ min: 0 }),
   ],
   validate,
   async (req, res) => {
@@ -194,7 +195,12 @@ router.put(
         return res.status(403).json({ error: 'Brak uprawnień' });
       }
 
-      const { name, price_net, tax_rate, stock, category, description, image_url, status } = req.body;
+      const { name, price_net, tax_rate, stock, category, description, image_url, status, platform_price } = req.body;
+
+      // Only admin/owner can set platform_price
+      if (platform_price !== undefined && !isAdmin) {
+        return res.status(403).json({ error: 'Tylko admin/owner może ustawiać cenę minimalną platformy' });
+      }
 
       // Recalculate prices if price_net or tax_rate changes
       let newPriceGross = null;
@@ -219,8 +225,9 @@ router.put(
            description   = COALESCE($8, description),
            image_url     = COALESCE($9, image_url),
            status        = COALESCE($10, status),
+           platform_price = COALESCE($11, platform_price),
            updated_at    = NOW()
-         WHERE id = $11
+         WHERE id = $12
          RETURNING *`,
         [
           name || null,
@@ -233,6 +240,7 @@ router.put(
           description !== undefined ? description : null,
           image_url || null,
           status || null,
+          platform_price !== undefined ? platform_price : null,
           req.params.id,
         ]
       );
