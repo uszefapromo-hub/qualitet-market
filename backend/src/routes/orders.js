@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate, sanitizeText } = require('../middleware/validate');
+const { auditLog } = require('../helpers/audit');
 
 const router = express.Router();
 
@@ -98,12 +99,23 @@ router.post(
         ? parseFloat(settingsResult.rows[0].value)
         : PLATFORM_COMMISSION_DEFAULT;
 
-      // Fetch products and verify stock.
-      // Central catalog products have store_id = NULL; match both store-specific and central.
+      // Fetch products via shop_products (supports central catalog and store-scoped products).
+      // The effective selling_price respects any per-store price_override / margin_override.
       const productIds = items.map((i) => i.product_id);
       const productResult = await db.query(
-        `SELECT id, name, selling_price, stock, margin FROM products
-         WHERE id = ANY($1::uuid[]) AND (store_id = $2 OR store_id IS NULL)`,
+        `SELECT p.id, p.name, p.stock,
+                COALESCE(sp.margin_override, p.margin) AS margin,
+                CASE
+                  WHEN sp.price_override IS NOT NULL THEN sp.price_override
+                  WHEN sp.margin_override IS NOT NULL AND COALESCE(sp.margin_type,'percent') = 'fixed'
+                    THEN p.price_gross + sp.margin_override
+                  WHEN sp.margin_override IS NOT NULL
+                    THEN p.price_gross * (1 + sp.margin_override / 100)
+                  ELSE p.selling_price
+                END AS selling_price
+         FROM products p
+         JOIN shop_products sp ON sp.product_id = p.id
+         WHERE sp.store_id = $2 AND sp.active = true AND p.id = ANY($1::uuid[])`,
         [productIds, store_id]
       );
       const productMap = Object.fromEntries(productResult.rows.map((p) => [p.id, p]));
@@ -177,6 +189,14 @@ router.post(
 
       const newOrder = await db.query('SELECT * FROM orders WHERE id = $1', [createdOrderId]);
       const newItems = await db.query('SELECT * FROM order_items WHERE order_id = $1', [createdOrderId]);
+      auditLog({
+        actorUserId: req.user.id,
+        action: 'order.created',
+        resource: 'order',
+        resourceId: createdOrderId,
+        payload: { store_id, total: newOrder.rows[0].total },
+        ipAddress: req.ip,
+      });
       return res.status(201).json({ ...newOrder.rows[0], items: newItems.rows });
     } catch (err) {
       console.error('create order error:', err.message);

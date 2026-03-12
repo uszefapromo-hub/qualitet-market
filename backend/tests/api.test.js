@@ -316,6 +316,25 @@ function setupDbMock() {
       const row = mockDb.shop_products.find((sp) => sp.id === id);
       return { rows: row ? [{ ...row, owner_id: SELLER_ID }] : [] };
     }
+    // orders.js product lookup via shop_products JOIN (central catalog model)
+    if (s.includes('from products p') && s.includes('join shop_products sp') && s.includes('= any')) {
+      const storeId = params[1];
+      const rows = mockDb.shop_products
+        .filter((sp) => sp.store_id === storeId && sp.active !== false)
+        .map((sp) => {
+          const p = mockDb.products.find((prod) => prod.id === sp.product_id);
+          if (!p) return null;
+          return {
+            id:            p.id,
+            name:          p.name,
+            stock:         p.stock != null ? p.stock : 10,
+            selling_price: sp.price_override || p.selling_price || 100,
+            margin:        sp.margin_override != null ? sp.margin_override : (p.margin || 15),
+          };
+        })
+        .filter(Boolean);
+      return { rows };
+    }
     if (s.startsWith('insert into shop_products')) {
       const sp = { id: params[0], store_id: params[1], product_id: params[2], active: true };
       const existing = mockDb.shop_products.findIndex(
@@ -3203,7 +3222,7 @@ describe('POST /api/orders – central catalog products (store_id IS NULL)', () 
     db.query
       .mockResolvedValueOnce({ rows: [{ id: STORE_ID, owner_id: SELLER_ID, margin: 15 }] }) // store
       .mockResolvedValueOnce({ rows: [{ value: '0.08' }] }) // platform_settings
-      // central product returned because (store_id = $2 OR store_id IS NULL) matches
+      // central product returned via JOIN shop_products (central catalog model)
       .mockResolvedValueOnce({ rows: [{ id: CENTRAL_PRODUCT_ID, name: 'Centralny produkt', selling_price: 100.00, stock: 20, margin: 15 }] })
       .mockResolvedValueOnce({ rows: [] }) // INSERT INTO orders
       .mockResolvedValueOnce({ rows: [] }) // INSERT INTO order_items
@@ -3222,5 +3241,83 @@ describe('POST /api/orders – central catalog products (store_id IS NULL)', () 
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('platform_commission', 8.00);
     expect(res.body).toHaveProperty('seller_revenue', 92.00);
+  });
+});
+
+
+
+// ─── requireActiveSubscription middleware ─────────────────────────────────────
+
+describe('requireActiveSubscription middleware', () => {
+  it('is exported from auth middleware', () => {
+    const { requireActiveSubscription } = require('../src/middleware/auth');
+    expect(typeof requireActiveSubscription).toBe('function');
+  });
+});
+
+// ─── PLAN_CONFIG export ───────────────────────────────────────────────────────
+
+describe('PLAN_CONFIG export', () => {
+  it('is exported from subscriptions router', () => {
+    const { PLAN_CONFIG } = require('../src/routes/subscriptions');
+    expect(PLAN_CONFIG).toBeDefined();
+    expect(PLAN_CONFIG.trial.maxProducts).toBe(10);
+    expect(PLAN_CONFIG.pro.maxProducts).toBe(500);
+    expect(PLAN_CONFIG.elite.maxProducts).toBeNull();
+    expect(PLAN_CONFIG.basic.platformMarginPct).toBe(10);
+  });
+});
+
+// ─── GET /api/admin/audit-logs ────────────────────────────────────────────────
+
+describe('GET /api/admin/audit-logs', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .get('/api/admin/audit-logs')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns audit log list as admin', async () => {
+    const res = await request(app)
+      .get('/api/admin/audit-logs')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('logs');
+  });
+});
+
+// ─── POST /api/admin/products/import ─────────────────────────────────────────
+
+describe('POST /api/admin/products/import', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post('/api/admin/products/import')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 422 when no file supplied', async () => {
+    const res = await request(app)
+      .post('/api/admin/products/import')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(422);
+  });
+
+  it('imports CSV products into central catalogue', async () => {
+    const csv = 'name,sku,price_net,tax_rate,stock\nFotel Biurowy,SKU-001,200,23,5\n';
+
+    db.query
+      .mockResolvedValueOnce({ rows: [] })  // sku lookup – not found
+      .mockResolvedValueOnce({ rows: [] }); // insert
+
+    const res = await request(app)
+      .post('/api/admin/products/import')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .attach('file', Buffer.from(csv), { filename: 'products.csv', contentType: 'text/csv' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('count');
+    expect(res.body.count).toBeGreaterThanOrEqual(1);
   });
 });

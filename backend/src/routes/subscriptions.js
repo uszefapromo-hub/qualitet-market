@@ -13,13 +13,17 @@ const router = express.Router();
 const VALID_PLANS = ['trial', 'basic', 'pro', 'elite'];
 
 /**
- * Plan configuration: product_limit (null = unlimited), commission_rate (decimal), duration_days (trial only)
+ * Plan configuration.
+ *
+ * product_limit / commission_rate are the DB column names used for persistence.
+ * maxProducts / platformMarginPct are semantic aliases used in business logic.
+ * durationDays is the default subscription period in days.
  */
 const PLAN_CONFIG = {
-  trial:  { product_limit: 10,   commission_rate: 0.15, duration_days: 14 },
-  basic:  { product_limit: 100,  commission_rate: 0.10 },
-  pro:    { product_limit: 500,  commission_rate: 0.07 },
-  elite:  { product_limit: null, commission_rate: 0.05 },
+  trial:  { product_limit: 10,   maxProducts: 10,   commission_rate: 0.15, platformMarginPct: 15, duration_days: 14, durationDays: 14 },
+  basic:  { product_limit: 100,  maxProducts: 100,  commission_rate: 0.10, platformMarginPct: 10, durationDays: 30 },
+  pro:    { product_limit: 500,  maxProducts: 500,  commission_rate: 0.07, platformMarginPct: 7,  durationDays: 30 },
+  elite:  { product_limit: null, maxProducts: null, commission_rate: 0.05, platformMarginPct: 5,  durationDays: 30 },
 };
 
 // ─── List subscriptions (own shops) ───────────────────────────────────────────

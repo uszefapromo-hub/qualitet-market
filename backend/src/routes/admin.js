@@ -1140,3 +1140,40 @@ router.patch(
 );
 
 module.exports = router;
+
+// ─── POST /api/admin/products/import – bulk import into central catalogue ──────
+// Accepts multipart/form-data with a `file` (CSV or XML).
+// Optionally accepts `supplier_id` body param.
+
+router.post(
+  '/products/import',
+  authenticate,
+  requireRole('owner', 'admin'),
+  upload.single('file'),
+  async (req, res) => {
+    if (!req.file) {
+      return res.status(422).json({ error: 'Plik jest wymagany (multipart: file)' });
+    }
+
+    const supplierId = req.body.supplier_id || null;
+
+    try {
+      const content = req.file.buffer.toString('utf-8');
+      const contentType = req.file.mimetype || '';
+      const filename = req.file.originalname || '';
+
+      let rawProducts;
+      if (contentType.includes('xml') || filename.endsWith('.xml')) {
+        rawProducts = await adminParseXmlProducts(content);
+      } else {
+        rawProducts = adminParseCsvProducts(content);
+      }
+
+      const count = await upsertCentralProducts(rawProducts, supplierId);
+      return res.json({ message: `Zaimportowano ${count} produktów do katalogu centralnego`, count });
+    } catch (err) {
+      console.error('admin products import error:', err.message);
+      return res.status(500).json({ error: 'Błąd importu: ' + err.message });
+    }
+  }
+);
