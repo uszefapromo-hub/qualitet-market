@@ -14,6 +14,8 @@
  *   OPENAI_MODEL     – Model name to use (default: gpt-3.5-turbo)
  */
 
+// node-fetch is the project-standard HTTP client (also used in services/supplier-import.js).
+// It provides a consistent fetch API across Node.js versions supported by this project.
 const fetch = require('node-fetch')
 const AiModel = require('./model')
 
