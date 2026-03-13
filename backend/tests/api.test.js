@@ -5790,3 +5790,174 @@ describe('POST /api/creator/payouts', () => {
     expect(res.body.amount).toBe(50);
   });
 });
+
+// ─── Creator Referral System ──────────────────────────────────────────────────
+
+const INVITER_ID = 'b0000000-0000-4000-8000-000000000077';
+
+describe('POST /api/creator/register with referral_code', () => {
+  let sellerToken2;
+  const OTHER_SELLER_ID = 'b0000000-0000-4000-8000-000000000088';
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    sellerToken2 = signToken({ id: OTHER_SELLER_ID, email: 'seller2@test.pl', role: 'seller' });
+  });
+
+  it('records invitation when valid referral_code provided', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: OTHER_SELLER_ID, email: 'seller2@test.pl', name: 'S2', role: 'seller' }] }) // SELECT user
+      .mockResolvedValueOnce({ rows: [] })                                                                               // UPDATE role
+      .mockResolvedValueOnce({ rows: [{ id: INVITER_ID }] })                                                            // SELECT inviter by code
+      .mockResolvedValueOnce({ rows: [] })                                                                               // SELECT existing referral
+      .mockResolvedValueOnce({ rows: [] });                                                                              // INSERT referral
+    const res = await request(app)
+      .post('/api/creator/register')
+      .set('Authorization', `Bearer ${sellerToken2}`)
+      .send({ referral_code: 'REF-ABCD1234' });
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe('creator');
+  });
+
+  it('blocks self-referral', async () => {
+    const { signToken } = require('../src/middleware/auth');
+    const selfToken = signToken({ id: INVITER_ID, email: 'inviter@test.pl', role: 'seller' });
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: INVITER_ID, email: 'inviter@test.pl', name: 'Inv', role: 'seller' }] }) // SELECT user
+      .mockResolvedValueOnce({ rows: [] })                                                                           // UPDATE role
+      .mockResolvedValueOnce({ rows: [{ id: INVITER_ID }] });                                                       // SELECT inviter → same as userId
+    // No INSERT should be made
+    const res = await request(app)
+      .post('/api/creator/register')
+      .set('Authorization', `Bearer ${selfToken}`)
+      .send({ referral_code: 'REF-SELFREF' });
+    expect(res.status).toBe(200);
+    // Registration succeeds but referral is silently skipped
+    expect(res.body.user.role).toBe('creator');
+  });
+});
+
+describe('POST /api/creator/referrals/generate-link', () => {
+  let creatorToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    creatorToken = signToken({ id: CREATOR_ID, email: 'creator@test.pl', role: 'creator' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/creator/referrals/generate-link');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns existing code when creator already has one', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ creator_referral_code: 'REF-EXISTING1' }] });
+    const res = await request(app)
+      .post('/api/creator/referrals/generate-link')
+      .set('Authorization', `Bearer ${creatorToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.code).toBe('REF-EXISTING1');
+    expect(res.body.link).toMatch(/REF-EXISTING1/);
+  });
+
+  it('generates and saves a new code when none exists', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ creator_referral_code: null }] })  // SELECT user
+      .mockResolvedValueOnce({ rows: [] })                                  // uniqueness check
+      .mockResolvedValueOnce({ rows: [] });                                 // UPDATE users
+    const res = await request(app)
+      .post('/api/creator/referrals/generate-link')
+      .set('Authorization', `Bearer ${creatorToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.code).toMatch(/^REF-/);
+    expect(res.body.link).toMatch(/\/invite\/REF-/);
+  });
+
+  it('returns 404 when user not found', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .post('/api/creator/referrals/generate-link')
+      .set('Authorization', `Bearer ${creatorToken}`);
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('GET /api/creator/referrals', () => {
+  let creatorToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    creatorToken = signToken({ id: CREATOR_ID, email: 'creator@test.pl', role: 'creator' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/creator/referrals');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns paginated list of invited creators', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'ref-1', created_at: new Date().toISOString(), invited_id: INVITER_ID, invited_name: 'Bob', invited_email: 'bob@test.pl', is_active: true }] });
+    const res = await request(app)
+      .get('/api/creator/referrals')
+      .set('Authorization', `Bearer ${creatorToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(1);
+    expect(res.body.creators).toHaveLength(1);
+    expect(res.body.creators[0].invited_name).toBe('Bob');
+  });
+
+  it('returns empty list when no invited creators', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .get('/api/creator/referrals')
+      .set('Authorization', `Bearer ${creatorToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(0);
+    expect(res.body.creators).toHaveLength(0);
+  });
+});
+
+describe('GET /api/creator/referrals/stats', () => {
+  let creatorToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    creatorToken = signToken({ id: CREATOR_ID, email: 'creator@test.pl', role: 'creator' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/creator/referrals/stats');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns referral stats', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ total: '3' }] })                       // invited count
+      .mockResolvedValueOnce({ rows: [{ active: '2' }] })                      // active count
+      .mockResolvedValueOnce({ rows: [{ referral_earnings: '4.50' }] })        // earnings
+      .mockResolvedValueOnce({ rows: [{ creator_referral_code: 'REF-TEST01' }] }); // user code
+    const res = await request(app)
+      .get('/api/creator/referrals/stats')
+      .set('Authorization', `Bearer ${creatorToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.invited_count).toBe(3);
+    expect(res.body.active_count).toBe(2);
+    expect(res.body.referral_earnings).toBe(4.5);
+    expect(res.body.referral_code).toBe('REF-TEST01');
+    expect(res.body.referral_link).toMatch(/REF-TEST01/);
+  });
+
+  it('returns null referral_link when code not yet generated', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ total: '0' }] })
+      .mockResolvedValueOnce({ rows: [{ active: '0' }] })
+      .mockResolvedValueOnce({ rows: [{ referral_earnings: '0' }] })
+      .mockResolvedValueOnce({ rows: [{ creator_referral_code: null }] });
+    const res = await request(app)
+      .get('/api/creator/referrals/stats')
+      .set('Authorization', `Bearer ${creatorToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.referral_code).toBeNull();
+    expect(res.body.referral_link).toBeNull();
+  });
+});

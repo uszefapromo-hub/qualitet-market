@@ -618,6 +618,17 @@
     adminStats()                           { return get('/affiliate/admin/stats'); },
   };
 
+  // ─── Creator Referral System ──────────────────────────────────────────────────
+
+  const CreatorReferrals = {
+    /** Generate (or return existing) creator referral link. POST /api/creator/referrals/generate-link */
+    generateLink()            { return post('/creator/referrals/generate-link'); },
+    /** List creators invited by the authenticated creator. GET /api/creator/referrals */
+    list(params)              { return get('/creator/referrals', params); },
+    /** Referral stats (invited, active, earnings, link). GET /api/creator/referrals/stats */
+    stats()                   { return get('/creator/referrals/stats'); },
+  };
+
   // ─── Public API surface ───────────────────────────────────────────────────────
 
   return {
@@ -637,6 +648,7 @@
     Referral,
     Announcements,
     Affiliate,
+    CreatorReferrals,
     health,
     /** Expose for advanced use cases. */
     _request: request,

@@ -28,6 +28,7 @@ const scriptsRouter = require('./routes/scripts');
 const analyticsRouter = require('./routes/analytics');
 const affiliateRouter = require('./routes/affiliate');
 const creatorRouter = require('./routes/creator');
+const creatorReferralsRouter = require('./routes/creator-referrals');
 const aiRouter = require('./modules/ai/routes');
 const errorHandler = require('./middleware/errorHandler');
 const { importSupplierProducts } = require('./services/supplier-import');
@@ -259,6 +260,7 @@ app.use('/api/referrals', referralsRouter);
 app.use('/api/scripts', scriptsRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/affiliate', affiliateRouter);
+app.use('/api/creator/referrals', creatorReferralsRouter);
 app.use('/api/creator', creatorRouter);
 app.use('/api/ai', aiRouter);
 
