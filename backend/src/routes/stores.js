@@ -151,6 +151,10 @@ router.put(
     body('description').optional().trim(),
     body('margin').optional().isFloat({ min: 0, max: 100 }),
     body('status').optional().isIn(['active', 'inactive', 'suspended']),
+    body('social_facebook').optional().trim().isURL({ require_protocol: true }).withMessage('Nieprawidłowy URL Facebook'),
+    body('social_instagram').optional().trim().isURL({ require_protocol: true }).withMessage('Nieprawidłowy URL Instagram'),
+    body('social_tiktok').optional().trim().isURL({ require_protocol: true }).withMessage('Nieprawidłowy URL TikTok'),
+    body('social_twitter').optional().trim().isURL({ require_protocol: true }).withMessage('Nieprawidłowy URL Twitter/X'),
   ],
   validate,
   async (req, res) => {
@@ -164,17 +168,31 @@ router.put(
         return res.status(403).json({ error: 'Brak uprawnień' });
       }
 
-      const { name, description, margin, status } = req.body;
+      const { name, description, margin, status, social_facebook, social_instagram, social_tiktok, social_twitter } = req.body;
       const result = await db.query(
         `UPDATE stores SET
-           name        = COALESCE($1, name),
-           description = COALESCE($2, description),
-           margin      = COALESCE($3, margin),
-           status      = COALESCE($4, status),
-           updated_at  = NOW()
+           name             = COALESCE($1, name),
+           description      = COALESCE($2, description),
+           margin           = COALESCE($3, margin),
+           status           = COALESCE($4, status),
+           social_facebook  = COALESCE($6, social_facebook),
+           social_instagram = COALESCE($7, social_instagram),
+           social_tiktok    = COALESCE($8, social_tiktok),
+           social_twitter   = COALESCE($9, social_twitter),
+           updated_at       = NOW()
          WHERE id = $5
          RETURNING *`,
-        [name || null, description !== undefined ? description : null, margin !== undefined ? margin : null, status || null, req.params.id]
+        [
+          name || null,
+          description !== undefined ? description : null,
+          margin !== undefined ? margin : null,
+          status || null,
+          req.params.id,
+          social_facebook !== undefined ? social_facebook : null,
+          social_instagram !== undefined ? social_instagram : null,
+          social_tiktok !== undefined ? social_tiktok : null,
+          social_twitter !== undefined ? social_twitter : null,
+        ]
       );
       return res.json(result.rows[0]);
     } catch (err) {

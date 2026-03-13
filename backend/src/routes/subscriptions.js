@@ -20,11 +20,22 @@ const VALID_PLANS = ['trial', 'basic', 'pro', 'elite'];
  * durationDays is the default subscription period in days.
  */
 const PLAN_CONFIG = {
-  trial:  { product_limit: 10,   maxProducts: 10,   commission_rate: 0.15, platformMarginPct: 15, duration_days: 14, durationDays: 14 },
-  basic:  { product_limit: 100,  maxProducts: 100,  commission_rate: 0.10, platformMarginPct: 10, duration_days: 30, durationDays: 30 },
-  pro:    { product_limit: 500,  maxProducts: 500,  commission_rate: 0.07, platformMarginPct: 7,  duration_days: 30, durationDays: 30 },
-  elite:  { product_limit: null, maxProducts: null, commission_rate: 0.05, platformMarginPct: 5,  duration_days: 30, durationDays: 30 },
+  trial:  { product_limit: 10,   maxProducts: 10,   commission_rate: 0.15, platformMarginPct: 15, duration_days: 14,  durationDays: 14,  price_pln: 0 },
+  basic:  { product_limit: 100,  maxProducts: 100,  commission_rate: 0.10, platformMarginPct: 10, duration_days: 30,  durationDays: 30,  price_pln: 49 },
+  pro:    { product_limit: 500,  maxProducts: 500,  commission_rate: 0.07, platformMarginPct: 7,  duration_days: 30,  durationDays: 30,  price_pln: 149 },
+  elite:  { product_limit: null, maxProducts: null, commission_rate: 0.05, platformMarginPct: 5,  duration_days: 30,  durationDays: 30,  price_pln: 299 },
 };
+
+// Lazily initialised Stripe SDK instance
+let _stripe = null;
+function getStripe() {
+  if (_stripe) return _stripe;
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return null;
+  // eslint-disable-next-line global-require
+  _stripe = require('stripe')(key);
+  return _stripe;
+}
 
 // ─── List subscriptions (own shops) ───────────────────────────────────────────
 
@@ -208,6 +219,97 @@ router.put(
     }
   }
 );
+
+// ─── POST /api/subscriptions/:id/checkout – create Stripe checkout for plan ───
+
+router.post(
+  '/:id/checkout',
+  authenticate,
+  [param('id').isUUID()],
+  validate,
+  async (req, res) => {
+    try {
+      const subResult = await db.query(
+        `SELECT s.*, st.owner_id
+           FROM subscriptions s
+           JOIN stores st ON s.shop_id = st.id
+          WHERE s.id = $1`,
+        [req.params.id]
+      );
+      const sub = subResult.rows[0];
+      if (!sub) return res.status(404).json({ error: 'Subskrypcja nie znaleziona' });
+
+      const isAdmin = ['owner', 'admin'].includes(req.user.role);
+      if (!isAdmin && sub.owner_id !== req.user.id) {
+        return res.status(403).json({ error: 'Brak uprawnień' });
+      }
+
+      const plan = sub.plan;
+      const config = PLAN_CONFIG[plan];
+      if (!config) return res.status(400).json({ error: 'Nieznany plan subskrypcji' });
+
+      const pricePln = config.price_pln || 0;
+      if (pricePln === 0) {
+        return res.status(400).json({ error: 'Plan trial jest bezpłatny – nie wymaga płatności' });
+      }
+
+      const stripe = getStripe();
+      if (!stripe) {
+        return res.status(503).json({
+          error: 'Bramka Stripe nie jest skonfigurowana.',
+          warning: 'Ustaw STRIPE_SECRET_KEY w .env.',
+          sandbox_mode: true,
+        });
+      }
+
+      const base = process.env.APP_URL || 'https://uszefaqualitet.pl';
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'pln',
+              product_data: {
+                name: `Subskrypcja Qualitet – plan ${plan.charAt(0).toUpperCase() + plan.slice(1)}`,
+                description: `${config.duration_days} dni dostępu, do ${config.product_limit ?? '∞'} produktów`,
+              },
+              unit_amount: pricePln * 100,
+            },
+            quantity: 1,
+          },
+        ],
+        mode: 'payment',
+        success_url: `${base}/cennik.html?subscription=success&subscription_id=${sub.id}&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${base}/cennik.html?subscription=cancel`,
+        metadata: { subscription_id: sub.id, plan },
+      });
+
+      return res.json({
+        subscription_id: sub.id,
+        plan,
+        price_pln: pricePln,
+        redirect_url: session.url,
+        session_id: session.id,
+      });
+    } catch (err) {
+      console.error('subscription checkout error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── GET /api/subscriptions/plans – public plan listing ───────────────────────
+
+router.get('/plans', async (_req, res) => {
+  const plans = Object.entries(PLAN_CONFIG).map(([name, cfg]) => ({
+    name,
+    price_pln: cfg.price_pln,
+    duration_days: cfg.duration_days,
+    product_limit: cfg.product_limit,
+    platform_margin_pct: cfg.platformMarginPct,
+  }));
+  return res.json({ plans });
+});
 
 module.exports = { router, PLAN_CONFIG };
 

@@ -72,6 +72,49 @@
     .btn-earn-primary{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:0 36px;border-radius:18px;font-weight:800;font-size:18px;border:0;cursor:pointer;background:linear-gradient(135deg,var(--accent-green-dark),var(--accent-blue-dark));color:#fff;box-shadow:0 8px 32px rgba(34,197,94,.35);text-decoration:none;transition:transform .15s ease,box-shadow .15s ease}
     .btn-earn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(34,197,94,.45)}
 
+    /* First sellers promo section */
+    .promo-launch-section{padding:20px 0 40px}
+    .promo-launch-section h2{font-size:clamp(24px,4vw,40px);margin:0 0 8px}
+    .promo-launch-section .lead{color:var(--muted);font-size:16px;margin:0 0 28px}
+    .promo-tiers{display:grid;gap:16px;grid-template-columns:repeat(3,1fr);margin-bottom:28px}
+    .promo-tier{border-radius:20px;padding:24px;text-align:center;position:relative;overflow:hidden}
+    .promo-tier-1{background:linear-gradient(135deg,rgba(250,204,21,.18),rgba(251,146,60,.12));border:2px solid rgba(250,204,21,.4)}
+    .promo-tier-2{background:linear-gradient(135deg,rgba(56,189,248,.16),rgba(99,102,241,.12));border:2px solid rgba(56,189,248,.35)}
+    .promo-tier-3{background:linear-gradient(135deg,rgba(34,197,94,.14),rgba(16,185,129,.10));border:2px solid rgba(34,197,94,.3)}
+    .promo-tier-badge{display:inline-block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;padding:3px 10px;border-radius:20px;margin-bottom:10px}
+    .promo-tier-1 .promo-tier-badge{background:rgba(250,204,21,.25);color:#fbbf24}
+    .promo-tier-2 .promo-tier-badge{background:rgba(56,189,248,.25);color:#38bdf8}
+    .promo-tier-3 .promo-tier-badge{background:rgba(34,197,94,.25);color:#22c55e}
+    .promo-tier-months{font-size:52px;font-weight:900;line-height:1;margin:6px 0 4px}
+    .promo-tier-1 .promo-tier-months{color:#fbbf24}
+    .promo-tier-2 .promo-tier-months{color:#38bdf8}
+    .promo-tier-3 .promo-tier-months{color:#22c55e}
+    .promo-tier-label{font-size:13px;color:var(--muted);margin-bottom:10px}
+    .promo-tier-slots{font-size:13px;font-weight:700;padding:4px 12px;border-radius:20px;display:inline-block}
+    .promo-tier-1 .promo-tier-slots{background:rgba(250,204,21,.15);color:#fbbf24}
+    .promo-tier-2 .promo-tier-slots{background:rgba(56,189,248,.15);color:#38bdf8}
+    .promo-tier-3 .promo-tier-slots{background:rgba(34,197,94,.15);color:#22c55e}
+    .promo-tier-slots.full{background:rgba(100,100,100,.15);color:var(--muted)}
+    .promo-timer{text-align:center;margin-bottom:24px;padding:14px 20px;border-radius:16px;background:rgba(255,255,255,.04);border:1px solid var(--stroke)}
+    .promo-timer-inner{display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px}
+    .promo-timer-inner .flame{font-size:20px}
+    .promo-register-box{border:1px solid var(--stroke);border-radius:20px;padding:28px;background:var(--card)}
+    .promo-register-box h3{font-size:20px;margin:0 0 6px}
+    .promo-register-box p{color:var(--muted);font-size:14px;margin:0 0 18px}
+    .promo-register-form{display:flex;gap:10px;flex-wrap:wrap}
+    .promo-register-form input{flex:1;min-width:0;height:48px;padding:0 16px;border-radius:12px;border:1px solid var(--stroke);background:var(--card);color:#fff;font-size:15px}
+    .promo-register-form input::placeholder{color:var(--muted)}
+    .promo-register-form .btn-promo-submit{height:48px;padding:0 24px;border-radius:12px;font-weight:700;font-size:15px;border:0;cursor:pointer;background:linear-gradient(135deg,var(--accent-green-dark),var(--accent-blue-dark));color:#fff;white-space:nowrap;transition:opacity .15s}
+    .promo-register-form .btn-promo-submit:hover{opacity:.88}
+    #promo-register-result{margin-top:12px;font-size:14px;font-weight:600}
+    #promo-register-result.success{color:var(--green)}
+    #promo-register-result.error{color:#f87171}
+    @media(max-width:700px){
+      .promo-tiers{grid-template-columns:1fr}
+      .promo-register-form{flex-direction:column}
+      .promo-register-form .btn-promo-submit{width:100%}
+    }
+
     /* Responsive */
     @media(max-width:900px){
       .earn-grid{grid-template-columns:repeat(2,1fr)}
@@ -326,6 +369,53 @@
       </div>
     </section>
 
+    <!-- ══════════════ FIRST SELLERS PROMO ══════════════ -->
+    <section class="promo-launch-section" id="pierwsi-sprzedawcy">
+      <div class="wrap">
+        <h2>🎉 Promocja dla pierwszych sprzedawców</h2>
+        <p class="lead">Stwórz sklep w 60 sekund – pierwsi sprzedawcy otrzymają dostęp do platformy bez subskrypcji!</p>
+
+        <div class="promo-tiers" id="promo-tiers-container">
+          <!-- filled dynamically via /api/promo/slots -->
+          <div class="promo-tier promo-tier-1">
+            <div class="promo-tier-badge">🏆 Pierwsze 10 osób</div>
+            <div class="promo-tier-months" id="pt1-months">12</div>
+            <div class="promo-tier-label">miesięcy gratis</div>
+            <div class="promo-tier-slots" id="pt1-slots">ładowanie…</div>
+          </div>
+          <div class="promo-tier promo-tier-2">
+            <div class="promo-tier-badge">🥈 Kolejne 10 osób</div>
+            <div class="promo-tier-months" id="pt2-months">6</div>
+            <div class="promo-tier-label">miesięcy gratis</div>
+            <div class="promo-tier-slots" id="pt2-slots">ładowanie…</div>
+          </div>
+          <div class="promo-tier promo-tier-3">
+            <div class="promo-tier-badge">🥉 Kolejne osoby</div>
+            <div class="promo-tier-months" id="pt3-months">3</div>
+            <div class="promo-tier-label">miesięcy gratis</div>
+            <div class="promo-tier-slots" id="pt3-slots">ładowanie…</div>
+          </div>
+        </div>
+
+        <div class="promo-timer">
+          <div class="promo-timer-inner">
+            <span class="flame">🔥</span>
+            <span>Oferta ograniczona – po wyczerpaniu miejsc nowi sprzedawcy startują na standardowym trialu (14 dni).</span>
+          </div>
+        </div>
+
+        <div class="promo-register-box">
+          <h3>Zapisz się teraz – załóż sklep w 60 sekund</h3>
+          <p>Podaj e-mail i kliknij przycisk – przejdziesz od razu do generatora sklepu, gdzie w jednym kroku skonfigurujesz swój sklep.</p>
+          <form class="promo-register-form" id="promo-register-form" novalidate>
+            <input type="email" id="promo-email" placeholder="Twój adres e-mail" required autocomplete="email">
+            <button type="submit" class="btn-promo-submit">Zakładam sklep →</button>
+          </form>
+          <div id="promo-register-result" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- ══════════════ CTA ══════════════ -->
     <section class="earn-cta-section">
       <div class="wrap">
@@ -438,6 +528,57 @@
       salesInput.addEventListener('input', update);
       marginInput.addEventListener('input', update);
       update();
+    }());
+  </script>
+  <script>
+    // ── Promo slots loader ─────────────────────────────────────────────────────
+    (function () {
+      var API = (window.QMApi && window.QMApi._base) || '/api';
+
+      function setSlotBadge(el, slotsLeft) {
+        if (!el) return;
+        if (slotsLeft <= 0) {
+          el.textContent = 'Miejsca zajęte';
+          el.classList.add('full');
+        } else {
+          el.textContent = 'Zostało: ' + slotsLeft + ' ' + (slotsLeft === 1 ? 'miejsce' : slotsLeft < 5 ? 'miejsca' : 'miejsc');
+          el.classList.remove('full');
+        }
+      }
+
+      fetch('/api/promo/slots')
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) {
+          if (!data || !data.slots) return;
+          var slots = data.slots;
+          setSlotBadge(document.getElementById('pt1-slots'), slots[0] ? slots[0].slotsLeft : 0);
+          setSlotBadge(document.getElementById('pt2-slots'), slots[1] ? slots[1].slotsLeft : 0);
+          setSlotBadge(document.getElementById('pt3-slots'), slots[2] ? slots[2].slotsLeft : 0);
+        })
+        .catch(function () {
+          ['pt1-slots','pt2-slots','pt3-slots'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) el.textContent = 'Sprawdź dostępność';
+          });
+        });
+
+      // ── Promo registration form ────────────────────────────────────────────
+      var form   = document.getElementById('promo-register-form');
+      var result = document.getElementById('promo-register-result');
+      if (form) {
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var email = (document.getElementById('promo-email').value || '').trim();
+          if (!email || !email.includes('@')) {
+            result.textContent = 'Proszę podać prawidłowy adres e-mail.';
+            result.className = 'error';
+            return;
+          }
+          // Redirect to registration with email pre-filled
+          var url = 'index.html?action=register&email=' + encodeURIComponent(email) + '&ref=zarabiaj';
+          window.location.href = url;
+        });
+      }
     }());
   </script>
 </body>

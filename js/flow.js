@@ -546,6 +546,12 @@
         if (logoInput) logoInput.value = store.logo_url || '';
         var bannerInput = document.querySelector('[data-settings-banner]');
         if (bannerInput) bannerInput.value = store.banner_url || '';
+        var fbInput = document.querySelector('[data-settings-social-facebook]');
+        if (fbInput) fbInput.value = store.social_facebook || '';
+        var igInput = document.querySelector('[data-settings-social-instagram]');
+        if (igInput) igInput.value = store.social_instagram || '';
+        var ttInput = document.querySelector('[data-settings-social-tiktok]');
+        if (ttInput) ttInput.value = store.social_tiktok || '';
 
         // Load stats
         return a.MyStore.stats()
@@ -628,6 +634,9 @@
         var descInput   = settingsForm.querySelector('[data-settings-desc]');
         var logoInput   = settingsForm.querySelector('[data-settings-logo]');
         var bannerInput = settingsForm.querySelector('[data-settings-banner]');
+        var fbInput     = settingsForm.querySelector('[data-settings-social-facebook]');
+        var igInput     = settingsForm.querySelector('[data-settings-social-instagram]');
+        var ttInput     = settingsForm.querySelector('[data-settings-social-tiktok]');
         var saveBtn     = settingsForm.querySelector('[data-settings-save]');
 
         var payload = {};
@@ -635,6 +644,9 @@
         if (descInput   && descInput.value.trim())   payload.description = descInput.value.trim();
         if (logoInput   && logoInput.value.trim())   payload.logo_url    = logoInput.value.trim();
         if (bannerInput && bannerInput.value.trim()) payload.banner_url  = bannerInput.value.trim();
+        if (fbInput)     payload.social_facebook  = fbInput.value.trim() || null;
+        if (igInput)     payload.social_instagram = igInput.value.trim() || null;
+        if (ttInput)     payload.social_tiktok    = ttInput.value.trim() || null;
 
         if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Zapisywanie…'; }
 

@@ -4579,3 +4579,203 @@ describe('GET /api/readiness – announcements and generator checks', () => {
     expect(res.body.checks).toHaveProperty('generator_system');
   });
 });
+
+// ─── /api/readiness – Stripe, mail, social, subscription plan checks ──────────
+
+describe('GET /api/readiness – stripe, mail and social checks', () => {
+  it('includes stripe_system, mail_system, social_media_system and subscription_plans checks', async () => {
+    const res = await request(app).get('/api/readiness');
+    expect(res.status).toBe(200);
+    expect(res.body.checks).toHaveProperty('stripe_system');
+    expect(res.body.checks).toHaveProperty('mail_system');
+    expect(res.body.checks).toHaveProperty('social_media_system');
+    expect(res.body.checks).toHaveProperty('subscription_plans');
+  });
+});
+
+// ─── /api/promo/slots ─────────────────────────────────────────────────────────
+
+describe('GET /api/promo/slots', () => {
+  it('returns slots without auth', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ count: '5' }] });
+    const res = await request(app).get('/api/promo/slots');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('slots');
+    expect(res.body).toHaveProperty('total_sellers');
+    expect(Array.isArray(res.body.slots)).toBe(true);
+  });
+
+  it('returns empty slots gracefully when db fails', async () => {
+    db.query.mockRejectedValueOnce(new Error('db error'));
+    const res = await request(app).get('/api/promo/slots');
+    expect(res.status).toBe(200);
+    expect(res.body.slots).toEqual([]);
+  });
+
+  it('slots contain correct tier info for 0 sellers', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ count: '0' }] });
+    const res = await request(app).get('/api/promo/slots');
+    expect(res.status).toBe(200);
+    const slots = res.body.slots;
+    expect(slots.length).toBeGreaterThan(0);
+    // First tier: 12 months, 10 slots available when count=0
+    expect(slots[0].bonusMonths).toBe(12);
+    expect(slots[0].slotsLeft).toBe(10);
+  });
+});
+
+// ─── /api/subscriptions/plans ─────────────────────────────────────────────────
+
+describe('GET /api/subscriptions/plans', () => {
+  it('returns plan list without authentication', async () => {
+    const res = await request(app).get('/api/subscriptions/plans');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('plans');
+    expect(Array.isArray(res.body.plans)).toBe(true);
+    const names = res.body.plans.map((p) => p.name);
+    expect(names).toContain('trial');
+    expect(names).toContain('basic');
+    expect(names).toContain('pro');
+    expect(names).toContain('elite');
+  });
+
+  it('plans include price_pln and duration_days', async () => {
+    const res = await request(app).get('/api/subscriptions/plans');
+    expect(res.status).toBe(200);
+    const basic = res.body.plans.find((p) => p.name === 'basic');
+    expect(basic).toBeDefined();
+    expect(basic.price_pln).toBe(49);
+    expect(basic.duration_days).toBe(30);
+  });
+});
+
+// ─── PUT /api/stores/:id – social media fields ─────────────────────────────────
+
+describe('PUT /api/stores/:id – social media links', () => {
+  it('rejects invalid social_facebook URL', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] }); // SELECT owner_id
+    const res = await request(app)
+      .put(`/api/stores/${STORE_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ social_facebook: 'not-a-url' });
+    expect(res.status).toBe(422);
+  });
+
+  it('updates social media links for store owner', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] }) // SELECT owner_id
+      .mockResolvedValueOnce({                                      // UPDATE
+        rows: [{
+          id: STORE_ID, owner_id: SELLER_ID, name: 'Mój Sklep',
+          social_facebook: 'https://facebook.com/test',
+          social_instagram: 'https://instagram.com/test',
+          social_tiktok: null,
+          social_twitter: null,
+        }],
+      });
+
+    const res = await request(app)
+      .put(`/api/stores/${STORE_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({
+        social_facebook: 'https://facebook.com/test',
+        social_instagram: 'https://instagram.com/test',
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.social_facebook).toBe('https://facebook.com/test');
+    expect(res.body.social_instagram).toBe('https://instagram.com/test');
+  });
+
+  it('returns 404 for unknown store', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // store not found
+    const res = await request(app)
+      .put(`/api/stores/00000000-0000-4000-8000-000000000099`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ social_facebook: 'https://facebook.com/test' });
+    expect(res.status).toBe(404);
+  });
+});
+
+// ─── POST /api/subscriptions/:id/checkout – Stripe subscription checkout ───────
+
+describe('POST /api/subscriptions/:id/checkout', () => {
+  const SUB_ID = 'b0000000-0000-4000-8000-000000000010';
+
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post(`/api/subscriptions/${SUB_ID}/checkout`);
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 for unknown subscription', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // subscription not found
+    const res = await request(app)
+      .post(`/api/subscriptions/${SUB_ID}/checkout`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 503 sandbox mode when Stripe is not configured', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SUB_ID, shop_id: STORE_ID, owner_id: SELLER_ID, plan: 'basic', status: 'active' }],
+    });
+    const savedKey = process.env.STRIPE_SECRET_KEY;
+    delete process.env.STRIPE_SECRET_KEY;
+
+    const res = await request(app)
+      .post(`/api/subscriptions/${SUB_ID}/checkout`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(503);
+    expect(res.body).toHaveProperty('sandbox_mode', true);
+
+    if (savedKey) process.env.STRIPE_SECRET_KEY = savedKey;
+  });
+
+  it('returns 400 for trial plan (free – no checkout needed)', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SUB_ID, shop_id: STORE_ID, owner_id: SELLER_ID, plan: 'trial', status: 'active' }],
+    });
+    const res = await request(app)
+      .post(`/api/subscriptions/${SUB_ID}/checkout`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(400);
+  });
+});
+
+// ─── POST /api/payments/stripe/webhook – Stripe signed webhook ────────────────
+
+describe('POST /api/payments/stripe/webhook', () => {
+  it('returns 503 when STRIPE_WEBHOOK_SECRET is not set', async () => {
+    const savedSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const savedKey    = process.env.STRIPE_SECRET_KEY;
+    delete process.env.STRIPE_WEBHOOK_SECRET;
+    delete process.env.STRIPE_SECRET_KEY;
+
+    const res = await request(app)
+      .post('/api/payments/stripe/webhook')
+      .set('Content-Type', 'application/json')
+      .send('{}');
+    expect(res.status).toBe(503);
+
+    if (savedSecret) process.env.STRIPE_WEBHOOK_SECRET = savedSecret;
+    if (savedKey)    process.env.STRIPE_SECRET_KEY    = savedKey;
+  });
+
+  it('returns 503 when STRIPE_SECRET_KEY is not set', async () => {
+    const savedSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const savedKey    = process.env.STRIPE_SECRET_KEY;
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test';
+    delete process.env.STRIPE_SECRET_KEY;
+
+    const res = await request(app)
+      .post('/api/payments/stripe/webhook')
+      .set('Content-Type', 'application/json')
+      .set('stripe-signature', 't=1,v1=abc')
+      .send('{}');
+    expect(res.status).toBe(503);
+
+    if (savedSecret) process.env.STRIPE_WEBHOOK_SECRET = savedSecret;
+    else delete process.env.STRIPE_WEBHOOK_SECRET;
+    if (savedKey) process.env.STRIPE_SECRET_KEY = savedKey;
+  });
+});
