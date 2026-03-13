@@ -5556,3 +5556,237 @@ describe('POST /api/ai/store-description', () => {
     expect(res.body).toHaveProperty('description');
   });
 });
+
+// ─── Creator module ───────────────────────────────────────────────────────────
+
+const CREATOR_ID = 'b0000000-0000-4000-8000-000000000099';
+
+describe('POST /api/creator/register', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/creator/register');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 when user not found', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // SELECT user
+    const res = await request(app)
+      .post('/api/creator/register')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 409 when already a creator', async () => {
+    const { signToken } = require('../src/middleware/auth');
+    const creatorToken = signToken({ id: CREATOR_ID, email: 'creator@test.pl', role: 'creator' });
+    db.query.mockResolvedValueOnce({ rows: [{ id: CREATOR_ID, email: 'creator@test.pl', name: 'Creator', role: 'creator' }] });
+    const res = await request(app)
+      .post('/api/creator/register')
+      .set('Authorization', `Bearer ${creatorToken}`);
+    expect(res.status).toBe(409);
+  });
+
+  it('upgrades user role to creator', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SELLER_ID, email: 'seller@test.pl', name: 'Seller', role: 'seller' }] }) // SELECT user
+      .mockResolvedValueOnce({ rows: [] }); // UPDATE role
+    const res = await request(app)
+      .post('/api/creator/register')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe('creator');
+  });
+});
+
+describe('GET /api/creator/links', () => {
+  let creatorToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    creatorToken = signToken({ id: CREATOR_ID, email: 'creator@test.pl', role: 'creator' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/creator/links');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns paginated links for creator', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({ rows: [{ id: AFF_LINK_ID, code: 'CR-AABBCCDD', is_active: true, created_at: new Date().toISOString(), product_name: 'Fotel', store_name: 'Sklep', clicks: 5 }] });
+    const res = await request(app)
+      .get('/api/creator/links')
+      .set('Authorization', `Bearer ${creatorToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.links).toHaveLength(1);
+    expect(res.body.total).toBe(1);
+  });
+});
+
+describe('POST /api/creator/links', () => {
+  let creatorToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    creatorToken = signToken({ id: CREATOR_ID, email: 'creator@test.pl', role: 'creator' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/creator/links').send({ product_id: PRODUCT_ID });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 400 when neither product_id nor store_id provided', async () => {
+    const res = await request(app)
+      .post('/api/creator/links')
+      .set('Authorization', `Bearer ${creatorToken}`)
+      .send({});
+    expect(res.status).toBe(400);
+  });
+
+  it('creates a new affiliate link', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] }) // check affiliate settings
+      .mockResolvedValueOnce({ rows: [] }); // INSERT
+    const res = await request(app)
+      .post('/api/creator/links')
+      .set('Authorization', `Bearer ${creatorToken}`)
+      .send({ product_id: PRODUCT_ID, store_id: STORE_ID });
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty('code');
+  });
+});
+
+describe('POST /api/creator/click', () => {
+  it('returns 404 for unknown code', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .post('/api/creator/click')
+      .send({ code: 'CR-UNKNOWN' });
+    expect(res.status).toBe(404);
+  });
+
+  it('records a click', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: AFF_LINK_ID, is_active: true }] }) // SELECT link
+      .mockResolvedValueOnce({ rows: [] }); // INSERT click
+    const res = await request(app)
+      .post('/api/creator/click')
+      .send({ code: 'CR-AABBCCDD' });
+    expect(res.status).toBe(201);
+    expect(res.body.recorded).toBe(true);
+  });
+});
+
+describe('GET /api/creator/stats', () => {
+  let creatorToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    creatorToken = signToken({ id: CREATOR_ID, email: 'creator@test.pl', role: 'creator' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/creator/stats');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns creator stats', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '3' }] })             // active links
+      .mockResolvedValueOnce({ rows: [{ count: '20' }] })            // total clicks
+      .mockResolvedValueOnce({ rows: [{ conversions: '2', total_earned: '50.00' }] })
+      .mockResolvedValueOnce({ rows: [{ confirmed_balance: '50.00' }] })
+      .mockResolvedValueOnce({ rows: [{ withdrawn: '10.00' }] });
+    const res = await request(app)
+      .get('/api/creator/stats')
+      .set('Authorization', `Bearer ${creatorToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.active_links).toBe(3);
+    expect(res.body.balance).toBe(40);
+  });
+});
+
+describe('GET /api/creator/commissions', () => {
+  let creatorToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    creatorToken = signToken({ id: CREATOR_ID, email: 'creator@test.pl', role: 'creator' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/creator/commissions');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns commission list', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'conv-1', order_amount: 100, commission_amount: 5, status: 'confirmed', created_at: new Date().toISOString(), link_code: 'CR-XX', product_name: 'Fotel' }] });
+    const res = await request(app)
+      .get('/api/creator/commissions')
+      .set('Authorization', `Bearer ${creatorToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.commissions).toHaveLength(1);
+  });
+});
+
+describe('GET /api/creator/payouts', () => {
+  let creatorToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    creatorToken = signToken({ id: CREATOR_ID, email: 'creator@test.pl', role: 'creator' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/creator/payouts');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns payout list', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'pay-1', amount: 30, status: 'pending', notes: null, created_at: new Date().toISOString(), processed_at: null }] });
+    const res = await request(app)
+      .get('/api/creator/payouts')
+      .set('Authorization', `Bearer ${creatorToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.payouts).toHaveLength(1);
+  });
+});
+
+describe('POST /api/creator/payouts', () => {
+  let creatorToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    creatorToken = signToken({ id: CREATOR_ID, email: 'creator@test.pl', role: 'creator' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/creator/payouts').send({ amount: 10 });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects amount exceeding balance', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ confirmed_balance: '20.00' }] })
+      .mockResolvedValueOnce({ rows: [{ withdrawn: '20.00' }] });
+    const res = await request(app)
+      .post('/api/creator/payouts')
+      .set('Authorization', `Bearer ${creatorToken}`)
+      .send({ amount: 5 });
+    expect(res.status).toBe(400);
+    expect(res.body.balance).toBe(0);
+  });
+
+  it('creates a payout request', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ confirmed_balance: '100.00' }] })
+      .mockResolvedValueOnce({ rows: [{ withdrawn: '10.00' }] })
+      .mockResolvedValueOnce({ rows: [] }); // INSERT
+    const res = await request(app)
+      .post('/api/creator/payouts')
+      .set('Authorization', `Bearer ${creatorToken}`)
+      .send({ amount: 50 });
+    expect(res.status).toBe(201);
+    expect(res.body.status).toBe('pending');
+    expect(res.body.amount).toBe(50);
+  });
+});
