@@ -67,24 +67,16 @@
 
       api.Auth.login(email, password)
         .then(function () {
-          // Also set the legacy localStorage flag so app.js guards still pass
-          try { localStorage.setItem('app_user_logged', 'true'); } catch (_) {}
-          try { localStorage.setItem('app_user_email', email); } catch (_) {}
+          // QMApi.Auth.login stores the JWT token under 'qm_token'; that is
+          // sufficient for app.js guards (isAppLoggedIn checks qm_token first).
           window.location.href = 'dashboard.html';
         })
         .catch(function (err) {
           restoreButton(submitBtn, origText);
-          // Show error for API-level failures (wrong credentials, etc.)
-          // Only fall back to localStorage when the API is completely unreachable
-          if (err && err.status) {
-            var msg = (err.body && err.body.error) || 'B\u0142\u0105d logowania. Sprawd\u017a e-mail i has\u0142o.';
-            showFormError(form, msg);
-          } else {
-            // Network/API unreachable – graceful degradation
-            try { localStorage.setItem('app_user_logged', 'true'); } catch (_) {}
-            try { localStorage.setItem('app_user_email', email); } catch (_) {}
-            window.location.href = 'dashboard.html';
-          }
+          var msg = (err && err.body && err.body.error)
+            || (err && !err.status ? 'Brak po\u0142\u0105czenia z serwerem. Spr\u00f3buj ponownie.' : null)
+            || 'B\u0142\u0105d logowania. Sprawd\u017a e-mail i has\u0142o.';
+          showFormError(form, msg);
         });
     }, true /* capture */);
 
@@ -126,8 +118,7 @@
 
       api.Auth.register(email, password, name.trim(), 'buyer')
         .then(function () {
-          try { localStorage.setItem('app_user_logged', 'true'); } catch (_) {}
-          try { localStorage.setItem('app_user_email', email); } catch (_) {}
+          // QMApi.Auth.register stores the JWT token under 'qm_token'.
           window.location.href = 'dashboard.html';
         })
         .catch(function (err) {

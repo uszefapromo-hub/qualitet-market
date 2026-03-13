@@ -90,6 +90,19 @@
     body = contentType.includes('application/json') ? await res.json() : await res.text();
 
     if (!res.ok) {
+      // When the token has expired or is invalid the server returns 401.
+      // Clear the stored credentials and redirect to the login page so the
+      // user can obtain a fresh token.  Skip the redirect for auth endpoints
+      // themselves (login / register) to avoid infinite loops.
+      if (res.status === 401 && !path.startsWith('/auth/')) {
+        removeToken();
+        if (typeof window !== 'undefined' && window.location) {
+          const loginPage = window.location.origin + '/login.html';
+          if (!window.location.href.includes('login.html')) {
+            window.location.href = loginPage;
+          }
+        }
+      }
       const err = new Error(
         (body && body.error) || (body && body.message) || `HTTP ${res.status}`
       );

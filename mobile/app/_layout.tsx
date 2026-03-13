@@ -73,9 +73,14 @@ export default function RootLayout() {
       }}>
         <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: ({ color, focused }) => <TabBarIcon name={focused ? 'home' : 'home-outline'} color={color} focused={focused} /> }} />
         <Tabs.Screen name="trending" options={{ title: 'Trending', tabBarIcon: ({ color, focused }) => <TabBarIcon name={focused ? 'trending-up' : 'trending-up-outline'} color={color} focused={focused} /> }} />
-        <Tabs.Screen name="stores" options={{ title: 'Stores', tabBarIcon: ({ color, focused }) => <TabBarIcon name={focused ? 'storefront' : 'storefront-outline'} color={color} focused={focused} /> }} />
-        <Tabs.Screen name="creator" options={{ title: 'Creator', tabBarIcon: ({ color, focused }) => <TabBarIcon name={focused ? 'people' : 'people-outline'} color={color} focused={focused} /> }} />
-        <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ color, focused }) => <TabBarIcon name={focused ? 'person' : 'person-outline'} color={color} focused={focused} /> }} />
+        <Tabs.Screen name="cart" options={{ title: 'Koszyk', tabBarIcon: ({ color, focused }) => <TabBarIcon name={focused ? 'cart' : 'cart-outline'} color={color} focused={focused} /> }} />
+        <Tabs.Screen name="stores" options={{ title: 'Sklepy', tabBarIcon: ({ color, focused }) => <TabBarIcon name={focused ? 'storefront' : 'storefront-outline'} color={color} focused={focused} /> }} />
+        <Tabs.Screen name="profile" options={{ title: 'Profil', tabBarIcon: ({ color, focused }) => <TabBarIcon name={focused ? 'person' : 'person-outline'} color={color} focused={focused} /> }} />
+        {/* Non-tab screens – accessible via navigation but hidden from the tab bar */}
+        <Tabs.Screen name="creator" options={{ href: null, title: 'Creator' }} />
+        <Tabs.Screen name="login" options={{ href: null, title: 'Logowanie' }} />
+        <Tabs.Screen name="orders" options={{ href: null, title: 'Zamówienia' }} />
+        <Tabs.Screen name="checkout" options={{ href: null, title: 'Kasa' }} />
       </Tabs>
     </SafeAreaProvider>
   );

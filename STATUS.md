@@ -1,6 +1,6 @@
 # RAPORT PROJEKTU – QUALITET PLATFORM
 
-> Data przeglądu: 2026-03-13
+> Data przeglądu: 2026-03-13 (aktualizacja po stabilizacji MVP)
 
 ---
 
@@ -13,6 +13,55 @@
 | **Strona produkcyjna** | https://uszefaqualitet.pl |
 | **Architektura** | REST API (Node.js/Express) + PWA frontend (HTML5/Vanilla JS) + Next.js Mobile Web + Expo React Native |
 | **Baza danych** | PostgreSQL |
+
+---
+
+## UKOŃCZONE ✅
+
+### Frontend – poprawki krytyczne
+
+| Zmiana | Status |
+|---|---|
+| JWT refresh: obsługa 401 w `js/api.js` (wyczyszczenie tokena + redirect do login) | ✅ GOTOWE |
+| Usunięcie starych zapisów `app_user_logged` / `app_user_email` z `pwa-connect.js` | ✅ GOTOWE |
+| Usunięcie niebezpiecznego fallbacku: dostęp bez auth przy braku sieci | ✅ GOTOWE |
+| „Otwórz aplikację" – zmiana z modalki na bottom sheet (CSS + animacja slide-up) | ✅ GOTOWE |
+| Bottom sheet respektuje dolny obszar bezpieczeństwa (`env(safe-area-inset-bottom)`) | ✅ GOTOWE |
+| Bottom sheet nie zasłania dolnej nawigacji (`body.has-bottom-nav`) | ✅ GOTOWE |
+| Na desktopie (>640px) modalka pozostaje wycentrowana jak dotychczas | ✅ GOTOWE |
+
+### Migracje bazy danych – poprawki numeracji
+
+| Zmiana | Status |
+|---|---|
+| `007_subdomain_support.sql` → `007a_subdomain_support.sql` | ✅ ZMIENIONA NAZWA |
+| `007_suppliers_import.sql` → `007b_suppliers_import.sql` | ✅ ZMIENIONA NAZWA |
+| `009_price_tiers.sql` → `009a_price_tiers.sql` | ✅ ZMIENIONA NAZWA |
+| `020_live_commerce.sql` → `020a_live_commerce.sql` | ✅ ZMIENIONA NAZWA |
+| Kolejność alfabetyczna zapewniona, brak duplikatów numerów | ✅ GOTOWE |
+
+### Expo React Native (`mobile/`) – nowe ekrany
+
+| Ekran | Plik | Status |
+|---|---|---|
+| Logowanie / Rejestracja | `mobile/app/login.tsx` | ✅ GOTOWE |
+| Koszyk | `mobile/app/cart.tsx` | ✅ GOTOWE |
+| Kasa / Checkout (3 kroki: Dostawa, Płatność, Przegląd) | `mobile/app/checkout.tsx` | ✅ GOTOWE |
+| Moje zamówienia | `mobile/app/orders.tsx` | ✅ GOTOWE |
+| Nawigacja dolna: dodano zakładkę Koszyk, Polskie etykiety | `mobile/app/_layout.tsx` | ✅ GOTOWE |
+
+### Expo React Native – poprawki homepage
+
+| Zmiana | Status |
+|---|---|
+| Nagłówek hero po polsku: „Odkryj Niesamowite Produkty" | ✅ GOTOWE |
+| Przycisk „Otwórz aplikację" otwiera bottom sheet (Modal) | ✅ GOTOWE |
+| Bottom sheet nie zasłania dolnej nawigacji | ✅ GOTOWE |
+| Przycisk zamknięcia w bottom sheet | ✅ GOTOWE |
+| Dolny obszar bezpieczeństwa (`useSafeAreaInsets`) | ✅ GOTOWE |
+| Polskie etykiety: „NA ŻYWO", „Teraz popularne", „Na żywo" | ✅ GOTOWE |
+
+
 
 ---
 
@@ -471,3 +520,47 @@ Przed wdrożeniem produkcyjnym należy skonfigurować:
 - `PAYMENT_WEBHOOK_SECRET` – sekret dla webhooków płatności
 - `STRIPE_SECRET_KEY` lub `P24_MERCHANT_ID` – dla realnych płatności
 - `ALLOWED_ORIGINS` – dozwolone domeny CORS
+
+---
+
+## RAPORT PLANOWANIA – BIEŻĄCY STATUS MVP
+
+### UKOŃCZONE ✅
+
+- Backend API – wszystkie endpointy (auth, products, stores, cart, orders, payments, admin, seller)
+- System cen – łańcuch supplier_price → platform_price → selling_price
+- PWA frontend – podłączony do backend przez QMApi
+- JWT auth – obsługa 401, automatyczny redirect do logowania po wygaśnięciu tokena
+- Usunięto insecure auth fallback w pwa-connect.js
+- Migracje DB – uporządkowana numeracja bez duplikatów (007, 009, 020 rozwiązane)
+- Expo Mobile – ekrany: Home (PL), Logowanie, Koszyk, Checkout, Zamówienia
+- Bottom sheet „Otwórz aplikację" – slide-up, nie zasłania dolnej nawigacji, safe area
+- Service Worker / PWA offline mode
+
+### W TOKU 🔄
+
+- Next.js frontend (`frontend/`) – podłączenie do backend API (strony istnieją, brak rzeczywistych danych)
+- Next.js auth flow – brak połączenia z `QMApi`
+- Expo Mobile – ekrany Creator, Trending, Stores używają danych mockowanych (nie z API)
+
+### BRAKUJE ❌
+
+- Wdrożenie produkcyjne – konfiguracja env: `JWT_SECRET`, `DB_PASSWORD`, `STRIPE_SECRET_KEY`, `ALLOWED_ORIGINS`
+- Email notifications (potwierdzenie zamówienia, rejestracja)
+- Subdomenowe sklepy – infrastruktura DNS/reverse proxy dla `*.qualitetmarket.pl`
+- Testy e2e (Playwright/Cypress) dla krytycznych przepływów
+- Testy mobilne (Detox) dla Expo
+
+### BŁĘDY DO NAPRAWIENIA 🐛
+
+- Next.js `frontend/` – brak podłączenia API (wszystkie dane mockowane)
+- Expo Mobile – Creator/Trending/Stores nie pobierają danych z API
+- Brak obsługi refresh tokenu (JWT wygasa, wymaga ponownego logowania)
+
+### NASTĘPNE ZADANIA 📋
+
+1. Podłączyć Next.js do backend API (`API_BASE_URL`, auth context)
+2. Podłączyć Expo do real API (zastąpić mock data w index.tsx, stores.tsx, trending.tsx)
+3. Dodać JWT refresh token endpoint w backend + obsługę w frontend
+4. Skonfigurować środowisko produkcyjne (env, CORS, SSL)
+5. Wdrożyć email notifications (nodemailer lub zewnętrzny provider)

@@ -916,20 +916,32 @@ body.has-bottom-nav.has-app-install-bar .install-banner{
   inset:0;
   background:rgba(5,10,20,.78);
   display:flex;
-  align-items:center;
+  align-items:flex-end;
   justify-content:center;
-  padding:24px;
   z-index:150;
 }
 .app-promo-modal[hidden]{display:none}
 .app-promo-window{
-  width:min(920px,100%);
-  border-radius:28px;
+  width:100%;
+  max-width:680px;
+  border-radius:24px 24px 0 0;
   border:1px solid rgba(53,217,255,.35);
+  border-bottom:none;
   background:rgba(7,18,33,.97);
-  box-shadow:0 30px 60px rgba(0,0,0,.4);
-  padding:26px;
+  box-shadow:0 -16px 40px rgba(0,0,0,.5);
+  padding:26px 26px calc(26px + env(safe-area-inset-bottom));
   position:relative;
+  max-height:90dvh;
+  overflow-y:auto;
+}
+/* Drag handle */
+.app-promo-window::before{
+  content:'';
+  display:block;
+  width:40px;height:4px;
+  border-radius:2px;
+  background:rgba(255,255,255,.15);
+  margin:0 auto 18px;
 }
 .app-promo-close{
   position:absolute;
@@ -947,7 +959,7 @@ body.has-bottom-nav.has-app-install-bar .install-banner{
 }
 .app-promo-grid{
   display:grid;
-  grid-template-columns:1.1fr .9fr;
+  grid-template-columns:1fr;
   gap:22px;
   align-items:center;
 }
@@ -959,12 +971,13 @@ body.has-bottom-nav.has-app-install-bar .install-banner{
   gap:6px;
 }
 .app-promo-media{
-  border-radius:22px;
+  border-radius:16px;
   overflow:hidden;
   border:1px solid rgba(255,255,255,.12);
   background:#0b1021;
   position:relative;
-  min-height:280px;
+  min-height:180px;
+  max-height:260px;
 }
 .app-promo-media img{
   width:100%;
@@ -1229,8 +1242,16 @@ body.has-bottom-nav.has-app-install-bar .install-banner{
   from{opacity:0;transform:scale(.97) translateY(10px)}
   to{opacity:1;transform:scale(1) translateY(0)}
 }
+@keyframes sheetSlideUp{
+  from{transform:translateY(100%)}
+  to{transform:translateY(0)}
+}
 .survey-modal:not([hidden]),.landing-modal:not([hidden]),.app-promo-modal:not([hidden]){animation:modalOverlayEnter .22s ease forwards}
-.survey-window,.landing-window,.app-promo-window{animation:modalWindowEnter .32s cubic-bezier(.4,0,.2,1) forwards}
+.app-promo-window{animation:sheetSlideUp .3s cubic-bezier(.32,0,.67,1) forwards}
+.survey-window,.landing-window{animation:modalWindowEnter .32s cubic-bezier(.4,0,.2,1) forwards}
+@media(min-width:641px){
+  .app-promo-window{animation:modalWindowEnter .32s cubic-bezier(.4,0,.2,1) forwards}
+}
 
 /* ---------- Promo motion gallery glow pulse ---------- */
 @keyframes galleryGlow{
@@ -2096,14 +2117,21 @@ table{word-break:break-word}
   .hero-stat:nth-child(odd){border-right:1px solid var(--stroke)}
   .hero-stat:last-child,.hero-stat:nth-last-child(2):nth-child(odd){border-bottom:0}
 
-  /* Modal */
-  .landing-modal,.survey-modal,.upgrade-modal,.app-promo-modal{padding:12px;align-items:flex-end}
+  /* Modal – bottom sheet, clears bottom navigation */
+  .landing-modal,.survey-modal,.upgrade-modal,.app-promo-modal{padding:0;align-items:flex-end}
   .landing-window,.survey-window,.upgrade-window,.app-promo-window{
     width:100%;
     border-radius:20px 20px 0 0;
-    padding:18px 16px;
-    max-height:90vh;
+    border-bottom:none;
+    padding:18px 16px calc(18px + env(safe-area-inset-bottom));
+    max-height:85dvh;
     overflow-y:auto;
+  }
+  /* When bottom nav is visible push the sheet above it */
+  body.has-bottom-nav .app-promo-modal,
+  body.has-bottom-nav .landing-modal,
+  body.has-bottom-nav .survey-modal{
+    padding-bottom:var(--app-bar-height,70px);
   }
 
   /* Checkout / price-card new */
@@ -2252,4 +2280,26 @@ html,body{max-width:100vw;overflow-x:hidden}
   .topbar-cta{margin-top:8px;font-size:13px;padding:0 12px;min-height:40px}
   .brand strong{font-size:15px}
   .brand span:not(.brand-tag){display:none}
+}
+
+/* ── App-promo bottom sheet: center on wider screens ── */
+@media(min-width:641px){
+  .app-promo-modal{
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .app-promo-window{
+    max-width:720px;
+    border-radius:24px;
+    border-bottom:1px solid rgba(53,217,255,.35);
+    padding:28px;
+  }
+  .app-promo-grid{
+    grid-template-columns:1.1fr .9fr;
+  }
+  .app-promo-media{
+    min-height:260px;
+    max-height:none;
+  }
 }
