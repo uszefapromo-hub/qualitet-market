@@ -27,6 +27,7 @@ const referralsRouter = require('./routes/referrals');
 const scriptsRouter = require('./routes/scripts');
 const analyticsRouter = require('./routes/analytics');
 const { importSupplierProducts } = require('./services/supplier-import');
+const { getPromoSlots } = require('./helpers/promo');
 const db = require('./config/database');
 
 const app = express();
@@ -167,6 +168,32 @@ app.get('/api/readiness', async (_req, res) => {
     generate_promo:    'POST /api/my/promotion/generate',
   };
 
+  // Stripe payment integration
+  checks.stripe_system = {
+    configured: Boolean(process.env.STRIPE_SECRET_KEY),
+    checkout:   'POST /api/payments/:orderId/initiate (method=stripe)',
+    webhook:    'POST /api/payments/stripe/webhook',
+    subscription_checkout: 'POST /api/subscriptions/:id/checkout',
+  };
+
+  // Mail / SMTP integration
+  checks.mail_system = {
+    configured: Boolean(process.env.SMTP_HOST),
+    send:       'POST /api/admin/mail',
+    list:       'GET  /api/admin/mail',
+  };
+
+  // Social media on store profiles
+  checks.social_media_system = {
+    update_store: 'PUT /api/stores/:id (social_facebook, social_instagram, social_tiktok)',
+    promo_slots:  'GET /api/promo/slots',
+  };
+
+  // Subscription plan listing
+  checks.subscription_plans = {
+    list: 'GET /api/subscriptions/plans',
+  };
+
   const status = allOk ? 'ready' : 'degraded';
   return res.status(allOk ? 200 : 503).json({
     status,
@@ -198,6 +225,20 @@ app.use('/api/referral', referralRouter);
 app.use('/api/referrals', referralsRouter);
 app.use('/api/scripts', scriptsRouter);
 app.use('/api/analytics', analyticsRouter);
+
+// ─── Public promo slots feed ───────────────────────────────────────────────────
+// Shows how many early-access slots remain at each promotional tier.
+// Used by the zarabiaj.html landing page.
+app.get('/api/promo/slots', async (_req, res) => {
+  try {
+    const result = await db.query(`SELECT COUNT(*) FROM users WHERE role = 'seller'`);
+    const totalSellers = parseInt(result.rows[0].count, 10);
+    const slots = getPromoSlots(totalSellers);
+    return res.json({ total_sellers: totalSellers, slots });
+  } catch (_err) {
+    return res.json({ total_sellers: 0, slots: [] });
+  }
+});
 
 // ─── Public announcements feed ─────────────────────────────────────────────────
 // Active platform announcements visible to all authenticated users.
