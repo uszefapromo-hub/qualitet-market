@@ -1,12 +1,12 @@
 {
-  "name": "UszefaQualitet",
-  "short_name": "Uszefa",
-  "description": "Platforma biznesowa HurtDetal Uszefa Qualitet i QualitetMarket.",
+  "name": "QualitetVerse",
+  "short_name": "QVerse",
+  "description": "QualitetVerse — AI-powered marketplace platform for creators, sellers and buyers.",
   "start_url": "index.html",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#0b1021",
-  "theme_color": "#0b1021",
+  "background_color": "#05050f",
+  "theme_color": "#7c3aed",
   "icons": [
     {
       "src": "assets/icons/icon-192.svg",

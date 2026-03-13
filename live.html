@@ -1,0 +1,1106 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Live Commerce – Zakupy na żywo | UszefaQualitet</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── Live Commerce page styles ── */
+    *, *::before, *::after { box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; margin: 0; min-height: 100dvh; }
+
+    /* ── Top bar ── */
+    .live-topbar {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px;
+      background: rgba(15,23,42,.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--stroke);
+    }
+    .live-topbar .logo { font-weight: 800; font-size: 20px; color: #fff; text-decoration: none; }
+    .live-topbar .logo span { color: var(--pink); }
+    .live-topbar .spacer { flex: 1; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px;
+           border-radius: 12px; font-size: 14px; font-weight: 700; border: none; cursor: pointer; transition: opacity .15s; }
+    .btn:hover { opacity: .85; }
+    .btn-primary { background: var(--pink); color: #fff; }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--stroke); }
+    .btn-sm { padding: 6px 14px; font-size: 13px; border-radius: 10px; }
+    .btn-red    { background: #ef4444; color: #fff; }
+    .btn-green  { background: var(--green); color: #000; }
+
+    /* ── Views ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Stream list ── */
+    .streams-hero {
+      padding: 40px 16px 20px; text-align: center;
+    }
+    .streams-hero h1 { font-size: clamp(24px, 5vw, 42px); font-weight: 900; margin: 0 0 8px; }
+    .streams-hero h1 span { color: var(--pink); }
+    .streams-hero p { color: var(--muted); margin: 0 0 20px; font-size: 16px; }
+
+    .streams-filters {
+      display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+      padding: 0 16px 24px;
+    }
+    .filter-btn { padding: 8px 18px; border-radius: 20px; font-size: 13px; font-weight: 700;
+                  border: 1px solid var(--stroke); background: var(--card); color: var(--muted);
+                  cursor: pointer; transition: all .15s; }
+    .filter-btn:hover, .filter-btn.active { background: var(--pink); color: #fff; border-color: var(--pink); }
+
+    .streams-grid {
+      display: grid; gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      padding: 0 16px 40px;
+      max-width: 1200px; margin: 0 auto;
+    }
+
+    /* Stream card */
+    .stream-card {
+      background: var(--card); border: 1px solid var(--stroke); border-radius: 20px;
+      overflow: hidden; cursor: pointer; transition: transform .15s, border-color .15s;
+      position: relative;
+    }
+    .stream-card:hover { transform: translateY(-3px); border-color: var(--pink); }
+    .stream-card-thumb {
+      width: 100%; aspect-ratio: 16/9; background: #1e293b;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 48px; position: relative; overflow: hidden;
+    }
+    .stream-card-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .live-badge {
+      position: absolute; top: 10px; left: 10px;
+      background: #ef4444; color: #fff; font-size: 11px; font-weight: 800;
+      padding: 3px 8px; border-radius: 6px; letter-spacing: .5px;
+      animation: livepulse 1.8s ease-in-out infinite;
+    }
+    @keyframes livepulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+    .viewer-count {
+      position: absolute; bottom: 8px; right: 8px;
+      background: rgba(0,0,0,.7); color: #fff; font-size: 12px; font-weight: 700;
+      padding: 3px 8px; border-radius: 6px;
+    }
+    .stream-card-body { padding: 16px; }
+    .stream-card-title { font-weight: 700; font-size: 16px; color: #f1f5f9; margin: 0 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stream-card-streamer { font-size: 13px; color: var(--muted); }
+    .stream-card-scheduled { font-size: 12px; color: var(--cyan); margin-top: 6px; }
+
+    /* ── Stream player layout ── */
+    .player-layout {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      grid-template-rows: auto 1fr;
+      gap: 0;
+      height: calc(100dvh - 57px);
+    }
+    @media (max-width: 768px) {
+      .player-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto 1fr;
+        height: auto;
+      }
+    }
+
+    /* Video area */
+    .player-main {
+      grid-row: 1 / 3;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    @media (max-width: 768px) {
+      .player-main { grid-row: auto; }
+    }
+
+    .video-wrapper {
+      position: relative; width: 100%; background: #000;
+      aspect-ratio: 16/9;
+      flex-shrink: 0;
+    }
+    .video-placeholder {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 12px; color: var(--muted);
+    }
+    .video-placeholder .play-icon { font-size: 64px; opacity: .3; }
+    .video-placeholder p { font-size: 14px; }
+    #videoEl {
+      width: 100%; height: 100%; object-fit: contain; display: none;
+    }
+
+    /* Stream info bar */
+    .stream-info-bar {
+      padding: 12px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      border-bottom: 1px solid var(--stroke);
+    }
+    .stream-title-bar { font-weight: 800; font-size: 18px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stream-status-pill {
+      padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800;
+    }
+    .stream-status-pill.live { background: #ef4444; color: #fff; }
+    .stream-status-pill.scheduled { background: rgba(56,189,248,.2); color: var(--cyan); }
+    .stream-status-pill.ended { background: rgba(148,163,184,.15); color: var(--muted); }
+
+    /* Pinned products carousel */
+    .products-bar {
+      padding: 12px 16px; border-bottom: 1px solid var(--stroke);
+      overflow-x: auto; display: flex; gap: 12px; flex-shrink: 0;
+    }
+    .products-bar::-webkit-scrollbar { height: 4px; }
+    .products-bar::-webkit-scrollbar-thumb { background: var(--stroke); border-radius: 4px; }
+
+    .product-card {
+      flex-shrink: 0; width: 140px;
+      background: rgba(30,41,59,.9); border: 1px solid var(--stroke);
+      border-radius: 16px; padding: 10px; cursor: pointer;
+      transition: border-color .15s, transform .15s;
+      position: relative;
+    }
+    .product-card:hover { border-color: var(--pink); transform: translateY(-2px); }
+    .product-card img {
+      width: 100%; height: 80px; object-fit: cover; border-radius: 10px;
+      background: #1e293b; display: block;
+    }
+    .product-card-name { font-size: 12px; font-weight: 700; color: #f1f5f9; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .product-card-price { font-size: 14px; font-weight: 800; color: var(--green); }
+    .product-card-promo { font-size: 11px; color: #ef4444; font-weight: 700; }
+    .product-card-orig  { font-size: 11px; color: var(--muted); text-decoration: line-through; }
+    .product-card-btn {
+      width: 100%; margin-top: 8px; padding: 6px; border-radius: 8px;
+      background: var(--pink); color: #fff; font-size: 12px; font-weight: 700;
+      border: none; cursor: pointer;
+    }
+    .product-card-btn:hover { opacity: .85; }
+
+    /* ── Chat sidebar ── */
+    .chat-sidebar {
+      grid-column: 2; grid-row: 1 / 3;
+      display: flex; flex-direction: column;
+      border-left: 1px solid var(--stroke);
+      height: 100%;
+      overflow: hidden;
+    }
+    @media (max-width: 768px) {
+      .chat-sidebar { grid-column: auto; grid-row: auto; height: 400px; border-left: none; border-top: 1px solid var(--stroke); }
+    }
+    .chat-header { padding: 12px 16px; border-bottom: 1px solid var(--stroke); font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: space-between; }
+    .chat-messages {
+      flex: 1; overflow-y: auto; padding: 12px;
+      display: flex; flex-direction: column; gap: 8px;
+      scroll-behavior: smooth;
+    }
+    .chat-messages::-webkit-scrollbar { width: 4px; }
+    .chat-messages::-webkit-scrollbar-thumb { background: var(--stroke); border-radius: 4px; }
+
+    .chat-msg { display: flex; flex-direction: column; gap: 2px; }
+    .chat-msg-author { font-size: 11px; font-weight: 700; color: var(--cyan); }
+    .chat-msg-content { font-size: 13px; color: #e2e8f0; background: rgba(30,41,59,.7); padding: 6px 10px; border-radius: 10px; word-break: break-word; }
+    .chat-msg.purchase .chat-msg-author { color: var(--green); }
+    .chat-msg.purchase .chat-msg-content { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.2); }
+    .chat-msg.system .chat-msg-content { background: rgba(148,163,184,.08); color: var(--muted); font-style: italic; font-size: 12px; }
+
+    .chat-input-area {
+      padding: 12px; border-top: 1px solid var(--stroke);
+      display: flex; gap: 8px; align-items: center;
+    }
+    .chat-input {
+      flex: 1; background: var(--card); border: 1px solid var(--stroke);
+      border-radius: 10px; padding: 9px 12px; color: var(--text); font-size: 14px;
+      outline: none;
+    }
+    .chat-input:focus { border-color: var(--pink); }
+    .chat-send-btn {
+      padding: 9px 16px; background: var(--pink); color: #fff;
+      border: none; border-radius: 10px; font-weight: 700; cursor: pointer;
+    }
+    .chat-send-btn:hover { opacity: .85; }
+    .chat-auth-note { font-size: 12px; color: var(--muted); text-align: center; padding: 8px; }
+
+    /* ── Live Promotions overlay ── */
+    .promo-overlay {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+      z-index: 200; width: calc(100% - 32px); max-width: 480px;
+      pointer-events: none;
+    }
+    .promo-banner {
+      background: linear-gradient(135deg, #1e1b4b, #312e81);
+      border: 1px solid rgba(99,102,241,.4); border-radius: 20px;
+      padding: 16px 20px; display: flex; align-items: center; gap: 16px;
+      animation: slideUp .4s ease; pointer-events: all;
+      box-shadow: 0 16px 40px rgba(0,0,0,.5);
+    }
+    @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+    .promo-banner-img { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; background: #1e293b; flex-shrink: 0; }
+    .promo-banner-info { flex: 1; min-width: 0; }
+    .promo-banner-title { font-weight: 800; font-size: 14px; color: #fff; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .promo-banner-price { font-size: 22px; font-weight: 900; color: var(--yellow); }
+    .promo-banner-orig  { font-size: 13px; color: rgba(255,255,255,.5); text-decoration: line-through; }
+    .promo-banner-timer { font-size: 28px; font-weight: 900; color: var(--yellow); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+    .promo-banner-close { color: rgba(255,255,255,.4); cursor: pointer; font-size: 20px; flex-shrink: 0; }
+    .promo-banner-close:hover { color: #fff; }
+
+    /* ── Instant checkout modal ── */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.7);
+      z-index: 300; align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--card); border: 1px solid var(--stroke); border-radius: 24px;
+      padding: 24px; width: 100%; max-width: 420px;
+      animation: modalIn .25s ease;
+    }
+    @keyframes modalIn { from { opacity:0; transform:scale(.95); } to { opacity:1; transform:scale(1); } }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .modal-title { font-size: 18px; font-weight: 800; }
+    .modal-close { background: none; border: none; color: var(--muted); font-size: 22px; cursor: pointer; }
+    .modal-close:hover { color: #fff; }
+    .checkout-product { display: flex; gap: 14px; align-items: center; margin-bottom: 20px; }
+    .checkout-product img { width: 72px; height: 72px; object-fit: cover; border-radius: 12px; background: #1e293b; flex-shrink: 0; }
+    .checkout-product-info .name { font-weight: 700; font-size: 15px; }
+    .checkout-product-info .price { font-size: 22px; font-weight: 900; color: var(--green); }
+    .checkout-product-info .price-orig { font-size: 13px; color: var(--muted); text-decoration: line-through; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
+    .form-group input, .form-group textarea {
+      width: 100%; background: rgba(30,41,59,.7); border: 1px solid var(--stroke);
+      border-radius: 12px; padding: 10px 14px; color: var(--text); font-size: 14px;
+      outline: none; font-family: inherit;
+    }
+    .form-group input:focus, .form-group textarea:focus { border-color: var(--pink); }
+    .qty-row { display: flex; align-items: center; gap: 10px; }
+    .qty-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--stroke);
+               background: var(--card); color: var(--text); font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .qty-btn:hover { border-color: var(--pink); }
+    .qty-val { font-size: 18px; font-weight: 800; min-width: 32px; text-align: center; }
+    .checkout-total { font-size: 14px; color: var(--muted); margin-bottom: 16px; }
+    .checkout-total strong { color: var(--green); font-size: 22px; }
+
+    /* ── Seller controls ── */
+    .seller-controls {
+      background: rgba(15,23,42,.95); border-top: 1px solid var(--stroke);
+      padding: 12px 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    }
+    .seller-controls.hidden { display: none; }
+
+    /* ── Stream create form ── */
+    .create-form-card {
+      background: var(--card); border: 1px solid var(--stroke); border-radius: 24px;
+      padding: 28px; max-width: 560px; margin: 40px auto; margin-left: auto; margin-right: auto;
+    }
+    .create-form-card h2 { margin: 0 0 20px; font-size: 22px; font-weight: 900; }
+    .loading-spinner {
+      display: inline-block; width: 18px; height: 18px;
+      border: 3px solid var(--stroke); border-top-color: var(--pink);
+      border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Empty / error states ── */
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+      color: var(--muted);
+    }
+    .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+    .alert { padding: 12px 16px; border-radius: 12px; font-size: 14px; margin: 12px 0; }
+    .alert-error { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); color: #f87171; }
+    .alert-success { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.3); color: #4ade80; }
+  </style>
+</head>
+<body>
+
+<!-- ── Top bar ── -->
+<header class="live-topbar">
+  <a href="index.html" class="logo">Uszefa<span>Live</span></a>
+  <div class="spacer"></div>
+  <button class="btn btn-outline btn-sm" id="btnBack" style="display:none" onclick="showList()">← Wróć</button>
+  <button class="btn btn-primary btn-sm" id="btnCreateStream" style="display:none" onclick="showCreateForm()">🎥 Nadawaj na żywo</button>
+</header>
+
+<!-- ══════════════ VIEW: Stream list ══════════════ -->
+<div id="viewList" class="view active">
+  <div class="streams-hero">
+    <h1>Zakupy na <span>żywo</span> 🔴</h1>
+    <p>Oglądaj streamy, kupuj produkty w czasie rzeczywistym i korzystaj z ekskluzywnych ofert live.</p>
+  </div>
+  <div class="streams-filters">
+    <button class="filter-btn active" data-filter="" onclick="setFilter(this,'')">Wszystkie</button>
+    <button class="filter-btn" data-filter="live" onclick="setFilter(this,'live')">🔴 Na żywo</button>
+    <button class="filter-btn" data-filter="scheduled" onclick="setFilter(this,'scheduled')">📅 Zaplanowane</button>
+    <button class="filter-btn" data-filter="ended" onclick="setFilter(this,'ended')">✅ Zakończone</button>
+  </div>
+  <div id="streamsGrid" class="streams-grid">
+    <div class="empty-state"><div class="loading-spinner"></div><p>Ładowanie streamów…</p></div>
+  </div>
+</div>
+
+<!-- ══════════════ VIEW: Stream player ══════════════ -->
+<div id="viewPlayer" class="view">
+  <div class="player-layout">
+    <!-- Main column: video + product bar -->
+    <div class="player-main">
+      <!-- Video -->
+      <div class="video-wrapper">
+        <div class="video-placeholder" id="videoPlaceholder">
+          <div class="play-icon">📺</div>
+          <p id="videoStatusText">Stream zaraz się rozpocznie…</p>
+        </div>
+        <video id="videoEl" controls playsinline></video>
+      </div>
+
+      <!-- Stream info bar -->
+      <div class="stream-info-bar">
+        <div class="stream-title-bar" id="streamTitle">—</div>
+        <span class="stream-status-pill" id="streamStatusPill">—</span>
+        <span style="color:var(--muted);font-size:13px" id="viewerCount">👁 0</span>
+      </div>
+
+      <!-- Pinned products carousel -->
+      <div class="products-bar" id="productsBar">
+        <span style="color:var(--muted);font-size:13px;align-self:center">Brak przypiętych produktów</span>
+      </div>
+
+      <!-- Seller controls (visible only for streamers) -->
+      <div class="seller-controls hidden" id="sellerControls">
+        <span style="font-size:13px;font-weight:700;color:var(--muted)">Panel sprzedawcy:</span>
+        <button class="btn btn-green btn-sm" id="btnGoLive" onclick="goLive()">🔴 Zacznij stream</button>
+        <button class="btn btn-red btn-sm" id="btnEndStream" onclick="endStream()" style="display:none">⏹ Zakończ stream</button>
+        <button class="btn btn-outline btn-sm" onclick="showPinProductModal()">📌 Przypnij produkt</button>
+        <button class="btn btn-outline btn-sm" onclick="showAddPromoModal()">⚡ Dodaj promocję</button>
+      </div>
+    </div>
+
+    <!-- Chat sidebar -->
+    <aside class="chat-sidebar">
+      <div class="chat-header">
+        <span>💬 Chat na żywo</span>
+        <span id="wsStatus" style="font-size:11px;color:var(--muted)">●  offline</span>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-msg system"><div class="chat-msg-content">Witaj na streamie! 👋</div></div>
+      </div>
+      <div id="chatInputArea" class="chat-input-area">
+        <input type="text" class="chat-input" id="chatInput" placeholder="Napisz wiadomość…" maxlength="500" autocomplete="off">
+        <button class="chat-send-btn" onclick="sendMessage()">➤</button>
+      </div>
+      <div class="chat-auth-note hidden" id="chatAuthNote">
+        <a href="login.html" style="color:var(--cyan)">Zaloguj się</a>, aby pisać na czacie
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- ══════════════ VIEW: Create stream form ══════════════ -->
+<div id="viewCreate" class="view">
+  <div style="padding:16px;max-width:600px;margin:0 auto">
+    <div class="create-form-card">
+      <h2>🎥 Utwórz stream na żywo</h2>
+      <div id="createFormError" class="alert alert-error" style="display:none"></div>
+
+      <div class="form-group">
+        <label>Tytuł streamu *</label>
+        <input type="text" id="sfTitle" placeholder="np. Wyprzedaż letniej kolekcji!" maxlength="255">
+      </div>
+      <div class="form-group">
+        <label>Opis</label>
+        <textarea id="sfDesc" placeholder="Co będzie na streamie?" rows="3" style="resize:vertical"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Miniatura (URL obrazka)</label>
+        <input type="url" id="sfThumb" placeholder="https://…">
+      </div>
+      <div class="form-group">
+        <label>Zaplanowany start (opcjonalnie)</label>
+        <input type="datetime-local" id="sfScheduled">
+      </div>
+      <div style="display:flex;gap:12px;margin-top:8px">
+        <button class="btn btn-outline" onclick="showList()" style="flex:1">Anuluj</button>
+        <button class="btn btn-primary" id="btnSubmitCreate" onclick="createStream()" style="flex:2">Utwórz stream</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Live promotions overlay ── -->
+<div class="promo-overlay" id="promoOverlay"></div>
+
+<!-- ── Instant checkout modal ── -->
+<div class="modal-backdrop" id="checkoutModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">🛒 Kup teraz</span>
+      <button class="modal-close" onclick="closeCheckout()">✕</button>
+    </div>
+    <div id="checkoutError" class="alert alert-error" style="display:none"></div>
+    <div class="checkout-product">
+      <img id="coImg" src="" alt="">
+      <div class="checkout-product-info">
+        <div class="name" id="coName">—</div>
+        <div class="price" id="coPrice">—</div>
+        <div class="price-orig" id="coOrig" style="display:none"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Liczba sztuk</label>
+      <div class="qty-row">
+        <button class="qty-btn" onclick="changeQty(-1)">−</button>
+        <span class="qty-val" id="coQty">1</span>
+        <button class="qty-btn" onclick="changeQty(1)">+</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Adres dostawy *</label>
+      <textarea id="coAddress" placeholder="ul. Przykładowa 1, 00-000 Warszawa" rows="2" style="resize:none;width:100%;background:rgba(30,41,59,.7);border:1px solid var(--stroke);border-radius:12px;padding:10px 14px;color:var(--text);font-size:14px;outline:none;font-family:inherit"></textarea>
+    </div>
+    <div class="checkout-total">Łączna kwota: <strong id="coTotal">—</strong></div>
+    <button class="btn btn-primary" style="width:100%" id="btnBuyNow" onclick="confirmBuy()">Kup teraz 🛒</button>
+  </div>
+</div>
+
+<!-- ── Pin product modal ── -->
+<div class="modal-backdrop" id="pinProductModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">📌 Przypnij produkt</span>
+      <button class="modal-close" onclick="document.getElementById('pinProductModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>ID produktu (UUID)</label>
+      <input type="text" id="pinProductId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="pinProduct()">Przypnij produkt</button>
+  </div>
+</div>
+
+<!-- ── Add promotion modal ── -->
+<div class="modal-backdrop" id="addPromoModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">⚡ Dodaj promocję live</span>
+      <button class="modal-close" onclick="document.getElementById('addPromoModal').classList.remove('open')">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Tytuł promocji *</label>
+      <input type="text" id="promoTitle" placeholder="Flash Deal – tylko przez 10 minut!">
+    </div>
+    <div class="form-group">
+      <label>Cena promocyjna (zł) *</label>
+      <input type="number" id="promoPrice" placeholder="79.00" min="0" step="0.01">
+    </div>
+    <div class="form-group">
+      <label>Cena oryginalna (zł)</label>
+      <input type="number" id="promoOrigPrice" placeholder="100.00" min="0" step="0.01">
+    </div>
+    <div class="form-group">
+      <label>Czas trwania (minuty) *</label>
+      <input type="number" id="promoDuration" placeholder="10" min="1" max="120" value="10">
+    </div>
+    <div class="form-group">
+      <label>Limit sztuk</label>
+      <input type="number" id="promoMaxQty" placeholder="50" min="1">
+    </div>
+    <div class="form-group">
+      <label>ID produktu (opcjonalnie)</label>
+      <input type="text" id="promoProductId" placeholder="xxxxxxxx-…">
+    </div>
+    <button class="btn btn-primary" style="width:100%" onclick="createPromo()">Dodaj promocję ⚡</button>
+  </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+'use strict';
+
+const API = window.QMApi;
+const WS_URL = (window.QM_WS_URL) || (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
+
+// ── State ──────────────────────────────────────────────────────────────────────
+let currentStream = null;
+let currentPromotion = null;
+let checkoutProduct = null;
+let checkoutQty = 1;
+let currentUser = null;
+let ws = null;
+let pollTimer = null;
+let promoTimers = {};
+let lastMessageTime = null;
+let statusFilter = '';
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    currentUser = await API.Auth.me();
+  } catch (_e) { currentUser = null; }
+
+  const role = currentUser && currentUser.role;
+  const isStreamer = role && ['seller', 'creator', 'admin', 'owner'].includes(role);
+
+  if (isStreamer) {
+    document.getElementById('btnCreateStream').style.display = 'inline-flex';
+  }
+
+  // Check URL params for direct stream link
+  const params = new URLSearchParams(location.search);
+  const streamId = params.get('id');
+  if (streamId) {
+    openStream(streamId);
+  } else {
+    loadStreams();
+  }
+}
+
+// ── Views ──────────────────────────────────────────────────────────────────────
+function showList() {
+  setView('viewList');
+  document.getElementById('btnBack').style.display = 'none';
+  disconnectWs();
+  stopPolling();
+  clearActivePromos();
+  loadStreams();
+}
+
+function showPlayer() {
+  setView('viewPlayer');
+  document.getElementById('btnBack').style.display = 'inline-flex';
+}
+
+function showCreateForm() {
+  setView('viewCreate');
+  document.getElementById('btnBack').style.display = 'inline-flex';
+}
+
+function setView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── Stream list ────────────────────────────────────────────────────────────────
+function setFilter(btn, filter) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  statusFilter = filter;
+  loadStreams();
+}
+
+async function loadStreams() {
+  const grid = document.getElementById('streamsGrid');
+  grid.innerHTML = '<div class="empty-state"><div class="loading-spinner"></div><p>Ładowanie…</p></div>';
+  try {
+    const data = await API.Live.listStreams({ status: statusFilter || undefined, limit: 24 });
+    renderStreamCards(data.streams || []);
+  } catch (e) {
+    grid.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Błąd ładowania streamów.</p></div>`;
+  }
+}
+
+function renderStreamCards(streams) {
+  const grid = document.getElementById('streamsGrid');
+  if (!streams.length) {
+    grid.innerHTML = `<div class="empty-state"><div class="icon">📺</div><p>Brak streamów w tej kategorii.</p></div>`;
+    return;
+  }
+  grid.innerHTML = streams.map(s => {
+    const isLive = s.status === 'live';
+    const thumb = s.thumbnail_url
+      ? `<img src="${escHtml(s.thumbnail_url)}" alt="" loading="lazy">`
+      : `<span style="font-size:52px;opacity:.3">📺</span>`;
+    const badge = isLive ? `<span class="live-badge">LIVE</span>` : '';
+    const viewers = isLive ? `<span class="viewer-count">👁 ${s.viewer_count || 0}</span>` : '';
+    const scheduled = s.scheduled_at && s.status === 'scheduled'
+      ? `<div class="stream-card-scheduled">📅 ${formatDate(s.scheduled_at)}</div>` : '';
+    return `
+      <div class="stream-card" onclick="openStream('${s.id}')">
+        <div class="stream-card-thumb">${thumb}${badge}${viewers}</div>
+        <div class="stream-card-body">
+          <div class="stream-card-title">${escHtml(s.title)}</div>
+          <div class="stream-card-streamer">🎙 ${escHtml(s.streamer_name || '—')}</div>
+          ${scheduled}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Open stream ────────────────────────────────────────────────────────────────
+async function openStream(id) {
+  showPlayer();
+  history.pushState({}, '', `?id=${id}`);
+  try {
+    const data = await API.Live.getStream(id);
+    currentStream = data.stream;
+    renderPlayerUI();
+    loadPinnedProducts();
+    loadPromotions();
+    loadMessages();
+    connectWs(id);
+    startPolling(id);
+    updateSellerControls();
+  } catch (e) {
+    document.getElementById('streamTitle').textContent = 'Stream nie znaleziony';
+  }
+}
+
+function renderPlayerUI() {
+  const s = currentStream;
+  document.getElementById('streamTitle').textContent = s.title;
+  document.getElementById('viewerCount').textContent = `👁 ${s.viewer_count || 0}`;
+
+  const pill = document.getElementById('streamStatusPill');
+  const statusMap = { live: 'LIVE 🔴', scheduled: 'Zaplanowany', ended: 'Zakończony', cancelled: 'Anulowany' };
+  pill.textContent = statusMap[s.status] || s.status;
+  pill.className = `stream-status-pill ${s.status}`;
+
+  const placeholder = document.getElementById('videoPlaceholder');
+  const videoStatusText = document.getElementById('videoStatusText');
+  if (s.status === 'live') {
+    videoStatusText.textContent = 'Stream jest aktywny';
+    placeholder.style.display = 'flex';
+  } else if (s.status === 'scheduled') {
+    videoStatusText.textContent = s.scheduled_at ? `Start: ${formatDate(s.scheduled_at)}` : 'Stream zaplanowany';
+    placeholder.style.display = 'flex';
+  } else {
+    videoStatusText.textContent = 'Stream zakończony';
+    placeholder.style.display = 'flex';
+  }
+}
+
+// ── Seller controls ────────────────────────────────────────────────────────────
+function updateSellerControls() {
+  if (!currentStream || !currentUser) return;
+  const isOwner = currentUser.id === currentStream.streamer_id || ['admin','owner'].includes(currentUser.role);
+  const ctrl = document.getElementById('sellerControls');
+  if (!isOwner) { ctrl.classList.add('hidden'); return; }
+  ctrl.classList.remove('hidden');
+
+  const btnGo = document.getElementById('btnGoLive');
+  const btnEnd = document.getElementById('btnEndStream');
+  if (currentStream.status === 'live') {
+    btnGo.style.display = 'none';
+    btnEnd.style.display = 'inline-flex';
+  } else if (currentStream.status === 'scheduled') {
+    btnGo.style.display = 'inline-flex';
+    btnEnd.style.display = 'none';
+  } else {
+    btnGo.style.display = 'none';
+    btnEnd.style.display = 'none';
+  }
+}
+
+async function goLive() {
+  if (!currentStream) return;
+  try {
+    const data = await API.Live.updateStatus(currentStream.id, 'live');
+    currentStream = data.stream;
+    renderPlayerUI();
+    updateSellerControls();
+    addSystemMessage('Stream jest teraz na żywo! 🔴');
+  } catch (e) { alert('Błąd uruchomienia streamu.'); }
+}
+
+async function endStream() {
+  if (!currentStream) return;
+  if (!confirm('Na pewno zakończyć stream?')) return;
+  try {
+    const data = await API.Live.updateStatus(currentStream.id, 'ended');
+    currentStream = data.stream;
+    renderPlayerUI();
+    updateSellerControls();
+    stopPolling();
+    addSystemMessage('Stream zakończony. Dziękujemy za oglądanie! 👋');
+  } catch (e) { alert('Błąd zakończenia streamu.'); }
+}
+
+// ── Products ───────────────────────────────────────────────────────────────────
+async function loadPinnedProducts() {
+  if (!currentStream) return;
+  try {
+    const data = await API.Live.getPinnedProducts(currentStream.id);
+    renderProducts(data.products || []);
+  } catch (_e) {}
+}
+
+function renderProducts(products) {
+  const bar = document.getElementById('productsBar');
+  if (!products.length) {
+    bar.innerHTML = `<span style="color:var(--muted);font-size:13px;align-self:center">Brak przypiętych produktów</span>`;
+    return;
+  }
+  bar.innerHTML = products.map(p => {
+    const img = p.image_url
+      ? `<img src="${escHtml(p.image_url)}" alt="${escHtml(p.name)}" loading="lazy">`
+      : `<img src="" alt="" style="background:#1e293b">`;
+    return `
+      <div class="product-card" onclick="openCheckout(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+        ${img}
+        <div class="product-card-name">${escHtml(p.name)}</div>
+        <div class="product-card-price">${formatPrice(p.price)} zł</div>
+        <button class="product-card-btn">Kup teraz</button>
+      </div>`;
+  }).join('');
+}
+
+function showPinProductModal() {
+  document.getElementById('pinProductModal').classList.add('open');
+}
+
+async function pinProduct() {
+  const productId = document.getElementById('pinProductId').value.trim();
+  if (!productId || !currentStream) return;
+  try {
+    await API.Live.pinProduct(currentStream.id, productId);
+    document.getElementById('pinProductModal').classList.remove('open');
+    document.getElementById('pinProductId').value = '';
+    loadPinnedProducts();
+  } catch (e) { alert('Błąd przypinania produktu.'); }
+}
+
+// ── Promotions ────────────────────────────────────────────────────────────────
+async function loadPromotions() {
+  if (!currentStream) return;
+  try {
+    const data = await API.Live.getPromotions(currentStream.id);
+    (data.promotions || []).forEach(showPromoBanner);
+  } catch (_e) {}
+}
+
+function showPromoBanner(promo) {
+  const overlay = document.getElementById('promoOverlay');
+  const id = `promo-${promo.id}`;
+  if (document.getElementById(id)) return;
+
+  const endsAt = new Date(promo.ends_at).getTime();
+  const img = promo.product_image
+    ? `<img class="promo-banner-img" src="${escHtml(promo.product_image)}" alt="">`
+    : `<span class="promo-banner-img" style="display:flex;align-items:center;justify-content:center;font-size:28px">⚡</span>`;
+
+  const div = document.createElement('div');
+  div.id = id;
+  div.className = 'promo-banner';
+  div.innerHTML = `
+    ${img}
+    <div class="promo-banner-info">
+      <div class="promo-banner-title">${escHtml(promo.title)}</div>
+      <div><span class="promo-banner-price">${formatPrice(promo.promo_price)} zł</span>
+        ${promo.original_price ? `<span class="promo-banner-orig">${formatPrice(promo.original_price)} zł</span>` : ''}
+      </div>
+    </div>
+    <div class="promo-banner-timer" id="timer-${promo.id}">--:--</div>
+    <div class="promo-banner-close" onclick="closePromo('${promo.id}')">✕</div>`;
+  overlay.appendChild(div);
+
+  promoTimers[promo.id] = setInterval(() => {
+    const remaining = Math.max(0, endsAt - Date.now());
+    const el = document.getElementById(`timer-${promo.id}`);
+    if (!el) { clearInterval(promoTimers[promo.id]); return; }
+    if (remaining === 0) {
+      clearInterval(promoTimers[promo.id]);
+      closePromo(promo.id);
+      return;
+    }
+    const m = Math.floor(remaining / 60000);
+    const s = Math.floor((remaining % 60000) / 1000);
+    el.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }, 500);
+}
+
+function closePromo(promoId) {
+  const el = document.getElementById(`promo-${promoId}`);
+  if (el) el.remove();
+  clearInterval(promoTimers[promoId]);
+  delete promoTimers[promoId];
+}
+
+function clearActivePromos() {
+  Object.keys(promoTimers).forEach(id => { clearInterval(promoTimers[id]); });
+  promoTimers = {};
+  document.getElementById('promoOverlay').innerHTML = '';
+}
+
+function showAddPromoModal() {
+  document.getElementById('addPromoModal').classList.add('open');
+}
+
+async function createPromo() {
+  const title = document.getElementById('promoTitle').value.trim();
+  const promoPrice = parseFloat(document.getElementById('promoPrice').value);
+  const origPrice = parseFloat(document.getElementById('promoOrigPrice').value) || null;
+  const durationMins = parseInt(document.getElementById('promoDuration').value) || 10;
+  const maxQty = parseInt(document.getElementById('promoMaxQty').value) || null;
+  const productId = document.getElementById('promoProductId').value.trim() || null;
+  if (!title || !promoPrice || !currentStream) return;
+
+  const endsAt = new Date(Date.now() + durationMins * 60000).toISOString();
+  const discountPercent = origPrice ? Math.round((1 - promoPrice / origPrice) * 100) : null;
+
+  try {
+    const data = await API.Live.createPromotion(currentStream.id, {
+      title, promo_price: promoPrice, original_price: origPrice,
+      discount_percent: discountPercent, ends_at: endsAt, max_quantity: maxQty, product_id: productId,
+    });
+    document.getElementById('addPromoModal').classList.remove('open');
+    showPromoBanner(data.promotion);
+  } catch (e) { alert('Błąd tworzenia promocji.'); }
+}
+
+// ── Chat ───────────────────────────────────────────────────────────────────────
+async function loadMessages(since) {
+  if (!currentStream) return;
+  try {
+    const params = { limit: 100 };
+    if (since) params.since = since;
+    const data = await API.Live.getMessages(currentStream.id, params);
+    (data.messages || []).forEach(appendMessage);
+  } catch (_e) {}
+}
+
+function appendMessage(msg) {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${msg.message_type === 'purchase' ? 'purchase' : msg.message_type === 'system' ? 'system' : ''}`;
+  if (msg.message_type !== 'system') {
+    div.innerHTML = `<div class="chat-msg-author">${escHtml(msg.display_name)}</div><div class="chat-msg-content">${escHtml(msg.content)}</div>`;
+  } else {
+    div.innerHTML = `<div class="chat-msg-content">${escHtml(msg.content)}</div>`;
+  }
+  container.appendChild(div);
+  lastMessageTime = msg.created_at;
+  container.scrollTop = container.scrollHeight;
+}
+
+function addSystemMessage(text) {
+  appendMessage({ display_name: '', content: text, message_type: 'system', created_at: new Date().toISOString() });
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const content = input.value.trim();
+  if (!content || !currentStream) return;
+
+  if (!currentUser) {
+    window.location.href = 'login.html?redirect=' + encodeURIComponent(location.href);
+    return;
+  }
+  input.value = '';
+  try {
+    const data = await API.Live.sendMessage(currentStream.id, content);
+    appendMessage(data.message);
+  } catch (e) {
+    if (e && e.status === 400) addSystemMessage('Wiadomości można wysyłać tylko podczas aktywnego streamu.');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const chatInput = document.getElementById('chatInput');
+  if (chatInput) {
+    chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(); });
+  }
+});
+
+// ── WebSocket ──────────────────────────────────────────────────────────────────
+function connectWs(streamId) {
+  disconnectWs();
+  try {
+    ws = new WebSocket(WS_URL);
+    ws.addEventListener('open', () => {
+      ws.send(JSON.stringify({ type: 'join', streamId }));
+      setWsStatus(true);
+    });
+    ws.addEventListener('message', (e) => {
+      try { handleWsMessage(JSON.parse(e.data)); } catch (_e) {}
+    });
+    ws.addEventListener('close', () => {
+      ws = null;
+      setWsStatus(false);
+    });
+    ws.addEventListener('error', () => {
+      ws = null;
+      setWsStatus(false);
+    });
+  } catch (_e) { setWsStatus(false); }
+}
+
+function disconnectWs() {
+  if (ws) { try { ws.close(); } catch (_e) {} ws = null; }
+  setWsStatus(false);
+}
+
+function setWsStatus(connected) {
+  const el = document.getElementById('wsStatus');
+  if (!el) return;
+  el.textContent = connected ? '● online' : '●  offline';
+  el.style.color = connected ? 'var(--green)' : 'var(--muted)';
+}
+
+function handleWsMessage(msg) {
+  switch (msg.type) {
+    case 'message':
+    case 'purchase':
+      appendMessage(msg.message || msg);
+      break;
+    case 'product_pinned':
+      loadPinnedProducts();
+      break;
+    case 'product_unpinned':
+      loadPinnedProducts();
+      break;
+    case 'promotion':
+      if (msg.promotion) showPromoBanner(msg.promotion);
+      break;
+    case 'stream_status':
+      if (msg.stream) { currentStream = msg.stream; renderPlayerUI(); updateSellerControls(); }
+      break;
+  }
+}
+
+// ── Polling (fallback when WebSocket unavailable) ─────────────────────────────
+function startPolling(streamId) {
+  stopPolling();
+  pollTimer = setInterval(async () => {
+    if (!currentStream || ws) return; // WS handles it
+    try {
+      const data = await API.Live.getMessages(streamId, { since: lastMessageTime, limit: 20 });
+      (data.messages || []).forEach(appendMessage);
+    } catch (_e) {}
+  }, 3000);
+}
+
+function stopPolling() {
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+}
+
+// ── Checkout ───────────────────────────────────────────────────────────────────
+function openCheckout(product, promotion) {
+  checkoutProduct = product;
+  checkoutQty = 1;
+  currentPromotion = promotion || null;
+
+  const usePromo = promotion && promotion.promo_price;
+  const price = usePromo ? parseFloat(promotion.promo_price) : parseFloat(product.price || product.promo_price);
+
+  document.getElementById('coImg').src = product.image_url || '';
+  document.getElementById('coName').textContent = product.name;
+  document.getElementById('coPrice').textContent = `${formatPrice(price)} zł`;
+
+  const origEl = document.getElementById('coOrig');
+  if (usePromo && promotion.original_price) {
+    origEl.textContent = `${formatPrice(promotion.original_price)} zł`;
+    origEl.style.display = 'block';
+  } else {
+    origEl.style.display = 'none';
+  }
+
+  document.getElementById('coQty').textContent = '1';
+  updateCheckoutTotal();
+  document.getElementById('checkoutError').style.display = 'none';
+  document.getElementById('checkoutModal').classList.add('open');
+}
+
+function closeCheckout() {
+  document.getElementById('checkoutModal').classList.remove('open');
+}
+
+function changeQty(delta) {
+  checkoutQty = Math.max(1, checkoutQty + delta);
+  document.getElementById('coQty').textContent = checkoutQty;
+  updateCheckoutTotal();
+}
+
+function updateCheckoutTotal() {
+  if (!checkoutProduct) return;
+  const usePromo = currentPromotion && currentPromotion.promo_price;
+  const price = usePromo ? parseFloat(currentPromotion.promo_price) : parseFloat(checkoutProduct.price || checkoutProduct.promo_price);
+  document.getElementById('coTotal').textContent = `${formatPrice(price * checkoutQty)} zł`;
+}
+
+async function confirmBuy() {
+  if (!currentUser) {
+    window.location.href = 'login.html?redirect=' + encodeURIComponent(location.href);
+    return;
+  }
+  const address = document.getElementById('coAddress').value.trim();
+  if (!address) {
+    showCheckoutError('Podaj adres dostawy.');
+    return;
+  }
+  const btn = document.getElementById('btnBuyNow');
+  btn.disabled = true;
+  btn.textContent = 'Kupowanie…';
+  try {
+    const payload = {
+      product_id: checkoutProduct.product_id || checkoutProduct.id,
+      quantity: checkoutQty,
+      shipping_address: address,
+    };
+    if (currentPromotion) payload.promotion_id = currentPromotion.id;
+    await API.Live.buyNow(currentStream.id, payload);
+    closeCheckout();
+    addSystemMessage('✅ Twoje zamówienie zostało złożone! Sprawdź email z potwierdzeniem.');
+  } catch (e) {
+    showCheckoutError('Błąd zakupu. Spróbuj ponownie.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Kup teraz 🛒';
+  }
+}
+
+function showCheckoutError(msg) {
+  const el = document.getElementById('checkoutError');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+// ── Create stream ──────────────────────────────────────────────────────────────
+async function createStream() {
+  const title = document.getElementById('sfTitle').value.trim();
+  if (!title) { document.getElementById('createFormError').textContent = 'Podaj tytuł streamu.'; document.getElementById('createFormError').style.display = 'block'; return; }
+  const btn = document.getElementById('btnSubmitCreate');
+  btn.disabled = true;
+  btn.textContent = 'Tworzenie…';
+  try {
+    const data = await API.Live.createStream({
+      title,
+      description: document.getElementById('sfDesc').value.trim() || undefined,
+      thumbnail_url: document.getElementById('sfThumb').value.trim() || undefined,
+      scheduled_at: document.getElementById('sfScheduled').value || undefined,
+    });
+    document.getElementById('createFormError').style.display = 'none';
+    await openStream(data.stream.id);
+  } catch (e) {
+    document.getElementById('createFormError').textContent = 'Błąd tworzenia streamu.';
+    document.getElementById('createFormError').style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Utwórz stream';
+  }
+}
+
+// ── Utilities ──────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function formatPrice(v) {
+  const n = parseFloat(v);
+  if (isNaN(n)) return '—';
+  return n.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('pl-PL', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+// ── Start ──────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>

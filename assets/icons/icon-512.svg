@@ -1,12 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="UszefaQualitet icon">
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 512 512" role="img" aria-label="QualitetVerse icon">
   <defs>
-    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#f9d976" />
-      <stop offset="55%" stop-color="#f6c453" />
-      <stop offset="100%" stop-color="#d39a2f" />
+    <linearGradient id="qv-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="50%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#00d4ff"/>
     </linearGradient>
+    <linearGradient id="qv-ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#00d4ff"/>
+    </linearGradient>
+    <filter id="qv-glow">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
   </defs>
-  <rect width="512" height="512" rx="120" fill="#0b1021" />
-  <rect x="40" y="40" width="432" height="432" rx="96" fill="none" stroke="url(#gold)" stroke-width="18" />
-  <text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-family="Arial, sans-serif" font-size="196" font-weight="700" fill="url(#gold)">UQ</text>
+  <rect width="512" height="512" rx="120" fill="#05050f"/>
+  <!-- Orbit ring -->
+  <ellipse cx="256" cy="256" rx="210" ry="72" fill="none" stroke="url(#qv-ring)" stroke-width="14" stroke-dasharray="30 18" opacity="0.7"/>
+  <!-- V mark -->
+  <filter id="glow2"><feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <path d="M148 148 L256 360 L364 148" fill="none" stroke="url(#qv-grad)" stroke-width="52" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow2)"/>
+  <!-- Center dot -->
+  <circle cx="256" cy="256" r="18" fill="url(#qv-ring)" opacity="0.9"/>
 </svg>

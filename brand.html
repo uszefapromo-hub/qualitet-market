@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <title>QualitetVerse — Brand Guide</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#7c3aed">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/qualitetverse.css">
+  <style>
+    .brand-section{padding:60px 0 40px}
+    .brand-section h2{font-size:32px;margin:0 0 8px}
+    .brand-section .lead{margin:0 0 36px}
+    .swatch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:36px}
+    .swatch{border-radius:16px;overflow:hidden;border:1px solid var(--stroke)}
+    .swatch-color{height:100px}
+    .swatch-info{padding:12px 14px;background:var(--card)}
+    .swatch-name{font-family:var(--font-heading);font-weight:700;font-size:15px;margin-bottom:4px}
+    .swatch-hex{font-size:12px;color:var(--muted);font-family:monospace}
+    .swatch-role{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-top:6px}
+    .type-row{margin:18px 0;padding:20px 24px;border:1px solid var(--stroke);border-radius:16px;background:var(--card)}
+    .type-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+    .component-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px;margin-bottom:36px}
+    .logo-variants{display:flex;flex-wrap:wrap;gap:24px;margin-bottom:36px}
+    .logo-box{
+      background:var(--card);border:1px solid var(--stroke);border-radius:20px;
+      padding:32px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;min-width:200px;
+    }
+    .logo-box.dark-bg{background:#05050f}
+    .logo-box.light-bg{background:#f0f0ff}
+    .logo-icon-preview{width:80px;height:80px}
+    .logo-wordmark{font-family:var(--font-heading);font-size:28px;font-weight:800;
+      background:linear-gradient(90deg,#a78bfa,#00d4ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .spacing-demo{display:flex;align-items:center;gap:0}
+    .sp-block{background:rgba(139,92,246,.3);border:1px solid rgba(139,92,246,.5);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--purple-bright)}
+    .do-dont{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+    .do-box,.dont-box{padding:20px;border-radius:16px}
+    .do-box{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.3)}
+    .dont-box{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3)}
+    .do-label{color:#4ade80;font-weight:700;font-size:13px;margin-bottom:10px}
+    .dont-label{color:#f87171;font-weight:700;font-size:13px;margin-bottom:10px}
+    .divider{height:1px;background:var(--stroke);margin:40px 0}
+    @media(max-width:640px){.do-dont{grid-template-columns:1fr}}
+  </style>
+</head>
+<body data-page="brand">
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <img src="assets/icons/favicon.svg" alt="QualitetVerse logo" width="42" height="42">
+        <div>
+          <strong>QualitetVerse</strong>
+          <span>Brand Guide</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Brand sections">
+        <a href="#identity">Identity</a>
+        <a href="#colors">Colors</a>
+        <a href="#typography">Typography</a>
+        <a href="#components">Components</a>
+        <a href="#icons">Icons</a>
+      </nav>
+      <a class="btn btn-primary" href="index.html">← Back to Platform</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+
+      <!-- ── HERO ── -->
+      <section class="brand-section qv-hero-section" style="text-align:left;padding:80px 0 60px">
+        <span class="qv-ai-badge">Brand Guide v1.0</span>
+        <h1 class="qv-hero-headline" style="text-align:left">
+          <span class="text-gradient">QualitetVerse</span><br>Brand Identity
+        </h1>
+        <p class="qv-hero-sub" style="text-align:left;max-width:560px">
+          Quality + Universe. A platform where creators, sellers and buyers build
+          a new AI-powered commerce ecosystem.
+        </p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <span class="tag-purple">Modern</span>
+          <span class="tag-purple">Futuristic</span>
+          <span class="tag-cyan">AI-Powered</span>
+          <span class="tag-cyan">Trustworthy</span>
+          <span class="tag-purple">Innovative</span>
+        </div>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- ── BRAND IDENTITY ── -->
+      <section class="brand-section" id="identity">
+        <h2>Brand Identity</h2>
+        <p class="lead">The QualitetVerse brand should feel like a fusion of TikTok's creativity, Stripe's trustworthiness, Shopify's simplicity, and Notion's clean intelligence.</p>
+
+        <div class="do-dont">
+          <div class="do-box">
+            <div class="do-label">✓ Do</div>
+            <ul style="margin:0;padding-left:18px;color:var(--text);font-size:14px;line-height:1.8">
+              <li>Use gradient text for key headlines</li>
+              <li>Apply glassmorphism to cards and panels</li>
+              <li>Use Space Grotesk for all headings</li>
+              <li>Maintain deep space black backgrounds</li>
+              <li>Apply subtle purple glow to interactive elements</li>
+              <li>Use neon cyan for CTAs and highlights</li>
+            </ul>
+          </div>
+          <div class="dont-box">
+            <div class="dont-label">✗ Don't</div>
+            <ul style="margin:0;padding-left:18px;color:var(--text);font-size:14px;line-height:1.8">
+              <li>Use pure white backgrounds</li>
+              <li>Use harsh, flat colors without gradients</li>
+              <li>Mix the old "Qualitet" gold/green palette</li>
+              <li>Use red or orange as primary accents</li>
+              <li>Apply heavy drop shadows (use glow instead)</li>
+              <li>Use serif or display-only fonts for UI</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Comparison brands feel -->
+        <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+          <span style="color:var(--muted);font-size:13px;font-weight:700">Comparable feeling to:</span>
+          <span class="tag-cyan">TikTok — social energy</span>
+          <span class="tag-purple">Stripe — technical trust</span>
+          <span class="tag-cyan">Shopify — commerce power</span>
+          <span class="tag-purple">Notion — clean intelligence</span>
+        </div>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- ── LOGO ── -->
+      <section class="brand-section" id="logo">
+        <h2>Logo</h2>
+        <p class="lead">The QualitetVerse logo is a bold V-mark forming a galaxy orbit ring, symbolizing the convergence of quality and the universe of commerce.</p>
+
+        <div class="logo-variants">
+          <div class="logo-box dark-bg">
+            <img class="logo-icon-preview" src="assets/icons/favicon.svg" alt="QualitetVerse icon on dark">
+            <div class="logo-wordmark">QualitetVerse</div>
+            <span style="font-size:11px;color:var(--muted)">Primary — Dark</span>
+          </div>
+          <div class="logo-box" style="background:#0d0d20">
+            <img class="logo-icon-preview" src="assets/icons/icon-192.svg" alt="QualitetVerse icon 192">
+            <div style="font-family:var(--font-heading);font-size:22px;font-weight:800;color:#fff">QualitetVerse</div>
+            <span style="font-size:11px;color:var(--muted)">Icon + Name — Space</span>
+          </div>
+          <div class="logo-box" style="background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.4)">
+            <img class="logo-icon-preview" src="assets/icons/apple-touch-icon.svg" alt="QualitetVerse app icon">
+            <span style="font-size:11px;color:var(--muted)">App Icon</span>
+          </div>
+        </div>
+
+        <div class="glass-card" style="padding:20px">
+          <h3 style="margin:0 0 12px;font-size:16px">Logo concept: V-Galaxy Ring</h3>
+          <p style="margin:0;color:var(--muted);font-size:14px;line-height:1.7">
+            The V symbol represents "Verse" (Universe). The orbit ellipse surrounding it represents the ecosystem of commerce revolving around quality. The purple-to-cyan gradient flows from the brand's primary Electric Purple to the secondary Neon Cyan — symbolising innovation transforming into clarity.
+          </p>
+        </div>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- ── COLORS ── -->
+      <section class="brand-section" id="colors">
+        <h2>Color System</h2>
+        <p class="lead">A cyber-futuristic SaaS palette built around Electric Purple as primary and Neon Cyan as secondary on a Deep Space Black foundation.</p>
+
+        <div class="swatch-grid">
+          <div class="swatch">
+            <div class="swatch-color" style="background:#7c3aed"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Electric Purple</div>
+              <div class="swatch-hex">#7c3aed</div>
+              <div class="swatch-role text-purple">Primary Brand</div>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#8b5cf6"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Purple Mid</div>
+              <div class="swatch-hex">#8b5cf6</div>
+              <div class="swatch-role text-purple">Primary Light</div>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#a78bfa"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Violet Bright</div>
+              <div class="swatch-hex">#a78bfa</div>
+              <div class="swatch-role text-purple">Accent / Text</div>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#00d4ff"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Neon Cyan</div>
+              <div class="swatch-hex">#00d4ff</div>
+              <div class="swatch-role text-cyan">Secondary Brand</div>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#0891b2"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Cyan Dark</div>
+              <div class="swatch-hex">#0891b2</div>
+              <div class="swatch-role text-cyan">Secondary Deep</div>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#67e8f9"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Cyan Bright</div>
+              <div class="swatch-hex">#67e8f9</div>
+              <div class="swatch-role text-cyan">Highlight</div>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#05050f"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Deep Space Black</div>
+              <div class="swatch-hex">#05050f</div>
+              <div class="swatch-role" style="color:var(--muted)">Background</div>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:#0d0d20"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Space Navy</div>
+              <div class="swatch-hex">#0d0d20</div>
+              <div class="swatch-role" style="color:var(--muted)">Card Surface</div>
+            </div>
+          </div>
+          <div class="swatch">
+            <div class="swatch-color" style="background:linear-gradient(135deg,#7c3aed,#00d4ff)"></div>
+            <div class="swatch-info">
+              <div class="swatch-name">Brand Gradient</div>
+              <div class="swatch-hex">135deg #7c3aed→#00d4ff</div>
+              <div class="swatch-role text-gradient">CTA / Hero</div>
+            </div>
+          </div>
+        </div>
+
+        <h3>Gradient Usage</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px">
+          <div style="height:64px;width:220px;border-radius:14px;background:linear-gradient(135deg,#7c3aed,#00d4ff);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:var(--font-heading)">Primary CTA</div>
+          <div style="height:64px;width:220px;border-radius:14px;background:linear-gradient(90deg,#a78bfa,#00d4ff);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:var(--font-heading)">Text Gradient</div>
+          <div style="height:64px;width:220px;border-radius:14px;background:linear-gradient(160deg,rgba(139,92,246,.32),rgba(0,212,255,.14));border:1px solid rgba(139,92,246,.3);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:var(--font-heading)">Glass Card A</div>
+          <div style="height:64px;width:220px;border-radius:14px;background:linear-gradient(160deg,rgba(124,58,237,.26),rgba(103,232,249,.14));border:1px solid rgba(0,212,255,.25);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:var(--font-heading)">Glass Card B</div>
+        </div>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- ── TYPOGRAPHY ── -->
+      <section class="brand-section" id="typography">
+        <h2>Typography</h2>
+        <p class="lead">Space Grotesk for headings (modern tech feel) + Inter for body text (clean and readable). Both from Google Fonts.</p>
+
+        <div class="type-row">
+          <div class="type-label">Display / H1 — Space Grotesk 800</div>
+          <div style="font-family:var(--font-heading);font-size:52px;font-weight:800;line-height:1.05;letter-spacing:-1.5px" class="text-gradient">QualitetVerse</div>
+        </div>
+        <div class="type-row">
+          <div class="type-label">Heading H2 — Space Grotesk 700</div>
+          <div style="font-family:var(--font-heading);font-size:34px;font-weight:700;line-height:1.1">AI Commerce Universe</div>
+        </div>
+        <div class="type-row">
+          <div class="type-label">Heading H3 — Space Grotesk 600</div>
+          <div style="font-family:var(--font-heading);font-size:22px;font-weight:600">Creator Dashboard · Seller Tools · Buyer Feed</div>
+        </div>
+        <div class="type-row">
+          <div class="type-label">Body — Inter 400</div>
+          <div style="font-family:var(--font-body);font-size:16px;font-weight:400;color:var(--muted);line-height:1.65">
+            QualitetVerse is an AI-powered marketplace connecting creators, sellers and buyers in a futuristic commerce ecosystem. Build your store, automate pricing, go live, and grow with built-in AI tools.
+          </div>
+        </div>
+        <div class="type-row">
+          <div class="type-label">Caption / Label — Inter 600 uppercase</div>
+          <div style="font-family:var(--font-body);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--muted)">Platform · Revenue · Analytics · AI Center</div>
+        </div>
+        <div class="type-row">
+          <div class="type-label">Code / Mono</div>
+          <div style="font-family:monospace;font-size:14px;color:var(--cyan)">const platform = "QualitetVerse"; // Quality + Universe</div>
+        </div>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- ── COMPONENTS ── -->
+      <section class="brand-section" id="components">
+        <h2>Component Library</h2>
+        <p class="lead">Reusable glassmorphism components with Electric Purple / Neon Cyan design system.</p>
+
+        <!-- Buttons -->
+        <h3>Buttons</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:28px">
+          <button class="btn-qv-primary">Primary CTA</button>
+          <button class="btn-qv-secondary">Secondary</button>
+          <button class="btn-qv-cyan">Neon Cyan</button>
+          <button class="btn btn-primary">Legacy Primary</button>
+          <button class="btn btn-secondary">Legacy Secondary</button>
+        </div>
+
+        <!-- Tags -->
+        <h3>Tags &amp; Badges</h3>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:28px">
+          <span class="tag-purple">Creator</span>
+          <span class="tag-cyan">AI Powered</span>
+          <span class="tag-purple">Live Commerce</span>
+          <span class="tag-cyan">Verified</span>
+          <span class="qv-ai-badge">AI Enhanced</span>
+          <span class="qv-live-badge">LIVE</span>
+        </div>
+
+        <!-- Product card -->
+        <h3>Product Cards</h3>
+        <div class="component-grid" style="margin-bottom:28px">
+          <div class="qv-product-card">
+            <div style="height:120px;background:linear-gradient(135deg,rgba(139,92,246,.2),rgba(0,212,255,.1));border-radius:12px;margin-bottom:4px"></div>
+            <span class="product-badge">New</span>
+            <div style="font-weight:600;font-size:14px">Wireless Noise-Cancelling Headphones</div>
+            <div style="color:var(--muted);font-size:12px">Electronics · Audio</div>
+            <div class="product-price">249 zł</div>
+            <button class="btn-qv-primary" style="min-height:40px;font-size:13px;border-radius:10px">Add to Cart</button>
+          </div>
+          <div class="qv-product-card">
+            <div style="height:120px;background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(139,92,246,.1));border-radius:12px;margin-bottom:4px"></div>
+            <span class="product-badge" style="background:rgba(0,212,255,.2);border-color:rgba(0,212,255,.4);color:var(--cyan)">Hot</span>
+            <div style="font-weight:600;font-size:14px">Smart Home Hub Pro Max</div>
+            <div style="color:var(--muted);font-size:12px">Smart Home · IoT</div>
+            <div class="product-price">599 zł</div>
+            <button class="btn-qv-cyan" style="min-height:40px;font-size:13px;border-radius:10px">Add to Cart</button>
+          </div>
+        </div>
+
+        <!-- Store card -->
+        <h3>Store Cards</h3>
+        <div class="component-grid" style="margin-bottom:28px">
+          <div class="qv-store-card">
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+              <div class="store-avatar">🛍</div>
+              <div>
+                <div style="font-family:var(--font-heading);font-weight:700;font-size:16px">NovaTech Store</div>
+                <div style="font-size:12px;color:var(--muted)">Electronics &amp; Gadgets</div>
+              </div>
+              <span class="tag-cyan" style="margin-left:auto">Pro</span>
+            </div>
+            <div style="display:flex;gap:16px">
+              <div><div style="font-size:20px;font-weight:700;font-family:var(--font-heading)">1,240</div><div style="font-size:11px;color:var(--muted)">Products</div></div>
+              <div><div style="font-size:20px;font-weight:700;font-family:var(--font-heading)" class="text-cyan">4.8★</div><div style="font-size:11px;color:var(--muted)">Rating</div></div>
+              <div><div style="font-size:20px;font-weight:700;font-family:var(--font-heading)">892</div><div style="font-size:11px;color:var(--muted)">Orders</div></div>
+            </div>
+          </div>
+          <div class="qv-store-card">
+            <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px">
+              <div class="store-avatar" style="background:linear-gradient(135deg,#0891b2,#7c3aed)">🎨</div>
+              <div>
+                <div style="font-family:var(--font-heading);font-weight:700;font-size:16px">Creative Hub</div>
+                <div style="font-size:12px;color:var(--muted)">Art &amp; Design Tools</div>
+              </div>
+              <span class="tag-purple" style="margin-left:auto">Elite</span>
+            </div>
+            <div style="display:flex;gap:16px">
+              <div><div style="font-size:20px;font-weight:700;font-family:var(--font-heading)">380</div><div style="font-size:11px;color:var(--muted)">Products</div></div>
+              <div><div style="font-size:20px;font-weight:700;font-family:var(--font-heading)" class="text-purple">5.0★</div><div style="font-size:11px;color:var(--muted)">Rating</div></div>
+              <div><div style="font-size:20px;font-weight:700;font-family:var(--font-heading)">2,100</div><div style="font-size:11px;color:var(--muted)">Orders</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Creator cards -->
+        <h3>Creator Cards</h3>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin-bottom:28px">
+          <div class="qv-creator-card">
+            <div class="creator-avatar">👩‍💻</div>
+            <div class="creator-name">@alexmktr</div>
+            <div class="creator-tier">Elite Creator</div>
+            <div style="margin-top:10px;font-size:13px;color:var(--muted)">124k followers · 2.3M reach</div>
+          </div>
+          <div class="qv-creator-card">
+            <div class="creator-avatar" style="background:linear-gradient(135deg,#0891b2,#00d4ff)">🎯</div>
+            <div class="creator-name">@techdrops</div>
+            <div class="creator-tier" style="color:var(--purple-bright)">Pro Creator</div>
+            <div style="margin-top:10px;font-size:13px;color:var(--muted)">58k followers · 890k reach</div>
+          </div>
+          <div class="qv-creator-card">
+            <div class="creator-avatar" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">🚀</div>
+            <div class="creator-name">@futurebuys</div>
+            <div class="creator-tier">Rising Creator</div>
+            <div style="margin-top:10px;font-size:13px;color:var(--muted)">12k followers · 180k reach</div>
+          </div>
+        </div>
+
+        <!-- AI widget -->
+        <h3>AI Widget</h3>
+        <div class="qv-ai-widget" style="margin-bottom:28px;max-width:480px">
+          <span class="qv-ai-badge">AI Enhanced</span>
+          <h4 style="margin:0 0 8px;font-family:var(--font-heading);font-size:18px">Smart Product Description</h4>
+          <p style="margin:0 0 16px;color:var(--muted);font-size:14px;line-height:1.6">Generate high-converting product descriptions with AI. Just add your product name and let QualitetVerse AI do the rest.</p>
+          <button class="btn-qv-primary" style="min-height:40px;font-size:13px">✦ Generate with AI</button>
+        </div>
+
+        <!-- Analytics panel -->
+        <h3>Analytics Panel</h3>
+        <div class="qv-analytics-panel" style="max-width:560px;margin-bottom:28px">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+            <div class="qv-metric">
+              <div class="qv-metric-label">Revenue</div>
+              <div class="qv-metric-value">48.2k</div>
+              <div class="qv-metric-delta">▲ +12.4%</div>
+            </div>
+            <div class="qv-metric">
+              <div class="qv-metric-label">Orders</div>
+              <div class="qv-metric-value">1,840</div>
+              <div class="qv-metric-delta">▲ +8.1%</div>
+            </div>
+            <div class="qv-metric">
+              <div class="qv-metric-label">Conversion</div>
+              <div class="qv-metric-value">3.7%</div>
+              <div class="qv-metric-delta down">▼ -0.2%</div>
+            </div>
+          </div>
+          <div style="height:1px;background:var(--stroke)"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:13px;color:var(--muted)">Last 30 days</span>
+            <button class="btn-qv-secondary" style="min-height:34px;font-size:12px;padding:0 14px;border-radius:10px">View Full Report</button>
+          </div>
+        </div>
+
+        <!-- Leaderboard -->
+        <h3>Leaderboard</h3>
+        <div class="qv-leaderboard" style="max-width:480px;margin-bottom:28px">
+          <div class="qv-leaderboard-row">
+            <div class="qv-rank top1">🥇</div>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:14px">@alexmktr</div>
+              <div style="font-size:12px;color:var(--muted)">124k followers</div>
+            </div>
+            <div class="text-gradient" style="font-weight:800;font-family:var(--font-heading)">48,200 zł</div>
+          </div>
+          <div class="qv-leaderboard-row">
+            <div class="qv-rank top2">🥈</div>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:14px">@techdrops</div>
+              <div style="font-size:12px;color:var(--muted)">58k followers</div>
+            </div>
+            <div class="text-cyan" style="font-weight:800;font-family:var(--font-heading)">31,500 zł</div>
+          </div>
+          <div class="qv-leaderboard-row">
+            <div class="qv-rank top3">🥉</div>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:14px">@futurebuys</div>
+              <div style="font-size:12px;color:var(--muted)">12k followers</div>
+            </div>
+            <div class="text-purple" style="font-weight:800;font-family:var(--font-heading)">18,900 zł</div>
+          </div>
+        </div>
+
+        <!-- Glass cards -->
+        <h3>Glassmorphism Cards</h3>
+        <div class="component-grid" style="margin-bottom:28px">
+          <div class="glass-card" style="padding:24px">
+            <span class="tag-purple" style="margin-bottom:12px;display:inline-flex">Purple Glass</span>
+            <h4 style="margin:0 0 8px;font-family:var(--font-heading)">Store Analytics</h4>
+            <p style="margin:0;font-size:14px;color:var(--muted);line-height:1.6">Use this variant for primary data panels, dashboards and feature highlights.</p>
+          </div>
+          <div class="glass-card-cyan" style="padding:24px">
+            <span class="tag-cyan" style="margin-bottom:12px;display:inline-flex">Cyan Glass</span>
+            <h4 style="margin:0 0 8px;font-family:var(--font-heading)">Live Commerce</h4>
+            <p style="margin:0;font-size:14px;color:var(--muted);line-height:1.6">Use the cyan glass variant for live events, real-time data and interactive features.</p>
+          </div>
+        </div>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- ── ICONS & MOCKUPS ── -->
+      <section class="brand-section" id="icons">
+        <h2>App Icons &amp; Platform Screens</h2>
+        <p class="lead">The QualitetVerse icon is consistent across all platforms: web favicon, PWA icon, and Apple touch icon.</p>
+
+        <div style="display:flex;flex-wrap:wrap;gap:20px;margin-bottom:36px">
+          <div style="text-align:center">
+            <div style="width:64px;height:64px;border-radius:14px;overflow:hidden;margin:0 auto 8px;border:1px solid var(--stroke)">
+              <img src="assets/icons/favicon.svg" alt="Favicon 64px" style="width:64px;height:64px">
+            </div>
+            <div style="font-size:11px;color:var(--muted)">64×64 favicon</div>
+          </div>
+          <div style="text-align:center">
+            <div style="width:96px;height:96px;border-radius:20px;overflow:hidden;margin:0 auto 8px;border:1px solid var(--stroke)">
+              <img src="assets/icons/icon-192.svg" alt="Icon 192px" style="width:96px;height:96px">
+            </div>
+            <div style="font-size:11px;color:var(--muted)">192×192 PWA</div>
+          </div>
+          <div style="text-align:center">
+            <div style="width:120px;height:120px;border-radius:26px;overflow:hidden;margin:0 auto 8px;border:1px solid var(--stroke)">
+              <img src="assets/icons/apple-touch-icon.svg" alt="Apple Touch" style="width:120px;height:120px">
+            </div>
+            <div style="font-size:11px;color:var(--muted)">Apple Touch 180×180</div>
+          </div>
+        </div>
+
+        <div class="glass-card" style="padding:24px">
+          <h3 style="margin:0 0 12px;font-size:16px">PWA Theme</h3>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:28px;height:28px;border-radius:8px;background:#05050f;border:1px solid var(--stroke)"></div>
+              <div><div style="font-size:13px;font-weight:700">Background</div><div style="font-size:11px;color:var(--muted);font-family:monospace">#05050f</div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="width:28px;height:28px;border-radius:8px;background:#7c3aed;border:1px solid var(--stroke)"></div>
+              <div><div style="font-size:13px;font-weight:700">Theme Color</div><div style="font-size:11px;color:var(--muted);font-family:monospace">#7c3aed</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="divider"></div>
+
+      <!-- ── FOOTER ── -->
+      <footer style="padding:40px 0 60px;text-align:center">
+        <img src="assets/icons/favicon.svg" alt="QualitetVerse" width="48" height="48" style="margin:0 auto 12px">
+        <div style="font-family:var(--font-heading);font-size:20px;font-weight:800;margin-bottom:6px" class="text-gradient">QualitetVerse</div>
+        <div style="font-size:13px;color:var(--muted)">Brand Guide v1.0 · Quality + Universe · AI Commerce Platform</div>
+      </footer>
+
+    </div>
+  </main>
+</body>
+</html>

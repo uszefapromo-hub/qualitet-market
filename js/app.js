@@ -195,7 +195,7 @@
       title.textContent = 'Zainstaluj aplikację';
       banner.setAttribute('aria-labelledby', title.id);
       const description = document.createElement('span');
-      description.textContent = 'Dodaj UszefaQualitet na ekran główny i korzystaj szybciej.';
+      description.textContent = 'Dodaj QualitetVerse na ekran główny i korzystaj szybciej.';
       content.append(title, description);
 
       const actions = document.createElement('div');
@@ -306,7 +306,7 @@
         points: ['Otwórz platformę na telefonie', 'Dodaj do ekranu głównego', 'Uruchamiaj jak aplikację'],
         tag: 'App Install',
         image: 'https://github.com/user-attachments/assets/085d1513-747e-4d49-8334-5813ae0855a7',
-        imageAlt: 'Promocja aplikacji mobilnej UszefaQualitet'
+        imageAlt: 'QualitetVerse Mobile App'
       },
       {
         eyebrow: 'Mobile PRO',
@@ -324,7 +324,7 @@
         points: ['Pełny dostęp do hurtowni', 'CRM i listing produktów', 'Wyniki sprzedaży w aplikacji'],
         tag: 'Upgrade',
         image: 'https://github.com/user-attachments/assets/5e136c43-153f-4e14-8136-79e0715b622d',
-        imageAlt: 'Plan PRO w platformie UszefaQualitet'
+        imageAlt: 'Plan PRO w platformie QualitetVerse'
       },
       {
         eyebrow: 'AI premium',

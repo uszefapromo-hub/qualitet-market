@@ -618,6 +618,35 @@
     adminStats()                           { return get('/affiliate/admin/stats'); },
   };
 
+  // ─── Live Commerce ────────────────────────────────────────────────────────────
+
+  const Live = {
+    /** List live streams (public). GET /api/live/streams */
+    listStreams(params)                          { return get('/live/streams', params); },
+    /** Get a single stream. GET /api/live/streams/:id */
+    getStream(id)                               { return get(`/live/streams/${id}`); },
+    /** Create a new stream (seller/creator). POST /api/live/streams */
+    createStream(data)                          { return post('/live/streams', data); },
+    /** Update stream status. PATCH /api/live/streams/:id/status */
+    updateStatus(id, status)                    { return patch(`/live/streams/${id}/status`, { status }); },
+    /** Get chat messages (polling). GET /api/live/streams/:id/messages */
+    getMessages(id, params)                     { return get(`/live/streams/${id}/messages`, params); },
+    /** Post a chat message. POST /api/live/streams/:id/messages */
+    sendMessage(id, content)                    { return post(`/live/streams/${id}/messages`, { content }); },
+    /** Get pinned products. GET /api/live/streams/:id/products */
+    getPinnedProducts(id)                       { return get(`/live/streams/${id}/products`); },
+    /** Pin a product to the stream. POST /api/live/streams/:id/products */
+    pinProduct(id, product_id)                  { return post(`/live/streams/${id}/products`, { product_id }); },
+    /** Unpin a product. DELETE /api/live/streams/:id/products/:productId */
+    unpinProduct(id, productId)                 { return del(`/live/streams/${id}/products/${productId}`); },
+    /** Get active live promotions. GET /api/live/streams/:id/promotions */
+    getPromotions(id)                           { return get(`/live/streams/${id}/promotions`); },
+    /** Create a live promotion. POST /api/live/streams/:id/promotions */
+    createPromotion(id, data)                   { return post(`/live/streams/${id}/promotions`, data); },
+    /** Buy directly from live stream. POST /api/live/streams/:id/orders */
+    buyNow(id, data)                            { return post(`/live/streams/${id}/orders`, data); },
+  };
+
   // ─── Public API surface ───────────────────────────────────────────────────────
 
   return {
@@ -637,6 +666,7 @@
     Referral,
     Announcements,
     Affiliate,
+    Live,
     health,
     /** Expose for advanced use cases. */
     _request: request,

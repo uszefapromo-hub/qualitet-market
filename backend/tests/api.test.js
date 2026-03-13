@@ -5790,3 +5790,402 @@ describe('POST /api/creator/payouts', () => {
     expect(res.body.amount).toBe(50);
   });
 });
+
+// ─── Live Commerce module ─────────────────────────────────────────────────────
+
+const LIVE_STREAM_ID = 'c0000000-0000-4000-8000-000000000001';
+
+const mockStream = {
+  id: LIVE_STREAM_ID,
+  title: 'Test Live',
+  description: 'Opis streama',
+  streamer_id: SELLER_ID,
+  store_id: STORE_ID,
+  status: 'scheduled',
+  stream_key: 'testkey123',
+  viewer_count: 0,
+  thumbnail_url: null,
+  scheduled_at: null,
+  started_at: null,
+  ended_at: null,
+  created_at: new Date().toISOString(),
+  streamer_name: 'Seller',
+  streamer_role: 'seller',
+};
+
+describe('GET /api/live/streams', () => {
+  it('returns stream list without auth', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({ rows: [mockStream] });
+    const res = await request(app).get('/api/live/streams');
+    expect(res.status).toBe(200);
+    expect(res.body.streams).toHaveLength(1);
+    expect(res.body.total).toBe(1);
+  });
+
+  it('filters by status parameter', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get('/api/live/streams?status=live');
+    expect(res.status).toBe(200);
+    expect(res.body.streams).toHaveLength(0);
+  });
+});
+
+describe('GET /api/live/streams/:id', () => {
+  it('returns 404 for unknown stream', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get(`/api/live/streams/${LIVE_STREAM_ID}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns stream details', async () => {
+    db.query.mockResolvedValueOnce({ rows: [mockStream] });
+    const res = await request(app).get(`/api/live/streams/${LIVE_STREAM_ID}`);
+    expect(res.status).toBe(200);
+    expect(res.body.stream.id).toBe(LIVE_STREAM_ID);
+  });
+});
+
+describe('POST /api/live/streams', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/live/streams').send({ title: 'Test' });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects missing title', async () => {
+    const res = await request(app)
+      .post('/api/live/streams')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({});
+    expect(res.status).toBe(422);
+  });
+
+  it('creates a stream for seller', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] }) // store check
+      .mockResolvedValueOnce({ rows: [mockStream] }); // INSERT
+    const res = await request(app)
+      .post('/api/live/streams')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ title: 'Test Live', store_id: STORE_ID });
+    expect(res.status).toBe(201);
+    expect(res.body.stream.title).toBe('Test Live');
+  });
+
+  it('creates a stream without store_id', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ ...mockStream, store_id: null }] }); // INSERT
+    const res = await request(app)
+      .post('/api/live/streams')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ title: 'No Store Stream' });
+    expect(res.status).toBe(201);
+  });
+});
+
+describe('PATCH /api/live/streams/:id/status', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .patch(`/api/live/streams/${LIVE_STREAM_ID}/status`)
+      .send({ status: 'live' });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects invalid status value', async () => {
+    const res = await request(app)
+      .patch(`/api/live/streams/${LIVE_STREAM_ID}/status`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ status: 'invalid' });
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 404 for unknown stream', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // SELECT stream
+    const res = await request(app)
+      .patch(`/api/live/streams/${LIVE_STREAM_ID}/status`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ status: 'live' });
+    expect(res.status).toBe(404);
+  });
+
+  it('rejects update by non-owner', async () => {
+    const otherStream = { ...mockStream, streamer_id: ADMIN_ID };
+    db.query.mockResolvedValueOnce({ rows: [otherStream] });
+    const res = await request(app)
+      .patch(`/api/live/streams/${LIVE_STREAM_ID}/status`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ status: 'live' });
+    expect(res.status).toBe(403);
+  });
+
+  it('starts the stream (scheduled → live)', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [mockStream] }) // SELECT stream
+      .mockResolvedValueOnce({ rows: [{ ...mockStream, status: 'live', started_at: new Date().toISOString() }] }); // UPDATE
+    const res = await request(app)
+      .patch(`/api/live/streams/${LIVE_STREAM_ID}/status`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ status: 'live' });
+    expect(res.status).toBe(200);
+    expect(res.body.stream.status).toBe('live');
+  });
+
+  it('ends the stream', async () => {
+    const liveStream = { ...mockStream, status: 'live' };
+    db.query
+      .mockResolvedValueOnce({ rows: [liveStream] })
+      .mockResolvedValueOnce({ rows: [{ ...liveStream, status: 'ended', ended_at: new Date().toISOString() }] });
+    const res = await request(app)
+      .patch(`/api/live/streams/${LIVE_STREAM_ID}/status`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ status: 'ended' });
+    expect(res.status).toBe(200);
+    expect(res.body.stream.status).toBe('ended');
+  });
+});
+
+describe('GET /api/live/streams/:id/messages', () => {
+  it('returns 404 for unknown stream', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get(`/api/live/streams/${LIVE_STREAM_ID}/messages`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns message list', async () => {
+    const msg = { id: 'msg-1', stream_id: LIVE_STREAM_ID, user_id: SELLER_ID, display_name: 'Seller', content: 'Cześć!', message_type: 'chat', created_at: new Date().toISOString() };
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: LIVE_STREAM_ID }] }) // stream check
+      .mockResolvedValueOnce({ rows: [msg] }); // messages
+    const res = await request(app).get(`/api/live/streams/${LIVE_STREAM_ID}/messages`);
+    expect(res.status).toBe(200);
+    expect(res.body.messages).toHaveLength(1);
+    expect(res.body.messages[0].content).toBe('Cześć!');
+  });
+});
+
+describe('POST /api/live/streams/:id/messages', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post(`/api/live/streams/${LIVE_STREAM_ID}/messages`)
+      .send({ content: 'Hej!' });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects empty content', async () => {
+    const res = await request(app)
+      .post(`/api/live/streams/${LIVE_STREAM_ID}/messages`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ content: '' });
+    expect(res.status).toBe(422);
+  });
+
+  it('rejects message when stream not live', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: LIVE_STREAM_ID, status: 'scheduled' }] });
+    const res = await request(app)
+      .post(`/api/live/streams/${LIVE_STREAM_ID}/messages`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ content: 'Hej!' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/aktywny/);
+  });
+
+  it('posts a message to live stream', async () => {
+    const msg = { id: 'msg-2', stream_id: LIVE_STREAM_ID, user_id: SELLER_ID, display_name: 'Seller', content: 'Hej!', message_type: 'chat', created_at: new Date().toISOString() };
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: LIVE_STREAM_ID, status: 'live' }] }) // stream check
+      .mockResolvedValueOnce({ rows: [msg] }); // INSERT
+    const res = await request(app)
+      .post(`/api/live/streams/${LIVE_STREAM_ID}/messages`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ content: 'Hej!' });
+    expect(res.status).toBe(201);
+    expect(res.body.message.content).toBe('Hej!');
+  });
+});
+
+describe('GET /api/live/streams/:id/products', () => {
+  it('returns 404 for unknown stream', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get(`/api/live/streams/${LIVE_STREAM_ID}/products`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns pinned products list', async () => {
+    const product = { id: 'pp-1', product_id: PRODUCT_ID, is_active: true, pinned_at: new Date().toISOString(), name: 'Fotel', price: 100, image_url: null };
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: LIVE_STREAM_ID }] })
+      .mockResolvedValueOnce({ rows: [product] });
+    const res = await request(app).get(`/api/live/streams/${LIVE_STREAM_ID}/products`);
+    expect(res.status).toBe(200);
+    expect(res.body.products).toHaveLength(1);
+  });
+});
+
+describe('POST /api/live/streams/:id/products', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post(`/api/live/streams/${LIVE_STREAM_ID}/products`)
+      .send({ product_id: PRODUCT_ID });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects missing product_id', async () => {
+    const res = await request(app)
+      .post(`/api/live/streams/${LIVE_STREAM_ID}/products`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({});
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 404 when stream not found', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // stream check
+    const res = await request(app)
+      .post(`/api/live/streams/${LIVE_STREAM_ID}/products`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ product_id: PRODUCT_ID });
+    expect(res.status).toBe(404);
+  });
+
+  it('pins a product to the stream', async () => {
+    const pinned = { id: PRODUCT_ID, name: 'Fotel', price: 100, image_url: null };
+    db.query
+      .mockResolvedValueOnce({ rows: [mockStream] }) // stream check (ownStream)
+      .mockResolvedValueOnce({ rows: [pinned] }) // product check
+      .mockResolvedValueOnce({ rows: [] }); // INSERT/UPSERT
+    const res = await request(app)
+      .post(`/api/live/streams/${LIVE_STREAM_ID}/products`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ product_id: PRODUCT_ID });
+    expect(res.status).toBe(201);
+    expect(res.body.product.name).toBe('Fotel');
+  });
+});
+
+describe('DELETE /api/live/streams/:id/products/:productId', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .delete(`/api/live/streams/${LIVE_STREAM_ID}/products/${PRODUCT_ID}`);
+    expect(res.status).toBe(401);
+  });
+
+  it('unpins a product from the stream', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [mockStream] }) // stream check
+      .mockResolvedValueOnce({ rows: [] }); // UPDATE
+    const res = await request(app)
+      .delete(`/api/live/streams/${LIVE_STREAM_ID}/products/${PRODUCT_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+});
+
+describe('GET /api/live/streams/:id/promotions', () => {
+  it('returns 404 for unknown stream', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get(`/api/live/streams/${LIVE_STREAM_ID}/promotions`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns active promotions', async () => {
+    const promo = { id: 'promo-1', title: 'Flash Deal', promo_price: '79.00', original_price: '100.00', discount_percent: 21, ends_at: new Date(Date.now() + 3600000).toISOString(), is_active: true, product_name: 'Fotel', product_image: null };
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: LIVE_STREAM_ID }] })
+      .mockResolvedValueOnce({ rows: [promo] });
+    const res = await request(app).get(`/api/live/streams/${LIVE_STREAM_ID}/promotions`);
+    expect(res.status).toBe(200);
+    expect(res.body.promotions).toHaveLength(1);
+    expect(res.body.promotions[0].title).toBe('Flash Deal');
+  });
+});
+
+describe('POST /api/live/streams/:id/promotions', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post(`/api/live/streams/${LIVE_STREAM_ID}/promotions`)
+      .send({ title: 'Deal', promo_price: 50, ends_at: new Date(Date.now() + 3600000).toISOString() });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects missing required fields', async () => {
+    const res = await request(app)
+      .post(`/api/live/streams/${LIVE_STREAM_ID}/promotions`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ title: 'No price' });
+    expect(res.status).toBe(422);
+  });
+
+  it('creates a live promotion', async () => {
+    const promo = { id: 'promo-2', stream_id: LIVE_STREAM_ID, title: 'Flash', promo_price: '79.00', original_price: '100.00', discount_percent: 21, ends_at: new Date(Date.now() + 3600000).toISOString(), max_quantity: 10, used_quantity: 0, is_active: true, created_at: new Date().toISOString() };
+    db.query
+      .mockResolvedValueOnce({ rows: [mockStream] }) // ownStream
+      .mockResolvedValueOnce({ rows: [promo] }); // INSERT
+    const res = await request(app)
+      .post(`/api/live/streams/${LIVE_STREAM_ID}/promotions`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ title: 'Flash', promo_price: 79, original_price: 100, discount_percent: 21, ends_at: new Date(Date.now() + 3600000).toISOString(), max_quantity: 10 });
+    expect(res.status).toBe(201);
+    expect(res.body.promotion.title).toBe('Flash');
+  });
+});
+
+describe('POST /api/live/streams/:id/orders', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post(`/api/live/streams/${LIVE_STREAM_ID}/orders`)
+      .send({ product_id: PRODUCT_ID, quantity: 1, shipping_address: 'ul. Testowa 1' });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects order when stream is not live', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ ...mockStream, status: 'scheduled' }] });
+    const res = await request(app)
+      .post(`/api/live/streams/${LIVE_STREAM_ID}/orders`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ product_id: PRODUCT_ID, quantity: 1, shipping_address: 'ul. Testowa 1' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/aktywny/);
+  });
+
+  it('creates order from live stream at product price', async () => {
+    const liveStream = { ...mockStream, status: 'live' };
+    const product = { id: PRODUCT_ID, name: 'Fotel', price: '100.00' };
+    db.query
+      .mockResolvedValueOnce({ rows: [liveStream] }) // stream
+      .mockResolvedValueOnce({ rows: [product] }) // product
+      .mockResolvedValueOnce({ rows: [] }) // INSERT orders
+      .mockResolvedValueOnce({ rows: [] }) // INSERT order_items
+      .mockResolvedValueOnce({ rows: [] }) // INSERT live_messages (purchase event)
+      .mockResolvedValueOnce({ rows: [] }); // auditLog
+    const res = await request(app)
+      .post(`/api/live/streams/${LIVE_STREAM_ID}/orders`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ product_id: PRODUCT_ID, quantity: 2, shipping_address: 'ul. Testowa 1' });
+    expect(res.status).toBe(201);
+    expect(res.body.order_id).toBeDefined();
+    expect(res.body.total_amount).toBe('200.00');
+  });
+
+  it('applies promotion price when valid promotion_id provided', async () => {
+    const liveStream = { ...mockStream, status: 'live' };
+    const product = { id: PRODUCT_ID, name: 'Fotel', price: '100.00' };
+    const promo = { id: 'promo-x', promo_price: '79.00', max_quantity: 10, used_quantity: 0 };
+    db.query
+      .mockResolvedValueOnce({ rows: [liveStream] }) // stream
+      .mockResolvedValueOnce({ rows: [product] }) // product
+      .mockResolvedValueOnce({ rows: [promo] }) // promo check
+      .mockResolvedValueOnce({ rows: [] }) // UPDATE used_quantity
+      .mockResolvedValueOnce({ rows: [] }) // INSERT orders
+      .mockResolvedValueOnce({ rows: [] }) // INSERT order_items
+      .mockResolvedValueOnce({ rows: [] }) // INSERT live_messages
+      .mockResolvedValueOnce({ rows: [] }); // auditLog
+    const res = await request(app)
+      .post(`/api/live/streams/${LIVE_STREAM_ID}/orders`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ product_id: PRODUCT_ID, quantity: 1, promotion_id: 'c0000000-0000-4000-8000-000000000099', shipping_address: 'ul. Testowa 1' });
+    expect(res.status).toBe(201);
+    expect(res.body.total_amount).toBe('79.00');
+  });
+});

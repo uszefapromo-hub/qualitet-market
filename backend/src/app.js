@@ -28,6 +28,7 @@ const scriptsRouter = require('./routes/scripts');
 const analyticsRouter = require('./routes/analytics');
 const affiliateRouter = require('./routes/affiliate');
 const creatorRouter = require('./routes/creator');
+const liveRouter = require('./routes/live');
 const aiRouter = require('./modules/ai/routes');
 const errorHandler = require('./middleware/errorHandler');
 const { importSupplierProducts } = require('./services/supplier-import');
@@ -227,6 +228,18 @@ app.get('/api/readiness', async (_req, res) => {
     conversations:          'GET  /api/ai/conversations',
   };
 
+  // Live commerce system
+  checks.live_system = {
+    websocket:          Boolean(process.env.NODE_ENV !== 'test'),
+    list_streams:       'GET  /api/live/streams',
+    create_stream:      'POST /api/live/streams',
+    stream_status:      'PATCH /api/live/streams/:id/status',
+    chat_messages:      'POST /api/live/streams/:id/messages',
+    pin_product:        'POST /api/live/streams/:id/products',
+    live_promotions:    'POST /api/live/streams/:id/promotions',
+    live_order:         'POST /api/live/streams/:id/orders',
+  };
+
   const status = allOk ? 'ready' : 'degraded';
   return res.status(allOk ? 200 : 503).json({
     status,
@@ -260,6 +273,7 @@ app.use('/api/scripts', scriptsRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/affiliate', affiliateRouter);
 app.use('/api/creator', creatorRouter);
+app.use('/api/live', liveRouter);
 app.use('/api/ai', aiRouter);
 
 // ─── Public promo slots feed ───────────────────────────────────────────────────
@@ -332,8 +346,17 @@ if (process.env.NODE_ENV !== 'test') {
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
 if (require.main === module) {
-  app.listen(PORT, () => {
+  const http = require('http');
+  const { WebSocketServer } = require('ws');
+  const wsManager = require('./services/websocket');
+
+  const server = http.createServer(app);
+  const wss = new WebSocketServer({ server });
+  wsManager.attach(wss);
+
+  server.listen(PORT, () => {
     console.log(`HurtDetalUszefaQUALITET API running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
+    console.log(`WebSocket server active on ws://localhost:${PORT}`);
   });
 }
 
