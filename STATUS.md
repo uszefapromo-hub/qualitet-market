@@ -1,6 +1,203 @@
-# STATUS PLATFORMY QUALITET
+# RAPORT PROJEKTU – QUALITET PLATFORM
 
-> Data przeglądu: 2026-03-12
+> Data przeglądu: 2026-03-13
+
+---
+
+## INFORMACJE O PROJEKCIE
+
+| | |
+|---|---|
+| **Nazwa repozytorium** | `HurtDetalUszefaQUALITET` |
+| **Pełny link do repozytorium** | https://github.com/uszefapromo-hub/HurtDetalUszefaQUALITET |
+| **Strona produkcyjna** | https://uszefaqualitet.pl |
+| **Architektura** | REST API (Node.js/Express) + PWA frontend (HTML5/Vanilla JS) + Next.js Mobile Web + Expo React Native |
+| **Baza danych** | PostgreSQL |
+
+---
+
+## CO JUŻ JEST ZROBIONE ✅
+
+### Backend API (Node.js / Express)
+
+| Moduł | Endpointy | Status |
+|---|---|---|
+| **Auth** | POST /register, POST /login, GET /me, PUT /me | ✅ GOTOWE |
+| **Users** | GET /, GET /me, PUT /me, PUT /me/password | ✅ GOTOWE |
+| **Stores** | CRUD + lista sklepów, subdomeny | ✅ GOTOWE |
+| **Products** | CRUD + katalog centralny, tiery cen | ✅ GOTOWE |
+| **Shop Products** | Produkty w sklepie, marże, ceny sprzedaży | ✅ GOTOWE |
+| **Cart** | Koszyk (dodawanie, edycja, usuwanie produktów) | ✅ GOTOWE |
+| **Orders** | Tworzenie zamówień, statusy, order_items | ✅ GOTOWE |
+| **Payments** | Stripe, Przelewy24, BLIK, przelew, webhook HMAC | ✅ GOTOWE |
+| **Suppliers** | Hurtownie, import CSV/XML/API, auto-sync co 12h | ✅ GOTOWE |
+| **Admin** | Dashboard, użytkownicy, sklepy, produkty, zamówienia, import, audit-log, ustawienia | ✅ GOTOWE |
+| **Seller (my/)** | Dashboard sprzedawcy, produkty, zamówienia, statystyki | ✅ GOTOWE |
+| **Subscriptions** | Plany trial/basic/pro/elite, limity produktów | ✅ GOTOWE |
+| **Categories** | Kategorie produktów | ✅ GOTOWE |
+| **Referral (promo)** | Kody QM-, system polecający, bonus_months, tiers 0-3 | ✅ GOTOWE |
+| **Affiliate** | Program partnerski, linki, prowizje, wypłaty | ✅ GOTOWE |
+| **AI Module** | Chat, opisy produktów/sklepów, generate-store, marketing-pack | ✅ GOTOWE |
+| **Social Commerce** | Feed, posty, polubienia, komentarze, udostępnienia | ✅ GOTOWE |
+| **Live Commerce** | Streamy, wiadomości, przypięte produkty, zamówienia live | ✅ GOTOWE |
+| **Gamification** | Punkty, odznaki, leaderboard, poziomy | ✅ GOTOWE |
+| **Collaboration** | Zaproszenia do sklepu, role (owner/manager/creator/marketer), revenue_shares | ✅ GOTOWE |
+| **Creator Referrals** | System polecania twórców, prowizje 2%, anty-abuse | ✅ GOTOWE |
+| **Analytics** | Snapshots, eventy, trendy produktów | ✅ GOTOWE |
+| **Notifications** | Powiadomienia (GET/PATCH) | ✅ GOTOWE |
+| **User Profiles** | Profile publiczne użytkowników | ✅ GOTOWE |
+
+### System cenowy
+
+- ✅ Łańcuch: `supplier_price → platform_price (tiery) → selling_price (marża sprzedawcy)`
+- ✅ `computePlatformPrice()` – automatyczne przeliczanie przy tworzeniu/aktualizacji produktu
+- ✅ Admin konfiguruje tiery marży przez `PUT /api/admin/platform-margins`
+- ✅ Domyślne tiery: ≤20 zł: 60%, ≤100 zł: 40%, ≤300 zł: 25%, >300 zł: 15%
+- ✅ Egzekucja minimalnej ceny (`min_selling_price = platform_price`)
+
+### Baza danych (PostgreSQL)
+
+- ✅ 23+ migracji SQL (`001` – `023`) pokrywających pełną historię schematu
+- ✅ Tabele: users, stores, products, shop_products, orders, order_items, payments, carts, suppliers, subscriptions, categories, referral_codes, referral_uses, affiliate_creators, creator_referrals, social_posts, live_streams, gamification, store_collaborators, revenue_shares, notifications, user_profiles, analytics_events, audit_logs i wiele innych
+
+### PWA Frontend (HTML5 / Vanilla JS)
+
+- ✅ `js/api.js` – pełny klient REST API (`window.QMApi`) – Auth, Products, Cart, Orders, Admin, Social, Live, AI, Creator, Gamification, Collaboration
+- ✅ `js/pwa-connect.js` – mostek frontend → backend (login, rejestracja, checkout)
+- ✅ `js/flow.js` – koordynator przepływów stron
+- ✅ `js/api-client.js` – shim kompatybilności `QualitetAPI → QMApi`
+- ✅ Service Worker (`service-worker.js`) – tryb offline/PWA
+- ✅ Strony HTML: `login.html`, `dashboard.html`, `sklep.html`, `koszyk.html`, `panel-sklepu.html`, `owner-panel.html`, `listing.html`, `generator-sklepu.html`, `affiliate.html`, `live.html`, `intelligence.html`, `zarabiaj.html`, `hurtownie.html`, `brand.html`, `cennik.html`, `crm.html`, `qualitetverse.html`, `qualitetmarket.html`
+
+### Next.js Frontend (`frontend/`)
+
+- ✅ Aplikacja Next.js 15 z App Router, Tailwind CSS, Radix UI, Framer Motion
+- ✅ Strony: `/` (landing), `/stores`, `/product`, `/profile`, `/ai`, `/admin`, `/seller`, `/creator`, `/trending`, `/cart`, `/checkout`
+- ✅ Glassmorphism UI z design systemem QualitetVerse (deep space + purple/cyan)
+- ✅ Komponenty: StoreCard, ProductCard, GlassCard, StatCard, LoadingSkeleton
+
+### Expo React Native (`mobile/`)
+
+- ✅ Aplikacja Expo + React Native z expo-router
+- ✅ Ekrany: Home (index), Stores, Creator, Profile, Trending
+- ✅ Klient API (`mobile/lib/api.ts`) do backendu
+- ✅ Komponenty: GlassCard, ProductCard, StatCard
+- ✅ Motyw kolorystyczny QualitetVerse
+
+### Testy
+
+- ✅ **540 testów** w `backend/tests/api.test.js` (Jest + supertest)
+- ✅ Pokrycie: auth, users, stores, products, cart, orders, payments, admin, seller, referral, affiliate, AI, social, live, gamification, collaboration, creator referrals
+
+---
+
+## CO JEST W TRAKCIE 🔄
+
+### Frontend Next.js – podłączenie do API
+
+- 🔄 Strony `stores`, `cart`, `checkout`, `ai` używają jeszcze **mock danych** zamiast prawdziwego API backendu
+- 🔄 Brak warstwy autoryzacji (JWT) w Next.js – strony nie są chronione dla zalogowanych użytkowników
+- 🔄 Strona `/checkout` – formularz płatności jest UI-only, nie wywołuje `/api/payments`
+
+### Mobile (Expo) – podłączenie do API
+
+- 🔄 Ekran `stores` używa **hardcoded danych** (`STORES = [...]`) zamiast `api.stores.list()`
+- 🔄 Brak obsługi logowania/rejestracji przez UI w apce mobilnej
+- 🔄 Brak obsługi koszyka i zamówień w apce mobilnej
+
+### CRM i Zadania
+
+- 🔄 `crm.html` i `tasks.html` – strony istnieją, ale integracja z backendem nie jest potwierdzona
+- 🔄 `tasks/` katalog zawiera tylko `index.html`
+
+---
+
+## CZEGO JESZCZE BRAKUJE ❌
+
+### Frontend
+
+1. ❌ **Email notifications** – brak wysyłki emaili (potwierdzenia zamówień, rejestracji, reset hasła)
+2. ❌ **Reset hasła** – brak endpointu i UI `forgot password / reset password`
+3. ❌ **Subdomenowe sklepy** – infrastruktura DNS/reverse proxy dla `*.qualitetmarket.pl`
+4. ❌ **Paginacja w UI** – listy produktów/zamówień nie mają pełnej paginacji po stronie frontendu
+
+### Mobile
+
+1. ❌ **Autentykacja** – brak ekranu logowania/rejestracji w apce mobilnej
+2. ❌ **Koszyk i zamówienia** – brak flow zakupowego w Expo
+3. ❌ **Push Notifications** – brak systemu powiadomień push (np. expo-notifications)
+4. ❌ **Głęboka integracja z API** – większość ekranów mobilnych używa mock danych
+
+### Backend
+
+1. ❌ **Reset hasła / weryfikacja email** – brak obsługi tokenów reset password
+2. ❌ **Testy dla modułu collaboration** – testy częściowe
+3. ❌ **Webhooks przychodzące od hurtowni** – brak obsługi webhooków od dostawców
+
+---
+
+## BŁĘDY DO NAPRAWY 🐛
+
+### Frontend (PWA + Next.js)
+
+| # | Opis | Plik | Priorytet |
+|---|---|---|---|
+| F-1 | Strony `stores`, `cart`, `checkout`, `ai` w `frontend/` używają mock danych – nie pobierają z API | `frontend/src/app/stores/page.tsx`, `cart/page.tsx`, `checkout/page.tsx`, `ai/page.tsx` | Wysoki |
+| F-2 | Brak ochrony tras (auth guard) w Next.js – każdy może wejść na `/admin`, `/seller` bez JWT | `frontend/src/app/admin/`, `seller/`, `creator/` | Wysoki |
+| F-3 | `mobile/app/stores.tsx` używa hardcoded `STORES = [...]` zamiast `api.stores.list()` | `mobile/app/stores.tsx` | Średni |
+
+### Backend
+
+| # | Opis | Plik | Priorytet |
+|---|---|---|---|
+| B-1 | `mobile/lib/api.ts` ma hardcoded `API_BASE = 'http://localhost:5000/api'` – nie działa na urządzeniu | `mobile/lib/api.ts` | Wysoki |
+| B-2 | Duplikat numerów migracji: `003_product_status.sql` i `003a_central_catalog.sql` i `007_subdomain_support.sql` i `007_stores_subdomain.sql` – ryzyko kolizji przy migrate | `backend/migrations/` | Średni |
+| B-3 | `STRIPE_SECRET_KEY` i `P24_MERCHANT_ID` niezdefiniowane w środowisku produkcyjnym – płatności działają w sandbox | `.env` (konfiguracja) | Niski (wymaga konfiguracji) |
+
+### Mobile (Expo)
+
+| # | Opis | Plik | Priorytet |
+|---|---|---|---|
+| M-1 | Hardcoded URL API (`localhost:5000`) nie działa na fizycznym urządzeniu ani w trybie produkcyjnym | `mobile/lib/api.ts:1` | Wysoki |
+| M-2 | Brak obsługi błędów sieciowych w ekranach – crash przy braku połączenia | `mobile/app/*.tsx` | Średni |
+| M-3 | Brak ekranu ładowania/splash screen po starcie aplikacji | `mobile/app/_layout.tsx` | Niski |
+
+---
+
+## NASTĘPNE ZADANIA 📋
+
+### Priorytet KRYTYCZNY (przed produkcją)
+
+1. **Podłączyć Next.js frontend do backendu** – zastąpić mock dane prawdziwymi wywołaniami API w `/stores`, `/cart`, `/checkout`, `/ai`
+2. **Dodać auth guard w Next.js** – middleware chroniący trasy `/admin`, `/seller`, `/creator`
+3. **Skonfigurować URL API w Expo** – użyć zmiennej środowiskowej zamiast `localhost:5000`
+4. **Ustawić `.env` produkcyjny** – `JWT_SECRET`, `DB_PASSWORD`, `STRIPE_SECRET_KEY`, `P24_MERCHANT_ID`, `ALLOWED_ORIGINS`
+
+### Priorytet WYSOKI
+
+5. **System powiadomień email** – wdrożyć nodemailer/SendGrid dla potwierdzeń zamówień, rejestracji
+6. **Reset hasła** – endpoint `POST /api/auth/reset-password` + UI
+7. **Pełna integracja Expo z API** – ekran logowania, koszyk, zamówienia w apce mobilnej
+8. **Push notifications w Expo** – expo-notifications + powiązanie z systemem powiadomień backendu
+
+### Priorytet ŚREDNI
+
+9. **Subdomenowe sklepy** – konfiguracja reverse proxy (nginx/Vercel) dla `*.qualitetmarket.pl`
+10. **Naprawić duplikaty migracji** – ujednolicić numerację (`007a`, `007b` lub scalić)
+11. **CRM i Tasks** – podłączyć `crm.html` i `tasks.html` do backendu
+12. **Testy E2E** – dodać testy end-to-end dla flow zakupowego (np. Playwright)
+
+### Priorytet NISKI
+
+13. **Panel admina UI** – dopracować dedykowane panele w `owner-panel.html` i `operator-panel.html`
+14. **Dokumentacja API** – wygenerować Swagger/OpenAPI dla wszystkich endpointów
+15. **App Store / Google Play** – przygotować Expo build do publikacji
+
+---
+
+# STATUS PLATFORMY QUALITET (szczegóły techniczne)
+
+> Data przeglądu: 2026-03-13
 
 ---
 
