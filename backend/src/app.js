@@ -82,7 +82,7 @@ app.use('/api/', limiter);
 // Stricter rate limit for auth endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isTest ? 10000 : 20,
+  max: isTest ? 10000 : parseInt(process.env.AUTH_RATE_LIMIT_MAX || '30', 10),
   message: { error: 'Zbyt wiele prób logowania. Spróbuj za 15 minut.' },
 });
 app.use('/api/users/login', authLimiter);
@@ -273,13 +273,26 @@ app.get('/api/readiness', async (_req, res) => {
     revenue_split: 'GET  /api/collaboration/stores/:storeId/revenue-split',
   };
 
+  // Seller onboarding system (first 100 sellers)
+  checks.seller_onboarding = {
+    onboarding_checklist: 'GET /api/my/onboarding',
+    promo_slots:          'GET /api/promo/slots',
+    seller_capacity:      100,
+    promo_tiers: [
+      { tier: 1, label: '12 miesięcy gratis', slots: '1–10' },
+      { tier: 2, label: '6 miesięcy gratis',  slots: '11–20' },
+      { tier: 3, label: '3 miesiące gratis',  slots: '21–30' },
+      { tier: 4, label: '1 miesiąc gratis',   slots: '31–100' },
+    ],
+  };
+
   const status = allOk ? 'ready' : 'degraded';
   return res.status(allOk ? 200 : 503).json({
     status,
     timestamp: new Date().toISOString(),
     checks,
     message: allOk
-      ? 'Platforma gotowa na pierwszych sprzedawców i pierwsze zamówienia.'
+      ? 'Platforma gotowa na pierwszych 100 sprzedawców i pierwsze zamówienia.'
       : 'Platforma niedostępna – sprawdź logi bazy danych.',
   });
 });

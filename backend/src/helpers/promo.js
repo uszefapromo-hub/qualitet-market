@@ -4,10 +4,11 @@
  * Promotional registration tier logic.
  *
  * The platform automatically grants free subscription months to early adopters:
- *   – First 10 sellers registered  → 12 months free
- *   – Next  10 sellers (11-20)     →  6 months free
- *   – Next  10 sellers (21-30)     →  3 months free
- *   – All subsequent sellers       → standard trial (14 days)
+ *   – First  10 sellers registered  → 12 months free
+ *   – Next   10 sellers (11-20)     →  6 months free
+ *   – Next   10 sellers (21-30)     →  3 months free
+ *   – Next   70 sellers (31-100)    →  1 month  free  ← first-100 launch promo
+ *   – All subsequent sellers        → standard trial (14 days)
  */
 
 /** Tiers ordered from most generous to least. */
@@ -15,6 +16,7 @@ const PROMO_TIERS = [
   { upToCount: 10,  bonusMonths: 12, label: 'Tier 1 – 12 miesięcy gratis' },
   { upToCount: 20,  bonusMonths: 6,  label: 'Tier 2 – 6 miesięcy gratis'  },
   { upToCount: 30,  bonusMonths: 3,  label: 'Tier 3 – 3 miesiące gratis'  },
+  { upToCount: 100, bonusMonths: 1,  label: 'Tier 4 – 1 miesiąc gratis (pierwsza setka)'  },
 ];
 
 const DAYS_PER_MONTH = 30;

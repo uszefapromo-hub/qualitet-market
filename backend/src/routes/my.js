@@ -716,4 +716,117 @@ function generatePromotionContent({ productName = '', price = null, storeUrl = '
   return { post, productDescription, platform, emoji };
 }
 
+// ─── GET /api/my/onboarding – seller onboarding checklist ────────────────────
+// Returns a checklist of steps a new seller should complete to go live.
+// Each step has a `done` flag so the frontend can render a progress guide.
+
+router.get(
+  '/onboarding',
+  authenticate,
+  requireRole('seller', 'owner'),
+  async (req, res) => {
+    try {
+      const userId = req.user.id;
+
+      const [storeResult, productResult, subResult, referralResult] = await Promise.all([
+        db.query(
+          'SELECT id, name, slug FROM stores WHERE owner_id = $1 ORDER BY created_at ASC LIMIT 1',
+          [userId]
+        ),
+        db.query(
+          `SELECT COUNT(*) FROM shop_products sp
+           JOIN stores s ON sp.store_id = s.id
+           WHERE s.owner_id = $1`,
+          [userId]
+        ),
+        db.query(
+          `SELECT sub.status FROM subscriptions sub
+           JOIN stores s ON sub.shop_id = s.id
+           WHERE s.owner_id = $1
+             AND sub.status = 'active'
+           LIMIT 1`,
+          [userId]
+        ),
+        db.query(
+          'SELECT id, code FROM referral_codes WHERE user_id = $1 LIMIT 1',
+          [userId]
+        ),
+      ]);
+
+      const store      = storeResult.rows[0]    || null;
+      const products   = parseInt(productResult.rows[0]?.count || '0', 10);
+      const activeSub  = subResult.rows[0]      || null;
+      const refCode    = referralResult.rows[0]  || null;
+
+      const storeSlug    = store ? store.slug    : null;
+      const storeId      = store ? store.id      : null;
+      const baseUrl      = process.env.APP_URL || 'https://uszefaqualitet.pl';
+      const storeFrontUrl = storeSlug ? `${baseUrl}/sklep.html?slug=${storeSlug}` : null;
+
+      const steps = [
+        {
+          key:         'account_created',
+          label:       'Konto sprzedawcy założone',
+          done:        true,
+          description: 'Twoje konto jest aktywne.',
+        },
+        {
+          key:         'store_created',
+          label:       'Sklep utworzony',
+          done:        Boolean(store),
+          description: store
+            ? `Twój sklep: ${store.name} (${storeFrontUrl})`
+            : 'Utwórz swój sklep w panelu sprzedawcy.',
+          action_url:  store ? null : `${baseUrl}/dashboard.html`,
+          store_id:    storeId,
+          store_slug:  storeSlug,
+          store_url:   storeFrontUrl,
+        },
+        {
+          key:         'product_added',
+          label:       'Pierwszy produkt dodany',
+          done:        products > 0,
+          description: products > 0
+            ? `Masz ${products} produkt(ów) w sklepie.`
+            : 'Dodaj produkty do swojego sklepu z katalogu platformy.',
+          action_url:  `${baseUrl}/dashboard.html#products`,
+          product_count: products,
+        },
+        {
+          key:         'subscription_active',
+          label:       'Subskrypcja aktywna',
+          done:        Boolean(activeSub),
+          description: activeSub
+            ? 'Twoja subskrypcja jest aktywna.'
+            : 'Aktywuj subskrypcję, aby Twój sklep był widoczny publicznie.',
+          action_url:  `${baseUrl}/pricing.html`,
+        },
+        {
+          key:         'referral_code_ready',
+          label:       'Kod polecający gotowy',
+          done:        Boolean(refCode),
+          description: refCode
+            ? `Twój kod polecający: ${refCode.code}`
+            : 'Wygeneruj swój kod polecający i zarabiaj na każdym nowym sprzedawcy.',
+          action_url:  `${baseUrl}/affiliate.html`,
+          referral_code: refCode ? refCode.code : null,
+        },
+      ];
+
+      const completedCount = steps.filter((s) => s.done).length;
+      const allDone = completedCount === steps.length;
+
+      return res.json({
+        completed: completedCount,
+        total:     steps.length,
+        all_done:  allDone,
+        steps,
+      });
+    } catch (err) {
+      console.error('my onboarding error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
 module.exports = router;

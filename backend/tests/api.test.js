@@ -2485,6 +2485,96 @@ describe('POST /api/my/store/products/bulk', () => {
   });
 });
 
+// ─── GET /api/my/onboarding ───────────────────────────────────────────────────
+
+describe('GET /api/my/onboarding', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/my/onboarding');
+    expect(res.status).toBe(401);
+  });
+
+  it('requires seller role', async () => {
+    const { signToken } = require('../src/middleware/auth');
+    const buyerToken = signToken({ id: 'buyer-id', email: 'buyer@test.pl', role: 'buyer' });
+    const res = await request(app)
+      .get('/api/my/onboarding')
+      .set('Authorization', `Bearer ${buyerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns checklist with 5 steps for a seller with store, products, subscription, referral', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID, name: 'Mój Sklep', slug: 'moj-sklep' }] }) // store
+      .mockResolvedValueOnce({ rows: [{ count: '3' }] }) // products count
+      .mockResolvedValueOnce({ rows: [{ status: 'active' }] }) // active subscription
+      .mockResolvedValueOnce({ rows: [{ id: 'ref-1', code: 'SELLER123' }] }); // referral code
+
+    const res = await request(app)
+      .get('/api/my/onboarding')
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('steps');
+    expect(res.body.steps).toHaveLength(5);
+    expect(res.body.total).toBe(5);
+    expect(res.body.completed).toBe(5);
+    expect(res.body.all_done).toBe(true);
+
+    const storeStep = res.body.steps.find((s) => s.key === 'store_created');
+    expect(storeStep.done).toBe(true);
+
+    const productStep = res.body.steps.find((s) => s.key === 'product_added');
+    expect(productStep.done).toBe(true);
+    expect(productStep.product_count).toBe(3);
+
+    const refStep = res.body.steps.find((s) => s.key === 'referral_code_ready');
+    expect(refStep.done).toBe(true);
+    expect(refStep.referral_code).toBe('SELLER123');
+  });
+
+  it('returns partial checklist when seller has no products or referral code yet', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID, name: 'Mój Sklep', slug: 'moj-sklep' }] }) // store
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] }) // 0 products
+      .mockResolvedValueOnce({ rows: [] }) // no active subscription
+      .mockResolvedValueOnce({ rows: [] }); // no referral code
+
+    const res = await request(app)
+      .get('/api/my/onboarding')
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.all_done).toBe(false);
+
+    const productStep = res.body.steps.find((s) => s.key === 'product_added');
+    expect(productStep.done).toBe(false);
+    expect(productStep.product_count).toBe(0);
+
+    const subStep = res.body.steps.find((s) => s.key === 'subscription_active');
+    expect(subStep.done).toBe(false);
+
+    const refStep = res.body.steps.find((s) => s.key === 'referral_code_ready');
+    expect(refStep.done).toBe(false);
+    expect(refStep.referral_code).toBeNull();
+  });
+
+  it('account_created step is always done', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] }) // no store
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .get('/api/my/onboarding')
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    const accountStep = res.body.steps.find((s) => s.key === 'account_created');
+    expect(accountStep.done).toBe(true);
+  });
+});
+
 describe('POST /api/orders – commission calculation', () => {
   it('uses global commission_rate from platform_settings for platform_commission', async () => {
     const NEW_ORDER_ID = 'b0000000-0000-4000-8000-000000000098';
@@ -3697,18 +3787,31 @@ describe('Promo tier helper', () => {
     expect(tier.bonusMonths).toBe(3);
   });
 
-  it('returns standard trial (0 bonus months) for 31st+ seller (count=30)', () => {
+  it('returns 1 month for 31st seller (count=30) – Tier 4 first-100 promo', () => {
     const tier = getPromoTier(30);
+    expect(tier.bonusMonths).toBe(1);
+    expect(tier.durationDays).toBe(30);
+  });
+
+  it('returns 1 month for 100th seller (count=99)', () => {
+    const tier = getPromoTier(99);
+    expect(tier.bonusMonths).toBe(1);
+    expect(tier.durationDays).toBe(30);
+  });
+
+  it('returns standard trial (0 bonus months) for 101st+ seller (count=100)', () => {
+    const tier = getPromoTier(100);
     expect(tier.bonusMonths).toBe(0);
     expect(tier.durationDays).toBe(14);
   });
 
   it('getPromoSlots returns correct slotsLeft for each tier', () => {
     const slots = getPromoSlots(5); // 5 sellers already registered
-    expect(slots).toHaveLength(3);
+    expect(slots).toHaveLength(4);
     expect(slots[0].slotsLeft).toBe(5);   // 10 - 5 = 5
     expect(slots[1].slotsLeft).toBe(15);  // 20 - 5 = 15
     expect(slots[2].slotsLeft).toBe(25);  // 30 - 5 = 25
+    expect(slots[3].slotsLeft).toBe(95);  // 100 - 5 = 95
   });
 
   it('getPromoSlots returns 0 when tier is exhausted', () => {
@@ -3716,6 +3819,12 @@ describe('Promo tier helper', () => {
     expect(slots[0].slotsLeft).toBe(0);  // 10 - 25 = 0 (clamped)
     expect(slots[1].slotsLeft).toBe(0);  // 20 - 25 = 0 (clamped)
     expect(slots[2].slotsLeft).toBe(5);  // 30 - 25 = 5
+    expect(slots[3].slotsLeft).toBe(75); // 100 - 25 = 75
+  });
+
+  it('getPromoSlots Tier 4 exhausted at 100 sellers', () => {
+    const slots = getPromoSlots(100);
+    expect(slots[3].slotsLeft).toBe(0);  // 100 - 100 = 0
   });
 });
 
@@ -3833,15 +3942,34 @@ describe('POST /api/auth/register – promo tier', () => {
     expect(res.body.promo.bonusMonths).toBe(6);
   });
 
-  it('registers 31st+ seller and gets standard trial (0 bonus months)', async () => {
-    const shopRow = { id: 'shop-promo3', owner_id: 'user-promo3', name: 'Late Seller', slug: 'late-seller', subdomain: 'late-seller.qualitetmarket.pl', status: 'active', plan: 'trial' };
+  it('registers 31st seller and gets Tier 4 promo (1 bonus month)', async () => {
+    const shopRow = { id: 'shop-promo3', owner_id: 'user-promo3', name: 'Tier4 Seller', slug: 'tier4-seller', subdomain: 'tier4-seller.qualitetmarket.pl', status: 'active', plan: 'trial' };
     db.query
       .mockResolvedValueOnce({ rows: [] })              // no duplicate email
-      .mockResolvedValueOnce({ rows: [{ count: '30' }] }) // seller count = 30 → no promo
+      .mockResolvedValueOnce({ rows: [{ count: '30' }] }) // seller count = 30 → Tier 4
       .mockResolvedValueOnce({ rows: [] })              // INSERT user
       .mockResolvedValueOnce({ rows: [] })              // uniqueSlug check
       .mockResolvedValueOnce({ rows: [shopRow] })       // INSERT store
       .mockResolvedValueOnce({ rows: [] });             // INSERT subscription
+
+    const res = await request(app).post('/api/auth/register').send({
+      email: 'tier4@test.pl',
+      password: 'Password123!',
+      name: 'Tier 4 Seller',
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.promo.bonusMonths).toBe(1);
+  });
+
+  it('registers 101st+ seller and gets standard trial (0 bonus months)', async () => {
+    const shopRow = { id: 'shop-late', owner_id: 'user-late', name: 'Late Seller', slug: 'late-seller', subdomain: 'late-seller.qualitetmarket.pl', status: 'active', plan: 'trial' };
+    db.query
+      .mockResolvedValueOnce({ rows: [] })               // no duplicate email
+      .mockResolvedValueOnce({ rows: [{ count: '100' }] }) // seller count = 100 → no promo
+      .mockResolvedValueOnce({ rows: [] })               // INSERT user
+      .mockResolvedValueOnce({ rows: [] })               // uniqueSlug check
+      .mockResolvedValueOnce({ rows: [shopRow] })        // INSERT store
+      .mockResolvedValueOnce({ rows: [] });              // INSERT subscription
 
     const res = await request(app).post('/api/auth/register').send({
       email: 'late@test.pl',
@@ -4625,6 +4753,21 @@ describe('GET /api/readiness – stripe, mail and social checks', () => {
   });
 });
 
+// ─── /api/readiness – first-100 seller_onboarding check ──────────────────────
+
+describe('GET /api/readiness – seller onboarding for first 100 sellers', () => {
+  it('includes seller_onboarding check with capacity 100 and 4 promo tiers', async () => {
+    const res = await request(app).get('/api/readiness');
+    expect(res.status).toBe(200);
+    expect(res.body.checks).toHaveProperty('seller_onboarding');
+    const ob = res.body.checks.seller_onboarding;
+    expect(ob.seller_capacity).toBe(100);
+    expect(Array.isArray(ob.promo_tiers)).toBe(true);
+    expect(ob.promo_tiers).toHaveLength(4);
+    expect(ob.onboarding_checklist).toBe('GET /api/my/onboarding');
+  });
+});
+
 // ─── /api/promo/slots ─────────────────────────────────────────────────────────
 
 describe('GET /api/promo/slots', () => {
@@ -4649,10 +4792,14 @@ describe('GET /api/promo/slots', () => {
     const res = await request(app).get('/api/promo/slots');
     expect(res.status).toBe(200);
     const slots = res.body.slots;
-    expect(slots.length).toBeGreaterThan(0);
+    // Now 4 tiers (Tier 4 added for first-100-seller campaign)
+    expect(slots.length).toBe(4);
     // First tier: 12 months, 10 slots available when count=0
     expect(slots[0].bonusMonths).toBe(12);
     expect(slots[0].slotsLeft).toBe(10);
+    // Tier 4: 1 month, 100 slots available when count=0 (covers sellers 31–100)
+    expect(slots[3].bonusMonths).toBe(1);
+    expect(slots[3].slotsLeft).toBe(100);
   });
 });
 
