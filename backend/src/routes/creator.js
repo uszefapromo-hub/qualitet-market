@@ -37,36 +37,77 @@ function hashIp(ip) {
 // ─── POST /api/creator/register ───────────────────────────────────────────────
 // Upgrade the authenticated user's role to 'creator' so they can generate
 // affiliate links and earn commissions.
+// Optional body param: referral_code – if provided and valid, records the
+// creator-to-creator invitation (1 level only, self-referral blocked).
 
-router.post('/register', authenticate, async (req, res) => {
-  try {
-    const userId = req.user.id;
+router.post(
+  '/register',
+  authenticate,
+  [
+    body('referral_code').optional().isString().trim(),
+  ],
+  validate,
+  async (req, res) => {
+    try {
+      const userId = req.user.id;
 
-    const userResult = await db.query(
-      'SELECT id, email, name, role FROM users WHERE id = $1',
-      [userId]
-    );
-    const user = userResult.rows[0];
-    if (!user) return res.status(404).json({ error: 'Użytkownik nie istnieje' });
+      const userResult = await db.query(
+        'SELECT id, email, name, role FROM users WHERE id = $1',
+        [userId]
+      );
+      const user = userResult.rows[0];
+      if (!user) return res.status(404).json({ error: 'Użytkownik nie istnieje' });
 
-    if (user.role === 'creator') {
-      return res.status(409).json({ error: 'Użytkownik jest już twórcą' });
+      if (user.role === 'creator') {
+        return res.status(409).json({ error: 'Użytkownik jest już twórcą' });
+      }
+
+      await db.query(
+        'UPDATE users SET role = $1 WHERE id = $2',
+        ['creator', userId]
+      );
+
+      // ── Referral tracking ────────────────────────────────────────────────────
+      const referralCode = (req.body.referral_code || '').trim() || null;
+      if (referralCode) {
+        try {
+          const inviterResult = await db.query(
+            'SELECT id FROM users WHERE creator_referral_code = $1',
+            [referralCode]
+          );
+          const inviter = inviterResult.rows[0];
+
+          // Anti-abuse: block self-referral and enforce 1-level-only limit
+          if (inviter && inviter.id !== userId) {
+            const existsResult = await db.query(
+              'SELECT id FROM creator_referrals WHERE invited_id = $1',
+              [userId]
+            );
+            if (existsResult.rows.length === 0) {
+              await db.query(
+                `INSERT INTO creator_referrals (id, inviter_id, invited_id, created_at)
+                 VALUES ($1, $2, $3, NOW())
+                 ON CONFLICT (invited_id) DO NOTHING`,
+                [uuidv4(), inviter.id, userId]
+              );
+            }
+          }
+        } catch (refErr) {
+          // Referral recording is best-effort; do not fail the registration
+          console.error('creator referral record error:', refErr.message);
+        }
+      }
+
+      return res.status(200).json({
+        message: 'Konto twórcy aktywowane pomyślnie',
+        user: { id: user.id, email: user.email, name: user.name, role: 'creator' },
+      });
+    } catch (err) {
+      console.error('creator register error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
     }
-
-    await db.query(
-      'UPDATE users SET role = $1 WHERE id = $2',
-      ['creator', userId]
-    );
-
-    return res.status(200).json({
-      message: 'Konto twórcy aktywowane pomyślnie',
-      user: { id: user.id, email: user.email, name: user.name, role: 'creator' },
-    });
-  } catch (err) {
-    console.error('creator register error:', err.message);
-    return res.status(500).json({ error: 'Błąd serwera' });
   }
-});
+);
 
 // ─── GET /api/creator/links ────────────────────────────────────────────────────
 // List all affiliate links belonging to the authenticated creator.

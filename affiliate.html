@@ -188,11 +188,12 @@
 
       <!-- Tabs -->
       <div class="aff-tabs" role="tablist">
-        <button class="aff-tab active" data-tab="creator"  role="tab">🎯 Creator</button>
-        <button class="aff-tab"        data-tab="promote"  role="tab">🔗 Promuj produkty</button>
-        <button class="aff-tab"        data-tab="earnings" role="tab">💰 Zarobki</button>
-        <button class="aff-tab"        data-tab="seller"   role="tab">🛍️ Ustawienia sprzedawcy</button>
-        <button class="aff-tab"        data-tab="admin"    role="tab" id="admin-tab" hidden>⚙️ Admin</button>
+        <button class="aff-tab active" data-tab="creator"   role="tab">🎯 Creator</button>
+        <button class="aff-tab"        data-tab="promote"   role="tab">🔗 Promuj produkty</button>
+        <button class="aff-tab"        data-tab="earnings"  role="tab">💰 Zarobki</button>
+        <button class="aff-tab"        data-tab="referrals" role="tab">👥 Polecaj twórców</button>
+        <button class="aff-tab"        data-tab="seller"    role="tab">🛍️ Ustawienia sprzedawcy</button>
+        <button class="aff-tab"        data-tab="admin"     role="tab" id="admin-tab" hidden>⚙️ Admin</button>
       </div>
 
       <!-- ── Creator Dashboard ── -->
@@ -345,6 +346,68 @@
                 </tr>
               </thead>
               <tbody id="earn-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Creator Referral Dashboard ── -->
+      <div class="aff-pane" id="pane-referrals">
+
+        <!-- Referral link card -->
+        <div class="panel-card" style="margin-bottom:20px">
+          <div class="section-head"><h2>Twój link polecający</h2></div>
+          <p style="color:var(--muted);font-size:14px;margin-bottom:16px">
+            Zaproś innych twórców korzystając z Twojego unikalnego linku i zarabiaj
+            <strong style="color:var(--green)">2&nbsp;%</strong> z każdej ich sprzedaży afiliacyjnej.
+          </p>
+          <div id="ref-link-wrap" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <code id="ref-link-display" style="flex:1;background:var(--input);border:1px solid var(--stroke);border-radius:10px;padding:10px 14px;font-size:13px;color:#f1f5f9;word-break:break-all">
+              —
+            </code>
+            <button class="btn btn-primary" id="btn-copy-ref-link" style="white-space:nowrap">📋 Kopiuj</button>
+            <button class="btn btn-secondary" id="btn-gen-ref-link">🔄 Generuj</button>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stat-grid" style="margin-bottom:28px">
+          <div class="stat-card">
+            <div class="stat-label">Zaproszeni twórcy</div>
+            <div class="stat-value accent" id="ref-stat-invited">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Aktywni twórcy</div>
+            <div class="stat-value" id="ref-stat-active">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Zarobki z poleceń</div>
+            <div class="stat-value green" id="ref-stat-earnings">--</div>
+          </div>
+        </div>
+
+        <!-- Invited creators list -->
+        <div class="panel-card">
+          <div class="section-head"><h2>Zaproszeni twórcy</h2></div>
+          <div id="ref-list-loading" class="empty-state">
+            <div class="app-splash-loader" style="margin:0 auto 12px"></div>
+            <p>Ładowanie…</p>
+          </div>
+          <div id="ref-list-empty" class="empty-state" hidden>
+            <div class="empty-icon">👥</div>
+            <p>Nie zaprosiłeś jeszcze żadnego twórcy.</p>
+          </div>
+          <div id="ref-list-table-wrap" hidden>
+            <table class="aff-table">
+              <thead>
+                <tr>
+                  <th>Twórca</th>
+                  <th>Email</th>
+                  <th>Status</th>
+                  <th>Data dołączenia</th>
+                </tr>
+              </thead>
+              <tbody id="ref-list-tbody"></tbody>
             </table>
           </div>
         </div>
@@ -534,11 +597,12 @@
       p.classList.toggle('active', p.id === `pane-${name}`);
     });
 
-    if (name === 'creator')  loadCreator();
-    if (name === 'promote')  loadPromoteProducts();
-    if (name === 'earnings') loadEarnings();
-    if (name === 'seller')   loadSellerSection();
-    if (name === 'admin')    loadAdminSection();
+    if (name === 'creator')   loadCreator();
+    if (name === 'promote')   loadPromoteProducts();
+    if (name === 'earnings')  loadEarnings();
+    if (name === 'referrals') loadReferrals();
+    if (name === 'seller')    loadSellerSection();
+    if (name === 'admin')     loadAdminSection();
   }
 
   // ─── Creator tab ─────────────────────────────────────────────────────────────
@@ -778,6 +842,66 @@
       msgEl.textContent = e.body?.error || 'Błąd wypłaty.';
       msgEl.hidden = false;
     }
+  });
+
+  // ─── Referrals tab ────────────────────────────────────────────────────────────
+
+  async function loadReferrals() {
+    try {
+      const stats = await API.CreatorReferrals.stats().catch(() => null);
+      if (stats) {
+        document.getElementById('ref-stat-invited').textContent  = stats.invited_count;
+        document.getElementById('ref-stat-active').textContent   = stats.active_count;
+        document.getElementById('ref-stat-earnings').textContent = formatPLN(stats.referral_earnings);
+        if (stats.referral_link) {
+          document.getElementById('ref-link-display').textContent = stats.referral_link;
+        }
+      }
+
+      const listResult = await API.CreatorReferrals.list({ limit: 50 }).catch(() => ({ creators: [] }));
+      renderReferralsList(listResult.creators || []);
+    } catch (e) {
+      console.error('loadReferrals error', e);
+    }
+  }
+
+  function renderReferralsList(creators) {
+    const loading = document.getElementById('ref-list-loading');
+    const empty   = document.getElementById('ref-list-empty');
+    const wrap    = document.getElementById('ref-list-table-wrap');
+    const tbody   = document.getElementById('ref-list-tbody');
+
+    loading.hidden = true;
+    if (!creators.length) {
+      empty.hidden = false;
+      wrap.hidden  = true;
+      return;
+    }
+    empty.hidden = true;
+    wrap.hidden  = false;
+
+    tbody.innerHTML = creators.map((c) => `
+      <tr>
+        <td>${escHtml(c.invited_name || '—')}</td>
+        <td>${escHtml(c.invited_email || '—')}</td>
+        <td><span class="pill ${c.is_active ? 'active' : 'inactive'}">${c.is_active ? 'Aktywny' : 'Nieaktywny'}</span></td>
+        <td>${formatDate(c.created_at)}</td>
+      </tr>
+    `).join('');
+  }
+
+  document.getElementById('btn-gen-ref-link').addEventListener('click', async () => {
+    try {
+      const data = await API.CreatorReferrals.generateLink();
+      document.getElementById('ref-link-display').textContent = data.link;
+    } catch (e) {
+      alert('Błąd generowania linku: ' + (e.body?.error || e.message));
+    }
+  });
+
+  document.getElementById('btn-copy-ref-link').addEventListener('click', () => {
+    const link = document.getElementById('ref-link-display').textContent.trim();
+    if (link && link !== '—') copyAffLink(link);
   });
 
   // ─── Seller tab ───────────────────────────────────────────────────────────────
