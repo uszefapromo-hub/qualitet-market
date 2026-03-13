@@ -20,7 +20,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.36.0",
     "lucide-react": "^0.577.0",
-    "next": "^15.0.8",
+    "next": "^15.2.3",
     "react": "^18",
     "react-dom": "^18",
     "tailwind-merge": "^3.5.0"
