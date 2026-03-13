@@ -30,6 +30,9 @@ const affiliateRouter = require('./routes/affiliate');
 const creatorRouter = require('./routes/creator');
 const creatorReferralsRouter = require('./routes/creator-referrals');
 const liveRouter = require('./routes/live');
+const socialRouter = require('./routes/social');
+const gamificationRouter = require('./routes/gamification');
+const collaborationRouter = require('./routes/collaboration');
 const aiRouter = require('./modules/ai/routes');
 const errorHandler = require('./middleware/errorHandler');
 const { importSupplierProducts } = require('./services/supplier-import');
@@ -241,6 +244,35 @@ app.get('/api/readiness', async (_req, res) => {
     live_order:         'POST /api/live/streams/:id/orders',
   };
 
+  // Social commerce system
+  checks.social_system = {
+    feed:             'GET  /api/social/feed',
+    trending:         'GET  /api/social/trending',
+    create_post:      'POST /api/social/posts',
+    like_post:        'POST /api/social/posts/:id/like',
+    comment_post:     'POST /api/social/posts/:id/comment',
+    share_post:       'POST /api/social/posts/:id/share',
+  };
+
+  // Gamification system
+  checks.gamification_system = {
+    leaderboard:  'GET  /api/gamification/leaderboard',
+    my_level:     'GET  /api/gamification/my/level',
+    my_badges:    'GET  /api/gamification/my/badges',
+    my_points:    'GET  /api/gamification/my/points',
+    award_points: 'POST /api/gamification/points (admin)',
+    award_badge:  'POST /api/gamification/badges/award (admin)',
+  };
+
+  // Collaborative stores system
+  checks.collaboration_system = {
+    invite:        'POST /api/collaboration/invite',
+    accept:        'POST /api/collaboration/accept/:token',
+    team:          'GET  /api/collaboration/stores/:storeId/team',
+    my_stores:     'GET  /api/collaboration/my-stores',
+    revenue_split: 'GET  /api/collaboration/stores/:storeId/revenue-split',
+  };
+
   const status = allOk ? 'ready' : 'degraded';
   return res.status(allOk ? 200 : 503).json({
     status,
@@ -276,6 +308,9 @@ app.use('/api/affiliate', affiliateRouter);
 app.use('/api/creator/referrals', creatorReferralsRouter);
 app.use('/api/creator', creatorRouter);
 app.use('/api/live', liveRouter);
+app.use('/api/social', socialRouter);
+app.use('/api/gamification', gamificationRouter);
+app.use('/api/collaboration', collaborationRouter);
 app.use('/api/ai', aiRouter);
 
 // ─── Public promo slots feed ───────────────────────────────────────────────────

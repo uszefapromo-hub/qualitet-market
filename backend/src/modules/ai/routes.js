@@ -11,6 +11,8 @@
  * DELETE /api/ai/conversations/:id       – delete a conversation
  * POST   /api/ai/product-description    – generate a product description
  * POST   /api/ai/store-description      – generate a store description
+ * POST   /api/ai/generate-store         – generate a full store setup (name, slogan, products)
+ * POST   /api/ai/marketing-pack         – generate a marketing pack for a product
  */
 
 const { Router } = require('express')
@@ -30,5 +32,8 @@ router.delete('/conversations/:id', ctrl.getConversationValidators, ctrl.deleteC
 
 router.post('/product-description', ctrl.productDescriptionValidators, ctrl.postProductDescription)
 router.post('/store-description', ctrl.storeDescriptionValidators, ctrl.postStoreDescription)
+
+router.post('/generate-store', ctrl.generateStoreValidators, ctrl.postGenerateStore)
+router.post('/marketing-pack', ctrl.marketingPackValidators, ctrl.postMarketingPack)
 
 module.exports = router

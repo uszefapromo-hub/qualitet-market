@@ -193,8 +193,98 @@ async function generateStoreDescription({ userId, storeName, category = '', tone
   return { description: content, tokensUsed }
 }
 
+// ─── Full store generator ──────────────────────────────────────────────────────
+
+/**
+ * Generate a complete store setup: name, description, slogan, and initial product ideas.
+ * @param {{ userId: string, niche: string, target_audience?: string, style?: string }} opts
+ */
+async function generateStore({ userId, niche, targetAudience = '', style = 'nowoczesny' }) {
+  const prompt =
+    `Wygeneruj kompletny sklep internetowy po polsku dla niszy: ${niche}.\n` +
+    (targetAudience ? `Docelowa grupa odbiorców: ${targetAudience}\n` : '') +
+    `Styl: ${style}\n\n` +
+    `Podaj w formacie JSON:\n` +
+    `{\n` +
+    `  "store_name": "...",\n` +
+    `  "slogan": "...",\n` +
+    `  "description": "...",\n` +
+    `  "categories": ["...", "...", "..."],\n` +
+    `  "product_ideas": [{"name": "...", "description": "...", "price_range": "..."}]\n` +
+    `}\n` +
+    `Zwróć tylko JSON bez dodatkowego tekstu.`
+
+  const start = Date.now()
+  const { content, tokensUsed } = await callAiProvider(
+    [
+      { role: 'system', content: 'Jesteś ekspertem od e-commerce i tworzenia konceptów sklepów internetowych. Zwracasz zawsze poprawny JSON.' },
+      { role: 'user', content: prompt },
+    ],
+    { temperature: 0.9, maxTokens: 800 }
+  )
+  const durationMs = Date.now() - start
+
+  await AiModel.logGeneration({ userId, type: 'generate_store', prompt, result: content, tokensUsed, durationMs })
+
+  let parsed = null
+  try {
+    parsed = JSON.parse(content)
+  } catch (e) {
+    console.warn('[AI] generate_store: failed to parse JSON response:', e.message)
+  }
+
+  return { store: parsed || { raw: content }, tokensUsed }
+}
+
+// ─── Marketing pack generator ──────────────────────────────────────────────────
+
+/**
+ * Generate a marketing pack: social post, email subject, ad headline, hashtags.
+ * @param {{ userId: string, productName: string, price?: number, audience?: string, platform?: string }} opts
+ */
+async function generateMarketingPack({ userId, productName, price = null, audience = '', platform = 'general' }) {
+  const prompt =
+    `Wygeneruj pakiet marketingowy po polsku dla produktu:\n` +
+    `Nazwa: ${productName}\n` +
+    (price ? `Cena: ${price} zł\n` : '') +
+    (audience ? `Odbiorcy: ${audience}\n` : '') +
+    `Platforma: ${platform}\n\n` +
+    `Podaj w formacie JSON:\n` +
+    `{\n` +
+    `  "social_post": "...",\n` +
+    `  "email_subject": "...",\n` +
+    `  "ad_headline": "...",\n` +
+    `  "ad_copy": "...",\n` +
+    `  "hashtags": ["...", "...", "..."]\n` +
+    `}\n` +
+    `Zwróć tylko JSON bez dodatkowego tekstu.`
+
+  const start = Date.now()
+  const { content, tokensUsed } = await callAiProvider(
+    [
+      { role: 'system', content: 'Jesteś ekspertem od marketingu cyfrowego i copywritingu sprzedażowego. Zwracasz zawsze poprawny JSON.' },
+      { role: 'user', content: prompt },
+    ],
+    { temperature: 0.85, maxTokens: 600 }
+  )
+  const durationMs = Date.now() - start
+
+  await AiModel.logGeneration({ userId, type: 'marketing_pack', prompt, result: content, tokensUsed, durationMs })
+
+  let parsed = null
+  try {
+    parsed = JSON.parse(content)
+  } catch (e) {
+    console.warn('[AI] marketing_pack: failed to parse JSON response:', e.message)
+  }
+
+  return { marketing: parsed || { raw: content }, tokensUsed }
+}
+
 module.exports = {
   chat,
   generateProductDescription,
   generateStoreDescription,
+  generateStore,
+  generateMarketingPack,
 }

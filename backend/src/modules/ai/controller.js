@@ -161,6 +161,62 @@ async function postStoreDescription(req, res, next) {
   }
 }
 
+// ─── Generate store ────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/ai/generate-store
+ * Body: { niche, target_audience?, style? }
+ */
+const generateStoreValidators = [
+  body('niche').notEmpty().withMessage('Nisza sklepu jest wymagana').isLength({ max: 200 }).withMessage('Nisza jest za długa'),
+  body('target_audience').optional().isLength({ max: 200 }),
+  body('style').optional().isIn(['nowoczesny', 'elegancki', 'minimalistyczny', 'kolorowy', 'profesjonalny']).withMessage('Nieprawidłowy styl'),
+]
+
+async function postGenerateStore(req, res, next) {
+  if (validationErrors(req, res)) return
+  try {
+    const result = await AiService.generateStore({
+      userId: req.user.id,
+      niche: req.body.niche,
+      targetAudience: req.body.target_audience || '',
+      style: req.body.style || 'nowoczesny',
+    })
+    res.json(result)
+  } catch (err) {
+    next(err)
+  }
+}
+
+// ─── Marketing pack ────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/ai/marketing-pack
+ * Body: { product_name, price?, audience?, platform? }
+ */
+const marketingPackValidators = [
+  body('product_name').notEmpty().withMessage('Nazwa produktu jest wymagana').isLength({ max: 200 }).withMessage('Nazwa jest za długa'),
+  body('price').optional().isFloat({ min: 0 }).withMessage('Cena musi być liczbą nieujemną'),
+  body('audience').optional().isLength({ max: 200 }),
+  body('platform').optional().isIn(['general', 'facebook', 'instagram', 'tiktok', 'email', 'google']).withMessage('Nieprawidłowa platforma'),
+]
+
+async function postMarketingPack(req, res, next) {
+  if (validationErrors(req, res)) return
+  try {
+    const result = await AiService.generateMarketingPack({
+      userId: req.user.id,
+      productName: req.body.product_name,
+      price: req.body.price || null,
+      audience: req.body.audience || '',
+      platform: req.body.platform || 'general',
+    })
+    res.json(result)
+  } catch (err) {
+    next(err)
+  }
+}
+
 module.exports = {
   chatValidators,
   postChat,
@@ -173,4 +229,8 @@ module.exports = {
   postProductDescription,
   storeDescriptionValidators,
   postStoreDescription,
+  generateStoreValidators,
+  postGenerateStore,
+  marketingPackValidators,
+  postMarketingPack,
 }

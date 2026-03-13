@@ -6360,3 +6360,494 @@ describe('GET /api/creator/referrals/stats', () => {
     expect(res.body.referral_link).toBeNull();
   });
 });
+
+// ─── Social Commerce module ───────────────────────────────────────────────────
+
+const SOCIAL_POST_ID = 'd0000000-0000-4000-8000-000000000001';
+const SOCIAL_COMMENT_ID = 'd0000000-0000-4000-8000-000000000002';
+
+const mockPost = {
+  id: SOCIAL_POST_ID,
+  content: 'Test post content',
+  media_urls: [],
+  post_type: 'general',
+  likes_count: 0,
+  comments_count: 0,
+  shares_count: 0,
+  views_count: 0,
+  viral_score: '0',
+  created_at: new Date().toISOString(),
+  author_id: SELLER_ID,
+  author_name: 'Seller',
+  store_id: null,
+  product_id: null,
+};
+
+describe('GET /api/social/feed', () => {
+  it('returns feed without auth', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [mockPost] })  // SELECT posts
+      .mockResolvedValueOnce({ rows: [] }); // UPDATE views
+    const res = await request(app).get('/api/social/feed');
+    expect(res.status).toBe(200);
+    expect(res.body.posts).toHaveLength(1);
+  });
+
+  it('returns empty feed', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get('/api/social/feed');
+    expect(res.status).toBe(200);
+    expect(res.body.posts).toHaveLength(0);
+  });
+});
+
+describe('GET /api/social/trending', () => {
+  it('returns trending posts', async () => {
+    db.query.mockResolvedValueOnce({ rows: [mockPost] });
+    const res = await request(app).get('/api/social/trending');
+    expect(res.status).toBe(200);
+    expect(res.body.posts).toHaveLength(1);
+  });
+});
+
+describe('POST /api/social/posts', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post('/api/social/posts')
+      .send({ content: 'Hello world' });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects missing content', async () => {
+    const res = await request(app)
+      .post('/api/social/posts')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({});
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/wymagana/i);
+  });
+
+  it('creates a post', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{
+        id: SOCIAL_POST_ID,
+        content: 'Hello world',
+        post_type: 'general',
+        likes_count: 0,
+        comments_count: 0,
+        shares_count: 0,
+        created_at: new Date().toISOString(),
+      }],
+    });
+    const res = await request(app)
+      .post('/api/social/posts')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ content: 'Hello world' });
+    expect(res.status).toBe(201);
+    expect(res.body.post.id).toBe(SOCIAL_POST_ID);
+  });
+});
+
+describe('GET /api/social/posts/:id', () => {
+  it('returns 404 for unknown post', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get(`/api/social/posts/${SOCIAL_POST_ID}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns post with comments', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [mockPost] }) // post
+      .mockResolvedValueOnce({ rows: [] }); // comments
+    const res = await request(app).get(`/api/social/posts/${SOCIAL_POST_ID}`);
+    expect(res.status).toBe(200);
+    expect(res.body.post.id).toBe(SOCIAL_POST_ID);
+    expect(res.body.comments).toBeDefined();
+  });
+});
+
+describe('POST /api/social/posts/:id/like', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post(`/api/social/posts/${SOCIAL_POST_ID}/like`);
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 for unknown post', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .post(`/api/social/posts/${SOCIAL_POST_ID}/like`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('toggles like on a post', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [mockPost] }) // post exists
+      .mockResolvedValueOnce({ rows: [] }) // no existing like
+      .mockResolvedValueOnce({ rows: [] }) // INSERT like
+      .mockResolvedValueOnce({ rows: [] }) // UPDATE likes_count
+      .mockResolvedValueOnce({ rows: [] }) // refreshViralScore
+      .mockResolvedValueOnce({ rows: [{ likes_count: 1 }] }); // updated count
+    const res = await request(app)
+      .post(`/api/social/posts/${SOCIAL_POST_ID}/like`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.liked).toBe(true);
+  });
+});
+
+describe('POST /api/social/posts/:id/comment', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post(`/api/social/posts/${SOCIAL_POST_ID}/comment`)
+      .send({ content: 'Nice post!' });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects empty content', async () => {
+    const res = await request(app)
+      .post(`/api/social/posts/${SOCIAL_POST_ID}/comment`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ content: '' });
+    expect(res.status).toBe(400);
+  });
+
+  it('adds a comment', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [mockPost] }) // post exists
+      .mockResolvedValueOnce({ rows: [{ id: SOCIAL_COMMENT_ID, content: 'Nice!', created_at: new Date().toISOString() }] }) // INSERT comment
+      .mockResolvedValueOnce({ rows: [] }) // UPDATE comments_count
+      .mockResolvedValueOnce({ rows: [] }); // refreshViralScore
+    const res = await request(app)
+      .post(`/api/social/posts/${SOCIAL_POST_ID}/comment`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ content: 'Nice post!' });
+    expect(res.status).toBe(201);
+    expect(res.body.comment.id).toBe(SOCIAL_COMMENT_ID);
+  });
+});
+
+describe('POST /api/social/posts/:id/share', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post(`/api/social/posts/${SOCIAL_POST_ID}/share`);
+    expect(res.status).toBe(401);
+  });
+
+  it('records a share', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [mockPost] }) // post exists
+      .mockResolvedValueOnce({ rows: [] }) // INSERT share
+      .mockResolvedValueOnce({ rows: [] }) // UPDATE shares_count
+      .mockResolvedValueOnce({ rows: [] }) // refreshViralScore
+      .mockResolvedValueOnce({ rows: [{ shares_count: 1 }] }); // updated count
+    const res = await request(app)
+      .post(`/api/social/posts/${SOCIAL_POST_ID}/share`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ platform: 'facebook' });
+    expect(res.status).toBe(200);
+    expect(res.body.shared).toBe(true);
+  });
+});
+
+// ─── Gamification module ──────────────────────────────────────────────────────
+
+describe('GET /api/gamification/leaderboard', () => {
+  it('returns leaderboard entries', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ rank: 1, total_points: 500, user_id: SELLER_ID, username: 'Seller', role: 'seller', refreshed_at: new Date().toISOString() }] });
+    const res = await request(app).get('/api/gamification/leaderboard');
+    expect(res.status).toBe(200);
+    expect(res.body.entries).toHaveLength(1);
+  });
+
+  it('rejects invalid leaderboard type', async () => {
+    const res = await request(app).get('/api/gamification/leaderboard?type=invalid');
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('GET /api/gamification/my/level', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/gamification/my/level');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns user level and points', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ total_points: '350' }] });
+    const res = await request(app)
+      .get('/api/gamification/my/level')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.total_points).toBe(350);
+    expect(res.body.level).toBeDefined();
+    expect(res.body.name).toBeDefined();
+  });
+});
+
+describe('GET /api/gamification/my/badges', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/gamification/my/badges');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns user badges', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ code: 'welcome', name: 'Witamy!', category: 'platform', points_reward: 10, awarded_at: new Date().toISOString() }] });
+    const res = await request(app)
+      .get('/api/gamification/my/badges')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.badges).toHaveLength(1);
+    expect(res.body.badges[0].code).toBe('welcome');
+  });
+});
+
+describe('GET /api/gamification/my/points', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/gamification/my/points');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns point history', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ total_points: '100' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'pt-1', points: 100, reason: 'Pierwsze zamówienie', source: 'order', created_at: new Date().toISOString() }] });
+    const res = await request(app)
+      .get('/api/gamification/my/points')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.total_points).toBe(100);
+    expect(res.body.history).toHaveLength(1);
+  });
+});
+
+describe('POST /api/gamification/points', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/gamification/points').send({ user_id: SELLER_ID, points: 50, reason: 'Test' });
+    expect(res.status).toBe(401);
+  });
+
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post('/api/gamification/points')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ user_id: SELLER_ID, points: 50, reason: 'Test' });
+    expect(res.status).toBe(403);
+  });
+
+  it('awards points as admin', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SELLER_ID }] }) // user check
+      .mockResolvedValueOnce({ rows: [{ id: 'pt-1', points: 50, reason: 'Test', source: 'admin', created_at: new Date().toISOString() }] }); // INSERT
+    const res = await request(app)
+      .post('/api/gamification/points')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ user_id: SELLER_ID, points: 50, reason: 'Bonus za aktywność' });
+    expect(res.status).toBe(201);
+    expect(res.body.transaction.points).toBe(50);
+  });
+});
+
+describe('POST /api/gamification/badges/award', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/gamification/badges/award').send({ user_id: SELLER_ID, badge_code: 'welcome' });
+    expect(res.status).toBe(401);
+  });
+
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post('/api/gamification/badges/award')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ user_id: SELLER_ID, badge_code: 'welcome' });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 404 when user not found', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] }) // user check
+      .mockResolvedValueOnce({ rows: [{ id: 'b1', name: 'Witamy!', points_reward: 10 }] }); // badge check
+    const res = await request(app)
+      .post('/api/gamification/badges/award')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ user_id: SELLER_ID, badge_code: 'welcome' });
+    expect(res.status).toBe(404);
+  });
+
+  it('awards a badge', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SELLER_ID }] }) // user check
+      .mockResolvedValueOnce({ rows: [{ id: 'b1', name: 'Witamy!', points_reward: 10 }] }) // badge check
+      .mockResolvedValueOnce({ rows: [] }) // INSERT badge
+      .mockResolvedValueOnce({ rows: [] }); // INSERT points
+    const res = await request(app)
+      .post('/api/gamification/badges/award')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ user_id: SELLER_ID, badge_code: 'welcome' });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.badge_name).toBe('Witamy!');
+  });
+});
+
+describe('POST /api/gamification/leaderboard/refresh', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/gamification/leaderboard/refresh');
+    expect(res.status).toBe(401);
+  });
+
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post('/api/gamification/leaderboard/refresh')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('refreshes the leaderboard', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ user_id: SELLER_ID, total_points: '500', rank: '1' }] }) // SELECT for entries
+      .mockResolvedValueOnce({ rows: [] }) // DELETE old cache
+      .mockResolvedValueOnce({ rows: [] }); // INSERT entry
+    const res = await request(app)
+      .post('/api/gamification/leaderboard/refresh')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ type: 'global' });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.leaderboard_type).toBe('global');
+  });
+});
+
+// ─── Collaborative Stores module ──────────────────────────────────────────────
+
+const COLLAB_STORE_ID = 'e0000000-0000-4000-8000-000000000001';
+const COLLAB_USER_ID  = 'e0000000-0000-4000-8000-000000000002';
+const COLLAB_TOKEN    = 'e0000000-0000-4000-8000-000000000003';
+
+describe('POST /api/collaboration/invite', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post('/api/collaboration/invite')
+      .send({ store_id: COLLAB_STORE_ID, email: 'creator@test.pl', role: 'creator' });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects missing role', async () => {
+    const res = await request(app)
+      .post('/api/collaboration/invite')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: COLLAB_STORE_ID, email: 'creator@test.pl' });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects when caller has no store access', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] }) // store_collaborators check
+      .mockResolvedValueOnce({ rows: [] }); // stores owner check
+    const res = await request(app)
+      .post('/api/collaboration/invite')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: COLLAB_STORE_ID, email: 'creator@test.pl', role: 'creator' });
+    expect(res.status).toBe(403);
+  });
+
+  it('creates invitation as store owner', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] }) // store_collaborators check (not a collab)
+      .mockResolvedValueOnce({ rows: [{ id: COLLAB_STORE_ID }] }) // stores owner check (is owner)
+      .mockResolvedValueOnce({ rows: [{ id: COLLAB_STORE_ID, name: 'Mój Sklep' }] }) // store check
+      .mockResolvedValueOnce({ rows: [] }) // invited user lookup
+      .mockResolvedValueOnce({ rows: [{ id: COLLAB_TOKEN, email: 'creator@test.pl', role: 'creator', token: COLLAB_TOKEN, expires_at: new Date().toISOString(), created_at: new Date().toISOString() }] }); // INSERT invitation
+    const res = await request(app)
+      .post('/api/collaboration/invite')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: COLLAB_STORE_ID, email: 'creator@test.pl', role: 'creator' });
+    expect(res.status).toBe(201);
+    expect(res.body.invitation).toBeDefined();
+  });
+});
+
+describe('GET /api/collaboration/stores/:storeId/team', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get(`/api/collaboration/stores/${COLLAB_STORE_ID}/team`);
+    expect(res.status).toBe(401);
+  });
+
+  it('returns team members', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: 'sc-1', role: 'creator', status: 'active', invited_at: new Date().toISOString(), accepted_at: new Date().toISOString(), user_id: COLLAB_USER_ID, username: 'Creator', email: 'creator@test.pl' }] });
+    const res = await request(app)
+      .get(`/api/collaboration/stores/${COLLAB_STORE_ID}/team`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.team).toHaveLength(1);
+  });
+});
+
+describe('GET /api/collaboration/my-stores', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/collaboration/my-stores');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns stores where user is collaborator', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ role: 'creator', status: 'active', accepted_at: new Date().toISOString(), store_id: STORE_ID, store_name: 'Mój Sklep', store_slug: 'moj-sklep' }] });
+    const res = await request(app)
+      .get('/api/collaboration/my-stores')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.stores).toHaveLength(1);
+  });
+});
+
+// ─── AI extended endpoints ────────────────────────────────────────────────────
+
+describe('POST /api/ai/generate-store', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/ai/generate-store').send({ niche: 'moda' });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects missing niche', async () => {
+    const res = await request(app)
+      .post('/api/ai/generate-store')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({});
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/nisza/i);
+  });
+
+  it('returns generated store', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // logGeneration
+    const res = await request(app)
+      .post('/api/ai/generate-store')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ niche: 'moda damska', style: 'elegancki' });
+    expect(res.status).toBe(200);
+    expect(res.body.store).toBeDefined();
+    expect(res.body.tokensUsed).toBeDefined();
+  });
+});
+
+describe('POST /api/ai/marketing-pack', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/ai/marketing-pack').send({ product_name: 'Buty' });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects missing product_name', async () => {
+    const res = await request(app)
+      .post('/api/ai/marketing-pack')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({});
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/nazwa/i);
+  });
+
+  it('returns marketing pack', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // logGeneration
+    const res = await request(app)
+      .post('/api/ai/marketing-pack')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ product_name: 'Buty sportowe', price: 199.99, platform: 'instagram' });
+    expect(res.status).toBe(200);
+    expect(res.body.marketing).toBeDefined();
+    expect(res.body.tokensUsed).toBeDefined();
+  });
+});
