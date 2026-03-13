@@ -289,7 +289,7 @@ router.post(
         [paymentId, orderId, req.user.id, order.total, method, provider]
       );
 
-      const providerData = buildProviderPayload(method, result.rows[0], return_url);
+      const providerData = await buildProviderPayload(method, result.rows[0], return_url);
 
       return res.status(201).json({
         payment: result.rows[0],
@@ -312,22 +312,60 @@ router.post(
  *   - transfer: manual bank transfer
  *   - card: generic card payment
  */
-function buildProviderPayload(method, payment, returnUrl) {
+async function buildProviderPayload(method, payment, returnUrl) {
   const base = process.env.APP_URL || 'https://uszefaqualitet.pl';
   const successUrl = returnUrl || `${base}/koszyk.html?payment=success&payment_id=${payment.id}`;
   const cancelUrl  = `${base}/koszyk.html?payment=cancel`;
 
   if (method === 'stripe') {
-    const hasStripe = Boolean(process.env.STRIPE_SECRET_KEY);
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    if (stripeKey) {
+      try {
+        const Stripe = require('stripe');
+        const stripe = Stripe(stripeKey);
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ['card'],
+          mode: 'payment',
+          client_reference_id: payment.id,
+          line_items: [
+            {
+              price_data: {
+                currency: 'pln',
+                product_data: {
+                  name: `Zamówienie #${payment.id.slice(0, 8)}`,
+                },
+                unit_amount: Math.round(parseFloat(payment.amount) * 100), // grosz
+              },
+              quantity: 1,
+            },
+          ],
+          success_url: `${successUrl}&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: cancelUrl,
+          metadata: {
+            payment_id: payment.id,
+            order_id:   payment.order_id,
+          },
+        });
+        return {
+          provider:    'stripe',
+          payment_id:  payment.id,
+          sandbox_mode: false,
+          redirect_url: session.url,
+          session_id:   session.id,
+          cancel_url:   cancelUrl,
+        };
+      } catch (err) {
+        console.error('[stripe] CheckoutSession error:', err.message);
+        // Fall through to sandbox mode on Stripe API error
+      }
+    }
     return {
-      provider: 'stripe',
-      payment_id: payment.id,
-      sandbox_mode: !hasStripe,
+      provider:     'stripe',
+      payment_id:   payment.id,
+      sandbox_mode: true,
       redirect_url: successUrl,
-      cancel_url: cancelUrl,
-      ...(hasStripe
-        ? {}
-        : { warning: 'Bramka Stripe nie jest skonfigurowana. Ustaw STRIPE_SECRET_KEY w .env.' }),
+      cancel_url:   cancelUrl,
+      warning: 'Bramka Stripe nie jest skonfigurowana. Ustaw STRIPE_SECRET_KEY w .env.',
     };
   }
 
@@ -381,3 +419,77 @@ function buildProviderPayload(method, payment, returnUrl) {
 }
 
 module.exports = router;
+
+// ─── POST /api/payments/stripe-webhook – Stripe native webhook ─────────────────
+// Verifies the Stripe signature and handles checkout.session.completed events.
+// Must be mounted BEFORE json body-parsing middleware; requires raw body.
+// The app.js mounts this via a special raw-body route.
+
+async function handleStripeWebhook(req, res) {
+  const stripeKey         = process.env.STRIPE_SECRET_KEY;
+  const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!stripeKey || !stripeWebhookSecret) {
+    return res.status(400).json({ error: 'Stripe nie jest skonfigurowany' });
+  }
+
+  let event;
+  try {
+    const Stripe = require('stripe');
+    const stripe = Stripe(stripeKey);
+    const sig = req.headers['stripe-signature'] || '';
+    event = stripe.webhooks.constructEvent(req.body, sig, stripeWebhookSecret);
+  } catch (err) {
+    console.error('[stripe-webhook] signature verification failed:', err.message);
+    return res.status(400).json({ error: `Stripe webhook error: ${err.message}` });
+  }
+
+  try {
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object;
+      const paymentId = session.metadata && session.metadata.payment_id;
+      if (paymentId) {
+        const updated = await db.query(
+          `UPDATE payments SET status = 'paid', external_ref = $1, paid_at = NOW(), updated_at = NOW()
+           WHERE id = $2 AND status != 'paid'
+           RETURNING order_id`,
+          [session.id, paymentId]
+        );
+        if (updated.rows[0]) {
+          await db.query(
+            `UPDATE orders SET status = 'paid', updated_at = NOW()
+             WHERE id = $1 AND status IN ('pending','created')`,
+            [updated.rows[0].order_id]
+          );
+        }
+      }
+    }
+
+    if (event.type === 'checkout.session.expired' || event.type === 'payment_intent.payment_failed') {
+      const session = event.data.object;
+      const paymentId = session.metadata && session.metadata.payment_id;
+      if (paymentId) {
+        const updated = await db.query(
+          `UPDATE payments SET status = 'failed', updated_at = NOW()
+           WHERE id = $1 AND status = 'pending'
+           RETURNING order_id`,
+          [paymentId]
+        );
+        if (updated.rows[0]) {
+          await db.query(
+            `UPDATE orders SET status = 'payment_failed', updated_at = NOW()
+             WHERE id = $1 AND status IN ('pending','created')`,
+            [updated.rows[0].order_id]
+          );
+        }
+      }
+    }
+
+    return res.json({ received: true });
+  } catch (err) {
+    console.error('[stripe-webhook] processing error:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera' });
+  }
+}
+
+module.exports.handleStripeWebhook = handleStripeWebhook;

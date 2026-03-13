@@ -72,12 +72,42 @@
     .btn-earn-primary{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:0 36px;border-radius:18px;font-weight:800;font-size:18px;border:0;cursor:pointer;background:linear-gradient(135deg,var(--accent-green-dark),var(--accent-blue-dark));color:#fff;box-shadow:0 8px 32px rgba(34,197,94,.35);text-decoration:none;transition:transform .15s ease,box-shadow .15s ease}
     .btn-earn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(34,197,94,.45)}
 
+    /* Promo tiers section */
+    .promo-section{padding:10px 0 50px}
+    .promo-section h2{font-size:clamp(24px,4vw,38px);margin:0 0 8px}
+    .promo-section .lead{color:var(--muted);margin:0 0 28px;font-size:15px}
+    .promo-tiers-grid{display:grid;gap:18px;grid-template-columns:repeat(3,1fr)}
+    .promo-tier-card{border-radius:20px;padding:24px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+    .promo-tier-card.tier-gold{background:linear-gradient(135deg,rgba(251,191,36,.18),rgba(245,158,11,.08));border:1.5px solid rgba(251,191,36,.4)}
+    .promo-tier-card.tier-silver{background:linear-gradient(135deg,rgba(148,163,184,.15),rgba(100,116,139,.08));border:1.5px solid rgba(148,163,184,.35)}
+    .promo-tier-card.tier-bronze{background:linear-gradient(135deg,rgba(217,119,6,.15),rgba(180,83,9,.08));border:1.5px solid rgba(217,119,6,.3)}
+    .promo-tier-card.tier-standard{background:var(--card);border:1px solid var(--stroke)}
+    .promo-tier-badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:4px 10px;border-radius:20px;margin-bottom:12px}
+    .tier-gold .promo-tier-badge{background:rgba(251,191,36,.25);color:#fbbf24}
+    .tier-silver .promo-tier-badge{background:rgba(148,163,184,.25);color:#94a3b8}
+    .tier-bronze .promo-tier-badge{background:rgba(217,119,6,.25);color:#d97706}
+    .tier-standard .promo-tier-badge{background:rgba(99,102,241,.2);color:#818cf8}
+    .promo-tier-months{font-size:48px;font-weight:900;line-height:1;margin:0 0 4px}
+    .tier-gold .promo-tier-months{color:#fbbf24}
+    .tier-silver .promo-tier-months{color:#94a3b8}
+    .tier-bronze .promo-tier-months{color:#d97706}
+    .tier-standard .promo-tier-months{color:#818cf8;font-size:32px}
+    .promo-tier-label{color:var(--muted);font-size:14px;margin-bottom:16px}
+    .promo-tier-slots{display:flex;align-items:center;gap:8px;font-size:14px}
+    .promo-slots-dots{display:flex;gap:4px}
+    .promo-slot-dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+    .promo-slot-dot.empty{background:var(--stroke)}
+    .promo-slots-text{color:var(--muted);font-size:13px}
+    .promo-tier-card.sold-out{opacity:.55}
+    .sold-out-badge{position:absolute;top:14px;right:14px;background:rgba(239,68,68,.2);color:#f87171;font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;letter-spacing:.4px}
+
     /* Responsive */
     @media(max-width:900px){
       .earn-grid{grid-template-columns:repeat(2,1fr)}
       .examples-grid{grid-template-columns:repeat(2,1fr)}
       .calc-fields{grid-template-columns:1fr}
       .process-steps{gap:0}
+      .promo-tiers-grid{grid-template-columns:repeat(2,1fr)}
     }
     @media(max-width:600px){
       .earn-grid{grid-template-columns:1fr}
@@ -87,6 +117,7 @@
       .process-arrow{display:none}
       .process-steps{flex-direction:column;align-items:center;gap:16px}
       .process-step{flex:0 0 auto;width:100%;max-width:280px}
+      .promo-tiers-grid{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -326,6 +357,48 @@
       </div>
     </section>
 
+    <!-- ══════════════ PROMO TIERS ══════════════ -->
+    <section class="promo-section" id="promo-tiers">
+      <div class="wrap">
+        <div class="section-head">
+          <span class="eyebrow">🎁 Oferta dla pierwszych sprzedawców</span>
+          <h2>Dołącz teraz i zyskaj miesiące za darmo</h2>
+          <p class="lead">Pierwsi sprzedawcy na platformie Qualitet otrzymują subskrypcję bez opłat. Liczba miejsc jest ograniczona!</p>
+        </div>
+        <div class="promo-tiers-grid" id="promo-tiers-grid">
+          <!-- filled dynamically -->
+          <div class="promo-tier-card tier-gold">
+            <span class="promo-tier-badge">🥇 Pierwsze 10 osób</span>
+            <div class="promo-tier-months">12</div>
+            <div class="promo-tier-label">miesięcy <strong>gratis</strong></div>
+            <div class="promo-tier-slots">
+              <div class="promo-slots-dots" id="dots-12"></div>
+              <span class="promo-slots-text" id="slots-12">Ładowanie…</span>
+            </div>
+          </div>
+          <div class="promo-tier-card tier-silver">
+            <span class="promo-tier-badge">🥈 Kolejne 10 osób</span>
+            <div class="promo-tier-months">6</div>
+            <div class="promo-tier-label">miesięcy <strong>gratis</strong></div>
+            <div class="promo-tier-slots">
+              <div class="promo-slots-dots" id="dots-6"></div>
+              <span class="promo-slots-text" id="slots-6">Ładowanie…</span>
+            </div>
+          </div>
+          <div class="promo-tier-card tier-bronze">
+            <span class="promo-tier-badge">🥉 Kolejne 10 osób</span>
+            <div class="promo-tier-months">3</div>
+            <div class="promo-tier-label">miesiące <strong>gratis</strong></div>
+            <div class="promo-tier-slots">
+              <div class="promo-slots-dots" id="dots-3"></div>
+              <span class="promo-slots-text" id="slots-3">Ładowanie…</span>
+            </div>
+          </div>
+        </div>
+        <p style="color:var(--muted);font-size:13px;text-align:center;margin-top:18px">Po wyczerpaniu miejsc promocyjnych obowiązuje standardowy okres próbny 14 dni.</p>
+      </div>
+    </section>
+
     <!-- ══════════════ CTA ══════════════ -->
     <section class="earn-cta-section">
       <div class="wrap">
@@ -438,6 +511,66 @@
       salesInput.addEventListener('input', update);
       marginInput.addEventListener('input', update);
       update();
+    }());
+  </script>
+  <script>
+    // Load live promo slot availability from the API
+    (function () {
+      var API_BASE = (window.QMApi && window.QMApi.baseUrl) || '/api';
+
+      var TIER_DOTS = { 12: 'dots-12', 6: 'dots-6', 3: 'dots-3' };
+      var TIER_TEXT = { 12: 'slots-12', 6: 'slots-6', 3: 'slots-3' };
+      var TIER_TOTAL = { 12: 10, 6: 10, 3: 10 };
+      var TIER_CARDS = { 12: 0, 6: 1, 3: 2 };
+
+      function renderDots(dotsEl, slotsLeft, total) {
+        dotsEl.innerHTML = '';
+        for (var i = 0; i < total; i++) {
+          var dot = document.createElement('span');
+          dot.className = 'promo-slot-dot' + (i < slotsLeft ? '' : ' empty');
+          dotsEl.appendChild(dot);
+        }
+      }
+
+      function loadPromoSlots() {
+        fetch(API_BASE + '/promo/slots')
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (data) {
+            if (!data || !data.slots) return;
+            var cards = document.querySelectorAll('.promo-tier-card');
+            data.slots.forEach(function (slot) {
+              var months = slot.bonusMonths;
+              var dotsEl = document.getElementById(TIER_DOTS[months]);
+              var textEl = document.getElementById(TIER_TEXT[months]);
+              if (!dotsEl || !textEl) return;
+              var total = TIER_TOTAL[months] || 10;
+              var left = slot.slotsLeft;
+              renderDots(dotsEl, left, total);
+              if (left === 0) {
+                textEl.textContent = 'Wszystkie miejsca zajęte';
+                var cardIdx = TIER_CARDS[months];
+                if (cards[cardIdx]) {
+                  cards[cardIdx].classList.add('sold-out');
+                  var badge = document.createElement('span');
+                  badge.className = 'sold-out-badge';
+                  badge.textContent = 'ZAJĘTE';
+                  cards[cardIdx].appendChild(badge);
+                }
+              } else {
+                textEl.textContent = left + ' ' + (left === 1 ? 'miejsce' : left < 5 ? 'miejsca' : 'miejsc') + ' dostępnych';
+              }
+            });
+          })
+          .catch(function () {
+            // Silent fail – static HTML labels remain visible
+            [12, 6, 3].forEach(function (m) {
+              var el = document.getElementById(TIER_TEXT[m]);
+              if (el) el.textContent = 'Sprawdź dostępność po rejestracji';
+            });
+          });
+      }
+
+      loadPromoSlots();
     }());
   </script>
 </body>

@@ -233,6 +233,10 @@
     const marginInput = form.querySelector('input[name="storeMargin"]');
     const planSelect = form.querySelector('select[name="storePlan"]');
     const trialSelect = form.querySelector('select[name="storeTrial"]');
+    const facebookInput = form.querySelector('input[name="facebookUrl"]');
+    const instagramInput = form.querySelector('input[name="instagramUrl"]');
+    const tiktokInput = form.querySelector('input[name="tiktokUrl"]');
+    const youtubeInput = form.querySelector('input[name="youtubeUrl"]');
 
     const name = nameInput ? nameInput.value.trim() : '';
     const slug = manager.normalizeSlug(slugInput && slugInput.value ? slugInput.value : name);
@@ -253,7 +257,11 @@
       theme: themeSelect ? themeSelect.value : DEFAULTS.theme,
       margin: normalizedMargin,
       plan: planSelect ? planSelect.value : DEFAULTS.plan,
-      trial: trialSelect ? trialSelect.value === 'true' : DEFAULTS.trial
+      trial: trialSelect ? trialSelect.value === 'true' : DEFAULTS.trial,
+      facebookUrl: facebookInput ? facebookInput.value.trim() : '',
+      instagramUrl: instagramInput ? instagramInput.value.trim() : '',
+      tiktokUrl: tiktokInput ? tiktokInput.value.trim() : '',
+      youtubeUrl: youtubeInput ? youtubeInput.value.trim() : '',
     };
   }
 
@@ -275,7 +283,11 @@
       storeTheme: store.theme,
       storeMargin: store.margin,
       storePlan: store.plan,
-      storeTrial: store.trial ? 'true' : 'false'
+      storeTrial: store.trial ? 'true' : 'false',
+      facebookUrl: store.facebookUrl,
+      instagramUrl: store.instagramUrl,
+      tiktokUrl: store.tiktokUrl,
+      youtubeUrl: store.youtubeUrl,
     };
     Object.entries(fields).forEach(([name, value]) => {
       if(value === undefined || value === null){

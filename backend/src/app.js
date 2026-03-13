@@ -18,7 +18,8 @@ const suppliersRouter = require('./routes/suppliers');
 const categoriesRouter = require('./routes/categories');
 const cartRouter = require('./routes/cart');
 const adminRouter = require('./routes/admin');
-const paymentsRouter = require('./routes/payments');
+const paymentsModule = require('./routes/payments');
+const paymentsRouter = paymentsModule;
 const shopProductsRouter = require('./routes/shop-products');
 const myRouter = require('./routes/my');
 const storeRouter = require('./routes/store');
@@ -51,6 +52,14 @@ app.use(
     },
     credentials: true,
   })
+);
+
+// ─── Stripe webhook – must be registered BEFORE json body-parser ───────────────
+// Stripe requires the raw (un-parsed) request body for signature verification.
+app.post(
+  '/api/payments/stripe-webhook',
+  express.raw({ type: 'application/json' }),
+  paymentsModule.handleStripeWebhook
 );
 
 // ─── Body parsing ──────────────────────────────────────────────────────────────
@@ -153,6 +162,27 @@ app.get('/api/readiness', async (_req, res) => {
     list:         'GET  /api/analytics',
   };
 
+  // Email system
+  checks.email_system = {
+    configured: Boolean(process.env.SMTP_HOST),
+    broadcast:  'POST /api/admin/broadcast',
+    provider:   process.env.SMTP_HOST ? `${process.env.SMTP_HOST}:${process.env.SMTP_PORT || 587}` : 'not configured (set SMTP_HOST)',
+  };
+
+  // Payment providers
+  checks.payment_providers = {
+    stripe:    Boolean(process.env.STRIPE_SECRET_KEY) ? 'configured' : 'not configured (set STRIPE_SECRET_KEY)',
+    p24:       Boolean(process.env.P24_MERCHANT_ID)   ? 'configured' : 'not configured (set P24_MERCHANT_ID)',
+    transfer:  'always available',
+    blik:      'always available',
+    stripe_webhook: 'POST /api/payments/stripe-webhook',
+  };
+
+  // Promo slots
+  checks.promo_slots = {
+    slots_endpoint: 'GET /api/promo/slots',
+  };
+
   const status = allOk ? 'ready' : 'degraded';
   return res.status(allOk ? 200 : 503).json({
     status,
@@ -184,6 +214,20 @@ app.use('/api/referral', referralRouter);
 app.use('/api/referrals', referralsRouter);
 app.use('/api/scripts', scriptsRouter);
 app.use('/api/analytics', analyticsRouter);
+
+// ─── GET /api/promo/slots – public promotional tier availability ───────────────
+// Used by the landing page to show how many free-month slots remain.
+const { getPromoSlots } = require('./helpers/promo');
+app.get('/api/promo/slots', async (_req, res) => {
+  try {
+    const result = await db.query(`SELECT COUNT(*) FROM users WHERE role = 'seller'`);
+    const totalSellers = parseInt(result.rows[0].count, 10);
+    return res.json({ slots: getPromoSlots(totalSellers), totalSellers });
+  } catch (_err) {
+    // Return static data if DB is unavailable
+    return res.json({ slots: getPromoSlots(0), totalSellers: 0 });
+  }
+});
 
 // ─── 404 ───────────────────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'Nie znaleziono zasobu' }));

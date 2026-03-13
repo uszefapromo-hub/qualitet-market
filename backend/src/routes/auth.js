@@ -21,6 +21,7 @@ const { PLAN_CONFIG } = require('./subscriptions');
 const { nameToSlug, uniqueSlug } = require('../helpers/slug');
 const { getPromoTier } = require('../helpers/promo');
 const { ensureReferralCode } = require('./referral');
+const { sendWelcomeEmail } = require('../services/email');
 
 const router = express.Router();
 
@@ -89,6 +90,14 @@ router.post(
         // Auto-create referral code for every new seller (non-blocking; failure is safe to ignore)
         ensureReferralCode(id).catch((err) => console.error('auto referral code error:', err.message));
       }
+
+      // Send welcome email (fire-and-forget)
+      sendWelcomeEmail({
+        to:         email,
+        name,
+        promoLabel: promoTier.label,
+        shopUrl:    shop ? `${process.env.APP_URL || 'https://uszefaqualitet.pl'}/dashboard.html` : undefined,
+      }).catch((err) => console.error('welcome email error:', err.message));
 
       // ── Record referral use (non-blocking) ────────────────────────────────
       if (ref_code) {

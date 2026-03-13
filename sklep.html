@@ -590,6 +590,13 @@
           </div>
         </div>
       </section>
+
+      <!-- Social media section – shown only when the store has social links configured -->
+      <section class="panel-card shop-social" id="shop-social" hidden>
+        <h2>Social Media</h2>
+        <p class="hint">Obserwuj nas i bądź na bieżąco z nowościami.</p>
+        <div class="social-links-row" id="social-links-row"></div>
+      </section>
       </div>
 
       <aside class="hero-side hero-side-right">
@@ -721,5 +728,55 @@
   <script src="stores.js" defer></script>
   <script src="shop.js" defer></script>
   <script src="js/cart.js" defer></script>
+  <script>
+    // Render social media links when store data is available
+    (function () {
+      var SOCIAL_CONFIG = [
+        {
+          key: 'facebook_url', label: 'Facebook', cls: 'facebook',
+          icon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>',
+        },
+        {
+          key: 'instagram_url', label: 'Instagram', cls: 'instagram',
+          icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>',
+        },
+        {
+          key: 'tiktok_url', label: 'TikTok', cls: 'tiktok',
+          icon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.37 6.37 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.95a8.16 8.16 0 0 0 4.78 1.52V7.01a4.85 4.85 0 0 1-1.01-.32z"/></svg>',
+        },
+        {
+          key: 'youtube_url', label: 'YouTube', cls: 'youtube',
+          icon: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-1.96C18.88 4 12 4 12 4s-6.88 0-8.6.46A2.78 2.78 0 0 0 1.46 6.42 29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58 2.78 2.78 0 0 0 1.94 1.96C5.12 20 12 20 12 20s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-1.96A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon fill="#0f172a" points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg>',
+        },
+      ];
+
+      function renderSocialLinks(store) {
+        var section = document.getElementById('shop-social');
+        var row = document.getElementById('social-links-row');
+        if (!section || !row) return;
+        var links = SOCIAL_CONFIG.filter(function (s) { return store[s.key]; });
+        if (!links.length) return;
+        row.innerHTML = links.map(function (s) {
+          return '<a class="social-link-btn ' + s.cls + '" href="' + store[s.key] + '" target="_blank" rel="noopener noreferrer">' +
+            s.icon + '<span>' + s.label + '</span></a>';
+        }).join('');
+        section.hidden = false;
+      }
+
+      // Listen for store data loaded by app.js / shop.js
+      document.addEventListener('store:loaded', function (e) {
+        if (e.detail && e.detail.store) renderSocialLinks(e.detail.store);
+      });
+
+      // Also poll for window.currentStore set by shop.js
+      var _pollSocial = setInterval(function () {
+        if (window.currentStore) {
+          renderSocialLinks(window.currentStore);
+          clearInterval(_pollSocial);
+        }
+      }, 500);
+      setTimeout(function () { clearInterval(_pollSocial); }, 8000);
+    }());
+  </script>
 </body>
 </html>

@@ -8,6 +8,7 @@ const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate, sanitizeText } = require('../middleware/validate');
 const { auditLog } = require('../helpers/audit');
+const { sendOrderConfirmationEmail, sendOrderStatusEmail } = require('../services/email');
 
 const router = express.Router();
 
@@ -197,6 +198,21 @@ router.post(
         payload: { store_id, total: newOrder.rows[0].total },
         ipAddress: req.ip,
       });
+
+      // Send confirmation email to buyer (fire-and-forget)
+      db.query('SELECT email, name FROM users WHERE id = $1', [req.user.id])
+        .then(({ rows }) => {
+          if (!rows[0]) return;
+          sendOrderConfirmationEmail({
+            to:      rows[0].email,
+            name:    rows[0].name,
+            orderId: createdOrderId,
+            total:   newOrder.rows[0].total,
+            items:   newItems.rows,
+          });
+        })
+        .catch((err) => console.error('order email lookup error:', err.message));
+
       return res.status(201).json({ ...newOrder.rows[0], items: newItems.rows });
     } catch (err) {
       console.error('create order error:', err.message);
@@ -230,6 +246,23 @@ router.patch(
         'UPDATE orders SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
         [req.body.status, req.params.id]
       );
+
+      // Notify buyer of status change (fire-and-forget)
+      const updatedOrder = result.rows[0];
+      if (updatedOrder && updatedOrder.buyer_id) {
+        db.query('SELECT email, name FROM users WHERE id = $1', [updatedOrder.buyer_id])
+          .then(({ rows }) => {
+            if (!rows[0]) return;
+            sendOrderStatusEmail({
+              to:      rows[0].email,
+              name:    rows[0].name,
+              orderId: updatedOrder.id,
+              status:  req.body.status,
+            });
+          })
+          .catch((err) => console.error('order status email error:', err.message));
+      }
+
       return res.json(result.rows[0]);
     } catch (err) {
       console.error('update order status error:', err.message);

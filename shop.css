@@ -7,3 +7,31 @@ body.store-shop{
 body.store-shop .product-card .price{
   font-size:var(--price-font-size);
 }
+
+/* Social media links in shop profile */
+.shop-social .social-links-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  margin-top:8px;
+}
+.social-link-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 20px;
+  border-radius:12px;
+  font-weight:600;
+  font-size:14px;
+  text-decoration:none;
+  transition:transform .15s ease, box-shadow .15s ease;
+  border:1px solid var(--stroke);
+  background:var(--card);
+  color:#e2e8f0;
+}
+.social-link-btn:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.social-link-btn.facebook{background:rgba(24,119,242,.15);border-color:rgba(24,119,242,.4);color:#4a9eff}
+.social-link-btn.instagram{background:rgba(225,48,108,.12);border-color:rgba(225,48,108,.35);color:#f06292}
+.social-link-btn.tiktok{background:rgba(0,0,0,.3);border-color:rgba(255,255,255,.15);color:#e2e8f0}
+.social-link-btn.youtube{background:rgba(255,0,0,.12);border-color:rgba(255,0,0,.35);color:#ff6b6b}
+.social-link-btn svg{width:18px;height:18px;flex-shrink:0}

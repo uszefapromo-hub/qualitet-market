@@ -151,6 +151,18 @@ router.put(
     body('description').optional().trim(),
     body('margin').optional().isFloat({ min: 0, max: 100 }),
     body('status').optional().isIn(['active', 'inactive', 'suspended']),
+    body('facebook_url').optional().trim().isURL({ require_protocol: true }).withMessage('Nieprawidłowy adres URL Facebook'),
+    body('instagram_url').optional().trim().isURL({ require_protocol: true }).withMessage('Nieprawidłowy adres URL Instagram'),
+    body('tiktok_url').optional().trim().isURL({ require_protocol: true }).withMessage('Nieprawidłowy adres URL TikTok'),
+    body('youtube_url').optional().trim().isURL({ require_protocol: true }).withMessage('Nieprawidłowy adres URL YouTube'),
+    body('contact_email').optional().isEmail().normalizeEmail(),
+    body('contact_phone').optional().trim(),
+    body('primary_color').optional().trim().matches(/^#[0-9a-fA-F]{3,6}$/).withMessage('Nieprawidłowy kolor hex'),
+    body('accent_color').optional().trim().matches(/^#[0-9a-fA-F]{3,6}$/).withMessage('Nieprawidłowy kolor hex'),
+    body('bg_color').optional().trim().matches(/^#[0-9a-fA-F]{3,6}$/).withMessage('Nieprawidłowy kolor hex'),
+    body('theme').optional().isIn(['modern', 'premium', 'market']),
+    body('logo_url').optional().trim(),
+    body('delivery_info').optional().trim(),
   ],
   validate,
   async (req, res) => {
@@ -164,17 +176,54 @@ router.put(
         return res.status(403).json({ error: 'Brak uprawnień' });
       }
 
-      const { name, description, margin, status } = req.body;
+      const {
+        name, description, margin, status,
+        facebook_url, instagram_url, tiktok_url, youtube_url,
+        contact_email, contact_phone,
+        primary_color, accent_color, bg_color, theme,
+        logo_url, delivery_info,
+      } = req.body;
+
       const result = await db.query(
         `UPDATE stores SET
-           name        = COALESCE($1, name),
-           description = COALESCE($2, description),
-           margin      = COALESCE($3, margin),
-           status      = COALESCE($4, status),
-           updated_at  = NOW()
-         WHERE id = $5
+           name          = COALESCE($1, name),
+           description   = COALESCE($2, description),
+           margin        = COALESCE($3, margin),
+           status        = COALESCE($4, status),
+           facebook_url  = COALESCE($5, facebook_url),
+           instagram_url = COALESCE($6, instagram_url),
+           tiktok_url    = COALESCE($7, tiktok_url),
+           youtube_url   = COALESCE($8, youtube_url),
+           contact_email = COALESCE($9, contact_email),
+           contact_phone = COALESCE($10, contact_phone),
+           primary_color = COALESCE($11, primary_color),
+           accent_color  = COALESCE($12, accent_color),
+           bg_color      = COALESCE($13, bg_color),
+           theme         = COALESCE($14, theme),
+           logo_url      = COALESCE($15, logo_url),
+           delivery_info = COALESCE($16, delivery_info),
+           updated_at    = NOW()
+         WHERE id = $17
          RETURNING *`,
-        [name || null, description !== undefined ? description : null, margin !== undefined ? margin : null, status || null, req.params.id]
+        [
+          name || null,
+          description !== undefined ? description : null,
+          margin !== undefined ? margin : null,
+          status || null,
+          facebook_url || null,
+          instagram_url || null,
+          tiktok_url || null,
+          youtube_url || null,
+          contact_email || null,
+          contact_phone || null,
+          primary_color || null,
+          accent_color || null,
+          bg_color || null,
+          theme || null,
+          logo_url || null,
+          delivery_info || null,
+          req.params.id,
+        ]
       );
       return res.json(result.rows[0]);
     } catch (err) {

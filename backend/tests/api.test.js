@@ -4345,3 +4345,104 @@ describe('GET /api/readiness – new subsystem checks', () => {
     expect(res.body.checks).toHaveProperty('analytics_system');
   });
 });
+
+// ─── POST /api/admin/broadcast ────────────────────────────────────────────────
+
+describe('POST /api/admin/broadcast', () => {
+  beforeEach(() => setupDbMock());
+
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post('/api/admin/broadcast')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ subject: 'Test', message: 'Hello' });
+    expect(res.status).toBe(403);
+  });
+
+  it('queues emails for all users', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [
+        { id: SELLER_ID, email: 'seller@test.pl', name: 'Seller' },
+        { id: ADMIN_ID,  email: 'admin@test.pl',  name: 'Admin'  },
+      ],
+    });
+    const res = await request(app)
+      .post('/api/admin/broadcast')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ subject: 'Ważna wiadomość', message: 'Witajcie na platformie!' });
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.queued).toBe(2);
+  });
+
+  it('validates required fields', async () => {
+    const res = await request(app)
+      .post('/api/admin/broadcast')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ subject: '' });
+    expect(res.status).toBe(422);
+  });
+});
+
+// ─── GET /api/promo/slots ─────────────────────────────────────────────────────
+
+describe('GET /api/promo/slots', () => {
+  beforeEach(() => setupDbMock());
+
+  it('returns promo slots without authentication', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ count: '5' }] }); // seller count
+    const res = await request(app).get('/api/promo/slots');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('slots');
+    expect(Array.isArray(res.body.slots)).toBe(true);
+    expect(res.body.slots.length).toBeGreaterThan(0);
+  });
+
+  it('returns correct slots for 5 sellers (tier1=5 left)', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ count: '5' }] });
+    const res = await request(app).get('/api/promo/slots');
+    const tier12 = res.body.slots.find((s) => s.bonusMonths === 12);
+    expect(tier12).toBeDefined();
+    expect(tier12.slotsLeft).toBe(5);
+  });
+
+  it('returns 0 slots for tier1 when 10+ sellers registered', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ count: '10' }] });
+    const res = await request(app).get('/api/promo/slots');
+    const tier12 = res.body.slots.find((s) => s.bonusMonths === 12);
+    expect(tier12.slotsLeft).toBe(0);
+  });
+
+  it('falls back gracefully on DB error', async () => {
+    db.query.mockRejectedValueOnce(new Error('DB unavailable'));
+    const res = await request(app).get('/api/promo/slots');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('slots');
+  });
+});
+
+// ─── PUT /api/stores/:id – social media fields ────────────────────────────────
+
+describe('PUT /api/stores/:id – social media', () => {
+  beforeEach(() => setupDbMock());
+
+  it('updates social media URLs', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] }) // SELECT owner_id
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID, facebook_url: 'https://facebook.com/test', instagram_url: null }] });
+    const res = await request(app)
+      .put(`/api/stores/${STORE_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ facebook_url: 'https://facebook.com/test' });
+    expect(res.status).toBe(200);
+    expect(res.body.facebook_url).toBe('https://facebook.com/test');
+  });
+
+  it('rejects invalid URL for facebook_url', async () => {
+    const res = await request(app)
+      .put(`/api/stores/${STORE_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ facebook_url: 'not-a-url' });
+    expect(res.status).toBe(422);
+  });
+});
