@@ -5354,3 +5354,205 @@ describe('GET /api/affiliate/admin/stats', () => {
     expect(res.body).toHaveProperty('pending_withdrawal_amount', 150);
   });
 });
+
+// ─── AI Module ─────────────────────────────────────────────────────────────────
+
+const AI_CONV_ID = 'c1000000-0000-4000-8000-000000000001';
+
+describe('POST /api/ai/chat', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/ai/chat').send({ message: 'Hello' });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects missing message', async () => {
+    const res = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({});
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
+  });
+
+  it('creates new conversation and returns assistant reply', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: AI_CONV_ID, title: 'Test', context_type: null, context_id: null, created_at: new Date(), updated_at: new Date() }] })  // createConversation
+      .mockResolvedValueOnce({ rows: [{ id: 'msg-1', role: 'user', content: 'Hello', tokens_used: null, created_at: new Date() }] })  // addMessage (user)
+      .mockResolvedValueOnce({ rows: [{ id: 'msg-1', role: 'user', content: 'Hello', tokens_used: null, created_at: new Date() }] })  // listMessages
+      .mockResolvedValueOnce({ rows: [{ id: 'msg-2', role: 'assistant', content: '[AI mock] Odpowiedź na: "Hello"', tokens_used: 0, created_at: new Date() }] })  // addMessage (assistant)
+      .mockResolvedValueOnce({ rows: [] });  // touchConversation
+
+    const res = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ message: 'Hello' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('conversationId');
+    expect(res.body).toHaveProperty('message');
+  });
+
+  it('continues existing conversation', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: AI_CONV_ID, user_id: SELLER_ID, title: 'Test', context_type: null, context_id: null }] })  // getConversation
+      .mockResolvedValueOnce({ rows: [{ id: 'msg-u', role: 'user', content: 'Follow up', tokens_used: null, created_at: new Date() }] })  // addMessage user
+      .mockResolvedValueOnce({ rows: [{ id: 'msg-u', role: 'user', content: 'Follow up', tokens_used: null, created_at: new Date() }] })  // listMessages
+      .mockResolvedValueOnce({ rows: [{ id: 'msg-a', role: 'assistant', content: '[AI mock] Odpowiedź na: "Follow up"', tokens_used: 0, created_at: new Date() }] })  // addMessage assistant
+      .mockResolvedValueOnce({ rows: [] });  // touchConversation
+
+    const res = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ message: 'Follow up', conversation_id: AI_CONV_ID });
+
+    expect(res.status).toBe(200);
+    expect(res.body.conversationId).toBe(AI_CONV_ID);
+  });
+
+  it('returns 404 for unknown conversation_id', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });  // getConversation returns nothing
+
+    const res = await request(app)
+      .post('/api/ai/chat')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ message: 'Hello', conversation_id: AI_CONV_ID });
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('GET /api/ai/conversations', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/ai/conversations');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns list of conversations', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [
+        { id: AI_CONV_ID, title: 'Rozmowa 1', context_type: null, context_id: null, created_at: new Date(), updated_at: new Date() },
+      ],
+    });
+
+    const res = await request(app)
+      .get('/api/ai/conversations')
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('conversations');
+    expect(Array.isArray(res.body.conversations)).toBe(true);
+  });
+});
+
+describe('GET /api/ai/conversations/:id', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get(`/api/ai/conversations/${AI_CONV_ID}`);
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 for unknown conversation', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .get(`/api/ai/conversations/${AI_CONV_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('returns conversation with messages', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: AI_CONV_ID, user_id: SELLER_ID, title: 'T', context_type: null, context_id: null }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'msg-1', role: 'user', content: 'Hi', tokens_used: null, created_at: new Date() }] });
+
+    const res = await request(app)
+      .get(`/api/ai/conversations/${AI_CONV_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('conversation');
+    expect(res.body).toHaveProperty('messages');
+  });
+});
+
+describe('DELETE /api/ai/conversations/:id', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).delete(`/api/ai/conversations/${AI_CONV_ID}`);
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 when conversation not found', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .delete(`/api/ai/conversations/${AI_CONV_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('deletes a conversation', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: AI_CONV_ID }] });
+
+    const res = await request(app)
+      .delete(`/api/ai/conversations/${AI_CONV_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+});
+
+describe('POST /api/ai/product-description', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/ai/product-description').send({ name: 'Foobar' });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects missing name', async () => {
+    const res = await request(app)
+      .post('/api/ai/product-description')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({});
+    expect(res.status).toBe(400);
+  });
+
+  it('returns generated description', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: 'log-1' }] });  // logGeneration
+
+    const res = await request(app)
+      .post('/api/ai/product-description')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ name: 'Super kamera sportowa', category: 'Elektronika', keywords: 'wodoodporna, 4K' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('description');
+  });
+});
+
+describe('POST /api/ai/store-description', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/ai/store-description').send({ store_name: 'MójSklep' });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects missing store_name', async () => {
+    const res = await request(app)
+      .post('/api/ai/store-description')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({});
+    expect(res.status).toBe(400);
+  });
+
+  it('returns generated store description', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: 'log-2' }] });  // logGeneration
+
+    const res = await request(app)
+      .post('/api/ai/store-description')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_name: 'Qualitet Fashion', category: 'Moda', tone: 'profesjonalny' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('description');
+  });
+});

@@ -27,6 +27,8 @@ const referralsRouter = require('./routes/referrals');
 const scriptsRouter = require('./routes/scripts');
 const analyticsRouter = require('./routes/analytics');
 const affiliateRouter = require('./routes/affiliate');
+const aiRouter = require('./modules/ai/routes');
+const errorHandler = require('./middleware/errorHandler');
 const { importSupplierProducts } = require('./services/supplier-import');
 const { getPromoSlots } = require('./helpers/promo');
 const db = require('./config/database');
@@ -204,6 +206,15 @@ app.get('/api/readiness', async (_req, res) => {
     list: 'GET /api/subscriptions/plans',
   };
 
+  // AI assistant system
+  checks.ai_system = {
+    configured: Boolean(process.env.OPENAI_API_KEY),
+    chat:                   'POST /api/ai/chat',
+    product_description:    'POST /api/ai/product-description',
+    store_description:      'POST /api/ai/store-description',
+    conversations:          'GET  /api/ai/conversations',
+  };
+
   const status = allOk ? 'ready' : 'degraded';
   return res.status(allOk ? 200 : 503).json({
     status,
@@ -236,6 +247,7 @@ app.use('/api/referrals', referralsRouter);
 app.use('/api/scripts', scriptsRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/affiliate', affiliateRouter);
+app.use('/api/ai', aiRouter);
 
 // ─── Public promo slots feed ───────────────────────────────────────────────────
 // Shows how many early-access slots remain at each promotional tier.
@@ -275,12 +287,7 @@ app.get('/api/announcements', async (req, res) => {
 app.use((_req, res) => res.status(404).json({ error: 'Nie znaleziono zasobu' }));
 
 // ─── Global error handler ──────────────────────────────────────────────────────
-// eslint-disable-next-line no-unused-vars
-app.use((err, _req, res, _next) => {
-  console.error('Unhandled error:', err.message);
-  const status = err.status || 500;
-  res.status(status).json({ error: err.message || 'Wewnętrzny błąd serwera' });
-});
+app.use(errorHandler);
 
 // ─── Supplier sync scheduler – every 12 hours ─────────────────────────────────
 // Disabled in test environment to avoid interference with mocked DB queries.
