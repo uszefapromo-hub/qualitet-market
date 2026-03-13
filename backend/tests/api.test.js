@@ -7185,3 +7185,350 @@ describe('GET /api/referrals/invites', () => {
     expect(res.body.limit).toBe(10);
   });
 });
+
+// ─── Reputation & Rating System ───────────────────────────────────────────────
+
+const REP_SELLER_ID  = 'f0000000-0000-4000-8000-000000000001';
+const REP_BUYER_ID   = 'f0000000-0000-4000-8000-000000000002';
+const REP_ORDER_ID   = 'f0000000-0000-4000-8000-000000000003';
+const REP_PRODUCT_ID = 'f0000000-0000-4000-8000-000000000004';
+
+// ── POST /api/reputation/sellers/:sellerId/rate ───────────────────────────────
+
+describe('POST /api/reputation/sellers/:sellerId/rate', () => {
+  let buyerToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    buyerToken = signToken({ id: REP_BUYER_ID, email: 'buyer@test.pl', role: 'buyer' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post(`/api/reputation/sellers/${REP_SELLER_ID}/rate`)
+      .send({ order_id: REP_ORDER_ID, rating: 5 });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects invalid rating value', async () => {
+    const res = await request(app)
+      .post(`/api/reputation/sellers/${REP_SELLER_ID}/rate`)
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ order_id: REP_ORDER_ID, rating: 6 });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects missing order_id', async () => {
+    const res = await request(app)
+      .post(`/api/reputation/sellers/${REP_SELLER_ID}/rate`)
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ rating: 4 });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 404 when order does not exist', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // order lookup
+    const res = await request(app)
+      .post(`/api/reputation/sellers/${REP_SELLER_ID}/rate`)
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ order_id: REP_ORDER_ID, rating: 5 });
+    expect(res.status).toBe(404);
+  });
+
+  it('rejects when order belongs to different buyer', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: REP_ORDER_ID, buyer_id: REP_SELLER_ID, seller_id: REP_SELLER_ID }],
+    });
+    const res = await request(app)
+      .post(`/api/reputation/sellers/${REP_SELLER_ID}/rate`)
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ order_id: REP_ORDER_ID, rating: 5 });
+    expect(res.status).toBe(403);
+  });
+
+  it('creates a seller rating successfully', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: REP_ORDER_ID, buyer_id: REP_BUYER_ID, seller_id: REP_SELLER_ID }] }) // order lookup
+      .mockResolvedValueOnce({ rows: [{ id: 'rating-1', order_id: REP_ORDER_ID, seller_id: REP_SELLER_ID, buyer_id: REP_BUYER_ID, rating: 5, comment: 'Świetny sprzedawca', created_at: new Date().toISOString() }] }) // INSERT rating
+      .mockResolvedValueOnce({ rows: [] }); // upsert creator_scores
+    const res = await request(app)
+      .post(`/api/reputation/sellers/${REP_SELLER_ID}/rate`)
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ order_id: REP_ORDER_ID, rating: 5, comment: 'Świetny sprzedawca' });
+    expect(res.status).toBe(201);
+    expect(res.body.rating).toBeDefined();
+    expect(res.body.rating.rating).toBe(5);
+  });
+
+  it('returns 409 when order already rated', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: REP_ORDER_ID, buyer_id: REP_BUYER_ID, seller_id: REP_SELLER_ID }] })
+      .mockResolvedValueOnce({ rows: [] }); // ON CONFLICT DO NOTHING returns no rows
+    const res = await request(app)
+      .post(`/api/reputation/sellers/${REP_SELLER_ID}/rate`)
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ order_id: REP_ORDER_ID, rating: 4 });
+    expect(res.status).toBe(409);
+  });
+});
+
+// ── GET /api/reputation/sellers/:sellerId ─────────────────────────────────────
+
+describe('GET /api/reputation/sellers/:sellerId', () => {
+  it('returns seller reputation summary', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ total_ratings: '12', avg_rating: '4.5', five_star_pct: '66.7', with_comment: '8' }] })
+      .mockResolvedValueOnce({ rows: [{ rating: 5, cnt: '8' }, { rating: 4, cnt: '4' }] })
+      .mockResolvedValueOnce({ rows: [{ reputation_score: '82.5', sales_generated: '5000', conversion_rate: '12', engagement_score: '70' }] })
+      .mockResolvedValueOnce({ rows: [{ rating: 5, comment: 'Super!', created_at: new Date().toISOString(), buyer_name: 'Marek' }] });
+    const res = await request(app).get(`/api/reputation/sellers/${REP_SELLER_ID}`);
+    expect(res.status).toBe(200);
+    expect(res.body.seller_id).toBe(REP_SELLER_ID);
+    expect(res.body.total_ratings).toBe(12);
+    expect(res.body.avg_rating).toBe(4.5);
+    expect(res.body.distribution).toHaveLength(2);
+    expect(res.body.recent_comments).toHaveLength(1);
+  });
+
+  it('returns zeros when seller has no ratings yet', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ total_ratings: '0', avg_rating: '0', five_star_pct: '0', with_comment: '0' }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get(`/api/reputation/sellers/${REP_SELLER_ID}`);
+    expect(res.status).toBe(200);
+    expect(res.body.total_ratings).toBe(0);
+    expect(res.body.avg_rating).toBe(0);
+  });
+});
+
+// ── POST /api/reputation/products/:productId/review ──────────────────────────
+
+describe('POST /api/reputation/products/:productId/review', () => {
+  let buyerToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    buyerToken = signToken({ id: REP_BUYER_ID, email: 'buyer@test.pl', role: 'buyer' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post(`/api/reputation/products/${REP_PRODUCT_ID}/review`)
+      .send({ rating: 4 });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects rating out of range', async () => {
+    const res = await request(app)
+      .post(`/api/reputation/products/${REP_PRODUCT_ID}/review`)
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ rating: 0 });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 404 when product not found', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .post(`/api/reputation/products/${REP_PRODUCT_ID}/review`)
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ rating: 4 });
+    expect(res.status).toBe(404);
+  });
+
+  it('creates a product review', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: REP_PRODUCT_ID }] }) // product exists
+      .mockResolvedValueOnce({ rows: [{ id: 'review-1', product_id: REP_PRODUCT_ID, reviewer_id: REP_BUYER_ID, rating: 4, comment: 'Dobry produkt', created_at: new Date().toISOString() }] });
+    const res = await request(app)
+      .post(`/api/reputation/products/${REP_PRODUCT_ID}/review`)
+      .set('Authorization', `Bearer ${buyerToken}`)
+      .send({ rating: 4, comment: 'Dobry produkt' });
+    expect(res.status).toBe(201);
+    expect(res.body.review).toBeDefined();
+    expect(res.body.review.rating).toBe(4);
+  });
+});
+
+// ── GET /api/reputation/products/:productId/reviews ──────────────────────────
+
+describe('GET /api/reputation/products/:productId/reviews', () => {
+  it('returns product reviews with summary', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ total: '5', avg_rating: '4.2' }] })
+      .mockResolvedValueOnce({ rows: [
+        { id: 'r1', rating: 5, comment: 'Świetny!', created_at: new Date().toISOString(), reviewer_name: 'Anna' },
+        { id: 'r2', rating: 4, comment: 'Bardzo dobry', created_at: new Date().toISOString(), reviewer_name: 'Piotr' },
+      ]});
+    const res = await request(app).get(`/api/reputation/products/${REP_PRODUCT_ID}/reviews`);
+    expect(res.status).toBe(200);
+    expect(res.body.product_id).toBe(REP_PRODUCT_ID);
+    expect(res.body.total).toBe(5);
+    expect(res.body.avg_rating).toBe(4.2);
+    expect(res.body.reviews).toHaveLength(2);
+  });
+
+  it('returns empty list for product with no reviews', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ total: '0', avg_rating: '0' }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get(`/api/reputation/products/${REP_PRODUCT_ID}/reviews`);
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(0);
+    expect(res.body.reviews).toHaveLength(0);
+  });
+});
+
+// ── GET /api/reputation/creators/:creatorId/score ────────────────────────────
+
+describe('GET /api/reputation/creators/:creatorId/score', () => {
+  it('returns empty score object when creator has no score entry', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get(`/api/reputation/creators/${REP_SELLER_ID}/score`);
+    expect(res.status).toBe(200);
+    expect(res.body.creator_id).toBe(REP_SELLER_ID);
+    expect(res.body.reputation_score).toBe(0);
+    expect(res.body.sales_generated).toBe(0);
+  });
+
+  it('returns populated creator score', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{
+        creator_id: REP_SELLER_ID, creator_name: 'Test Seller', creator_role: 'seller',
+        sales_generated: '15000.00', conversion_rate: '18.50',
+        engagement_score: '75.00', avg_rating: '4.80',
+        total_reviews: 32, delivery_score: '4.90',
+        reputation_score: '88.40', updated_at: new Date().toISOString(),
+      }],
+    });
+    const res = await request(app).get(`/api/reputation/creators/${REP_SELLER_ID}/score`);
+    expect(res.status).toBe(200);
+    expect(res.body.creator_name).toBe('Test Seller');
+    expect(res.body.avg_rating).toBe(4.8);
+    expect(res.body.total_reviews).toBe(32);
+    expect(res.body.reputation_score).toBe(88.4);
+  });
+});
+
+// ── GET /api/reputation/users/:userId/badges ─────────────────────────────────
+
+describe('GET /api/reputation/users/:userId/badges', () => {
+  it('returns badges for user', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [
+        { id: 'ub-1', awarded_at: new Date().toISOString(), code: 'top_seller', name: 'Top Sprzedawca', description: 'Opis', icon_url: null, category: 'sales', points_reward: 300 },
+        { id: 'ub-2', awarded_at: new Date().toISOString(), code: 'welcome', name: 'Witamy!', description: 'Opis', icon_url: null, category: 'platform', points_reward: 10 },
+      ],
+    });
+    const res = await request(app).get(`/api/reputation/users/${REP_SELLER_ID}/badges`);
+    expect(res.status).toBe(200);
+    expect(res.body.user_id).toBe(REP_SELLER_ID);
+    expect(res.body.badges).toHaveLength(2);
+    expect(res.body.badges[0].code).toBe('top_seller');
+  });
+
+  it('returns empty badges array when user has no badges', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get(`/api/reputation/users/${REP_SELLER_ID}/badges`);
+    expect(res.status).toBe(200);
+    expect(res.body.badges).toHaveLength(0);
+  });
+});
+
+// ── GET /api/reputation/badges ────────────────────────────────────────────────
+
+describe('GET /api/reputation/badges', () => {
+  it('returns all active badge definitions', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [
+        { id: 'bd-1', code: 'top_seller', name: 'Top Sprzedawca', description: 'Opis', icon_url: null, category: 'sales', points_reward: 300, is_active: true },
+        { id: 'bd-2', code: 'welcome', name: 'Witamy!', description: 'Opis', icon_url: null, category: 'platform', points_reward: 10, is_active: true },
+      ],
+    });
+    const res = await request(app).get('/api/reputation/badges');
+    expect(res.status).toBe(200);
+    expect(res.body.badges).toHaveLength(2);
+  });
+});
+
+// ── POST /api/reputation/badges/award ────────────────────────────────────────
+
+describe('POST /api/reputation/badges/award', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post('/api/reputation/badges/award')
+      .send({ user_id: REP_SELLER_ID, badge_code: 'top_seller' });
+    expect(res.status).toBe(401);
+  });
+
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post('/api/reputation/badges/award')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ user_id: REP_SELLER_ID, badge_code: 'top_seller' });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 404 for unknown badge code', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .post('/api/reputation/badges/award')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ user_id: REP_SELLER_ID, badge_code: 'nonexistent_badge' });
+    expect(res.status).toBe(404);
+  });
+
+  it('awards badge to user', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'bd-1' }] }) // badge definition lookup
+      .mockResolvedValueOnce({ rows: [{ id: 'ub-new', user_id: REP_SELLER_ID, badge_id: 'bd-1', awarded_at: new Date().toISOString() }] }); // INSERT
+    const res = await request(app)
+      .post('/api/reputation/badges/award')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ user_id: REP_SELLER_ID, badge_code: 'top_seller' });
+    expect(res.status).toBe(201);
+    expect(res.body.award).toBeDefined();
+  });
+
+  it('returns 409 when user already has the badge', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'bd-1' }] })
+      .mockResolvedValueOnce({ rows: [] }); // ON CONFLICT DO NOTHING
+    const res = await request(app)
+      .post('/api/reputation/badges/award')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ user_id: REP_SELLER_ID, badge_code: 'top_seller' });
+    expect(res.status).toBe(409);
+  });
+});
+
+// ── PUT /api/reputation/creators/:creatorId/score ────────────────────────────
+
+describe('PUT /api/reputation/creators/:creatorId/score', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .put(`/api/reputation/creators/${REP_SELLER_ID}/score`)
+      .send({ sales_generated: 5000 });
+    expect(res.status).toBe(401);
+  });
+
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .put(`/api/reputation/creators/${REP_SELLER_ID}/score`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ sales_generated: 5000 });
+    expect(res.status).toBe(403);
+  });
+
+  it('updates creator score and returns reputation_score', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ creator_id: REP_SELLER_ID, avg_rating: '4.5', delivery_score: '4.0', conversion_rate: '15.0', engagement_score: '60.0', sales_generated: '5000', updated_at: new Date().toISOString() }] }) // upsert
+      .mockResolvedValueOnce({ rows: [] }); // UPDATE reputation_score
+    const res = await request(app)
+      .put(`/api/reputation/creators/${REP_SELLER_ID}/score`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ sales_generated: 5000, conversion_rate: 15, engagement_score: 60 });
+    expect(res.status).toBe(200);
+    expect(res.body.reputation_score).toBeDefined();
+    expect(typeof res.body.reputation_score).toBe('number');
+  });
+});

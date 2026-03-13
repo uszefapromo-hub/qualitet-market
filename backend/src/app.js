@@ -33,6 +33,7 @@ const liveRouter = require('./routes/live');
 const socialRouter = require('./routes/social');
 const gamificationRouter = require('./routes/gamification');
 const collaborationRouter = require('./routes/collaboration');
+const reputationRouter = require('./routes/reputation');
 const aiRouter = require('./modules/ai/routes');
 const errorHandler = require('./middleware/errorHandler');
 const { importSupplierProducts } = require('./services/supplier-import');
@@ -324,6 +325,7 @@ app.use('/api/live', liveRouter);
 app.use('/api/social', socialRouter);
 app.use('/api/gamification', gamificationRouter);
 app.use('/api/collaboration', collaborationRouter);
+app.use('/api/reputation', reputationRouter);
 app.use('/api/ai', aiRouter);
 
 // ─── Public promo slots feed ───────────────────────────────────────────────────

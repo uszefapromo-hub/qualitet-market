@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Reputacja i Oceny – QualitetVerse</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { background: var(--bg); color: var(--text); font-family: system-ui, sans-serif; margin: 0; min-height: 100dvh; }
+
+    /* ── Top bar ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px;
+      background: rgba(15,23,42,.92); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--stroke);
+    }
+    .topbar .logo { font-weight: 800; font-size: 20px; color: #fff; text-decoration: none; }
+    .topbar .logo span { color: var(--pink); }
+    .topbar .spacer { flex: 1; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px;
+           border-radius: 12px; font-size: 14px; font-weight: 700; border: none; cursor: pointer; transition: opacity .15s; }
+    .btn:hover { opacity: .85; }
+    .btn-primary { background: var(--pink); color: #fff; }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--stroke); }
+    .btn-sm { padding: 6px 14px; font-size: 13px; border-radius: 10px; }
+
+    /* ── Views ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Hero ── */
+    .hero {
+      padding: 48px 16px 28px; text-align: center;
+    }
+    .hero h1 { font-size: clamp(24px, 5vw, 44px); font-weight: 900; margin: 0 0 10px; }
+    .hero h1 span { color: var(--pink); }
+    .hero p { color: var(--muted); font-size: 16px; margin: 0 0 28px; }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+      padding: 0 16px 28px;
+    }
+    .tab-btn {
+      padding: 9px 20px; border-radius: 20px; font-size: 14px; font-weight: 700;
+      border: 1px solid var(--stroke); background: var(--card); color: var(--muted);
+      cursor: pointer; transition: all .15s;
+    }
+    .tab-btn:hover, .tab-btn.active { background: var(--pink); color: #fff; border-color: var(--pink); }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card); border: 1px solid var(--stroke); border-radius: 20px;
+      padding: 24px; margin-bottom: 16px;
+    }
+    .card h2 { margin: 0 0 16px; font-size: 18px; font-weight: 800; }
+    .card p { margin: 0 0 12px; color: var(--muted); }
+
+    .section-wrap { max-width: 960px; margin: 0 auto; padding: 0 16px 60px; }
+
+    /* ── Stars ── */
+    .stars { display: inline-flex; gap: 3px; }
+    .star { font-size: 20px; cursor: pointer; color: var(--stroke); transition: color .1s; }
+    .star.filled { color: #f59e0b; }
+    .star-display { font-size: 16px; color: #f59e0b; }
+
+    /* ── Rating summary ── */
+    .rating-summary {
+      display: flex; gap: 24px; align-items: center; flex-wrap: wrap; margin-bottom: 20px;
+    }
+    .rating-big { text-align: center; }
+    .rating-big .score { font-size: 56px; font-weight: 900; line-height: 1; color: #f59e0b; }
+    .rating-big .total { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .rating-bars { flex: 1; min-width: 200px; }
+    .rating-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 13px; }
+    .rating-bar-row .label { width: 20px; text-align: right; color: var(--muted); }
+    .rating-bar-track { flex: 1; height: 8px; background: var(--stroke); border-radius: 4px; overflow: hidden; }
+    .rating-bar-fill { height: 100%; background: #f59e0b; border-radius: 4px; transition: width .4s; }
+
+    /* ── Badge grid ── */
+    .badge-grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+    .badge-card {
+      background: var(--card); border: 1px solid var(--stroke); border-radius: 16px;
+      padding: 16px; text-align: center; transition: transform .15s;
+    }
+    .badge-card:hover { transform: translateY(-2px); border-color: var(--pink); }
+    .badge-card .badge-icon { font-size: 40px; margin-bottom: 8px; }
+    .badge-card .badge-name { font-weight: 800; font-size: 15px; margin-bottom: 4px; }
+    .badge-card .badge-desc { color: var(--muted); font-size: 12px; }
+    .badge-card .badge-pts { margin-top: 8px; font-size: 12px; color: var(--pink); font-weight: 700; }
+
+    .badge-category { text-transform: capitalize; }
+    .earned-badge { border-color: #f59e0b !important; }
+    .earned-badge .badge-icon::after { content: ' ✓'; font-size: 18px; color: #f59e0b; }
+
+    /* ── Review items ── */
+    .review-item {
+      padding: 14px 0; border-bottom: 1px solid var(--stroke);
+    }
+    .review-item:last-child { border-bottom: none; }
+    .review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .review-author { font-weight: 700; font-size: 14px; }
+    .review-date { font-size: 12px; color: var(--muted); }
+    .review-comment { color: var(--muted); font-size: 14px; line-height: 1.5; }
+
+    /* ── Reputation score indicator ── */
+    .rep-score-wrap { display: flex; align-items: center; gap: 16px; }
+    .rep-score-circle {
+      width: 90px; height: 90px; border-radius: 50%;
+      border: 4px solid var(--pink);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 22px; color: var(--pink);
+    }
+    .rep-score-circle .label { font-size: 11px; font-weight: 600; color: var(--muted); }
+    .rep-score-details { flex: 1; }
+    .rep-metric { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
+    .rep-metric .name { color: var(--muted); }
+    .rep-metric .value { font-weight: 700; }
+
+    /* ── Form ── */
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: var(--muted); }
+    .form-group input, .form-group textarea {
+      width: 100%; background: var(--bg); border: 1px solid var(--stroke);
+      border-radius: 10px; padding: 10px 14px; color: var(--text); font-size: 14px;
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .form-group input:focus, .form-group textarea:focus { outline: none; border-color: var(--pink); }
+
+    /* ── Alerts ── */
+    .alert { padding: 12px 16px; border-radius: 12px; font-size: 14px; margin-bottom: 14px; }
+    .alert-success { background: rgba(16,185,129,.15); color: #6ee7b7; }
+    .alert-error   { background: rgba(239,68,68,.15); color: #fca5a5; }
+    .hidden { display: none !important; }
+    .loading { opacity: .5; pointer-events: none; }
+  </style>
+</head>
+<body>
+
+<!-- ── Top bar ── -->
+<header class="topbar">
+  <a href="index.html" class="logo">Qualitet<span>Verse</span></a>
+  <span class="spacer"></span>
+  <a href="dashboard.html" class="btn btn-outline btn-sm">Dashboard</a>
+</header>
+
+<!-- ── Hero ── -->
+<section class="hero">
+  <h1>System <span>Reputacji</span> i Ocen</h1>
+  <p>Zaufaj sprzedawcom i produktom dzięki weryfikowanym opiniom</p>
+</section>
+
+<!-- ── Tabs ── -->
+<div class="tabs">
+  <button class="tab-btn active" data-tab="seller">⭐ Oceny sprzedawców</button>
+  <button class="tab-btn" data-tab="product">📦 Recenzje produktów</button>
+  <button class="tab-btn" data-tab="creator">🏆 Reputacja kreatorów</button>
+  <button class="tab-btn" data-tab="badges">🎖️ Odznaki</button>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TAB: Seller ratings                                                     -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div id="tab-seller" class="view active section-wrap">
+
+  <!-- Look up seller reputation -->
+  <div class="card">
+    <h2>🔍 Sprawdź reputację sprzedawcy</h2>
+    <div class="form-group">
+      <label>ID sprzedawcy</label>
+      <input id="seller-id-input" type="text" placeholder="np. uuid sprzedawcy">
+    </div>
+    <button class="btn btn-primary" onclick="loadSellerReputation()">Sprawdź</button>
+  </div>
+
+  <!-- Result -->
+  <div id="seller-result" class="hidden">
+    <div class="card">
+      <div id="seller-alert" class="alert hidden"></div>
+      <div class="rating-summary" id="seller-summary"></div>
+      <h3>Ostatnie komentarze</h3>
+      <div id="seller-comments"></div>
+    </div>
+  </div>
+
+  <!-- Rate a seller -->
+  <div class="card" id="rate-seller-form">
+    <h2>✍️ Oceń sprzedawcę</h2>
+    <p>Dostępne tylko po zrealizowaniu zamówienia.</p>
+    <div id="rate-alert" class="alert hidden"></div>
+    <div class="form-group">
+      <label>ID zamówienia</label>
+      <input id="rate-order-id" type="text" placeholder="UUID zamówienia">
+    </div>
+    <div class="form-group">
+      <label>ID sprzedawcy</label>
+      <input id="rate-seller-id" type="text" placeholder="UUID sprzedawcy">
+    </div>
+    <div class="form-group">
+      <label>Ocena (1–5 gwiazdek)</label>
+      <div class="stars" id="seller-stars">
+        <span class="star" data-v="1">★</span>
+        <span class="star" data-v="2">★</span>
+        <span class="star" data-v="3">★</span>
+        <span class="star" data-v="4">★</span>
+        <span class="star" data-v="5">★</span>
+      </div>
+      <input type="hidden" id="seller-star-value" value="0">
+    </div>
+    <div class="form-group">
+      <label>Komentarz (opcjonalnie)</label>
+      <textarea id="rate-comment" placeholder="Podziel się swoją opinią..."></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="submitSellerRating()">Wyślij ocenę</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TAB: Product reviews                                                    -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div id="tab-product" class="view section-wrap">
+
+  <!-- Look up product reviews -->
+  <div class="card">
+    <h2>🔍 Recenzje produktu</h2>
+    <div class="form-group">
+      <label>ID produktu</label>
+      <input id="product-id-input" type="text" placeholder="UUID produktu">
+    </div>
+    <button class="btn btn-primary" onclick="loadProductReviews()">Wczytaj recenzje</button>
+  </div>
+
+  <div id="product-reviews-result" class="hidden">
+    <div class="card">
+      <div id="product-summary"></div>
+      <div id="product-reviews-list"></div>
+    </div>
+  </div>
+
+  <!-- Submit review -->
+  <div class="card">
+    <h2>✍️ Napisz recenzję produktu</h2>
+    <div id="review-alert" class="alert hidden"></div>
+    <div class="form-group">
+      <label>ID produktu</label>
+      <input id="review-product-id" type="text" placeholder="UUID produktu">
+    </div>
+    <div class="form-group">
+      <label>Ocena (1–5 gwiazdek)</label>
+      <div class="stars" id="product-stars">
+        <span class="star" data-v="1">★</span>
+        <span class="star" data-v="2">★</span>
+        <span class="star" data-v="3">★</span>
+        <span class="star" data-v="4">★</span>
+        <span class="star" data-v="5">★</span>
+      </div>
+      <input type="hidden" id="product-star-value" value="0">
+    </div>
+    <div class="form-group">
+      <label>Recenzja</label>
+      <textarea id="review-comment" placeholder="Co myślisz o tym produkcie?"></textarea>
+    </div>
+    <button class="btn btn-primary" onclick="submitProductReview()">Opublikuj recenzję</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TAB: Creator score                                                      -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div id="tab-creator" class="view section-wrap">
+  <div class="card">
+    <h2>🔍 Wynik reputacji kreatora</h2>
+    <div class="form-group">
+      <label>ID kreatora</label>
+      <input id="creator-id-input" type="text" placeholder="UUID kreatora">
+    </div>
+    <button class="btn btn-primary" onclick="loadCreatorScore()">Sprawdź</button>
+  </div>
+
+  <div id="creator-result" class="hidden">
+    <div class="card">
+      <h2 id="creator-name-heading">Reputacja kreatora</h2>
+      <div class="rep-score-wrap">
+        <div class="rep-score-circle">
+          <span id="creator-rep-score">–</span>
+          <span class="label">pkt</span>
+        </div>
+        <div class="rep-score-details" id="creator-metrics"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<!-- TAB: Badges                                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════════ -->
+<div id="tab-badges" class="view section-wrap">
+  <div class="card">
+    <h2>🎖️ Wszystkie odznaki platformy</h2>
+    <p>Zbieraj odznaki za aktywność sprzedażową, twórczą i społecznościową.</p>
+    <div id="badges-loading" class="alert">⏳ Ładowanie odznak…</div>
+    <div id="badge-grid" class="badge-grid hidden"></div>
+  </div>
+
+  <div class="card">
+    <h2>👤 Moje odznaki</h2>
+    <div class="form-group">
+      <label>ID użytkownika (opcjonalnie – domyślnie zalogowany)</label>
+      <input id="user-badges-id" type="text" placeholder="UUID użytkownika">
+    </div>
+    <button class="btn btn-primary" onclick="loadUserBadges()">Wczytaj</button>
+    <div id="user-badges-result" class="badge-grid" style="margin-top:16px"></div>
+  </div>
+</div>
+
+<!-- ── Scripts ── -->
+<script src="js/api.js"></script>
+<script>
+  'use strict';
+
+  // ─── Tab navigation ────────────────────────────────────────────────────────
+  document.querySelectorAll('.tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // ─── Star widgets ──────────────────────────────────────────────────────────
+  function initStars(containerId, hiddenInputId) {
+    const container = document.getElementById(containerId);
+    const input = document.getElementById(hiddenInputId);
+    container.querySelectorAll('.star').forEach((star) => {
+      star.addEventListener('click', () => {
+        const val = parseInt(star.dataset.v, 10);
+        input.value = val;
+        container.querySelectorAll('.star').forEach((s) => {
+          s.classList.toggle('filled', parseInt(s.dataset.v, 10) <= val);
+        });
+      });
+      star.addEventListener('mouseover', () => {
+        const val = parseInt(star.dataset.v, 10);
+        container.querySelectorAll('.star').forEach((s) => {
+          s.style.color = parseInt(s.dataset.v, 10) <= val ? '#f59e0b' : '';
+        });
+      });
+    });
+    container.addEventListener('mouseleave', () => {
+      const cur = parseInt(input.value, 10) || 0;
+      container.querySelectorAll('.star').forEach((s) => {
+        s.style.color = '';
+        s.classList.toggle('filled', parseInt(s.dataset.v, 10) <= cur);
+      });
+    });
+  }
+  initStars('seller-stars', 'seller-star-value');
+  initStars('product-stars', 'product-star-value');
+
+  // ─── Alert helpers ─────────────────────────────────────────────────────────
+  function showAlert(id, msg, type = 'error') {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.className = `alert alert-${type}`;
+    el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 5000);
+  }
+
+  function starsHtml(rating) {
+    let s = '';
+    for (let i = 1; i <= 5; i++) s += `<span class="star-display">${i <= rating ? '★' : '☆'}</span>`;
+    return s;
+  }
+
+  // ─── Seller reputation ─────────────────────────────────────────────────────
+  async function loadSellerReputation() {
+    const id = document.getElementById('seller-id-input').value.trim();
+    if (!id) { alert('Podaj ID sprzedawcy'); return; }
+
+    try {
+      const data = await QMApi.Reputation.getSeller(id);
+      const summary = document.getElementById('seller-summary');
+      const maxCount = Math.max(...data.distribution.map((d) => d.count), 1);
+
+      summary.innerHTML = `
+        <div class="rating-big">
+          <div class="score">${data.avg_rating.toFixed(1)}</div>
+          <div>${starsHtml(Math.round(data.avg_rating))}</div>
+          <div class="total">${data.total_ratings} ocen</div>
+        </div>
+        <div class="rating-bars">
+          ${[5,4,3,2,1].map((r) => {
+            const d = data.distribution.find((x) => parseInt(x.rating) === r);
+            const cnt = d ? d.count : 0;
+            const pct = maxCount ? Math.round((cnt / maxCount) * 100) : 0;
+            return `<div class="rating-bar-row">
+              <span class="label">${r}</span>
+              <div class="rating-bar-track"><div class="rating-bar-fill" style="width:${pct}%"></div></div>
+              <span style="font-size:12px;color:var(--muted)">${cnt}</span>
+            </div>`;
+          }).join('')}
+        </div>
+        ${data.reputation_score > 0 ? `<div><strong style="font-size:13px;color:var(--muted)">Wynik reputacji</strong><br><span style="font-size:28px;font-weight:900;color:var(--pink)">${data.reputation_score}</span></div>` : ''}
+      `;
+
+      const comments = document.getElementById('seller-comments');
+      if (data.recent_comments.length) {
+        comments.innerHTML = data.recent_comments.map((c) => `
+          <div class="review-item">
+            <div class="review-header">
+              <span class="review-author">${escHtml(c.buyer_name)}</span>
+              <div>
+                ${starsHtml(c.rating)}
+                <span class="review-date">${new Date(c.created_at).toLocaleDateString('pl-PL')}</span>
+              </div>
+            </div>
+            <div class="review-comment">${escHtml(c.comment)}</div>
+          </div>`).join('');
+      } else {
+        comments.innerHTML = '<p style="color:var(--muted)">Brak komentarzy</p>';
+      }
+
+      document.getElementById('seller-result').classList.remove('hidden');
+    } catch (e) {
+      alert('Błąd: ' + (e.message || 'Nie można załadować danych'));
+    }
+  }
+
+  async function submitSellerRating() {
+    const order_id  = document.getElementById('rate-order-id').value.trim();
+    const sellerId  = document.getElementById('rate-seller-id').value.trim();
+    const rating    = parseInt(document.getElementById('seller-star-value').value, 10);
+    const comment   = document.getElementById('rate-comment').value.trim();
+
+    if (!order_id || !sellerId) { showAlert('rate-alert', 'Wypełnij ID zamówienia i sprzedawcy'); return; }
+    if (!rating)                { showAlert('rate-alert', 'Wybierz ocenę gwiazdkową');           return; }
+
+    try {
+      await QMApi.Reputation.rateSeller(sellerId, { order_id, rating, comment });
+      showAlert('rate-alert', 'Ocena została dodana!', 'success');
+      document.getElementById('rate-comment').value = '';
+      document.getElementById('seller-star-value').value = 0;
+      document.querySelectorAll('#seller-stars .star').forEach((s) => s.classList.remove('filled'));
+    } catch (e) {
+      showAlert('rate-alert', e.message || 'Błąd wysyłania oceny');
+    }
+  }
+
+  // ─── Product reviews ───────────────────────────────────────────────────────
+  async function loadProductReviews() {
+    const id = document.getElementById('product-id-input').value.trim();
+    if (!id) { alert('Podaj ID produktu'); return; }
+
+    try {
+      const data = await QMApi.Reputation.getProductReviews(id);
+      const summary = document.getElementById('product-summary');
+      summary.innerHTML = `
+        <div class="rating-summary">
+          <div class="rating-big">
+            <div class="score">${data.avg_rating.toFixed(1)}</div>
+            <div>${starsHtml(Math.round(data.avg_rating))}</div>
+            <div class="total">${data.total} recenzji</div>
+          </div>
+        </div>`;
+
+      const list = document.getElementById('product-reviews-list');
+      if (data.reviews.length) {
+        list.innerHTML = data.reviews.map((r) => `
+          <div class="review-item">
+            <div class="review-header">
+              <span class="review-author">${escHtml(r.reviewer_name)}</span>
+              <div>
+                ${starsHtml(r.rating)}
+                <span class="review-date">${new Date(r.created_at).toLocaleDateString('pl-PL')}</span>
+              </div>
+            </div>
+            ${r.comment ? `<div class="review-comment">${escHtml(r.comment)}</div>` : ''}
+          </div>`).join('');
+      } else {
+        list.innerHTML = '<p style="color:var(--muted)">Brak recenzji</p>';
+      }
+
+      document.getElementById('product-reviews-result').classList.remove('hidden');
+    } catch (e) {
+      alert('Błąd: ' + (e.message || 'Nie można załadować recenzji'));
+    }
+  }
+
+  async function submitProductReview() {
+    const productId = document.getElementById('review-product-id').value.trim();
+    const rating    = parseInt(document.getElementById('product-star-value').value, 10);
+    const comment   = document.getElementById('review-comment').value.trim();
+
+    if (!productId) { showAlert('review-alert', 'Podaj ID produktu');        return; }
+    if (!rating)    { showAlert('review-alert', 'Wybierz ocenę gwiazdkową'); return; }
+
+    try {
+      await QMApi.Reputation.reviewProduct(productId, { rating, comment });
+      showAlert('review-alert', 'Recenzja została opublikowana!', 'success');
+      document.getElementById('review-comment').value = '';
+      document.getElementById('product-star-value').value = 0;
+      document.querySelectorAll('#product-stars .star').forEach((s) => s.classList.remove('filled'));
+    } catch (e) {
+      showAlert('review-alert', e.message || 'Błąd publikacji recenzji');
+    }
+  }
+
+  // ─── Creator score ─────────────────────────────────────────────────────────
+  async function loadCreatorScore() {
+    const id = document.getElementById('creator-id-input').value.trim();
+    if (!id) { alert('Podaj ID kreatora'); return; }
+
+    try {
+      const data = await QMApi.Reputation.getCreatorScore(id);
+      document.getElementById('creator-name-heading').textContent =
+        data.creator_name ? `Reputacja: ${data.creator_name}` : 'Reputacja kreatora';
+      document.getElementById('creator-rep-score').textContent = data.reputation_score.toFixed(1);
+
+      document.getElementById('creator-metrics').innerHTML = `
+        <div class="rep-metric"><span class="name">Sprzedaż wygenerowana</span><span class="value">${data.sales_generated.toLocaleString('pl-PL')} PLN</span></div>
+        <div class="rep-metric"><span class="name">Współczynnik konwersji</span><span class="value">${data.conversion_rate.toFixed(1)}%</span></div>
+        <div class="rep-metric"><span class="name">Zaangażowanie</span><span class="value">${data.engagement_score.toFixed(1)}/100</span></div>
+        <div class="rep-metric"><span class="name">Średnia ocena</span><span class="value">${starsHtml(Math.round(data.avg_rating))} ${data.avg_rating.toFixed(2)}</span></div>
+        <div class="rep-metric"><span class="name">Ocena dostawy</span><span class="value">${data.delivery_score.toFixed(2)}/5</span></div>
+        <div class="rep-metric"><span class="name">Liczba ocen</span><span class="value">${data.total_reviews}</span></div>
+      `;
+
+      document.getElementById('creator-result').classList.remove('hidden');
+    } catch (e) {
+      alert('Błąd: ' + (e.message || 'Nie można załadować danych'));
+    }
+  }
+
+  // ─── Badges ────────────────────────────────────────────────────────────────
+  const BADGE_ICONS = {
+    top_seller:      '🏆',
+    trusted_creator: '✅',
+    fast_shipping:   '🚀',
+    verified_seller: '🔵',
+    first_sale:      '🎉',
+    ten_sales:       '🔟',
+    hundred_sales:   '💯',
+    first_affiliate: '🔗',
+    top_creator:     '⭐',
+    social_star:     '💫',
+    welcome:         '👋',
+  };
+
+  async function loadAllBadges() {
+    try {
+      const data = await QMApi.Reputation.listBadges();
+      const grid = document.getElementById('badge-grid');
+      document.getElementById('badges-loading').classList.add('hidden');
+      grid.innerHTML = data.badges.map((b) => `
+        <div class="badge-card">
+          <div class="badge-icon">${BADGE_ICONS[b.code] || '🏅'}</div>
+          <div class="badge-name">${escHtml(b.name)}</div>
+          <div class="badge-desc">${escHtml(b.description || '')}</div>
+          <div class="badge-pts">+${b.points_reward} pkt</div>
+          <div style="font-size:11px;margin-top:4px;color:var(--muted)">${b.category}</div>
+        </div>`).join('');
+      grid.classList.remove('hidden');
+    } catch (e) {
+      document.getElementById('badges-loading').textContent = 'Błąd ładowania odznak: ' + (e.message || '');
+    }
+  }
+
+  async function loadUserBadges() {
+    const userInput = document.getElementById('user-badges-id').value.trim();
+    const token = localStorage.getItem('qm_token');
+    const user  = (() => { try { return JSON.parse(localStorage.getItem('qm_user') || '{}'); } catch { return {}; } })();
+    const id    = userInput || user.id;
+
+    if (!id) { alert('Zaloguj się lub podaj ID użytkownika'); return; }
+
+    try {
+      const data = await QMApi.Reputation.getUserBadges(id);
+      const container = document.getElementById('user-badges-result');
+      if (!data.badges.length) {
+        container.innerHTML = '<p style="color:var(--muted)">Brak odznak</p>';
+        return;
+      }
+      container.innerHTML = data.badges.map((b) => `
+        <div class="badge-card earned-badge">
+          <div class="badge-icon">${BADGE_ICONS[b.code] || '🏅'}</div>
+          <div class="badge-name">${escHtml(b.name)}</div>
+          <div class="badge-desc">${escHtml(b.description || '')}</div>
+          <div style="font-size:11px;margin-top:6px;color:var(--muted)">Zdobyto: ${new Date(b.awarded_at).toLocaleDateString('pl-PL')}</div>
+        </div>`).join('');
+    } catch (e) {
+      alert('Błąd: ' + (e.message || ''));
+    }
+  }
+
+  // ─── Utility ───────────────────────────────────────────────────────────────
+  function escHtml(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+              .replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+  }
+
+  // Auto-load badges on page load
+  loadAllBadges();
+</script>
+</body>
+</html>

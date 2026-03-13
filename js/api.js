@@ -731,6 +731,29 @@
     buyNow(id, data)                            { return post(`/live/streams/${id}/orders`, data); },
   };
 
+  // ─── Reputation & Ratings ─────────────────────────────────────────────────────
+
+  const Reputation = {
+    /** Rate a seller after purchase (buyer). POST /api/reputation/sellers/:id/rate */
+    rateSeller(sellerId, data)                  { return post(`/reputation/sellers/${sellerId}/rate`, data); },
+    /** Get seller reputation summary (public). GET /api/reputation/sellers/:id */
+    getSeller(sellerId)                         { return get(`/reputation/sellers/${sellerId}`); },
+    /** Submit a product review (authenticated). POST /api/reputation/products/:id/review */
+    reviewProduct(productId, data)              { return post(`/reputation/products/${productId}/review`, data); },
+    /** Get product reviews (public). GET /api/reputation/products/:id/reviews */
+    getProductReviews(productId, params)        { return get(`/reputation/products/${productId}/reviews`, params); },
+    /** Get creator reputation score (public). GET /api/reputation/creators/:id/score */
+    getCreatorScore(creatorId)                  { return get(`/reputation/creators/${creatorId}/score`); },
+    /** Get badges earned by a user (public). GET /api/reputation/users/:id/badges */
+    getUserBadges(userId)                       { return get(`/reputation/users/${userId}/badges`); },
+    /** List all active badge definitions (public). GET /api/reputation/badges */
+    listBadges()                                { return get('/reputation/badges'); },
+    /** Award a badge to a user (admin). POST /api/reputation/badges/award */
+    awardBadge(data)                            { return post('/reputation/badges/award', data); },
+    /** Update creator reputation score (admin). PUT /api/reputation/creators/:id/score */
+    updateCreatorScore(creatorId, data)         { return put(`/reputation/creators/${creatorId}/score`, data); },
+  };
+
   // ─── Public API surface ───────────────────────────────────────────────────────
 
   return {
@@ -753,6 +776,7 @@
     UserReferrals,
     CreatorReferrals,
     Live,
+    Reputation,
     health,
     /** Expose for advanced use cases. */
     _request: request,
