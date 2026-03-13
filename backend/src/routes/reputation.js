@@ -49,7 +49,7 @@ function computeReputationScore({ avg_rating, delivery_score, conversion_rate, e
   const c = parseFloat(conversion_rate) || 0
   const e = parseFloat(engagement_score) || 0
 
-  // Normalise each component to 0-100
+  // Normalize each component to 0-100
   const ratingNorm    = (r / 5) * 100
   const deliveryNorm  = (d / 5) * 100
   const convNorm      = Math.min(c, 100)
