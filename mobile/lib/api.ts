@@ -1,4 +1,14 @@
-const API_BASE = 'http://localhost:5000/api';
+// Environment-based API configuration.
+// In development set EXPO_PUBLIC_API_URL in mobile/.env.local (or .env).
+// In production / staging set it in your CI/CD environment or app config.
+// The default points to the Android emulator loopback. Physical devices and
+// iOS simulators require the machine's LAN IP – use .env.local to override.
+const DEFAULT_DEV_URL = 'http://10.0.2.2:5000/api'; // Android emulator loopback
+const API_BASE: string =
+  (process.env.EXPO_PUBLIC_API_URL as string | undefined) ?? DEFAULT_DEV_URL;
+
+const RETRY_ATTEMPTS = 3;
+const RETRY_DELAY_MS = 1000;
 
 let authToken: string | null = null;
 
@@ -6,17 +16,45 @@ export function setAuthToken(token: string | null) {
   authToken = token;
 }
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+/** Returns the currently configured API base URL (useful for debugging). */
+export function getApiBase(): string {
+  return API_BASE;
+}
+
+async function sleep(ms: number) {
+  return new Promise<void>(resolve => setTimeout(resolve, ms));
+}
+
+async function request<T>(
+  path: string,
+  options?: RequestInit,
+  attempt = 1,
+): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
   };
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(err.error || 'Request failed');
+  try {
+    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Request failed' }));
+      throw new Error(err.error || 'Request failed');
+    }
+    return res.json();
+  } catch (error) {
+    const isNetworkError =
+      error instanceof TypeError && error.message.toLowerCase().includes('network');
+    if (isNetworkError && attempt < RETRY_ATTEMPTS) {
+      await sleep(RETRY_DELAY_MS * attempt);
+      return request<T>(path, options, attempt + 1);
+    }
+    if (isNetworkError) {
+      throw new Error(
+        'Brak połączenia z siecią. Sprawdź swoje połączenie internetowe i spróbuj ponownie.',
+      );
+    }
+    throw error;
   }
-  return res.json();
 }
 
 export const api = {
