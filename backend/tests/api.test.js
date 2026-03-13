@@ -6883,3 +6883,158 @@ describe('POST /api/ai/marketing-pack', () => {
     expect(res.body.tokensUsed).toBeDefined();
   });
 });
+
+// ─── User Referral System ──────────────────────────────────────────────────────
+
+const USER_REF_INVITER_ID = 'e0000000-0000-4000-8000-000000000010';
+
+describe('POST /api/referrals/generate', () => {
+  let userToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    userToken = signToken({ id: USER_REF_INVITER_ID, email: 'refuser@test.pl', role: 'seller' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/referrals/generate');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns existing code when user already has one', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ user_referral_code: 'USR-EXISTING1' }] });
+    const res = await request(app)
+      .post('/api/referrals/generate')
+      .set('Authorization', `Bearer ${userToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.code).toBe('USR-EXISTING1');
+    expect(res.body.link).toMatch(/USR-EXISTING1/);
+  });
+
+  it('generates and saves a new code when none exists', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ user_referral_code: null }] }) // SELECT user
+      .mockResolvedValueOnce({ rows: [] })                              // uniqueness check
+      .mockResolvedValueOnce({ rows: [] });                             // UPDATE users
+    const res = await request(app)
+      .post('/api/referrals/generate')
+      .set('Authorization', `Bearer ${userToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.code).toMatch(/^USR-/);
+    expect(res.body.link).toMatch(/\/invite\/USR-/);
+  });
+
+  it('returns 404 when user not found', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .post('/api/referrals/generate')
+      .set('Authorization', `Bearer ${userToken}`);
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('GET /api/referrals/stats', () => {
+  let userToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    userToken = signToken({ id: USER_REF_INVITER_ID, email: 'refuser@test.pl', role: 'seller' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/referrals/stats');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns referral stats with code and link', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ total: '5' }] })                           // invited count
+      .mockResolvedValueOnce({ rows: [{ total_earnings: '12.50' }] })              // earnings
+      .mockResolvedValueOnce({ rows: [{ user_referral_code: 'USR-STATTEST' }] });  // user code
+    const res = await request(app)
+      .get('/api/referrals/stats')
+      .set('Authorization', `Bearer ${userToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.invited_count).toBe(5);
+    expect(res.body.total_earnings).toBe(12.5);
+    expect(res.body.referral_code).toBe('USR-STATTEST');
+    expect(res.body.referral_link).toMatch(/USR-STATTEST/);
+  });
+
+  it('returns null referral_link when code not yet generated', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ total: '0' }] })
+      .mockResolvedValueOnce({ rows: [{ total_earnings: '0' }] })
+      .mockResolvedValueOnce({ rows: [{ user_referral_code: null }] });
+    const res = await request(app)
+      .get('/api/referrals/stats')
+      .set('Authorization', `Bearer ${userToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.invited_count).toBe(0);
+    expect(res.body.total_earnings).toBe(0);
+    expect(res.body.referral_code).toBeNull();
+    expect(res.body.referral_link).toBeNull();
+  });
+});
+
+describe('GET /api/referrals/invites', () => {
+  let userToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    userToken = signToken({ id: USER_REF_INVITER_ID, email: 'refuser@test.pl', role: 'seller' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/referrals/invites');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns paginated list of invited users', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '2' }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'ref-id-1', created_at: new Date().toISOString(),
+            invited_id: SELLER_ID, invited_name: 'Alice', invited_email: 'alice@test.pl',
+            earned_from_user: '3.00',
+          },
+          {
+            id: 'ref-id-2', created_at: new Date().toISOString(),
+            invited_id: ADMIN_ID, invited_name: 'Bob', invited_email: 'bob@test.pl',
+            earned_from_user: '1.50',
+          },
+        ],
+      });
+    const res = await request(app)
+      .get('/api/referrals/invites')
+      .set('Authorization', `Bearer ${userToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(2);
+    expect(res.body.users).toHaveLength(2);
+    expect(res.body.users[0].invited_name).toBe('Alice');
+    expect(res.body.users[1].invited_name).toBe('Bob');
+  });
+
+  it('returns empty list when no invited users', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .get('/api/referrals/invites')
+      .set('Authorization', `Bearer ${userToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(0);
+    expect(res.body.users).toHaveLength(0);
+  });
+
+  it('respects page and limit query params', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '50' }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .get('/api/referrals/invites?page=2&limit=10')
+      .set('Authorization', `Bearer ${userToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.page).toBe(2);
+    expect(res.body.limit).toBe(10);
+  });
+});

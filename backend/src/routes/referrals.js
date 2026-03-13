@@ -1,7 +1,7 @@
 'use strict';
 
 const express = require('express');
-const { body, param } = require('express-validator');
+const { body, param, query } = require('express-validator');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 
@@ -14,6 +14,25 @@ const router = express.Router();
 const VALID_DISCOUNT_TYPES = ['none', 'percent', 'fixed'];
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
+// ─── User Referral System constants ───────────────────────────────────────────
+
+// Percentage of invited user's order commission credited to the inviter
+const USER_REFERRAL_REWARD_RATE = 0.02; // 2 %
+const BASE_URL = process.env.FRONTEND_URL || 'https://uszefaqualitet.pl';
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+/** Generate a URL-safe user referral code using unbiased rejection sampling. */
+function generateUserReferralCode() {
+  const MAX_VALID = Math.floor(256 / CODE_ALPHABET.length) * CODE_ALPHABET.length;
+  let code = 'USR-';
+  while (code.length < 12) { // 'USR-' + 8 chars
+    const byte = crypto.randomBytes(1)[0];
+    if (byte < MAX_VALID) code += CODE_ALPHABET[byte % CODE_ALPHABET.length];
+  }
+  return code;
+}
+
 /** Generate a random alphanumeric referral code of given length. */
 function generateCode(length = 8) {
   let code = '';
@@ -22,6 +41,159 @@ function generateCode(length = 8) {
   }
   return code;
 }
+
+// ─── POST /api/referrals/generate – generate or return user's invite link ─────
+// Any authenticated user may call this to get their personal referral link.
+// The code is persisted in users.user_referral_code; subsequent calls return
+// the same code.
+
+router.post(
+  '/generate',
+  authenticate,
+  async (req, res) => {
+    const userId = req.user.id;
+
+    try {
+      const userResult = await db.query(
+        'SELECT user_referral_code FROM users WHERE id = $1',
+        [userId]
+      );
+      const user = userResult.rows[0];
+      if (!user) return res.status(404).json({ error: 'Użytkownik nie istnieje' });
+
+      let code = user.user_referral_code;
+
+      if (!code) {
+        // Generate a collision-free code (up to 10 attempts)
+        let attempts = 0;
+        while (!code && attempts < 10) {
+          const candidate = generateUserReferralCode();
+          const existsResult = await db.query(
+            'SELECT id FROM users WHERE user_referral_code = $1',
+            [candidate]
+          );
+          if (existsResult.rows.length === 0) code = candidate;
+          attempts++;
+        }
+
+        if (!code) {
+          return res.status(500).json({ error: 'Nie można wygenerować kodu polecającego' });
+        }
+
+        await db.query(
+          'UPDATE users SET user_referral_code = $1 WHERE id = $2',
+          [code, userId]
+        );
+      }
+
+      return res.status(200).json({
+        code,
+        link: `${BASE_URL}/invite/${code}`,
+      });
+    } catch (err) {
+      console.error('user referral generate error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── GET /api/referrals/stats – user referral stats ───────────────────────────
+// Returns the authenticated user's referral summary:
+//   invited_count     – total users invited
+//   total_earnings    – total rewards earned from invited users' activity
+//   referral_code     – user's own invite code (null if not yet generated)
+//   referral_link     – full invite URL
+
+router.get(
+  '/stats',
+  authenticate,
+  async (req, res) => {
+    const userId = req.user.id;
+
+    try {
+      const [invitedResult, earningsResult, userResult] = await Promise.all([
+        db.query(
+          'SELECT COUNT(*) AS total FROM user_referrals WHERE inviter_id = $1',
+          [userId]
+        ),
+        db.query(
+          `SELECT COALESCE(SUM(amount), 0) AS total_earnings
+           FROM referral_rewards
+           WHERE inviter_id = $1`,
+          [userId]
+        ),
+        db.query(
+          'SELECT user_referral_code FROM users WHERE id = $1',
+          [userId]
+        ),
+      ]);
+
+      const code = userResult.rows[0]?.user_referral_code || null;
+
+      return res.json({
+        invited_count:  parseInt(invitedResult.rows[0].total, 10),
+        total_earnings: parseFloat(earningsResult.rows[0].total_earnings),
+        referral_code:  code,
+        referral_link:  code ? `${BASE_URL}/invite/${code}` : null,
+      });
+    } catch (err) {
+      console.error('user referral stats error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── GET /api/referrals/invites – paginated list of invited users ──────────────
+// Returns users who registered via the authenticated user's referral link.
+
+router.get(
+  '/invites',
+  authenticate,
+  [
+    query('page').optional().isInt({ min: 1 }),
+    query('limit').optional().isInt({ min: 1, max: 100 }),
+  ],
+  validate,
+  async (req, res) => {
+    const page      = Math.max(1, parseInt(req.query.page  || '1',  10));
+    const limit     = Math.min(100, parseInt(req.query.limit || '20', 10));
+    const offset    = (page - 1) * limit;
+    const inviterId = req.user.id;
+
+    try {
+      const [countResult, rowsResult] = await Promise.all([
+        db.query(
+          'SELECT COUNT(*) FROM user_referrals WHERE inviter_id = $1',
+          [inviterId]
+        ),
+        db.query(
+          `SELECT ur.id, ur.created_at,
+                  u.id AS invited_id, u.name AS invited_name, u.email AS invited_email,
+                  COALESCE(
+                    (SELECT SUM(rr.amount) FROM referral_rewards rr
+                     WHERE rr.inviter_id = $1 AND rr.invited_id = u.id), 0
+                  ) AS earned_from_user
+           FROM user_referrals ur
+           JOIN users u ON u.id = ur.invited_id
+           WHERE ur.inviter_id = $1
+           ORDER BY ur.created_at DESC
+           LIMIT $2 OFFSET $3`,
+          [inviterId, limit, offset]
+        ),
+      ]);
+
+      return res.json({
+        total: parseInt(countResult.rows[0].count, 10),
+        page,
+        limit,
+        users: rowsResult.rows,
+      });
+    } catch (err) {
+      console.error('user referral invites error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
 
 // ─── GET /api/referrals – list own referral codes ─────────────────────────────
 

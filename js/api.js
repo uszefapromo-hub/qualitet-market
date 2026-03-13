@@ -680,6 +680,17 @@
     adminStats()                           { return get('/affiliate/admin/stats'); },
   };
 
+  // ─── User Referral System ────────────────────────────────────────────────────
+
+  const UserReferrals = {
+    /** Generate (or return existing) user invite link. POST /api/referrals/generate */
+    generate()            { return post('/referrals/generate'); },
+    /** Referral stats (invited count, earnings, link). GET /api/referrals/stats */
+    stats()               { return get('/referrals/stats'); },
+    /** List users invited via the referral link. GET /api/referrals/invites */
+    invites(params)       { return get('/referrals/invites', params); },
+  };
+
   // ─── Creator Referral System ──────────────────────────────────────────────────
 
   const CreatorReferrals = {
@@ -739,6 +750,7 @@
     Referral,
     Announcements,
     Affiliate,
+    UserReferrals,
     CreatorReferrals,
     Live,
     health,

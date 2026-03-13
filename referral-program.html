@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Program Polecający | QualitetVerse</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#7c3aed">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
+  <link rel="stylesheet" href="panel.css">
+  <style>
+    /* ── Referral programme styles ── */
+
+    .ref-hero {
+      background: linear-gradient(135deg, rgba(99,102,241,.15) 0%, rgba(139,92,246,.1) 100%);
+      border: 1px solid rgba(99,102,241,.3);
+      border-radius: 24px;
+      padding: 32px;
+      margin-bottom: 28px;
+      text-align: center;
+    }
+    .ref-hero h2 { font-size: 26px; font-weight: 800; color: #fff; margin: 0 0 8px; }
+    .ref-hero p  { color: var(--muted); font-size: 15px; margin: 0 0 24px; }
+
+    /* Invite link box */
+    .invite-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--input);
+      border: 1px solid var(--stroke);
+      border-radius: 14px;
+      padding: 10px 16px;
+      max-width: 540px;
+      margin: 0 auto;
+    }
+    .invite-box input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #f1f5f9;
+      font-size: 14px;
+      font-family: monospace;
+      min-width: 0;
+    }
+    .invite-box button {
+      white-space: nowrap;
+      padding: 8px 18px;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+      transition: opacity .15s;
+    }
+    .invite-box button:hover { opacity: .85; }
+
+    /* Generate button */
+    .btn-generate {
+      margin-top: 16px;
+      padding: 12px 28px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 700;
+      transition: opacity .15s;
+    }
+    .btn-generate:hover { opacity: .85; }
+    .btn-generate:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Stat cards */
+    .stat-grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: .6px; font-weight: 700; color: var(--muted); }
+    .stat-value { font-size: 28px; font-weight: 800; color: #fff; }
+    .stat-value.green  { color: var(--green); }
+    .stat-value.accent { color: var(--accent); }
+
+    /* Invited users table */
+    .ref-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .ref-table th {
+      text-align: left; padding: 10px 14px;
+      color: var(--muted); font-weight: 700;
+      font-size: 12px; text-transform: uppercase; letter-spacing: .5px;
+      border-bottom: 1px solid var(--stroke);
+    }
+    .ref-table td { padding: 12px 14px; border-bottom: 1px solid var(--stroke); color: #e2e8f0; vertical-align: middle; }
+    .ref-table tr:last-child td { border-bottom: none; }
+    .ref-table tr:hover td { background: rgba(255,255,255,.03); }
+
+    .empty-state { text-align: center; padding: 40px; color: var(--muted); font-size: 15px; }
+
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: #10b981; color: #fff;
+      padding: 12px 22px; border-radius: 12px;
+      font-weight: 700; font-size: 14px;
+      opacity: 0; transform: translateY(10px);
+      transition: opacity .3s, transform .3s;
+      pointer-events: none; z-index: 9999;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+  </style>
+</head>
+<body>
+  <div id="app-shell">
+    <header class="topbar">
+      <a href="dashboard.html" class="logo-link">
+        <span class="logo-text">Qualitet<span class="logo-accent">Verse</span></span>
+      </a>
+      <nav class="topnav">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="referral-program.html" class="active">Program Polecający</a>
+      </nav>
+    </header>
+
+    <main class="page-content">
+      <div class="container">
+
+        <!-- Hero / Invite link -->
+        <section class="ref-hero">
+          <h2>🎁 Zapraszaj i zarabiaj</h2>
+          <p>Poleć Qualitet swoim znajomym. Za każdą aktywność zaproszonego użytkownika otrzymasz <strong>2% prowizji</strong>.</p>
+
+          <div id="link-section" style="display:none;">
+            <div class="invite-box">
+              <input type="text" id="invite-link-input" readonly placeholder="Twój link polecający...">
+              <button id="copy-btn" onclick="copyLink()">📋 Kopiuj</button>
+            </div>
+          </div>
+
+          <button id="generate-btn" class="btn-generate" onclick="generateLink()">
+            Wygeneruj link polecający
+          </button>
+        </section>
+
+        <!-- Stats -->
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-label">Zaproszeni</div>
+            <div class="stat-value accent" id="stat-invited">–</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Zarobki</div>
+            <div class="stat-value green" id="stat-earnings">–</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Twój kod</div>
+            <div class="stat-value" style="font-size:16px; font-family:monospace;" id="stat-code">–</div>
+          </div>
+        </div>
+
+        <!-- Invited users list -->
+        <section class="card" style="padding:24px;">
+          <h3 style="margin:0 0 18px; font-size:18px; font-weight:800; color:#f1f5f9;">
+            Zaproszeni użytkownicy
+          </h3>
+          <div id="users-loading" class="empty-state">Ładowanie…</div>
+          <div id="users-empty" class="empty-state" style="display:none;">
+            Nie zaprosiłeś/aś jeszcze nikogo.<br>
+            <small>Udostępnij swój link polecający, by zacząć zarabiać.</small>
+          </div>
+          <div id="users-table-wrap" style="display:none; overflow-x:auto;">
+            <table class="ref-table">
+              <thead>
+                <tr>
+                  <th>Użytkownik</th>
+                  <th>E-mail</th>
+                  <th>Dołączył/a</th>
+                  <th>Zarobki od tej osoby</th>
+                </tr>
+              </thead>
+              <tbody id="users-tbody"></tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div id="pagination" style="display:none; gap:8px; justify-content:center; margin-top:16px;">
+            <button id="prev-btn" class="btn-secondary" onclick="changePage(-1)">← Poprzednia</button>
+            <span id="page-info" style="line-height:38px; color:var(--muted); font-size:14px;"></span>
+            <button id="next-btn" class="btn-secondary" onclick="changePage(1)">Następna →</button>
+          </div>
+        </section>
+
+      </div><!-- /.container -->
+    </main>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="js/api.js"></script>
+  <script>
+    'use strict';
+
+    let currentPage = 1;
+    let totalPages  = 1;
+
+    function showToast(msg, color) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.background = color || '#10b981';
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    function copyLink() {
+      const input = document.getElementById('invite-link-input');
+      navigator.clipboard.writeText(input.value)
+        .then(() => showToast('Link skopiowany!'))
+        .catch(() => {
+          input.select();
+          document.execCommand('copy');
+          showToast('Link skopiowany!');
+        });
+    }
+
+    async function generateLink() {
+      const btn = document.getElementById('generate-btn');
+      btn.disabled = true;
+      btn.textContent = 'Generowanie…';
+      try {
+        const data = await window.QMApi.UserReferrals.generate();
+        showInviteLink(data.link, data.code);
+      } catch (e) {
+        showToast(e.message || 'Błąd generowania linku', '#ef4444');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Wygeneruj link polecający';
+      }
+    }
+
+    function showInviteLink(link, code) {
+      document.getElementById('invite-link-input').value = link;
+      document.getElementById('link-section').style.display = 'block';
+      document.getElementById('generate-btn').style.display = 'none';
+      document.getElementById('stat-code').textContent = code || '–';
+    }
+
+    async function loadStats() {
+      try {
+        const s = await window.QMApi.UserReferrals.stats();
+        document.getElementById('stat-invited').textContent = s.invited_count ?? 0;
+        document.getElementById('stat-earnings').textContent =
+          (s.total_earnings != null ? s.total_earnings.toFixed(2) : '0.00') + ' zł';
+        if (s.referral_code) {
+          document.getElementById('stat-code').textContent = s.referral_code;
+          showInviteLink(s.referral_link, s.referral_code);
+        }
+      } catch (_) { /* silently skip if unauthenticated */ }
+    }
+
+    async function loadInvites(page) {
+      document.getElementById('users-loading').style.display = 'block';
+      document.getElementById('users-empty').style.display = 'none';
+      document.getElementById('users-table-wrap').style.display = 'none';
+
+      try {
+        const data = await window.QMApi.UserReferrals.invites({ page, limit: 20 });
+        document.getElementById('users-loading').style.display = 'none';
+
+        if (!data.users || data.users.length === 0) {
+          document.getElementById('users-empty').style.display = 'block';
+          document.getElementById('pagination').style.display = 'none';
+          return;
+        }
+
+        const tbody = document.getElementById('users-tbody');
+        tbody.innerHTML = data.users.map(u => `
+          <tr>
+            <td>${escHtml(u.invited_name || '—')}</td>
+            <td>${escHtml(u.invited_email || '—')}</td>
+            <td>${u.created_at ? new Date(u.created_at).toLocaleDateString('pl-PL') : '—'}</td>
+            <td style="color:var(--green);">${parseFloat(u.earned_from_user || 0).toFixed(2)} zł</td>
+          </tr>
+        `).join('');
+
+        document.getElementById('users-table-wrap').style.display = 'block';
+
+        totalPages = Math.max(1, Math.ceil(data.total / data.limit));
+        currentPage = data.page;
+        document.getElementById('page-info').textContent =
+          `Strona ${currentPage} z ${totalPages}`;
+        document.getElementById('prev-btn').disabled = currentPage <= 1;
+        document.getElementById('next-btn').disabled = currentPage >= totalPages;
+        document.getElementById('pagination').style.display =
+          totalPages > 1 ? 'flex' : 'none';
+
+      } catch (err) {
+        document.getElementById('users-loading').style.display = 'none';
+        document.getElementById('users-empty').textContent = 'Błąd ładowania danych.';
+        document.getElementById('users-empty').style.display = 'block';
+      }
+    }
+
+    function changePage(delta) {
+      const next = currentPage + delta;
+      if (next < 1 || next > totalPages) return;
+      currentPage = next;
+      loadInvites(currentPage);
+    }
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // Initialise
+    loadStats();
+    loadInvites(1);
+  </script>
+</body>
+</html>
