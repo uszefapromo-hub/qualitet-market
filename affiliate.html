@@ -1,0 +1,1049 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Afiliacja – Creator Dashboard | UszefaQualitet</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
+  <link rel="stylesheet" href="panel.css">
+  <style>
+    /* ── Affiliate page specific styles ── */
+
+    /* Tab navigation */
+    .aff-tabs { display:flex; gap:8px; margin-bottom:28px; flex-wrap:wrap; }
+    .aff-tab  { padding:10px 20px; border-radius:12px; border:1px solid var(--stroke);
+                background:var(--card); cursor:pointer; font-size:14px; font-weight:600;
+                color:var(--muted); transition:all .15s; }
+    .aff-tab:hover  { color:#fff; border-color:var(--accent); }
+    .aff-tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+    /* Tab panes */
+    .aff-pane { display:none; }
+    .aff-pane.active { display:block; }
+
+    /* Stat cards */
+    .stat-grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); margin-bottom:28px; }
+    .stat-card { background:var(--card); border:1px solid var(--stroke); border-radius:20px;
+                 padding:20px; display:flex; flex-direction:column; gap:8px; }
+    .stat-label{ font-size:12px; text-transform:uppercase; letter-spacing:.6px; font-weight:700; color:var(--muted); }
+    .stat-value{ font-size:28px; font-weight:800; color:#fff; }
+    .stat-value.green { color:var(--green); }
+    .stat-value.accent { color:var(--accent); }
+
+    /* Links table */
+    .aff-table { width:100%; border-collapse:collapse; font-size:14px; }
+    .aff-table th { text-align:left; padding:10px 14px; color:var(--muted); font-weight:700;
+                    font-size:12px; text-transform:uppercase; letter-spacing:.5px;
+                    border-bottom:1px solid var(--stroke); }
+    .aff-table td { padding:12px 14px; border-bottom:1px solid var(--stroke); color:#e2e8f0; vertical-align:middle; }
+    .aff-table tr:last-child td { border-bottom:none; }
+    .aff-table tr:hover td { background:rgba(255,255,255,.03); }
+
+    /* Code badge */
+    .code-badge { font-family:monospace; background:rgba(99,102,241,.15); color:var(--accent);
+                  border:1px solid rgba(99,102,241,.35); border-radius:8px; padding:3px 9px;
+                  font-size:13px; cursor:pointer; }
+    .code-badge:hover { background:rgba(99,102,241,.3); }
+
+    /* Status pill */
+    .pill { border-radius:20px; padding:3px 10px; font-size:12px; font-weight:700; }
+    .pill.pending  { background:rgba(245,158,11,.15); color:#f59e0b; }
+    .pill.confirmed{ background:rgba(16,185,129,.15); color:#10b981; }
+    .pill.rejected { background:rgba(239,68,68,.15);  color:#ef4444; }
+    .pill.approved { background:rgba(16,185,129,.15); color:#10b981; }
+    .pill.active   { background:rgba(16,185,129,.15); color:#10b981; }
+    .pill.inactive { background:rgba(107,114,128,.15); color:#6b7280; }
+
+    /* Product card grid */
+    .promo-grid { display:grid; gap:16px; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); }
+    .promo-card { background:var(--card); border:1px solid var(--stroke); border-radius:20px;
+                  padding:18px; display:flex; flex-direction:column; gap:10px; }
+    .promo-card img { width:100%; height:120px; object-fit:cover; border-radius:12px; background:#1e293b; }
+    .promo-card-name { font-weight:700; font-size:15px; color:#f1f5f9; }
+    .promo-card-store { font-size:12px; color:var(--muted); }
+    .promo-card-commission { font-size:20px; font-weight:800; color:var(--green); }
+    .promo-card-price { font-size:13px; color:var(--muted); }
+
+    /* Form row */
+    .form-row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom:20px; }
+    .form-row .form-group { flex:1; min-width:160px; }
+    .form-group label { display:block; font-size:13px; color:var(--muted); margin-bottom:6px; font-weight:600; }
+    .form-group input, .form-group select {
+      width:100%; background:var(--input); border:1px solid var(--stroke); border-radius:10px;
+      padding:10px 14px; color:#f1f5f9; font-size:14px; outline:none; }
+    .form-group input:focus, .form-group select:focus { border-color:var(--accent); }
+
+    /* Section header */
+    .section-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; gap:12px; flex-wrap:wrap; }
+    .section-head h2 { margin:0; font-size:20px; }
+
+    /* Empty state */
+    .empty-state { text-align:center; padding:48px 20px; color:var(--muted); }
+    .empty-state .empty-icon { font-size:48px; margin-bottom:12px; }
+    .empty-state p { font-size:15px; margin:0; }
+
+    /* Withdraw box */
+    .withdraw-box { background:var(--card); border:1px solid var(--stroke); border-radius:20px;
+                    padding:24px; max-width:420px; }
+    .withdraw-balance { font-size:40px; font-weight:800; color:var(--green); margin:8px 0 20px; }
+
+    /* Toggle switch for seller settings */
+    .toggle-switch { position:relative; display:inline-block; width:44px; height:24px; }
+    .toggle-switch input { opacity:0; width:0; height:0; }
+    .toggle-slider { position:absolute; inset:0; cursor:pointer; background:#374151;
+                     border-radius:24px; transition:.2s; }
+    .toggle-slider:before { position:absolute; content:""; height:18px; width:18px;
+                            left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; }
+    .toggle-switch input:checked + .toggle-slider { background:var(--accent); }
+    .toggle-switch input:checked + .toggle-slider:before { transform:translateX(20px); }
+
+    /* Commission input inline */
+    .commission-input { width:80px; background:var(--input); border:1px solid var(--stroke);
+                        border-radius:8px; padding:6px 10px; color:#f1f5f9; font-size:14px; text-align:right; }
+
+    /* Copy toast */
+    #copy-toast { position:fixed; bottom:24px; right:24px; background:#1e293b; color:#f1f5f9;
+                  border:1px solid var(--stroke); border-radius:12px; padding:12px 20px;
+                  font-size:14px; font-weight:600; opacity:0; pointer-events:none;
+                  transition:opacity .25s; z-index:9999; }
+    #copy-toast.show { opacity:1; }
+
+    @media (max-width:680px) {
+      .stat-grid { grid-template-columns:1fr 1fr; }
+      .promo-grid { grid-template-columns:1fr 1fr; }
+    }
+    @media (max-width:400px) {
+      .stat-grid { grid-template-columns:1fr; }
+      .promo-grid { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body data-page="affiliate" class="dashboard-page has-bottom-nav">
+
+  <!-- Splash -->
+  <div class="app-splash" data-app-splash>
+    <div class="app-splash-card">
+      <div class="app-splash-logo">
+        <img src="assets/icons/icon-192.svg" alt="UszefaQualitet">
+      </div>
+      <div class="app-splash-title">
+        <strong>UszefaQualitet</strong>
+        <span>Afiliacja</span>
+      </div>
+      <div class="app-splash-loader"></div>
+    </div>
+  </div>
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>UszefaQualitet</strong>
+          <span>QualitetMarket</span>
+          <span class="brand-tag">U SZEFA</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Główna nawigacja">
+        <a href="index.html">Start</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="zarabiaj.html">Zarabiaj</a>
+        <a href="cennik.html">Cennik</a>
+      </nav>
+      <a class="btn btn-primary topbar-cta" href="dashboard.html">Panel</a>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <!-- Dashboard shell -->
+  <div class="dashboard-shell">
+    <aside class="sidebar">
+      <nav class="sidebar-nav" aria-label="Menu panelu">
+        <a href="dashboard.html">Dashboard</a>
+        <a href="generator-sklepu.html">Mój sklep</a>
+        <a href="hurtownie.html" data-require="pro">Hurtownie</a>
+        <a href="linki-sprzedazowe.html">Linki sprzedażowe</a>
+        <a href="affiliate.html" class="active">Afiliacja</a>
+        <a href="qualitetmarket.html" data-require="pro">QualitetMarket</a>
+        <a href="listing.html" data-require="pro">Listing</a>
+        <a href="crm.html" data-require="pro">CRM</a>
+        <a href="cennik.html">Subskrypcja</a>
+        <a href="owner-panel.html" data-superadmin-link hidden>Panel Superadmina</a>
+      </nav>
+    </aside>
+
+    <main class="dashboard-main">
+      <!-- Page header -->
+      <section class="panel-card" style="margin-bottom:0">
+        <span class="eyebrow">Program partnerski</span>
+        <h1 style="font-size:clamp(22px,4vw,32px);margin:8px 0 6px">Afiliacja – Creator Dashboard</h1>
+        <p class="hint">Promuj produkty na TikToku i Instagramie. Zarabiaj prowizję za każdą sprzedaż.</p>
+      </section>
+
+      <!-- Tabs -->
+      <div class="aff-tabs" role="tablist">
+        <button class="aff-tab active" data-tab="creator"  role="tab">🎯 Creator</button>
+        <button class="aff-tab"        data-tab="promote"  role="tab">🔗 Promuj produkty</button>
+        <button class="aff-tab"        data-tab="earnings" role="tab">💰 Zarobki</button>
+        <button class="aff-tab"        data-tab="seller"   role="tab">🛍️ Ustawienia sprzedawcy</button>
+        <button class="aff-tab"        data-tab="admin"    role="tab" id="admin-tab" hidden>⚙️ Admin</button>
+      </div>
+
+      <!-- ── Creator Dashboard ── -->
+      <div class="aff-pane active" id="pane-creator">
+        <div class="stat-grid" id="creator-stats">
+          <div class="stat-card">
+            <div class="stat-label">Aktywne linki</div>
+            <div class="stat-value accent" id="stat-links">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Kliknięcia</div>
+            <div class="stat-value" id="stat-clicks">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Konwersje</div>
+            <div class="stat-value" id="stat-conv">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Zarobiono łącznie</div>
+            <div class="stat-value green" id="stat-earned">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Dostępne saldo</div>
+            <div class="stat-value green" id="stat-balance">--</div>
+          </div>
+        </div>
+
+        <!-- My affiliate links -->
+        <div class="panel-card">
+          <div class="section-head">
+            <h2>Moje linki afiliacyjne</h2>
+            <button class="btn btn-primary btn-sm" id="btn-open-create-link">+ Nowy link</button>
+          </div>
+
+          <!-- Create link form (hidden by default) -->
+          <div id="create-link-form" hidden style="margin-bottom:24px; background:rgba(99,102,241,.07); border:1px solid rgba(99,102,241,.25); border-radius:16px; padding:20px;">
+            <p style="font-weight:700; margin:0 0 14px; font-size:15px;">Utwórz nowy link afiliacyjny</p>
+            <div class="form-row">
+              <div class="form-group" style="flex:2">
+                <label for="new-link-product">ID produktu</label>
+                <input type="text" id="new-link-product" placeholder="uuid produktu" />
+              </div>
+              <div class="form-group" style="flex:2">
+                <label for="new-link-store">ID sklepu (opcjonalnie)</label>
+                <input type="text" id="new-link-store" placeholder="uuid sklepu" />
+              </div>
+              <div class="form-group" style="flex:0 0 auto">
+                <label>&nbsp;</label>
+                <button class="btn btn-primary" id="btn-create-link">Utwórz</button>
+              </div>
+            </div>
+            <p id="create-link-error" style="color:#ef4444; font-size:13px; margin:4px 0 0;" hidden></p>
+          </div>
+
+          <div id="links-loading" class="empty-state" hidden>
+            <div class="app-splash-loader" style="margin:0 auto 12px"></div>
+            <p>Ładowanie linków…</p>
+          </div>
+          <div id="links-empty" class="empty-state" hidden>
+            <div class="empty-icon">🔗</div>
+            <p>Nie masz jeszcze żadnych linków afiliacyjnych.<br>Kliknij <strong>+ Nowy link</strong> aby dodać pierwszy.</p>
+          </div>
+          <div id="links-table-wrap" hidden>
+            <table class="aff-table" id="links-table">
+              <thead>
+                <tr>
+                  <th>Kod</th>
+                  <th>Produkt</th>
+                  <th>Sklep</th>
+                  <th>Kliknięcia</th>
+                  <th>Konwersje</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="links-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Promote Products ── -->
+      <div class="aff-pane" id="pane-promote">
+        <div class="panel-card">
+          <div class="section-head">
+            <h2>Produkty do promowania</h2>
+            <div class="form-row" style="margin:0">
+              <input type="text" id="promo-search" placeholder="Szukaj produktu…" style="background:var(--input);border:1px solid var(--stroke);border-radius:10px;padding:8px 14px;color:#f1f5f9;font-size:14px;width:220px">
+            </div>
+          </div>
+          <p class="hint" style="margin:0 0 20px">Produkty ze sklepów z włączoną afiliację. Kliknij <strong>Promuj</strong> aby wygenerować swój link.</p>
+
+          <div id="promo-loading" class="empty-state" hidden>
+            <div class="app-splash-loader" style="margin:0 auto 12px"></div>
+            <p>Ładowanie produktów…</p>
+          </div>
+          <div id="promo-empty" class="empty-state" hidden>
+            <div class="empty-icon">📦</div>
+            <p>Brak produktów z włączoną afiliację.</p>
+          </div>
+          <div class="promo-grid" id="promo-grid"></div>
+          <div style="text-align:center; margin-top:20px; display:none" id="promo-load-more">
+            <button class="btn btn-secondary" id="btn-promo-more">Załaduj więcej</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Earnings ── -->
+      <div class="aff-pane" id="pane-earnings">
+        <!-- Withdraw box -->
+        <div class="withdraw-box" style="margin-bottom:24px">
+          <div class="stat-label">Dostępne saldo do wypłaty</div>
+          <div class="withdraw-balance" id="withdraw-balance">-- zł</div>
+          <div class="form-row" style="margin:0">
+            <div class="form-group" style="flex:1; min-width:120px">
+              <label for="withdraw-amount">Kwota wypłaty (zł)</label>
+              <input type="number" id="withdraw-amount" min="1" step="0.01" placeholder="np. 50.00">
+            </div>
+            <div class="form-group" style="flex:0 0 auto">
+              <label>&nbsp;</label>
+              <button class="btn btn-primary" id="btn-withdraw">Wypłać</button>
+            </div>
+          </div>
+          <p id="withdraw-msg" style="font-size:13px; margin:8px 0 0;" hidden></p>
+        </div>
+
+        <!-- Earnings history -->
+        <div class="panel-card">
+          <div class="section-head">
+            <h2>Historia zarobków</h2>
+          </div>
+          <div id="earn-loading" class="empty-state" hidden>
+            <div class="app-splash-loader" style="margin:0 auto 12px"></div>
+            <p>Ładowanie historii…</p>
+          </div>
+          <div id="earn-empty" class="empty-state" hidden>
+            <div class="empty-icon">💸</div>
+            <p>Brak historii konwersji.</p>
+          </div>
+          <div id="earn-table-wrap" hidden>
+            <table class="aff-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Produkt</th>
+                  <th>Link</th>
+                  <th>Wartość zamówienia</th>
+                  <th>Prowizja</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="earn-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Seller Settings ── -->
+      <div class="aff-pane" id="pane-seller">
+        <div class="panel-card" style="margin-bottom:20px">
+          <!-- Seller stats -->
+          <div class="section-head">
+            <h2>Statystyki afiliacji sklepu</h2>
+          </div>
+          <div class="stat-grid" id="seller-stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">Aktywne linki</div>
+              <div class="stat-value accent" id="ss-links">--</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Kliknięcia</div>
+              <div class="stat-value" id="ss-clicks">--</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Konwersje</div>
+              <div class="stat-value" id="ss-conv">--</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Przychód afiliantów</div>
+              <div class="stat-value green" id="ss-rev">--</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top creators -->
+        <div class="panel-card" style="margin-bottom:20px">
+          <div class="section-head">
+            <h2>Top twórcy promujący Twoje produkty</h2>
+          </div>
+          <div id="creators-empty" class="empty-state" hidden>
+            <div class="empty-icon">🎬</div>
+            <p>Nikt jeszcze nie promuje Twoich produktów.</p>
+          </div>
+          <div id="creators-table-wrap" hidden>
+            <table class="aff-table">
+              <thead>
+                <tr>
+                  <th>Twórca</th>
+                  <th>Linki</th>
+                  <th>Kliknięcia</th>
+                  <th>Konwersje</th>
+                  <th>Prowizje</th>
+                </tr>
+              </thead>
+              <tbody id="creators-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Product affiliate settings -->
+        <div class="panel-card">
+          <div class="section-head">
+            <h2>Ustawienia prowizji per produkt</h2>
+          </div>
+          <p class="hint" style="margin:0 0 20px">Ustaw % prowizji i włącz/wyłącz afiliację dla każdego produktu w Twoim sklepie.</p>
+          <div id="seller-settings-loading" class="empty-state" hidden>
+            <div class="app-splash-loader" style="margin:0 auto 12px"></div>
+            <p>Ładowanie ustawień…</p>
+          </div>
+          <div id="seller-settings-empty" class="empty-state" hidden>
+            <div class="empty-icon">⚙️</div>
+            <p>Brak produktów z ustawieniami afiliacji.</p>
+          </div>
+          <div id="seller-settings-table-wrap" hidden>
+            <table class="aff-table">
+              <thead>
+                <tr>
+                  <th>Produkt</th>
+                  <th>Cena</th>
+                  <th>Prowizja (%)</th>
+                  <th>Afiliacja</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="seller-settings-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Admin ── -->
+      <div class="aff-pane" id="pane-admin">
+        <!-- Platform stats -->
+        <div class="panel-card" style="margin-bottom:20px">
+          <div class="section-head"><h2>Statystyki platformy</h2></div>
+          <div class="stat-grid" id="admin-stats-grid">
+            <div class="stat-card"><div class="stat-label">Aktywne linki</div><div class="stat-value accent" id="as-links">--</div></div>
+            <div class="stat-card"><div class="stat-label">Kliknięcia</div><div class="stat-value" id="as-clicks">--</div></div>
+            <div class="stat-card"><div class="stat-label">Konwersje</div><div class="stat-value" id="as-conv">--</div></div>
+            <div class="stat-card"><div class="stat-label">Wypłacone prowizje</div><div class="stat-value green" id="as-paid">--</div></div>
+            <div class="stat-card"><div class="stat-label">Oczekujące wypłaty</div><div class="stat-value" id="as-pend">--</div></div>
+          </div>
+        </div>
+
+        <!-- Withdrawal requests -->
+        <div class="panel-card">
+          <div class="section-head">
+            <h2>Wnioski o wypłatę</h2>
+            <div>
+              <select id="admin-w-filter" style="background:var(--input);border:1px solid var(--stroke);border-radius:10px;padding:8px 12px;color:#f1f5f9;font-size:14px">
+                <option value="">Wszystkie</option>
+                <option value="pending">Oczekujące</option>
+                <option value="approved">Zatwierdzone</option>
+                <option value="rejected">Odrzucone</option>
+              </select>
+            </div>
+          </div>
+          <div id="admin-w-loading" class="empty-state" hidden>
+            <div class="app-splash-loader" style="margin:0 auto 12px"></div>
+            <p>Ładowanie…</p>
+          </div>
+          <div id="admin-w-empty" class="empty-state" hidden>
+            <div class="empty-icon">📋</div>
+            <p>Brak wniosków.</p>
+          </div>
+          <div id="admin-w-table-wrap" hidden>
+            <table class="aff-table">
+              <thead>
+                <tr>
+                  <th>Data</th>
+                  <th>Twórca</th>
+                  <th>Email</th>
+                  <th>Kwota</th>
+                  <th>Status</th>
+                  <th>Akcje</th>
+                </tr>
+              </thead>
+              <tbody id="admin-w-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div><!-- /.dashboard-shell -->
+
+  <!-- Copy toast notification -->
+  <div id="copy-toast">✅ Skopiowano do schowka!</div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script>
+  'use strict';
+
+  const API = window.QMApi;
+  let currentUser = null;
+  let promoPage = 1;
+
+  // ─── Init ─────────────────────────────────────────────────────────────────────
+
+  async function init() {
+    hideSplash();
+    currentUser = getCachedUser();
+    if (!currentUser || !getToken()) {
+      return redirectLogin();
+    }
+
+    // Show admin tab for owners/admins
+    if (currentUser.role === 'owner' || currentUser.role === 'admin') {
+      document.getElementById('admin-tab').hidden = false;
+    }
+
+    // Bind tab buttons
+    document.querySelectorAll('.aff-tab').forEach((btn) => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    // Load initial pane
+    switchTab('creator');
+  }
+
+  // ─── Tab routing ─────────────────────────────────────────────────────────────
+
+  function switchTab(name) {
+    document.querySelectorAll('.aff-tab').forEach((b) => {
+      b.classList.toggle('active', b.dataset.tab === name);
+    });
+    document.querySelectorAll('.aff-pane').forEach((p) => {
+      p.classList.toggle('active', p.id === `pane-${name}`);
+    });
+
+    if (name === 'creator')  loadCreator();
+    if (name === 'promote')  loadPromoteProducts();
+    if (name === 'earnings') loadEarnings();
+    if (name === 'seller')   loadSellerSection();
+    if (name === 'admin')    loadAdminSection();
+  }
+
+  // ─── Creator tab ─────────────────────────────────────────────────────────────
+
+  async function loadCreator() {
+    try {
+      const [dash, links] = await Promise.all([
+        API.Affiliate.dashboard(),
+        API.Affiliate.links({ limit: 50 }),
+      ]);
+
+      document.getElementById('stat-links').textContent   = dash.active_links;
+      document.getElementById('stat-clicks').textContent  = dash.total_clicks;
+      document.getElementById('stat-conv').textContent    = dash.conversions;
+      document.getElementById('stat-earned').textContent  = formatPLN(dash.total_earned);
+      document.getElementById('stat-balance').textContent = formatPLN(dash.balance);
+
+      renderLinksTable(links.links || []);
+    } catch (e) {
+      console.error('loadCreator error', e);
+    }
+  }
+
+  function renderLinksTable(links) {
+    const loading = document.getElementById('links-loading');
+    const empty   = document.getElementById('links-empty');
+    const wrap    = document.getElementById('links-table-wrap');
+    const tbody   = document.getElementById('links-tbody');
+
+    loading.hidden = true;
+    if (!links.length) {
+      empty.hidden = false;
+      wrap.hidden  = true;
+      return;
+    }
+    empty.hidden = true;
+    wrap.hidden  = false;
+
+    tbody.innerHTML = links.map((l) => `
+      <tr>
+        <td><span class="code-badge" data-copy="${buildAffUrl(l.code)}" title="Kliknij aby skopiować link">${l.code}</span></td>
+        <td>${escHtml(l.product_name || '—')}</td>
+        <td>${escHtml(l.store_name || '—')}</td>
+        <td>${l.clicks}</td>
+        <td>${l.conversions}</td>
+        <td><span class="pill ${l.is_active ? 'active' : 'inactive'}">${l.is_active ? 'Aktywny' : 'Nieaktywny'}</span></td>
+        <td>
+          <button class="btn btn-secondary btn-sm" onclick="copyAffLink('${escHtml(buildAffUrl(l.code))}')">📋 Kopiuj</button>
+          ${l.is_active ? `<button class="btn btn-sm" style="color:#ef4444" onclick="deactivateLink('${l.id}')">✕</button>` : ''}
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // Create link form toggle
+  document.getElementById('btn-open-create-link').addEventListener('click', () => {
+    const form = document.getElementById('create-link-form');
+    form.hidden = !form.hidden;
+  });
+
+  document.getElementById('btn-create-link').addEventListener('click', async () => {
+    const productId = document.getElementById('new-link-product').value.trim();
+    const storeId   = document.getElementById('new-link-store').value.trim() || null;
+    const errEl     = document.getElementById('create-link-error');
+    errEl.hidden = true;
+
+    if (!productId) {
+      errEl.textContent = 'Podaj ID produktu.';
+      errEl.hidden = false;
+      return;
+    }
+    try {
+      await API.Affiliate.createLink({ product_id: productId, store_id: storeId });
+      document.getElementById('create-link-form').hidden = true;
+      document.getElementById('new-link-product').value = '';
+      document.getElementById('new-link-store').value = '';
+      loadCreator();
+    } catch (e) {
+      errEl.textContent = e.body?.error || 'Błąd tworzenia linku.';
+      errEl.hidden = false;
+    }
+  });
+
+  async function deactivateLink(id) {
+    if (!confirm('Dezaktywować ten link?')) return;
+    try {
+      await API.Affiliate.deleteLink(id);
+      loadCreator();
+    } catch (e) {
+      alert('Błąd: ' + (e.body?.error || e.message));
+    }
+  }
+
+  // ─── Promote Products tab ─────────────────────────────────────────────────────
+
+  async function loadPromoteProducts(append = false) {
+    const loading = document.getElementById('promo-loading');
+    const empty   = document.getElementById('promo-empty');
+    const grid    = document.getElementById('promo-grid');
+    const moreBtn = document.getElementById('promo-load-more');
+
+    if (!append) {
+      promoPage = 1;
+      grid.innerHTML = '';
+      loading.hidden = false;
+      empty.hidden   = true;
+    }
+
+    try {
+      const data = await API.Affiliate.products({ page: promoPage, limit: 12 });
+      loading.hidden = true;
+
+      if (!data.products.length && !append) {
+        empty.hidden = false;
+        return;
+      }
+
+      data.products.forEach((p) => {
+        const card = document.createElement('div');
+        card.className = 'promo-card';
+        card.innerHTML = `
+          <div style="background:#1e293b;border-radius:12px;height:120px;display:flex;align-items:center;justify-content:center;font-size:40px">🛍️</div>
+          <div class="promo-card-name">${escHtml(p.name)}</div>
+          <div class="promo-card-store">📍 ${escHtml(p.store_name)}</div>
+          <div class="promo-card-commission">${p.commission_percent}% prowizji</div>
+          <div class="promo-card-price">Cena: ${formatPLN(p.price_gross)}</div>
+          <button class="btn btn-primary btn-sm" style="margin-top:4px"
+            onclick="quickCreateLink('${p.id}','${p.store_id}')">
+            🔗 Promuj
+          </button>
+        `;
+        grid.appendChild(card);
+      });
+
+      const hasMore = promoPage * 12 < data.total;
+      moreBtn.style.display = hasMore ? 'block' : 'none';
+    } catch (e) {
+      loading.hidden = true;
+      console.error('loadPromoteProducts error', e);
+    }
+  }
+
+  document.getElementById('btn-promo-more').addEventListener('click', () => {
+    promoPage++;
+    loadPromoteProducts(true);
+  });
+
+  document.getElementById('promo-search').addEventListener('input', debounce(() => {
+    // Simple client-side filter on visible cards
+    const q = document.getElementById('promo-search').value.trim().toLowerCase();
+    document.querySelectorAll('#promo-grid .promo-card').forEach((card) => {
+      const text = card.textContent.toLowerCase();
+      card.style.display = q && !text.includes(q) ? 'none' : '';
+    });
+  }, 250));
+
+  async function quickCreateLink(productId, storeId) {
+    try {
+      const link = await API.Affiliate.createLink({ product_id: productId, store_id: storeId });
+      const url  = buildAffUrl(link.code);
+      copyAffLink(url);
+      showToast('✅ Link skopiowany do schowka: ' + link.code);
+    } catch (e) {
+      if (e.body?.link) {
+        // Already exists – copy it
+        copyAffLink(buildAffUrl(e.body.link.code));
+        showToast('📋 Twój istniejący link skopiowany!');
+      } else {
+        alert('Błąd: ' + (e.body?.error || e.message));
+      }
+    }
+  }
+
+  // ─── Earnings tab ─────────────────────────────────────────────────────────────
+
+  async function loadEarnings() {
+    const loading = document.getElementById('earn-loading');
+    const empty   = document.getElementById('earn-empty');
+    const wrap    = document.getElementById('earn-table-wrap');
+    const tbody   = document.getElementById('earn-tbody');
+
+    loading.hidden = false;
+    empty.hidden   = true;
+    wrap.hidden    = true;
+
+    try {
+      const [bal, earnings] = await Promise.all([
+        API.Affiliate.balance(),
+        API.Affiliate.earnings({ limit: 50 }),
+      ]);
+
+      document.getElementById('withdraw-balance').textContent = formatPLN(bal.balance);
+      loading.hidden = true;
+
+      if (!earnings.earnings.length) {
+        empty.hidden = false;
+        return;
+      }
+      empty.hidden = true;
+      wrap.hidden  = false;
+
+      tbody.innerHTML = earnings.earnings.map((e) => `
+        <tr>
+          <td>${formatDate(e.created_at)}</td>
+          <td>${escHtml(e.product_name || '—')}</td>
+          <td><span class="code-badge">${escHtml(e.link_code)}</span></td>
+          <td>${formatPLN(e.order_amount)}</td>
+          <td style="color:var(--green);font-weight:700">${formatPLN(e.commission_amount)}</td>
+          <td><span class="pill ${e.status}">${statusLabel(e.status)}</span></td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      loading.hidden = true;
+      console.error('loadEarnings error', err);
+    }
+  }
+
+  document.getElementById('btn-withdraw').addEventListener('click', async () => {
+    const amount = parseFloat(document.getElementById('withdraw-amount').value);
+    const msgEl  = document.getElementById('withdraw-msg');
+    msgEl.hidden = true;
+    msgEl.style.color = '#ef4444';
+
+    if (!amount || amount <= 0) {
+      msgEl.textContent = 'Podaj kwotę większą od 0.';
+      msgEl.hidden = false;
+      return;
+    }
+    try {
+      await API.Affiliate.withdraw({ amount });
+      msgEl.textContent  = '✅ Wniosek o wypłatę złożony!';
+      msgEl.style.color  = '#10b981';
+      msgEl.hidden       = false;
+      document.getElementById('withdraw-amount').value = '';
+      loadEarnings();
+    } catch (e) {
+      msgEl.textContent = e.body?.error || 'Błąd wypłaty.';
+      msgEl.hidden = false;
+    }
+  });
+
+  // ─── Seller tab ───────────────────────────────────────────────────────────────
+
+  async function loadSellerSection() {
+    try {
+      const [stats, creators, settings] = await Promise.all([
+        API.Affiliate.sellerStats().catch(() => null),
+        API.Affiliate.sellerCreators({ limit: 10 }).catch(() => ({ creators: [] })),
+        API.Affiliate.sellerSettings().catch(() => ({ settings: [] })),
+      ]);
+
+      if (stats) {
+        document.getElementById('ss-links').textContent  = stats.active_links;
+        document.getElementById('ss-clicks').textContent = stats.total_clicks;
+        document.getElementById('ss-conv').textContent   = stats.conversions;
+        document.getElementById('ss-rev').textContent    = formatPLN(stats.affiliate_revenue);
+      }
+
+      renderCreatorsTable(creators.creators || []);
+      renderSellerSettings(settings.settings || []);
+    } catch (e) {
+      console.error('loadSellerSection error', e);
+    }
+  }
+
+  function renderCreatorsTable(creators) {
+    const empty = document.getElementById('creators-empty');
+    const wrap  = document.getElementById('creators-table-wrap');
+    const tbody = document.getElementById('creators-tbody');
+
+    if (!creators.length) {
+      empty.hidden = false;
+      wrap.hidden  = true;
+      return;
+    }
+    empty.hidden = true;
+    wrap.hidden  = false;
+
+    tbody.innerHTML = creators.map((c) => `
+      <tr>
+        <td>${escHtml(c.creator_name || '—')}</td>
+        <td>${c.links}</td>
+        <td>${c.clicks}</td>
+        <td>${c.conversions}</td>
+        <td style="color:var(--green)">${formatPLN(c.total_commission)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function renderSellerSettings(settings) {
+    const loading = document.getElementById('seller-settings-loading');
+    const empty   = document.getElementById('seller-settings-empty');
+    const wrap    = document.getElementById('seller-settings-table-wrap');
+    const tbody   = document.getElementById('seller-settings-tbody');
+
+    loading.hidden = true;
+
+    if (!settings.length) {
+      empty.hidden = false;
+      wrap.hidden  = true;
+      return;
+    }
+    empty.hidden = true;
+    wrap.hidden  = false;
+
+    tbody.innerHTML = settings.map((s) => `
+      <tr>
+        <td>${escHtml(s.product_name)}</td>
+        <td>${formatPLN(s.price_gross)}</td>
+        <td>
+          <input type="number" class="commission-input" data-pid="${s.product_id}"
+                 value="${s.commission_percent}" min="0" max="80" step="0.5"
+                 onchange="saveSellerProduct(this)">
+          <span style="color:var(--muted);font-size:13px"> %</span>
+        </td>
+        <td>
+          <label class="toggle-switch">
+            <input type="checkbox" data-pid="${s.product_id}" ${s.is_affiliate_enabled ? 'checked' : ''}
+                   onchange="saveSellerProduct(this)">
+            <span class="toggle-slider"></span>
+          </label>
+        </td>
+        <td id="save-msg-${s.product_id}" style="font-size:12px; color:var(--muted)"></td>
+      </tr>
+    `).join('');
+  }
+
+  async function saveSellerProduct(el) {
+    const pid  = el.dataset.pid;
+    const row  = el.closest('tr');
+    const commInput = row.querySelector('.commission-input');
+    const togInput  = row.querySelector('input[type=checkbox]');
+    const msgEl     = document.getElementById(`save-msg-${pid}`);
+
+    try {
+      await API.Affiliate.sellerSetProduct(pid, {
+        commission_percent:   parseFloat(commInput.value),
+        is_affiliate_enabled: togInput.checked,
+      });
+      if (msgEl) { msgEl.textContent = '✓ Zapisano'; setTimeout(() => { if (msgEl) msgEl.textContent = ''; }, 2000); }
+    } catch (e) {
+      if (msgEl) msgEl.textContent = '✗ Błąd';
+      console.error('saveSellerProduct error', e);
+    }
+  }
+
+  // ─── Admin tab ────────────────────────────────────────────────────────────────
+
+  async function loadAdminSection() {
+    try {
+      const stats = await API.Affiliate.adminStats();
+      document.getElementById('as-links').textContent  = stats.active_links;
+      document.getElementById('as-clicks').textContent = stats.total_clicks;
+      document.getElementById('as-conv').textContent   = stats.confirmed_conversions;
+      document.getElementById('as-paid').textContent   = formatPLN(stats.total_commissions_paid);
+      document.getElementById('as-pend').textContent   = `${stats.pending_withdrawals} (${formatPLN(stats.pending_withdrawal_amount)})`;
+    } catch (e) { console.error('loadAdminSection stats error', e); }
+
+    loadAdminWithdrawals();
+  }
+
+  async function loadAdminWithdrawals() {
+    const filter  = document.getElementById('admin-w-filter').value;
+    const loading = document.getElementById('admin-w-loading');
+    const empty   = document.getElementById('admin-w-empty');
+    const wrap    = document.getElementById('admin-w-table-wrap');
+    const tbody   = document.getElementById('admin-w-tbody');
+
+    loading.hidden = false;
+    empty.hidden   = true;
+    wrap.hidden    = true;
+
+    try {
+      const params = { limit: 50 };
+      if (filter) params.status = filter;
+      const data = await API.Affiliate.adminWithdrawals(params);
+      loading.hidden = true;
+
+      if (!data.withdrawals.length) {
+        empty.hidden = false;
+        return;
+      }
+      wrap.hidden = false;
+
+      tbody.innerHTML = data.withdrawals.map((w) => `
+        <tr>
+          <td>${formatDate(w.created_at)}</td>
+          <td>${escHtml(w.creator_name || '—')}</td>
+          <td>${escHtml(w.creator_email || '—')}</td>
+          <td style="font-weight:700">${formatPLN(w.amount)}</td>
+          <td><span class="pill ${w.status}">${statusLabel(w.status)}</span></td>
+          <td>
+            ${w.status === 'pending' ? `
+              <button class="btn btn-primary btn-sm" onclick="updateWithdrawal('${w.id}','approved')">✓ Zatwierdź</button>
+              <button class="btn btn-sm" style="color:#ef4444" onclick="updateWithdrawal('${w.id}','rejected')">✕ Odrzuć</button>
+            ` : '—'}
+          </td>
+        </tr>
+      `).join('');
+    } catch (e) {
+      loading.hidden = true;
+      console.error('loadAdminWithdrawals error', e);
+    }
+  }
+
+  document.getElementById('admin-w-filter').addEventListener('change', loadAdminWithdrawals);
+
+  async function updateWithdrawal(id, status) {
+    const notes = status === 'rejected' ? prompt('Powód odrzucenia (opcjonalnie):') : null;
+    try {
+      await API.Affiliate.adminUpdateWithdrawal(id, { status, notes });
+      loadAdminWithdrawals();
+    } catch (e) {
+      alert('Błąd: ' + (e.body?.error || e.message));
+    }
+  }
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+  function buildAffUrl(code) {
+    // Use QM_API_BASE if set (strips /api suffix to get the root URL),
+    // otherwise fall back to a relative path that works in any deployment.
+    const base = (window.QM_API_BASE || '')
+      .replace(/\/api\/?$/, '');
+    const root = base || window.location.origin;
+    return `${root}/api/affiliate/click/${code}`;
+  }
+
+  function copyAffLink(url) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).catch(() => fallbackCopy(url));
+    } else {
+      fallbackCopy(url);
+    }
+    showToast('📋 Link skopiowany do schowka!');
+  }
+
+  function fallbackCopy(text) {
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.style.cssText = 'position:fixed;left:-9999px';
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('copy-toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  function formatPLN(n) {
+    return parseFloat(n || 0).toLocaleString('pl-PL', { style:'currency', currency:'PLN' });
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleDateString('pl-PL', { day:'2-digit', month:'2-digit', year:'numeric' });
+  }
+
+  function statusLabel(s) {
+    const map = { pending:'Oczekujący', confirmed:'Potwierdzony', rejected:'Odrzucony',
+                  approved:'Wypłacony', active:'Aktywny', inactive:'Nieaktywny' };
+    return map[s] || s;
+  }
+
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function debounce(fn, ms) {
+    let t;
+    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+  }
+
+  function hideSplash() {
+    const splash = document.querySelector('[data-app-splash]');
+    if (splash) splash.style.display = 'none';
+  }
+
+  function getToken() {
+    try { return localStorage.getItem('qm_token'); } catch { return null; }
+  }
+
+  function getCachedUser() {
+    try { return JSON.parse(localStorage.getItem('qm_user') || 'null'); } catch { return null; }
+  }
+
+  function redirectLogin() {
+    window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href);
+  }
+
+  // Click on code-badge copies the link
+  document.addEventListener('click', (e) => {
+    const badge = e.target.closest('[data-copy]');
+    if (badge) copyAffLink(badge.dataset.copy);
+  });
+
+  // Start
+  init();
+  </script>
+</body>
+</html>

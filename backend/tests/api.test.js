@@ -4779,3 +4779,578 @@ describe('POST /api/payments/stripe/webhook', () => {
     if (savedKey) process.env.STRIPE_SECRET_KEY = savedKey;
   });
 });
+
+// ─── Affiliate Creator System ──────────────────────────────────────────────────
+
+const AFF_LINK_ID    = 'c0000000-0000-4000-8000-000000000001';
+const AFF_CONV_ID    = 'c0000000-0000-4000-8000-000000000002';
+const AFF_WITHDRAW_ID = 'c0000000-0000-4000-8000-000000000003';
+
+describe('GET /api/affiliate/dashboard', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/affiliate/dashboard');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns creator stats', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '3' }] })           // active links
+      .mockResolvedValueOnce({ rows: [{ count: '42' }] })          // total clicks
+      .mockResolvedValueOnce({ rows: [{ conversions: '5', total_earned: '150.00' }] }) // conversions
+      .mockResolvedValueOnce({ rows: [{ confirmed_balance: '100.00' }] }) // confirmed balance
+      .mockResolvedValueOnce({ rows: [{ withdrawn: '30.00' }] });  // withdrawn
+
+    const res = await request(app)
+      .get('/api/affiliate/dashboard')
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('active_links', 3);
+    expect(res.body).toHaveProperty('total_clicks', 42);
+    expect(res.body).toHaveProperty('conversions', 5);
+    expect(res.body).toHaveProperty('total_earned', 150);
+    expect(res.body).toHaveProperty('balance', 70);
+  });
+});
+
+describe('GET /api/affiliate/links', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/affiliate/links');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns paginated links for creator', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({
+        rows: [{
+          id: AFF_LINK_ID, code: 'AFF-AABBCCDD', product_id: PRODUCT_ID,
+          store_id: STORE_ID, is_active: true, created_at: new Date().toISOString(),
+          product_name: 'Fotel', product_price: 141.45, store_name: 'Mój Sklep',
+          clicks: 5, conversions: 1,
+        }],
+      });
+
+    const res = await request(app)
+      .get('/api/affiliate/links')
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('total', 1);
+    expect(res.body.links).toHaveLength(1);
+    expect(res.body.links[0].code).toBe('AFF-AABBCCDD');
+  });
+});
+
+describe('POST /api/affiliate/links', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/affiliate/links').send({ product_id: PRODUCT_ID });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects invalid product_id', async () => {
+    const res = await request(app)
+      .post('/api/affiliate/links')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ product_id: 'not-a-uuid' });
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 404 when product does not exist', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // product not found
+    const res = await request(app)
+      .post('/api/affiliate/links')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ product_id: PRODUCT_ID });
+    expect(res.status).toBe(404);
+  });
+
+  it('creates a new affiliate link', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })        // product exists
+      .mockResolvedValueOnce({ rows: [] })                          // no duplicate link
+      .mockResolvedValueOnce({                                       // INSERT
+        rows: [{
+          id: AFF_LINK_ID, creator_id: SELLER_ID, product_id: PRODUCT_ID,
+          store_id: null, code: 'AFF-TESTTESTTT', is_active: true,
+          created_at: new Date().toISOString(),
+        }],
+      });
+
+    const res = await request(app)
+      .post('/api/affiliate/links')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ product_id: PRODUCT_ID });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty('code');
+    expect(res.body.product_id).toBe(PRODUCT_ID);
+  });
+
+  it('returns 409 when link already exists', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })        // product exists
+      .mockResolvedValueOnce({ rows: [{ id: AFF_LINK_ID, code: 'AFF-EXISTING' }] }); // duplicate
+
+    const res = await request(app)
+      .post('/api/affiliate/links')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ product_id: PRODUCT_ID });
+
+    expect(res.status).toBe(409);
+    expect(res.body).toHaveProperty('link');
+  });
+});
+
+describe('DELETE /api/affiliate/links/:id', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).delete(`/api/affiliate/links/${AFF_LINK_ID}`);
+    expect(res.status).toBe(401);
+  });
+
+  it('deactivates an owned link', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: AFF_LINK_ID }] });
+
+    const res = await request(app)
+      .delete(`/api/affiliate/links/${AFF_LINK_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  });
+
+  it('returns 404 for link not owned by caller', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .delete(`/api/affiliate/links/${AFF_LINK_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('GET /api/affiliate/earnings', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/affiliate/earnings');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns earnings list', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({
+        rows: [{
+          id: AFF_CONV_ID, order_id: ORDER_ID, order_amount: 141.45,
+          commission_amount: 14.14, status: 'confirmed',
+          created_at: new Date().toISOString(),
+          link_code: 'AFF-TESTTESTTT', product_name: 'Fotel',
+        }],
+      });
+
+    const res = await request(app)
+      .get('/api/affiliate/earnings')
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('total', 1);
+    expect(res.body.earnings).toHaveLength(1);
+    expect(res.body.earnings[0].commission_amount).toBe(14.14);
+  });
+});
+
+describe('GET /api/affiliate/balance', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/affiliate/balance');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns correct balance', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ total: '200.00' }] }) // confirmed
+      .mockResolvedValueOnce({ rows: [{ total: '50.00' }] });  // withdrawn
+
+    const res = await request(app)
+      .get('/api/affiliate/balance')
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('balance', 150);
+  });
+});
+
+describe('POST /api/affiliate/withdraw', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/affiliate/withdraw').send({ amount: 50 });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects amount <= 0', async () => {
+    const res = await request(app)
+      .post('/api/affiliate/withdraw')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ amount: 0 });
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 400 when balance is insufficient', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ total: '10.00' }] })  // confirmed
+      .mockResolvedValueOnce({ rows: [{ total: '0.00' }] });   // pending/approved
+
+    const res = await request(app)
+      .post('/api/affiliate/withdraw')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ amount: 100 });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('balance');
+  });
+
+  it('creates a withdrawal request when balance is sufficient', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ total: '200.00' }] })  // confirmed
+      .mockResolvedValueOnce({ rows: [{ total: '0.00' }] })    // pending/approved
+      .mockResolvedValueOnce({                                   // INSERT
+        rows: [{
+          id: AFF_WITHDRAW_ID, creator_id: SELLER_ID,
+          amount: 50, status: 'pending', created_at: new Date().toISOString(),
+        }],
+      });
+
+    const res = await request(app)
+      .post('/api/affiliate/withdraw')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ amount: 50 });
+
+    expect(res.status).toBe(201);
+    expect(res.body.status).toBe('pending');
+    expect(res.body.amount).toBe(50);
+  });
+});
+
+describe('GET /api/affiliate/products', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/affiliate/products');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns affiliate-enabled products', async () => {
+    db.query
+      .mockResolvedValueOnce({
+        rows: [{
+          id: PRODUCT_ID, name: 'Fotel', price_gross: 141.45, image_url: null,
+          store_id: STORE_ID, store_name: 'Mój Sklep', commission_percent: 10,
+        }],
+      })
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] });
+
+    const res = await request(app)
+      .get('/api/affiliate/products')
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('total', 1);
+    expect(res.body.products).toHaveLength(1);
+    expect(res.body.products[0].commission_percent).toBe(10);
+  });
+});
+
+describe('GET /api/affiliate/click/:code', () => {
+  it('returns 404 for unknown code', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // link not found
+
+    const res = await request(app).get('/api/affiliate/click/AFF-UNKNOWN1');
+    expect(res.status).toBe(404);
+  });
+
+  it('records click and redirects for valid code', async () => {
+    db.query
+      .mockResolvedValueOnce({
+        rows: [{
+          id: AFF_LINK_ID, product_id: PRODUCT_ID,
+          store_id: STORE_ID, is_active: true,
+        }],
+      })
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] }) // anti-fraud check
+      .mockResolvedValueOnce({ rows: [] });                // INSERT click
+
+    const res = await request(app).get('/api/affiliate/click/AFF-AABBCCDD');
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toBeDefined();
+  });
+
+  it('still redirects but does not record when IP rate limit exceeded', async () => {
+    db.query
+      .mockResolvedValueOnce({
+        rows: [{ id: AFF_LINK_ID, product_id: PRODUCT_ID, store_id: STORE_ID, is_active: true }],
+      })
+      .mockResolvedValueOnce({ rows: [{ count: '5' }] }); // anti-fraud: already 5 clicks
+
+    const res = await request(app).get('/api/affiliate/click/AFF-AABBCCDD');
+    expect(res.status).toBe(302);
+  });
+});
+
+describe('GET /api/affiliate/seller/settings', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/affiliate/seller/settings');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 when seller has no store', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // no store
+
+    const res = await request(app)
+      .get('/api/affiliate/seller/settings')
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('returns settings list', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] }) // store
+      .mockResolvedValueOnce({
+        rows: [{
+          id: 'pas-id-1', product_id: PRODUCT_ID, commission_percent: 8,
+          is_affiliate_enabled: true, product_name: 'Fotel', price_gross: 141.45,
+        }],
+      });
+
+    const res = await request(app)
+      .get('/api/affiliate/seller/settings')
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('store_id', STORE_ID);
+    expect(res.body.settings).toHaveLength(1);
+  });
+});
+
+describe('PUT /api/affiliate/seller/products/:pid', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .put(`/api/affiliate/seller/products/${PRODUCT_ID}`)
+      .send({ commission_percent: 10, is_affiliate_enabled: true });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects commission_percent > 80', async () => {
+    const res = await request(app)
+      .put(`/api/affiliate/seller/products/${PRODUCT_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ commission_percent: 85, is_affiliate_enabled: true });
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 404 when seller has no store', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .put(`/api/affiliate/seller/products/${PRODUCT_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ commission_percent: 10, is_affiliate_enabled: true });
+
+    expect(res.status).toBe(404);
+  });
+
+  it('upserts affiliate settings for the product', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] })           // store
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID }] })       // product in store
+      .mockResolvedValueOnce({                                         // UPSERT
+        rows: [{
+          id: 'pas-id-1', product_id: PRODUCT_ID, store_id: STORE_ID,
+          commission_percent: 10, is_affiliate_enabled: true,
+        }],
+      });
+
+    const res = await request(app)
+      .put(`/api/affiliate/seller/products/${PRODUCT_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ commission_percent: 10, is_affiliate_enabled: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body.commission_percent).toBe(10);
+    expect(res.body.is_affiliate_enabled).toBe(true);
+  });
+});
+
+describe('GET /api/affiliate/seller/creators', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/affiliate/seller/creators');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns top creators for seller store', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] }) // store
+      .mockResolvedValueOnce({
+        rows: [{
+          creator_id: SELLER_ID, creator_name: 'Seller',
+          links: 2, clicks: 30, conversions: 3, total_commission: 45,
+        }],
+      });
+
+    const res = await request(app)
+      .get('/api/affiliate/seller/creators')
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.creators).toHaveLength(1);
+    expect(res.body.creators[0].conversions).toBe(3);
+  });
+});
+
+describe('GET /api/affiliate/seller/stats', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/affiliate/seller/stats');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns seller affiliate stats', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] })   // store
+      .mockResolvedValueOnce({ rows: [{ count: '3' }] })     // active links
+      .mockResolvedValueOnce({ rows: [{ count: '120' }] })   // clicks
+      .mockResolvedValueOnce({
+        rows: [{ conversions: '5', affiliate_revenue: '700.00', total_commissions_paid: '70.00' }],
+      });
+
+    const res = await request(app)
+      .get('/api/affiliate/seller/stats')
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('active_links', 3);
+    expect(res.body).toHaveProperty('total_clicks', 120);
+    expect(res.body).toHaveProperty('conversions', 5);
+    expect(res.body).toHaveProperty('affiliate_revenue', 700);
+    expect(res.body).toHaveProperty('total_commissions_paid', 70);
+  });
+});
+
+describe('GET /api/affiliate/admin/withdrawals', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/affiliate/admin/withdrawals');
+    expect(res.status).toBe(401);
+  });
+
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .get('/api/affiliate/admin/withdrawals')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns paginated withdrawal list for admin', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({
+        rows: [{
+          id: AFF_WITHDRAW_ID, creator_id: SELLER_ID, amount: 50,
+          status: 'pending', notes: null,
+          created_at: new Date().toISOString(), processed_at: null,
+          creator_name: 'Seller', creator_email: 'seller@test.pl',
+        }],
+      });
+
+    const res = await request(app)
+      .get('/api/affiliate/admin/withdrawals')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('total', 1);
+    expect(res.body.withdrawals).toHaveLength(1);
+    expect(res.body.withdrawals[0].status).toBe('pending');
+  });
+});
+
+describe('PATCH /api/affiliate/admin/withdrawals/:id', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .patch(`/api/affiliate/admin/withdrawals/${AFF_WITHDRAW_ID}`)
+      .send({ status: 'approved' });
+    expect(res.status).toBe(401);
+  });
+
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .patch(`/api/affiliate/admin/withdrawals/${AFF_WITHDRAW_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ status: 'approved' });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects invalid status', async () => {
+    const res = await request(app)
+      .patch(`/api/affiliate/admin/withdrawals/${AFF_WITHDRAW_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'invalid' });
+    expect(res.status).toBe(422);
+  });
+
+  it('approves a pending withdrawal', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{
+        id: AFF_WITHDRAW_ID, creator_id: SELLER_ID, amount: 50,
+        status: 'approved', notes: null,
+        created_at: new Date().toISOString(), processed_at: new Date().toISOString(),
+      }],
+    });
+
+    const res = await request(app)
+      .patch(`/api/affiliate/admin/withdrawals/${AFF_WITHDRAW_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'approved' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('approved');
+  });
+
+  it('returns 404 for already processed withdrawal', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .patch(`/api/affiliate/admin/withdrawals/${AFF_WITHDRAW_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'rejected', notes: 'Fraud detected' });
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('GET /api/affiliate/admin/stats', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/affiliate/admin/stats');
+    expect(res.status).toBe(401);
+  });
+
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .get('/api/affiliate/admin/stats')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns platform-wide affiliate stats', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '10' }] })                                    // links
+      .mockResolvedValueOnce({ rows: [{ count: '500' }] })                                   // clicks
+      .mockResolvedValueOnce({ rows: [{ count: '25', total_paid: '375.00' }] })              // confirmed convs
+      .mockResolvedValueOnce({ rows: [{ count: '3', total_amount: '150.00' }] });            // pending withdrawals
+
+    const res = await request(app)
+      .get('/api/affiliate/admin/stats')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('active_links', 10);
+    expect(res.body).toHaveProperty('total_clicks', 500);
+    expect(res.body).toHaveProperty('confirmed_conversions', 25);
+    expect(res.body).toHaveProperty('total_commissions_paid', 375);
+    expect(res.body).toHaveProperty('pending_withdrawals', 3);
+    expect(res.body).toHaveProperty('pending_withdrawal_amount', 150);
+  });
+});

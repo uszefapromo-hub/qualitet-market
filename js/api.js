@@ -583,6 +583,41 @@
     list(params)               { return get('/announcements', params); },
   };
 
+  // ─── Affiliate Creator System ─────────────────────────────────────────────────
+
+  const Affiliate = {
+    /** Creator dashboard stats. GET /api/affiliate/dashboard */
+    dashboard()                            { return get('/affiliate/dashboard'); },
+    /** List creator's affiliate links. GET /api/affiliate/links */
+    links(params)                          { return get('/affiliate/links', params); },
+    /** Create a new affiliate link. POST /api/affiliate/links */
+    createLink(data)                       { return post('/affiliate/links', data); },
+    /** Deactivate an affiliate link. DELETE /api/affiliate/links/:id */
+    deleteLink(id)                         { return del(`/affiliate/links/${id}`); },
+    /** Creator earnings/conversions. GET /api/affiliate/earnings */
+    earnings(params)                       { return get('/affiliate/earnings', params); },
+    /** Creator's withdrawable balance. GET /api/affiliate/balance */
+    balance()                              { return get('/affiliate/balance'); },
+    /** Request a payout. POST /api/affiliate/withdraw */
+    withdraw(data)                         { return post('/affiliate/withdraw', data); },
+    /** Browse affiliate-enabled products. GET /api/affiliate/products */
+    products(params)                       { return get('/affiliate/products', params); },
+    /** Seller: list affiliate settings. GET /api/affiliate/seller/settings */
+    sellerSettings()                       { return get('/affiliate/seller/settings'); },
+    /** Seller: set commission for a product. PUT /api/affiliate/seller/products/:pid */
+    sellerSetProduct(pid, data)            { return put(`/affiliate/seller/products/${pid}`, data); },
+    /** Seller: top creators for their products. GET /api/affiliate/seller/creators */
+    sellerCreators(params)                 { return get('/affiliate/seller/creators', params); },
+    /** Seller: affiliate stats. GET /api/affiliate/seller/stats */
+    sellerStats()                          { return get('/affiliate/seller/stats'); },
+    /** Admin: list withdrawal requests. GET /api/affiliate/admin/withdrawals */
+    adminWithdrawals(params)               { return get('/affiliate/admin/withdrawals', params); },
+    /** Admin: approve/reject a withdrawal. PATCH /api/affiliate/admin/withdrawals/:id */
+    adminUpdateWithdrawal(id, data)        { return patch(`/affiliate/admin/withdrawals/${id}`, data); },
+    /** Admin: platform-wide stats. GET /api/affiliate/admin/stats */
+    adminStats()                           { return get('/affiliate/admin/stats'); },
+  };
+
   // ─── Public API surface ───────────────────────────────────────────────────────
 
   return {
@@ -601,6 +636,7 @@
     MyStore,
     Referral,
     Announcements,
+    Affiliate,
     health,
     /** Expose for advanced use cases. */
     _request: request,

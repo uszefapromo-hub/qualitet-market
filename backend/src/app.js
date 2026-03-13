@@ -26,6 +26,7 @@ const referralRouter = require('./routes/referral').router;
 const referralsRouter = require('./routes/referrals');
 const scriptsRouter = require('./routes/scripts');
 const analyticsRouter = require('./routes/analytics');
+const affiliateRouter = require('./routes/affiliate');
 const { importSupplierProducts } = require('./services/supplier-import');
 const { getPromoSlots } = require('./helpers/promo');
 const db = require('./config/database');
@@ -189,6 +190,15 @@ app.get('/api/readiness', async (_req, res) => {
     promo_slots:  'GET /api/promo/slots',
   };
 
+  // Affiliate creator system
+  checks.affiliate_system = {
+    dashboard:          'GET  /api/affiliate/dashboard',
+    create_link:        'POST /api/affiliate/links',
+    click_track:        'GET  /api/affiliate/click/:code',
+    seller_settings:    'PUT  /api/affiliate/seller/products/:pid',
+    admin_withdrawals:  'GET  /api/affiliate/admin/withdrawals',
+  };
+
   // Subscription plan listing
   checks.subscription_plans = {
     list: 'GET /api/subscriptions/plans',
@@ -225,6 +235,7 @@ app.use('/api/referral', referralRouter);
 app.use('/api/referrals', referralsRouter);
 app.use('/api/scripts', scriptsRouter);
 app.use('/api/analytics', analyticsRouter);
+app.use('/api/affiliate', affiliateRouter);
 
 // ─── Public promo slots feed ───────────────────────────────────────────────────
 // Shows how many early-access slots remain at each promotional tier.
