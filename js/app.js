@@ -469,6 +469,7 @@
     bar.className = 'app-install-bar';
     bar.setAttribute('data-app-install-bar', '');
     bar.innerHTML = `
+      <button class="app-install-bar__close" type="button" data-app-install-bar-close aria-label="Zamknij panel">×</button>
       <div class="app-install-bar__text">
         <span class="app-install-bar__pill">Panel mobilny</span>
         <strong>Otwórz aplikację</strong>
@@ -481,6 +482,13 @@
     `;
     document.body.appendChild(bar);
     document.body.classList.add('has-app-install-bar');
+    const closeBtn = bar.querySelector('[data-app-install-bar-close]');
+    if(closeBtn){
+      closeBtn.addEventListener('click', () => {
+        bar.remove();
+        document.body.classList.remove('has-app-install-bar');
+      });
+    }
     return bar;
   }
 
