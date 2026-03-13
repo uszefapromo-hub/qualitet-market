@@ -10,10 +10,20 @@ const DELIVERY_OPTIONS = [
   { id: 'same_day', label: 'Same Day', days: 'Today', price: 59 },
 ];
 
+interface CheckoutForm {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  street: string;
+  city: string;
+  zip: string;
+}
+
 export default function CheckoutPage() {
   const [step, setStep] = useState(0);
   const [delivery, setDelivery] = useState('standard');
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', street: '', city: '', zip: '' });
+  const [form, setForm] = useState<CheckoutForm>({ firstName: '', lastName: '', email: '', phone: '', street: '', city: '', zip: '' });
   const deliveryCost = DELIVERY_OPTIONS.find(d => d.id === delivery)?.price || 0;
   const total = 328.20 + deliveryCost;
 

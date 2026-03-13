@@ -16,7 +16,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pl" className="dark">
-      <body className="bg-[#0a0a0f] text-white min-h-screen" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+      <body className="bg-[#0a0a0f] text-white min-h-screen font-sans">
         <Header />
         <main className="pb-24 min-h-screen">{children}</main>
         <BottomNav />
