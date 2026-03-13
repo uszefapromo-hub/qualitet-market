@@ -4345,3 +4345,237 @@ describe('GET /api/readiness – new subsystem checks', () => {
     expect(res.body.checks).toHaveProperty('analytics_system');
   });
 });
+
+// ─── /api/admin/announcements ─────────────────────────────────────────────────
+
+describe('GET /api/admin/announcements', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .get('/api/admin/announcements')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns announcements list for admin', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .get('/api/admin/announcements')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('announcements');
+  });
+});
+
+describe('POST /api/admin/announcements', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post('/api/admin/announcements')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ title: 'Test', body: 'Body' });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects missing title', async () => {
+    const res = await request(app)
+      .post('/api/admin/announcements')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ body: 'Body only' });
+    expect(res.status).toBe(422);
+  });
+
+  it('creates announcement for admin', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: 'ann-1', title: 'Hello', body: 'World', type: 'info', is_active: true }] });
+
+    const res = await request(app)
+      .post('/api/admin/announcements')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ title: 'Hello', body: 'World' });
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty('id');
+  });
+});
+
+describe('PATCH /api/admin/announcements/:id', () => {
+  const ANN_ID = 'a0000000-0000-4000-8000-000000000099';
+
+  it('returns 404 for unknown announcement', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .patch(`/api/admin/announcements/${ANN_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ is_active: false });
+    expect(res.status).toBe(404);
+  });
+
+  it('updates announcement', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: ANN_ID }] })        // SELECT existing
+      .mockResolvedValueOnce({ rows: [{ id: ANN_ID, is_active: false }] }); // UPDATE RETURNING
+
+    const res = await request(app)
+      .patch(`/api/admin/announcements/${ANN_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ is_active: false });
+    expect(res.status).toBe(200);
+  });
+});
+
+describe('DELETE /api/admin/announcements/:id', () => {
+  const ANN_ID = 'a0000000-0000-4000-8000-000000000099';
+
+  it('returns 404 for unknown id', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .delete(`/api/admin/announcements/${ANN_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('deletes announcement', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: ANN_ID }] });
+    const res = await request(app)
+      .delete(`/api/admin/announcements/${ANN_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(204);
+  });
+});
+
+// ─── /api/admin/mail ──────────────────────────────────────────────────────────
+
+describe('POST /api/admin/mail', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post('/api/admin/mail')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ to: 'x@x.com', subject: 'Hi', body: 'Test' });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects invalid email address', async () => {
+    const res = await request(app)
+      .post('/api/admin/mail')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ to: 'not-email', subject: 'Hi', body: 'Test' });
+    expect(res.status).toBe(422);
+  });
+
+  it('queues a mail message', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: 'mail-1', to_email: 'user@test.pl', subject: 'Hi', status: 'queued' }] });
+
+    const res = await request(app)
+      .post('/api/admin/mail')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ to: 'user@test.pl', subject: 'Wiadomość testowa', body: 'Treść wiadomości' });
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty('id');
+  });
+});
+
+describe('GET /api/admin/mail', () => {
+  it('returns mail messages list', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .get('/api/admin/mail')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('messages');
+  });
+});
+
+// ─── /api/my/store/generate ───────────────────────────────────────────────────
+
+describe('POST /api/my/store/generate', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post('/api/my/store/generate')
+      .send({ interests: 'moda' });
+    expect(res.status).toBe(401);
+  });
+
+  it('generates store content for authenticated user', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // products query (empty OK)
+
+    const res = await request(app)
+      .post('/api/my/store/generate')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ interests: 'elektronika', style: 'modern', margin: 20 });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('name');
+    expect(res.body).toHaveProperty('slug');
+    expect(res.body).toHaveProperty('description');
+    expect(res.body).toHaveProperty('sales_link');
+  });
+
+  it('rejects invalid style', async () => {
+    const res = await request(app)
+      .post('/api/my/store/generate')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ style: 'unknown' });
+    expect(res.status).toBe(422);
+  });
+});
+
+// ─── /api/my/promotion/generate ──────────────────────────────────────────────
+
+describe('POST /api/my/promotion/generate', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post('/api/my/promotion/generate')
+      .send({ product_name: 'Test' });
+    expect(res.status).toBe(401);
+  });
+
+  it('generates promotion content', async () => {
+    const res = await request(app)
+      .post('/api/my/promotion/generate')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ product_name: 'Fotel gamingowy', price: 299.99, platform: 'instagram' });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('post');
+    expect(res.body).toHaveProperty('productDescription');
+    expect(res.body.platform).toBe('instagram');
+  });
+
+  it('rejects missing product_name', async () => {
+    const res = await request(app)
+      .post('/api/my/promotion/generate')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ platform: 'facebook' });
+    expect(res.status).toBe(422);
+  });
+});
+
+// ─── /api/announcements – public feed ────────────────────────────────────────
+
+describe('GET /api/announcements', () => {
+  it('returns active announcements without auth', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: 'ann-1', title: 'Hello', type: 'info' }] });
+    const res = await request(app).get('/api/announcements');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('announcements');
+  });
+
+  it('returns empty list gracefully when db fails', async () => {
+    db.query.mockRejectedValueOnce(new Error('db error'));
+    const res = await request(app).get('/api/announcements');
+    expect(res.status).toBe(200);
+    expect(res.body.announcements).toEqual([]);
+  });
+});
+
+// ─── /api/readiness includes new subsystem checks (extended) ──────────────────
+
+describe('GET /api/readiness – announcements and generator checks', () => {
+  it('includes announcements_system and generator_system checks', async () => {
+    const res = await request(app).get('/api/readiness');
+    expect(res.status).toBe(200);
+    expect(res.body.checks).toHaveProperty('announcements_system');
+    expect(res.body.checks).toHaveProperty('generator_system');
+  });
+});

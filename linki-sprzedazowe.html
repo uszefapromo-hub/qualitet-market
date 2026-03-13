@@ -102,6 +102,57 @@
         <p class="hint">Monitoruj kliknięcia, konwersje i zarobki w czasie rzeczywistym z poziomu tego panelu.</p>
       </article>
     </section>
+
+    <!-- Promotion generator section -->
+    <section class="wrap" style="margin-top:32px">
+      <div class="section-head">
+        <span class="eyebrow">Generator treści</span>
+        <h2>✨ Generator postów i opisów produktów</h2>
+        <p class="hint">Automatycznie wygeneruj gotowy post do social media i opis produktu. Jedno kliknięcie – gotowe do publikacji.</p>
+      </div>
+      <form class="panel-card" id="promoGenForm">
+        <div class="owner-toolbar" style="flex-wrap:wrap;gap:12px">
+          <label class="form-field" style="flex:1;min-width:180px">
+            Nazwa produktu
+            <input type="text" name="promo_product" class="owner-input" placeholder="np. Fotel gamingowy RGB" required>
+          </label>
+          <label class="form-field" style="min-width:120px">
+            Cena (zł)
+            <input type="number" name="promo_price" class="owner-input" placeholder="299.99" min="0" step="0.01">
+          </label>
+          <label class="form-field" style="min-width:180px">
+            Link do sklepu (opcjonalnie)
+            <input type="url" name="promo_url" class="owner-input" placeholder="https://twojsklep.pl/produkt">
+          </label>
+          <label class="form-field" style="min-width:140px">
+            Platforma
+            <select name="promo_platform" class="owner-filter">
+              <option value="facebook">Facebook</option>
+              <option value="instagram">Instagram</option>
+              <option value="tiktok">TikTok</option>
+              <option value="twitter">Twitter / X</option>
+            </select>
+          </label>
+        </div>
+        <div class="cta-row" style="margin-top:12px">
+          <button class="btn btn-primary" type="submit">✨ Generuj treść</button>
+          <span class="hint" id="promoGenStatus"></span>
+        </div>
+      </form>
+      <div id="promoGenResult" hidden class="panel-card" style="margin-top:16px">
+        <div class="section-head"><span class="eyebrow">Wygenerowane treści</span><h2>Gotowe do użycia</h2></div>
+        <div style="margin-bottom:16px">
+          <strong>Post do social media:</strong>
+          <pre id="promoResultPost" style="white-space:pre-wrap;background:var(--bg-2,#f1f5f9);padding:12px;border-radius:6px;margin-top:8px;font-family:inherit"></pre>
+          <button class="btn btn-secondary" id="copyPostBtn" type="button" style="margin-top:8px">Kopiuj post</button>
+        </div>
+        <div>
+          <strong>Opis produktu:</strong>
+          <p id="promoResultDesc" style="margin-top:8px;color:var(--muted)"></p>
+          <button class="btn btn-secondary" id="copyDescBtn" type="button" style="margin-top:8px">Kopiuj opis</button>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="wrap panel-footer">
@@ -157,5 +208,72 @@
   </nav>
 
   <script src="js/app.js" defer></script>
+  <script>
+  (function () {
+    // ─── Promotion generator ──────────────────────────────────────────────────
+    const genForm   = document.getElementById('promoGenForm');
+    const genResult = document.getElementById('promoGenResult');
+
+    async function generatePromotion(e) {
+      e.preventDefault();
+      if (!genForm) return;
+      const fd    = new FormData(genForm);
+      const token = localStorage.getItem('token') || '';
+      const btn   = genForm.querySelector('[type="submit"]');
+      const statusEl = document.getElementById('promoGenStatus');
+
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ Generuję…'; }
+      if (statusEl) statusEl.textContent = '';
+
+      try {
+        const res = await fetch('/api/my/promotion/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+          body: JSON.stringify({
+            product_name: fd.get('promo_product') || '',
+            price: fd.get('promo_price') ? parseFloat(fd.get('promo_price')) : null,
+            store_url: fd.get('promo_url') || '',
+            platform: fd.get('promo_platform') || 'facebook',
+          }),
+        });
+        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'Błąd'); }
+        const data = await res.json();
+
+        if (genResult) {
+          genResult.hidden = false;
+          const postEl = document.getElementById('promoResultPost');
+          const descEl = document.getElementById('promoResultDesc');
+          if (postEl) postEl.textContent = data.post || '';
+          if (descEl) descEl.textContent = data.productDescription || '';
+        }
+      } catch (err) {
+        if (statusEl) statusEl.textContent = '❌ ' + (err.message || 'Błąd. Upewnij się, że jesteś zalogowany.');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '✨ Generuj treść'; }
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const form = document.getElementById('promoGenForm');
+      if (form) form.addEventListener('submit', generatePromotion);
+
+      const copyPost = document.getElementById('copyPostBtn');
+      if (copyPost) copyPost.addEventListener('click', () => {
+        const text = (document.getElementById('promoResultPost') || {}).textContent || '';
+        navigator.clipboard.writeText(text).catch(() => {});
+        copyPost.textContent = '✅ Skopiowano!';
+        setTimeout(() => { copyPost.textContent = 'Kopiuj post'; }, 2000);
+      });
+
+      const copyDesc = document.getElementById('copyDescBtn');
+      if (copyDesc) copyDesc.addEventListener('click', () => {
+        const text = (document.getElementById('promoResultDesc') || {}).textContent || '';
+        navigator.clipboard.writeText(text).catch(() => {});
+        copyDesc.textContent = '✅ Skopiowano!';
+        setTimeout(() => { copyDesc.textContent = 'Kopiuj opis'; }, 2000);
+      });
+    });
+  })();
+  </script>
 </body>
 </html>

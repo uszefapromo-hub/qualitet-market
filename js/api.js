@@ -503,6 +503,18 @@
     scripts()                  { return get('/admin/scripts'); },
     /** Run a system script. POST /api/admin/scripts/:id/run */
     runScript(id)              { return post(`/admin/scripts/${id}/run`, {}); },
+    /** List announcements. GET /api/admin/announcements */
+    announcements(params)      { return get('/admin/announcements', params); },
+    /** Create an announcement. POST /api/admin/announcements */
+    createAnnouncement(data)   { return post('/admin/announcements', data); },
+    /** Update an announcement. PATCH /api/admin/announcements/:id */
+    updateAnnouncement(id, data) { return patch(`/admin/announcements/${id}`, data); },
+    /** Delete an announcement. DELETE /api/admin/announcements/:id */
+    deleteAnnouncement(id)     { return del(`/admin/announcements/${id}`); },
+    /** List mail messages. GET /api/admin/mail */
+    mailMessages(params)       { return get('/admin/mail', params); },
+    /** Send a mail message. POST /api/admin/mail */
+    sendMail(data)             { return post('/admin/mail', data); },
   };
 
   // ─── Referral ─────────────────────────────────────────────────────────────────
@@ -544,6 +556,18 @@
     updateProduct(id, data)    { return patch(`/my/store/products/${id}`, data); },
     /** Remove a product from seller's store. */
     removeProduct(id)          { return del(`/my/store/products/${id}`); },
+    /**
+     * Generate store name, description, and theme suggestions.
+     * POST /api/my/store/generate
+     * @param {{ interests?, product_types?, style?, margin? }} data
+     */
+    generateStore(data)        { return post('/my/store/generate', data); },
+    /**
+     * Generate promotion content (social media post + product description).
+     * POST /api/my/promotion/generate
+     * @param {{ product_name, price?, store_url?, platform? }} data
+     */
+    generatePromotion(data)    { return post('/my/promotion/generate', data); },
   };
 
   // ─── Health ───────────────────────────────────────────────────────────────────
@@ -551,6 +575,13 @@
   function health() {
     return fetch(HEALTH_URL).then((r) => r.json());
   }
+
+  // ─── Public announcements feed ────────────────────────────────────────────────
+
+  const Announcements = {
+    /** List active announcements (public). GET /api/announcements */
+    list(params)               { return get('/announcements', params); },
+  };
 
   // ─── Public API surface ───────────────────────────────────────────────────────
 
@@ -569,6 +600,7 @@
     Admin,
     MyStore,
     Referral,
+    Announcements,
     health,
     /** Expose for advanced use cases. */
     _request: request,

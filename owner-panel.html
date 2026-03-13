@@ -66,6 +66,8 @@
         <a href="#" data-owner-tab="operators">🛠 Operatorzy</a>
         <a href="#" data-owner-tab="reports">📊 Raporty</a>
         <a href="#" data-owner-tab="payments">💵 Płatności</a>
+        <a href="#" data-owner-tab="announcements">📢 Komunikaty</a>
+        <a href="#" data-owner-tab="mail">✉️ Mail / Komunikacja</a>
         <a href="#" data-owner-tab="settings">⚙️ Ustawienia systemu</a>
         <a href="#" data-owner-tab="security">🔒 Bezpieczeństwo</a>
         <hr class="sidebar-sep">
@@ -1423,6 +1425,139 @@
 
         <!-- TAB: SCRIPTS is defined above (first occurrence) -->
 
+        <!-- TAB: ANNOUNCEMENTS (Komunikaty) -->
+        <div class="owner-tab-panel" data-owner-tab-panel="announcements" hidden>
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Komunikaty i ogłoszenia</span>
+            <h2>Centrum komunikacji</h2>
+            <p class="hint">Zarządzaj ogłoszeniami platformy widocznymi dla wszystkich użytkowników lub wybranej grupy.</p>
+          </section>
+          <section class="panel-card">
+            <div class="section-head"><span class="eyebrow">Nowe ogłoszenie</span><h2>Dodaj komunikat</h2></div>
+            <form class="form-card" id="announcementForm">
+              <div class="owner-toolbar">
+                <label class="form-field">
+                  Tytuł
+                  <input class="owner-input" type="text" name="ann_title" placeholder="np. Przerwa techniczna 15 marca" required>
+                </label>
+                <label class="form-field">
+                  Typ
+                  <select class="owner-filter" name="ann_type">
+                    <option value="info">ℹ️ Informacja</option>
+                    <option value="warning">⚠️ Ostrzeżenie</option>
+                    <option value="success">✅ Sukces</option>
+                    <option value="alert">🚨 Alert</option>
+                  </select>
+                </label>
+                <label class="form-field">
+                  Adresaci
+                  <select class="owner-filter" name="ann_target">
+                    <option value="">Wszyscy</option>
+                    <option value="seller">Sprzedawcy</option>
+                    <option value="buyer">Kupujący</option>
+                    <option value="admin">Administratorzy</option>
+                  </select>
+                </label>
+              </div>
+              <div class="owner-toolbar">
+                <label class="form-field" style="flex:1">
+                  Treść ogłoszenia
+                  <textarea class="owner-input" name="ann_body" rows="3" placeholder="Treść komunikatu…" required></textarea>
+                </label>
+              </div>
+              <div class="cta-row">
+                <button class="btn btn-primary" type="submit">Opublikuj ogłoszenie</button>
+                <span class="hint" id="annSavedMsg" hidden>✅ Ogłoszenie opublikowane!</span>
+              </div>
+            </form>
+          </section>
+          <section class="panel-card">
+            <div class="section-head"><span class="eyebrow">Aktywne ogłoszenia</span><h2>Lista komunikatów</h2></div>
+            <div class="owner-table-wrap">
+              <table class="owner-table">
+                <thead>
+                  <tr><th>Data</th><th>Tytuł</th><th>Typ</th><th>Adresaci</th><th>Status</th><th>Akcje</th></tr>
+                </thead>
+                <tbody id="announcementsTbody">
+                  <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Brak ogłoszeń. Dodaj pierwsze komunikat powyżej.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- TAB: MAIL (Mail / Komunikacja) -->
+        <div class="owner-tab-panel" data-owner-tab-panel="mail" hidden>
+          <section class="panel-card dashboard-welcome">
+            <span class="eyebrow">Mail / Komunikacja</span>
+            <h2>Wysyłka wiadomości e-mail</h2>
+            <p class="hint">Wyślij wiadomość e-mail do konkretnego użytkownika lub grupy. System obsługuje konfigurację Proton Mail przez SMTP Bridge.</p>
+          </section>
+          <section class="panel-card">
+            <div class="section-head"><span class="eyebrow">Nowa wiadomość</span><h2>Wyślij e-mail</h2></div>
+            <form class="form-card" id="mailForm">
+              <div class="owner-toolbar">
+                <label class="form-field">
+                  Do (adres e-mail)
+                  <input class="owner-input" type="email" name="mail_to" placeholder="uzytkownik@domena.pl" required>
+                </label>
+                <label class="form-field">
+                  Temat
+                  <input class="owner-input" type="text" name="mail_subject" placeholder="Temat wiadomości" required>
+                </label>
+              </div>
+              <div class="owner-toolbar">
+                <label class="form-field" style="flex:1">
+                  Treść wiadomości
+                  <textarea class="owner-input" name="mail_body" rows="5" placeholder="Treść wiadomości e-mail…" required></textarea>
+                </label>
+              </div>
+              <div class="cta-row">
+                <button class="btn btn-primary" type="submit">Wyślij wiadomość</button>
+                <span class="hint" id="mailSentMsg" hidden>✅ Wiadomość wysłana!</span>
+                <span class="hint status-error" id="mailErrMsg" hidden></span>
+              </div>
+            </form>
+          </section>
+          <section class="panel-card">
+            <div class="section-head"><span class="eyebrow">Historia wiadomości</span><h2>Wysłane e-maile</h2></div>
+            <div class="owner-table-wrap">
+              <table class="owner-table">
+                <thead>
+                  <tr><th>Data</th><th>Do</th><th>Temat</th><th>Status</th></tr>
+                </thead>
+                <tbody id="mailTbody">
+                  <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:24px">Brak wysłanych wiadomości.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <section class="panel-card">
+            <div class="section-head"><span class="eyebrow">Konfiguracja</span><h2>Ustawienia SMTP (Proton Mail Bridge)</h2></div>
+            <div class="roles-grid">
+              <div class="role-card">
+                <strong>Proton Mail Bridge</strong>
+                <span>Zainstaluj Proton Mail Bridge na serwerze i skonfiguruj następujące zmienne środowiskowe:</span>
+                <ul>
+                  <li><code>SMTP_HOST=127.0.0.1</code></li>
+                  <li><code>SMTP_PORT=1025</code></li>
+                  <li><code>SMTP_USER=twoj@protonmail.com</code></li>
+                  <li><code>SMTP_PASS=bridge_password</code></li>
+                  <li><code>SMTP_FROM=noreply@uszefaqualitet.pl</code></li>
+                </ul>
+              </div>
+              <div class="role-card">
+                <strong>Status integracji</strong>
+                <span>System automatycznie wykrywa konfigurację SMTP przy każdym wysłaniu wiadomości.</span>
+                <ul>
+                  <li>Gdy SMTP_HOST nie jest ustawiony — wiadomość zostaje zapisana w kolejce</li>
+                  <li>Po skonfigurowaniu Bridge — wiadomości są wysyłane natychmiast</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+        </div>
+
       </div>
 
   <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
@@ -1467,5 +1602,127 @@
   </nav>
 
   <script src="js/app.js" defer></script>
+  <script>
+  // ─── Announcements tab logic ─────────────────────────────────────────────────
+  (function () {
+    const API = window.QMApi || { request: async (method, url, data) => {
+      const token = localStorage.getItem('token') || '';
+      const opts = { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) } };
+      if (data) opts.body = JSON.stringify(data);
+      const r = await fetch('/api' + url, opts);
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
+    }};
+
+    function apiReq(method, path, body) {
+      const token = localStorage.getItem('token') || '';
+      const opts = { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) } };
+      if (body) opts.body = JSON.stringify(body);
+      return fetch('/api' + path, opts).then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e)));
+    }
+
+    // Load announcements
+    async function loadAnnouncements() {
+      const tbody = document.getElementById('announcementsTbody');
+      if (!tbody) return;
+      try {
+        const data = await apiReq('GET', '/admin/announcements');
+        if (!data.announcements || data.announcements.length === 0) return;
+        const types = { info: 'ℹ️', warning: '⚠️', success: '✅', alert: '🚨' };
+        tbody.innerHTML = data.announcements.map(a => `
+          <tr>
+            <td class="cell-muted">${new Date(a.created_at).toLocaleDateString('pl-PL')}</td>
+            <td><strong>${a.title || ''}</strong></td>
+            <td>${types[a.type] || ''} ${a.type}</td>
+            <td>${a.target_role || 'Wszyscy'}</td>
+            <td>${a.is_active ? '<span class="pill-active">Aktywne</span>' : '<span class="pill-inactive">Nieaktywne</span>'}</td>
+            <td>
+              <button class="btn btn-secondary" type="button" data-ann-deactivate="${a.id}" ${!a.is_active ? 'disabled' : ''}>${a.is_active ? 'Dezaktywuj' : 'Nieaktywne'}</button>
+              <button class="btn btn-danger" type="button" data-ann-delete="${a.id}">Usuń</button>
+            </td>
+          </tr>`).join('');
+
+        tbody.querySelectorAll('[data-ann-deactivate]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            try { await apiReq('PATCH', '/admin/announcements/' + btn.dataset.annDeactivate, { is_active: false }); loadAnnouncements(); } catch (_) {}
+          });
+        });
+        tbody.querySelectorAll('[data-ann-delete]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            if (!confirm('Usunąć ogłoszenie?')) return;
+            try { await apiReq('DELETE', '/admin/announcements/' + btn.dataset.annDelete); loadAnnouncements(); } catch (_) {}
+          });
+        });
+      } catch (_) {}
+    }
+
+    const annForm = document.getElementById('announcementForm');
+    if (annForm) {
+      annForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(annForm);
+        const payload = { title: fd.get('ann_title'), body: fd.get('ann_body'), type: fd.get('ann_type'), target_role: fd.get('ann_target') || null };
+        try {
+          await apiReq('POST', '/admin/announcements', payload);
+          annForm.reset();
+          const msg = document.getElementById('annSavedMsg');
+          if (msg) { msg.hidden = false; setTimeout(() => { msg.hidden = true; }, 3000); }
+          loadAnnouncements();
+        } catch (_) {}
+      });
+    }
+
+    // Load on tab switch
+    document.querySelectorAll('[data-owner-tab]').forEach(a => {
+      if (a.dataset.ownerTab === 'announcements') {
+        a.addEventListener('click', () => setTimeout(loadAnnouncements, 100));
+      }
+    });
+
+    // ─── Mail tab logic ─────────────────────────────────────────────────────────
+    async function loadMailHistory() {
+      const tbody = document.getElementById('mailTbody');
+      if (!tbody) return;
+      try {
+        const data = await apiReq('GET', '/admin/mail');
+        if (!data.messages || data.messages.length === 0) return;
+        tbody.innerHTML = data.messages.map(m => `
+          <tr>
+            <td class="cell-muted">${new Date(m.created_at).toLocaleDateString('pl-PL')}</td>
+            <td>${m.to_email || ''}</td>
+            <td>${m.subject || ''}</td>
+            <td><span class="pill-${m.status === 'sent' ? 'active' : 'inactive'}">${m.status}</span></td>
+          </tr>`).join('');
+      } catch (_) {}
+    }
+
+    const mailForm = document.getElementById('mailForm');
+    if (mailForm) {
+      mailForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(mailForm);
+        const payload = { to: fd.get('mail_to'), subject: fd.get('mail_subject'), body: fd.get('mail_body') };
+        const sentMsg = document.getElementById('mailSentMsg');
+        const errMsg  = document.getElementById('mailErrMsg');
+        if (sentMsg) sentMsg.hidden = true;
+        if (errMsg) errMsg.hidden = true;
+        try {
+          await apiReq('POST', '/admin/mail', payload);
+          mailForm.reset();
+          if (sentMsg) { sentMsg.hidden = false; setTimeout(() => { sentMsg.hidden = true; }, 3000); }
+          loadMailHistory();
+        } catch (err) {
+          if (errMsg) { errMsg.textContent = 'Błąd wysyłki: ' + (err.error || err.message || 'Nieznany błąd'); errMsg.hidden = false; }
+        }
+      });
+    }
+
+    document.querySelectorAll('[data-owner-tab]').forEach(a => {
+      if (a.dataset.ownerTab === 'mail') {
+        a.addEventListener('click', () => setTimeout(loadMailHistory, 100));
+      }
+    });
+  })();
+  </script>
 </body>
 </html>

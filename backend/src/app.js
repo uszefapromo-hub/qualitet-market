@@ -153,6 +153,20 @@ app.get('/api/readiness', async (_req, res) => {
     list:         'GET  /api/analytics',
   };
 
+  // Announcements & communications
+  checks.announcements_system = {
+    list_public:  'GET  /api/announcements',
+    admin_list:   'GET  /api/admin/announcements',
+    admin_create: 'POST /api/admin/announcements',
+    admin_mail:   'POST /api/admin/mail',
+  };
+
+  // Store generator & promotions
+  checks.generator_system = {
+    generate_store:    'POST /api/my/store/generate',
+    generate_promo:    'POST /api/my/promotion/generate',
+  };
+
   const status = allOk ? 'ready' : 'degraded';
   return res.status(allOk ? 200 : 503).json({
     status,
@@ -184,6 +198,26 @@ app.use('/api/referral', referralRouter);
 app.use('/api/referrals', referralsRouter);
 app.use('/api/scripts', scriptsRouter);
 app.use('/api/analytics', analyticsRouter);
+
+// ─── Public announcements feed ─────────────────────────────────────────────────
+// Active platform announcements visible to all authenticated users.
+app.get('/api/announcements', async (req, res) => {
+  const roleFilter = req.query.role || null;
+  try {
+    const result = await db.query(
+      `SELECT id, title, body, type, target_role, created_at
+         FROM announcements
+        WHERE is_active = TRUE
+          AND ($1::text IS NULL OR target_role IS NULL OR target_role = $1)
+        ORDER BY created_at DESC
+        LIMIT 20`,
+      [roleFilter]
+    );
+    return res.json({ announcements: result.rows });
+  } catch (_err) {
+    return res.json({ announcements: [] });
+  }
+});
 
 // ─── 404 ───────────────────────────────────────────────────────────────────────
 app.use((_req, res) => res.status(404).json({ error: 'Nie znaleziono zasobu' }));

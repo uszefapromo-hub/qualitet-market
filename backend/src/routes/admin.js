@@ -1150,6 +1150,226 @@ router.patch(
   }
 );
 
+// ─── GET /api/admin/announcements – list all announcements ───────────────────
+
+router.get('/announcements', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+  const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
+  const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
+  const offset = (page - 1) * limit;
+  try {
+    const countResult = await db.query('SELECT COUNT(*) FROM announcements');
+    const total = parseInt(countResult.rows[0].count, 10);
+    const result = await db.query(
+      `SELECT a.*, u.name AS author_name
+         FROM announcements a
+         LEFT JOIN users u ON u.id = a.created_by
+        ORDER BY a.created_at DESC
+        LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    return res.json({ total, page, limit, announcements: result.rows });
+  } catch (err) {
+    console.error('admin list announcements error:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// ─── POST /api/admin/announcements – create announcement ─────────────────────
+
+router.post(
+  '/announcements',
+  authenticate,
+  requireRole('owner', 'admin'),
+  [
+    body('title').trim().notEmpty().isLength({ max: 255 }),
+    body('body').trim().notEmpty(),
+    body('type').optional().isIn(['info', 'warning', 'success', 'alert']),
+    body('target_role').optional({ nullable: true }).isIn(['seller', 'buyer', 'admin', null]),
+    body('is_active').optional().isBoolean(),
+  ],
+  validate,
+  async (req, res) => {
+    const { title, body: msgBody, type = 'info', target_role = null, is_active = true } = req.body;
+    const id = uuidv4();
+    try {
+      const result = await db.query(
+        `INSERT INTO announcements (id, title, body, type, target_role, is_active, created_by, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+         RETURNING *`,
+        [id, title, msgBody, type, target_role, is_active, req.user.id]
+      );
+      return res.status(201).json(result.rows[0]);
+    } catch (err) {
+      console.error('admin create announcement error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── PATCH /api/admin/announcements/:id – update announcement ────────────────
+
+router.patch(
+  '/announcements/:id',
+  authenticate,
+  requireRole('owner', 'admin'),
+  [
+    param('id').isUUID(),
+    body('title').optional().trim().notEmpty().isLength({ max: 255 }),
+    body('body').optional().trim().notEmpty(),
+    body('type').optional().isIn(['info', 'warning', 'success', 'alert']),
+    body('target_role').optional({ nullable: true }).isIn(['seller', 'buyer', 'admin', null]),
+    body('is_active').optional().isBoolean(),
+  ],
+  validate,
+  async (req, res) => {
+    const { title, body: msgBody, type, target_role, is_active } = req.body;
+    try {
+      const existing = await db.query('SELECT id FROM announcements WHERE id = $1', [req.params.id]);
+      if (!existing.rows[0]) return res.status(404).json({ error: 'Ogłoszenie nie znalezione' });
+
+      const result = await db.query(
+        `UPDATE announcements SET
+           title       = COALESCE($1, title),
+           body        = COALESCE($2, body),
+           type        = COALESCE($3, type),
+           target_role = COALESCE($4, target_role),
+           is_active   = COALESCE($5, is_active),
+           updated_at  = NOW()
+         WHERE id = $6
+         RETURNING *`,
+        [title || null, msgBody || null, type || null, target_role !== undefined ? target_role : null, is_active != null ? is_active : null, req.params.id]
+      );
+      return res.json(result.rows[0]);
+    } catch (err) {
+      console.error('admin update announcement error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── DELETE /api/admin/announcements/:id – delete announcement ────────────────
+
+router.delete(
+  '/announcements/:id',
+  authenticate,
+  requireRole('owner', 'admin'),
+  [param('id').isUUID()],
+  validate,
+  async (req, res) => {
+    try {
+      const result = await db.query(
+        'DELETE FROM announcements WHERE id = $1 RETURNING id',
+        [req.params.id]
+      );
+      if (!result.rows[0]) return res.status(404).json({ error: 'Ogłoszenie nie znalezione' });
+      return res.status(204).send();
+    } catch (err) {
+      console.error('admin delete announcement error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── GET /api/announcements – public list of active announcements ─────────────
+// Exposed on the main router so buyers and sellers can also see announcements.
+// Kept here for convenience (admin router mounts at /api/admin).
+// A separate public route is NOT needed – see app.js for /api/announcements.
+
+// ─── POST /api/admin/mail – send mail message to user(s) ─────────────────────
+
+router.post(
+  '/mail',
+  authenticate,
+  requireRole('owner', 'admin'),
+  [
+    body('to').trim().isEmail(),
+    body('subject').trim().notEmpty().isLength({ max: 500 }),
+    body('body').trim().notEmpty(),
+    body('user_id').optional({ nullable: true }).isUUID(),
+  ],
+  validate,
+  async (req, res) => {
+    const { to, subject, body: msgBody, user_id = null } = req.body;
+    const id = uuidv4();
+    try {
+      const result = await db.query(
+        `INSERT INTO mail_messages (id, to_email, to_user_id, subject, body, status, created_by, created_at)
+         VALUES ($1, $2, $3, $4, $5, 'queued', $6, NOW())
+         RETURNING *`,
+        [id, to, user_id, subject, msgBody, req.user.id]
+      );
+
+      // Attempt to dispatch via configured SMTP / Proton Bridge.
+      // Falls back gracefully when SMTP is not configured.
+      let sent = false;
+      try {
+        const smtpHost = process.env.SMTP_HOST;
+        if (smtpHost) {
+          const nodemailer = (() => { try { return require('nodemailer'); } catch (_) { return null; } })();
+          if (nodemailer) {
+            const transporter = nodemailer.createTransport({
+              host: smtpHost,
+              port: parseInt(process.env.SMTP_PORT || '587', 10),
+              secure: process.env.SMTP_SECURE === 'true',
+              auth: {
+                user: process.env.SMTP_USER || '',
+                pass: process.env.SMTP_PASS || '',
+              },
+            });
+            await transporter.sendMail({
+              from: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@uszefaqualitet.pl',
+              to,
+              subject,
+              text: msgBody,
+            });
+            sent = true;
+          }
+        }
+      } catch (sendErr) {
+        console.error('mail send error (non-critical):', sendErr.message);
+      }
+
+      // Update status in DB
+      if (sent) {
+        await db.query(
+          `UPDATE mail_messages SET status = 'sent', sent_at = NOW() WHERE id = $1`,
+          [id]
+        );
+        result.rows[0].status = 'sent';
+      }
+
+      return res.status(201).json({ ...result.rows[0], delivered: sent });
+    } catch (err) {
+      console.error('admin send mail error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── GET /api/admin/mail – list sent/queued mail messages ────────────────────
+
+router.get('/mail', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+  const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
+  const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
+  const offset = (page - 1) * limit;
+  try {
+    const countResult = await db.query('SELECT COUNT(*) FROM mail_messages');
+    const total = parseInt(countResult.rows[0].count, 10);
+    const result = await db.query(
+      `SELECT m.*, u.name AS sender_name
+         FROM mail_messages m
+         LEFT JOIN users u ON u.id = m.created_by
+        ORDER BY m.created_at DESC
+        LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    return res.json({ total, page, limit, messages: result.rows });
+  } catch (err) {
+    console.error('admin list mail error:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
 module.exports = router;
 
 // ─── POST /api/admin/products/import – bulk import into central catalogue ──────

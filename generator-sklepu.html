@@ -52,6 +52,54 @@
       <p class="lead">Uzupełnij dane, aby stworzyć sklep na platformie U SZEFA.</p>
     </section>
 
+    <!-- Auto-generate section -->
+    <section class="panel-card" style="max-width:860px;margin:0 auto 24px">
+      <div class="section-head">
+        <span class="eyebrow">Szybki start</span>
+        <h2>🤖 Automatyczny generator sklepu</h2>
+        <p class="hint">Opisz swój wymarzony sklep, a system wygeneruje dla Ciebie nazwę, opis, dobierze produkty i stworzy link sprzedażowy.</p>
+      </div>
+      <div class="owner-toolbar" style="flex-wrap:wrap;gap:12px">
+        <label class="form-field" style="flex:1;min-width:180px">
+          Zainteresowania / branża
+          <input type="text" id="genInterests" class="owner-input" placeholder="np. moda, elektronika, dom i ogród">
+        </label>
+        <label class="form-field" style="flex:1;min-width:180px">
+          Typ produktów
+          <input type="text" id="genProductTypes" class="owner-input" placeholder="np. ubrania, gadżety, meble">
+        </label>
+        <label class="form-field" style="min-width:140px">
+          Styl sklepu
+          <select id="genStyle" class="owner-filter">
+            <option value="modern">Modern</option>
+            <option value="premium">Premium</option>
+            <option value="market">Market</option>
+          </select>
+        </label>
+        <label class="form-field" style="min-width:100px">
+          Marża (%)
+          <input type="number" id="genMargin" class="owner-input" min="0" max="100" value="15">
+        </label>
+      </div>
+      <div class="cta-row" style="margin-top:12px">
+        <button class="btn btn-primary" type="button" id="autoGenerateBtn">🤖 Generuj sklep automatycznie</button>
+        <span class="hint" id="genStatus"></span>
+      </div>
+      <div id="genResult" hidden style="margin-top:16px;padding:16px;background:var(--bg-2,#f1f5f9);border-radius:8px">
+        <strong>Wygenerowane dane sklepu:</strong>
+        <div class="owner-toolbar" style="flex-wrap:wrap;gap:12px;margin-top:12px">
+          <div class="form-field">Nazwa sklepu<strong id="genResultName" style="display:block"></strong></div>
+          <div class="form-field">Slug<strong id="genResultSlug" style="display:block"></strong></div>
+        </div>
+        <div class="form-field" style="margin-top:8px">Opis<p id="genResultDesc" style="color:var(--muted);font-size:.95rem"></p></div>
+        <div class="form-field" style="margin-top:8px">Link sprzedażowy<a id="genResultLink" href="#" target="_blank" style="display:block;word-break:break-all"></a></div>
+        <div id="genResultProducts" style="margin-top:8px"></div>
+        <div class="cta-row" style="margin-top:12px">
+          <button class="btn btn-secondary" id="genApplyBtn" type="button">Użyj tych danych w formularzu ↓</button>
+        </div>
+      </div>
+    </section>
+
     <section class="app-cta-section">
       <div class="app-cta-box app-cta-grid">
         <div class="app-cta-content">
@@ -263,5 +311,83 @@
   <script src="js/app.js" defer></script>
   <script src="stores.js" defer></script>
   <script src="shop.js" defer></script>
+  <script>
+  (function () {
+    let lastGenerated = null;
+
+    async function generateStore() {
+      const btn    = document.getElementById('autoGenerateBtn');
+      const status = document.getElementById('genStatus');
+      const result = document.getElementById('genResult');
+
+      const interests    = (document.getElementById('genInterests')    || {}).value || '';
+      const productTypes = (document.getElementById('genProductTypes') || {}).value || '';
+      const style        = (document.getElementById('genStyle')        || {}).value || 'modern';
+      const margin       = parseFloat((document.getElementById('genMargin') || {}).value || '15');
+
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ Generuję…'; }
+      if (status) status.textContent = '';
+
+      try {
+        const token = localStorage.getItem('token') || '';
+        const res = await fetch('/api/my/store/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+          body: JSON.stringify({ interests, product_types: productTypes, style, margin }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Błąd generowania');
+        }
+        const data = await res.json();
+        lastGenerated = data;
+
+        const el = (id) => document.getElementById(id);
+        if (el('genResultName')) el('genResultName').textContent = data.name || '';
+        if (el('genResultSlug')) el('genResultSlug').textContent = data.slug || '';
+        if (el('genResultDesc')) el('genResultDesc').textContent = data.description || '';
+        if (el('genResultLink')) { el('genResultLink').href = data.sales_link || '#'; el('genResultLink').textContent = data.sales_link || ''; }
+
+        if (data.suggested_products && data.suggested_products.length > 0) {
+          const prod = el('genResultProducts');
+          if (prod) {
+            prod.innerHTML = '<strong>Sugerowane produkty:</strong><ul style="margin-top:4px;padding-left:20px">' +
+              data.suggested_products.map(p => `<li>${p.name} — ${parseFloat(p.selling_price || 0).toFixed(2)} zł</li>`).join('') +
+              '</ul>';
+          }
+        }
+
+        if (result) result.hidden = false;
+        if (status) status.textContent = '✅ Gotowe!';
+      } catch (err) {
+        if (status) status.textContent = '❌ ' + (err.message || 'Błąd generowania. Upewnij się, że jesteś zalogowany.');
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '🤖 Generuj sklep automatycznie'; }
+      }
+    }
+
+    function applyGenerated() {
+      if (!lastGenerated) return;
+      const nameInput = document.querySelector('[name="storeName"]');
+      const slugInput = document.querySelector('[name="storeSlug"]');
+      const descInput = document.querySelector('[name="storeDescription"]');
+      const marginInput = document.querySelector('[name="storeMargin"]');
+      const themeSelect = document.querySelector('[name="storeTheme"]');
+
+      if (nameInput) nameInput.value = lastGenerated.name || '';
+      if (slugInput) slugInput.value = lastGenerated.slug || '';
+      if (descInput) descInput.value = lastGenerated.description || '';
+      if (marginInput) marginInput.value = lastGenerated.margin != null ? lastGenerated.margin : 15;
+      if (themeSelect) themeSelect.value = lastGenerated.style || 'modern';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const genBtn   = document.getElementById('autoGenerateBtn');
+      const applyBtn = document.getElementById('genApplyBtn');
+      if (genBtn)   genBtn.addEventListener('click', generateStore);
+      if (applyBtn) applyBtn.addEventListener('click', applyGenerated);
+    });
+  })();
+  </script>
 </body>
 </html>
