@@ -28,6 +28,7 @@ const scriptsRouter = require('./routes/scripts');
 const analyticsRouter = require('./routes/analytics');
 const affiliateRouter = require('./routes/affiliate');
 const creatorRouter = require('./routes/creator');
+const storeTeamRouter = require('./routes/store-team');
 const aiRouter = require('./modules/ai/routes');
 const errorHandler = require('./middleware/errorHandler');
 const { importSupplierProducts } = require('./services/supplier-import');
@@ -260,6 +261,7 @@ app.use('/api/scripts', scriptsRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/affiliate', affiliateRouter);
 app.use('/api/creator', creatorRouter);
+app.use('/api/store', storeTeamRouter);
 app.use('/api/ai', aiRouter);
 
 // ─── Public promo slots feed ───────────────────────────────────────────────────

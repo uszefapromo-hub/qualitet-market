@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Zespół Sklepu | UszefaQualitet</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#05050f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
+  <link rel="stylesheet" href="panel.css">
+  <style>
+    /* ── Store Team page styles ── */
+
+    /* Tab navigation */
+    .team-tabs { display:flex; gap:8px; margin-bottom:28px; flex-wrap:wrap; }
+    .team-tab  { padding:10px 20px; border-radius:12px; border:1px solid var(--stroke);
+                 background:var(--card); cursor:pointer; font-size:14px; font-weight:600;
+                 color:var(--muted); transition:all .15s; }
+    .team-tab:hover  { color:#fff; border-color:var(--accent); }
+    .team-tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+    /* Tab panes */
+    .team-pane { display:none; }
+    .team-pane.active { display:block; }
+
+    /* Members table */
+    .team-table { width:100%; border-collapse:collapse; font-size:14px; }
+    .team-table th { text-align:left; padding:10px 14px; color:var(--muted); font-weight:700;
+                     font-size:12px; text-transform:uppercase; letter-spacing:.5px;
+                     border-bottom:1px solid var(--stroke); }
+    .team-table td { padding:12px 14px; border-bottom:1px solid var(--stroke); color:#e2e8f0; vertical-align:middle; }
+    .team-table tr:last-child td { border-bottom:none; }
+    .team-table tr:hover td { background:rgba(255,255,255,.03); }
+
+    /* Role badge */
+    .role-badge { border-radius:20px; padding:3px 10px; font-size:12px; font-weight:700; display:inline-block; }
+    .role-owner    { background:rgba(139,92,246,.2); color:#a78bfa; }
+    .role-manager  { background:rgba(0,212,255,.15); color:#00d4ff; }
+    .role-creator  { background:rgba(16,185,129,.15); color:#10b981; }
+    .role-marketer { background:rgba(245,158,11,.15); color:#f59e0b; }
+
+    /* Status pill */
+    .pill { border-radius:20px; padding:3px 10px; font-size:12px; font-weight:700; }
+    .pill.active  { background:rgba(16,185,129,.15); color:#10b981; }
+    .pill.pending { background:rgba(245,158,11,.15); color:#f59e0b; }
+    .pill.revoked { background:rgba(239,68,68,.15);  color:#ef4444; }
+
+    /* Avatar circle */
+    .avatar { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#8b5cf6,#00d4ff);
+              display:flex; align-items:center; justify-content:center; font-weight:800;
+              font-size:14px; color:#fff; flex-shrink:0; }
+
+    /* Invite form card */
+    .invite-card { background:var(--card); border:1px solid var(--stroke); border-radius:20px;
+                   padding:28px; max-width:520px; }
+    .form-group { margin-bottom:16px; }
+    .form-group label { display:block; font-size:13px; color:var(--muted); margin-bottom:6px; font-weight:600; }
+    .form-group input, .form-group select {
+      width:100%; background:var(--input); border:1px solid var(--stroke); border-radius:10px;
+      padding:10px 14px; color:#f1f5f9; font-size:14px; outline:none; box-sizing:border-box; }
+    .form-group input:focus, .form-group select:focus { border-color:var(--accent); }
+
+    /* Role descriptions */
+    .role-desc-grid { display:grid; gap:12px; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); margin-bottom:28px; }
+    .role-desc-card { background:var(--card); border:1px solid var(--stroke); border-radius:16px; padding:16px; }
+    .role-desc-title { font-weight:800; font-size:14px; margin-bottom:6px; }
+    .role-desc-text  { font-size:13px; color:var(--muted); line-height:1.5; }
+
+    /* Revenue split */
+    .split-card { background:var(--card); border:1px solid var(--stroke); border-radius:20px;
+                  padding:28px; max-width:480px; }
+    .split-row { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+    .split-label { min-width:90px; font-size:14px; font-weight:700; }
+    .split-input { flex:1; background:var(--input); border:1px solid var(--stroke); border-radius:10px;
+                   padding:9px 14px; color:#f1f5f9; font-size:14px; outline:none; }
+    .split-input:focus { border-color:var(--accent); }
+    .split-pct { color:var(--muted); font-size:14px; min-width:30px; }
+    .split-total { font-size:15px; font-weight:700; padding:12px 0; border-top:1px solid var(--stroke);
+                   margin-top:4px; display:flex; justify-content:space-between; }
+    .split-total span { color:var(--accent); }
+
+    /* Section header */
+    .section-head { display:flex; align-items:center; justify-content:space-between;
+                    margin-bottom:20px; gap:12px; flex-wrap:wrap; }
+    .section-head h2 { margin:0; font-size:20px; }
+
+    /* Activity log */
+    .log-list { list-style:none; padding:0; margin:0; }
+    .log-item { padding:14px 0; border-bottom:1px solid var(--stroke); display:flex; gap:14px;
+                align-items:flex-start; }
+    .log-item:last-child { border-bottom:none; }
+    .log-icon { width:34px; height:34px; border-radius:50%; background:rgba(139,92,246,.15);
+                display:flex; align-items:center; justify-content:center; font-size:16px;
+                flex-shrink:0; }
+    .log-body { flex:1; }
+    .log-text { font-size:14px; color:#e2e8f0; margin:0 0 2px; }
+    .log-time { font-size:12px; color:var(--muted); }
+
+    /* Empty state */
+    .empty-state { text-align:center; padding:48px 20px; color:var(--muted); }
+    .empty-state .empty-icon { font-size:48px; margin-bottom:12px; }
+    .empty-state p { font-size:15px; margin:0; }
+
+    /* Alert box */
+    .alert { border-radius:12px; padding:12px 16px; font-size:14px; margin-bottom:16px; }
+    .alert-success { background:rgba(16,185,129,.15); color:#10b981; border:1px solid rgba(16,185,129,.3); }
+    .alert-error   { background:rgba(239,68,68,.15);  color:#ef4444; border:1px solid rgba(239,68,68,.3); }
+  </style>
+</head>
+<body>
+
+<!-- ─── Sidebar navigation ─────────────────────────────────────────────────── -->
+<div id="sidebar-placeholder"></div>
+
+<!-- ─── Main content ──────────────────────────────────────────────────────── -->
+<main class="main-content" id="main-content">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">👥 Zespół Sklepu</h1>
+      <p class="page-subtitle">Zapraszaj współpracowników, zarządzaj rolami i konfiguruj podział przychodów</p>
+    </div>
+  </div>
+
+  <!-- ─── Tabs ─────────────────────────────────────────────────────────────── -->
+  <div class="team-tabs">
+    <button class="team-tab active" data-tab="members">Członkowie zespołu</button>
+    <button class="team-tab" data-tab="roles">Role i uprawnienia</button>
+    <button class="team-tab" data-tab="revenue">Podział przychodów</button>
+    <button class="team-tab" data-tab="activity">Dziennik aktywności</button>
+  </div>
+
+  <!-- ─── Members tab ───────────────────────────────────────────────────────── -->
+  <div class="team-pane active" id="pane-members">
+    <div class="section-head">
+      <h2>Członkowie zespołu</h2>
+      <button class="btn btn-primary" id="btn-invite-open">+ Zaproś osobę</button>
+    </div>
+
+    <!-- Invite form (hidden by default) -->
+    <div class="invite-card" id="invite-form" style="display:none; margin-bottom:24px;">
+      <h3 style="margin:0 0 20px; font-size:17px;">Zaproś współpracownika</h3>
+      <div id="invite-alert"></div>
+      <div class="form-group">
+        <label for="invite-email">Adres e-mail</label>
+        <input type="email" id="invite-email" placeholder="wspolpracownik@firma.pl">
+      </div>
+      <div class="form-group">
+        <label for="invite-role">Rola</label>
+        <select id="invite-role">
+          <option value="manager">Manager – produkty i zamówienia</option>
+          <option value="creator">Creator – promocja afiliacyjna</option>
+          <option value="marketer">Marketer – narzędzia marketingowe</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-primary" id="btn-invite-send">Wyślij zaproszenie</button>
+        <button class="btn btn-secondary" id="btn-invite-cancel">Anuluj</button>
+      </div>
+    </div>
+
+    <!-- Members table -->
+    <div class="card">
+      <div id="members-loading" class="empty-state" style="display:none;">
+        <div class="empty-icon">⏳</div><p>Ładowanie…</p>
+      </div>
+      <div id="members-empty" class="empty-state" style="display:none;">
+        <div class="empty-icon">👤</div>
+        <p>Brak członków zespołu. Zaproś pierwszą osobę!</p>
+      </div>
+      <table class="team-table" id="members-table" style="display:none;">
+        <thead>
+          <tr>
+            <th>Osoba</th>
+            <th>Rola</th>
+            <th>Status</th>
+            <th>Dołączył/a</th>
+          </tr>
+        </thead>
+        <tbody id="members-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─── Roles tab ─────────────────────────────────────────────────────────── -->
+  <div class="team-pane" id="pane-roles">
+    <h2 style="margin-bottom:20px;">Role i uprawnienia</h2>
+    <div class="role-desc-grid">
+      <div class="role-desc-card">
+        <div class="role-desc-title" style="color:#a78bfa;">👑 Owner</div>
+        <div class="role-desc-text">Pełny dostęp do wszystkich funkcji sklepu: produkty, zamówienia, ustawienia, zespół i przychody.</div>
+      </div>
+      <div class="role-desc-card">
+        <div class="role-desc-title" style="color:#00d4ff;">⚙️ Manager</div>
+        <div class="role-desc-text">Zarządzanie produktami i zamówieniami. Brak dostępu do ustawień finansowych i zarządzania zespołem.</div>
+      </div>
+      <div class="role-desc-card">
+        <div class="role-desc-title" style="color:#10b981;">🔗 Creator</div>
+        <div class="role-desc-text">Dostęp do programu afiliacyjnego – tworzenie linków promocyjnych i śledzenie prowizji.</div>
+      </div>
+      <div class="role-desc-card">
+        <div class="role-desc-title" style="color:#f59e0b;">📣 Marketer</div>
+        <div class="role-desc-text">Narzędzia marketingowe: kampanie, posty w mediach społecznościowych, analizy ruchu.</div>
+      </div>
+    </div>
+
+    <h3 style="margin-bottom:16px;">Tabela uprawnień</h3>
+    <div class="card" style="overflow-x:auto;">
+      <table class="team-table">
+        <thead>
+          <tr>
+            <th>Funkcja</th>
+            <th>Owner</th>
+            <th>Manager</th>
+            <th>Creator</th>
+            <th>Marketer</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Produkty</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+          <tr><td>Zamówienia</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td></tr>
+          <tr><td>Afiliacja</td><td>✅</td><td>❌</td><td>✅</td><td>❌</td></tr>
+          <tr><td>Marketing</td><td>✅</td><td>❌</td><td>❌</td><td>✅</td></tr>
+          <tr><td>Ustawienia sklepu</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+          <tr><td>Zarządzanie zespołem</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+          <tr><td>Podział przychodów</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ─── Revenue tab ───────────────────────────────────────────────────────── -->
+  <div class="team-pane" id="pane-revenue">
+    <div class="section-head">
+      <h2>Podział przychodów</h2>
+    </div>
+    <p style="color:var(--muted); font-size:14px; margin-bottom:24px;">
+      Skonfiguruj automatyczny podział przychodów między uczestników. Suma nie może przekraczać 100%. Reszta trafia do platformy.
+    </p>
+    <div class="split-card">
+      <div id="revenue-alert"></div>
+      <div class="split-row">
+        <div class="split-label">🛍️ Seller</div>
+        <input type="number" class="split-input" id="split-seller" min="0" max="100" step="0.01" value="70" placeholder="0">
+        <div class="split-pct">%</div>
+      </div>
+      <div class="split-row">
+        <div class="split-label">🔗 Creator</div>
+        <input type="number" class="split-input" id="split-creator" min="0" max="100" step="0.01" value="20" placeholder="0">
+        <div class="split-pct">%</div>
+      </div>
+      <div class="split-row">
+        <div class="split-label">🏢 Platforma</div>
+        <input type="number" class="split-input" id="split-platform" min="0" max="100" step="0.01" value="10" placeholder="0">
+        <div class="split-pct">%</div>
+      </div>
+      <div class="split-total">
+        <span>Suma:</span>
+        <span id="split-sum">100.00 %</span>
+      </div>
+      <button class="btn btn-primary" id="btn-save-split" style="margin-top:16px; width:100%;">
+        Zapisz podział
+      </button>
+    </div>
+  </div>
+
+  <!-- ─── Activity log tab ─────────────────────────────────────────────────── -->
+  <div class="team-pane" id="pane-activity">
+    <h2 style="margin-bottom:20px;">Dziennik aktywności</h2>
+    <div class="card">
+      <ul class="log-list" id="activity-log">
+        <!-- populated by JS -->
+      </ul>
+      <div id="activity-empty" class="empty-state" style="display:none;">
+        <div class="empty-icon">📋</div>
+        <p>Brak zarejestrowanej aktywności.</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ─── Scripts ────────────────────────────────────────────────────────────── -->
+<script src="js/api.js"></script>
+<script>
+'use strict';
+
+// ─── Auth guard ──────────────────────────────────────────────────────────────
+const token = localStorage.getItem('token');
+if (!token) { window.location.href = 'login.html'; }
+
+// ─── Tab switching ───────────────────────────────────────────────────────────
+document.querySelectorAll('.team-tab').forEach((tab) => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.team-tab').forEach((t) => t.classList.remove('active'));
+    document.querySelectorAll('.team-pane').forEach((p) => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('pane-' + tab.dataset.tab).classList.add('active');
+
+    if (tab.dataset.tab === 'members') loadTeam();
+    if (tab.dataset.tab === 'activity') loadActivity();
+  });
+});
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function formatDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('pl-PL', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function roleBadge(role) {
+  const map = { owner: 'role-owner', manager: 'role-manager', creator: 'role-creator', marketer: 'role-marketer' };
+  const labels = { owner: 'Owner', manager: 'Manager', creator: 'Creator', marketer: 'Marketer' };
+  return `<span class="role-badge ${map[role] || ''}">${labels[role] || role}</span>`;
+}
+
+function statusPill(status) {
+  const labels = { active: 'Aktywny', pending: 'Oczekuje', revoked: 'Odwołany' };
+  return `<span class="pill ${status}">${labels[status] || status}</span>`;
+}
+
+function initials(email) {
+  return (email || '?').slice(0, 2).toUpperCase();
+}
+
+function showAlert(containerId, msg, type) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = `<div class="alert alert-${type}">${msg}</div>`;
+  setTimeout(() => { el.innerHTML = ''; }, 5000);
+}
+
+// ─── Load team members ────────────────────────────────────────────────────────
+async function loadTeam() {
+  const loading = document.getElementById('members-loading');
+  const empty   = document.getElementById('members-empty');
+  const table   = document.getElementById('members-table');
+  const tbody   = document.getElementById('members-tbody');
+
+  loading.style.display = 'block';
+  table.style.display   = 'none';
+  empty.style.display   = 'none';
+
+  try {
+    const data = await window.QMApi.StoreTeam.team();
+    loading.style.display = 'none';
+
+    if (!data.members || data.members.length === 0) {
+      empty.style.display = 'block';
+      return;
+    }
+
+    tbody.innerHTML = data.members.map((m) => `
+      <tr>
+        <td>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <div class="avatar">${initials(m.user_name || m.email)}</div>
+            <div>
+              <div style="font-weight:600;">${m.user_name || '—'}</div>
+              <div style="font-size:12px; color:var(--muted);">${m.email}</div>
+            </div>
+          </div>
+        </td>
+        <td>${roleBadge(m.role)}</td>
+        <td>${statusPill(m.status)}</td>
+        <td>${formatDate(m.accepted_at || m.invited_at)}</td>
+      </tr>
+    `).join('');
+
+    table.style.display = 'table';
+  } catch (err) {
+    loading.style.display = 'none';
+    empty.style.display   = 'block';
+    console.error('loadTeam error:', err);
+  }
+}
+
+// ─── Invite form ──────────────────────────────────────────────────────────────
+document.getElementById('btn-invite-open').addEventListener('click', () => {
+  document.getElementById('invite-form').style.display = 'block';
+  document.getElementById('btn-invite-open').style.display = 'none';
+});
+
+document.getElementById('btn-invite-cancel').addEventListener('click', () => {
+  document.getElementById('invite-form').style.display = 'none';
+  document.getElementById('btn-invite-open').style.display = '';
+  document.getElementById('invite-alert').innerHTML = '';
+});
+
+document.getElementById('btn-invite-send').addEventListener('click', async () => {
+  const email = document.getElementById('invite-email').value.trim();
+  const role  = document.getElementById('invite-role').value;
+  const btn   = document.getElementById('btn-invite-send');
+
+  if (!email) {
+    showAlert('invite-alert', 'Podaj adres e-mail.', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Wysyłanie…';
+
+  try {
+    await window.QMApi.StoreTeam.invite({ email, role });
+    showAlert('invite-alert', `Zaproszenie wysłane na ${email}!`, 'success');
+    document.getElementById('invite-email').value = '';
+    loadTeam();
+  } catch (err) {
+    const msg = err?.data?.error || 'Nie udało się wysłać zaproszenia.';
+    showAlert('invite-alert', msg, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Wyślij zaproszenie';
+  }
+});
+
+// ─── Revenue split ────────────────────────────────────────────────────────────
+function updateSplitSum() {
+  const seller   = parseFloat(document.getElementById('split-seller').value)   || 0;
+  const creator  = parseFloat(document.getElementById('split-creator').value)  || 0;
+  const platform = parseFloat(document.getElementById('split-platform').value) || 0;
+  const sum      = seller + creator + platform;
+  const sumEl    = document.getElementById('split-sum');
+  sumEl.textContent = sum.toFixed(2) + ' %';
+  sumEl.style.color = sum > 100 ? '#ef4444' : 'var(--accent)';
+}
+
+['split-seller', 'split-creator', 'split-platform'].forEach((id) => {
+  document.getElementById(id).addEventListener('input', updateSplitSum);
+});
+
+document.getElementById('btn-save-split').addEventListener('click', async () => {
+  const seller   = parseFloat(document.getElementById('split-seller').value)   || 0;
+  const creator  = parseFloat(document.getElementById('split-creator').value)  || 0;
+  const platform = parseFloat(document.getElementById('split-platform').value) || 0;
+  const btn      = document.getElementById('btn-save-split');
+
+  if (seller + creator + platform > 100) {
+    showAlert('revenue-alert', 'Suma procent nie może przekraczać 100%.', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Zapisywanie…';
+
+  try {
+    await window.QMApi.StoreTeam.revenueSplit({ seller, creator, platform });
+    showAlert('revenue-alert', 'Podział przychodów zapisany!', 'success');
+  } catch (err) {
+    const msg = err?.data?.error || 'Nie udało się zapisać podziału.';
+    showAlert('revenue-alert', msg, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Zapisz podział';
+  }
+});
+
+// ─── Activity log (in-memory demo) ───────────────────────────────────────────
+function loadActivity() {
+  const list  = document.getElementById('activity-log');
+  const empty = document.getElementById('activity-empty');
+
+  // Activity log is populated from locally stored events.
+  // In production, this would come from a dedicated audit-log endpoint.
+  const events = JSON.parse(localStorage.getItem('team_activity') || '[]');
+
+  if (events.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+
+  empty.style.display = 'none';
+  list.innerHTML = events.map((e) => `
+    <li class="log-item">
+      <div class="log-icon">${e.icon || '📋'}</div>
+      <div class="log-body">
+        <p class="log-text">${e.text}</p>
+        <p class="log-time">${formatDate(e.time)}</p>
+      </div>
+    </li>
+  `).join('');
+}
+
+// ─── Accept invite via URL token ──────────────────────────────────────────────
+async function handleInviteToken() {
+  const params = new URLSearchParams(window.location.search);
+  const tok    = params.get('invite');
+  if (!tok) return;
+
+  try {
+    const data = await window.QMApi.StoreTeam.acceptInvite({ token: tok });
+    // Log the acceptance
+    const activity = JSON.parse(localStorage.getItem('team_activity') || '[]');
+    activity.unshift({ icon: '✅', text: `Dołączyłeś/aś do sklepu „${data.store_name}" jako ${data.role}.`, time: new Date().toISOString() });
+    localStorage.setItem('team_activity', JSON.stringify(activity.slice(0, 50)));
+
+    // Remove token from URL without reloading
+    const url = new URL(window.location.href);
+    url.searchParams.delete('invite');
+    history.replaceState({}, '', url.toString());
+
+    showAlert('invite-alert', `Zaproszenie zaakceptowane! Rola: ${data.role}.`, 'success');
+  } catch (err) {
+    console.warn('accept invite failed:', err);
+  }
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+loadTeam();
+handleInviteToken();
+</script>
+</body>
+</html>

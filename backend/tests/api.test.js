@@ -5790,3 +5790,275 @@ describe('POST /api/creator/payouts', () => {
     expect(res.body.amount).toBe(50);
   });
 });
+
+// ─── Store Collaboration endpoints ───────────────────────────────────────────
+
+const COLLAB_STORE_ID = 'c0000000-0000-4000-8000-000000000001';
+const COLLAB_ID       = 'c0000000-0000-4000-8000-000000000002';
+const INVITE_TOKEN    = 'aabbccdd11223344aabbccdd11223344aabbccdd11223344aabbccdd11223344';
+
+describe('POST /api/store/invite', () => {
+  let sellerToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    sellerToken = signToken({ id: SELLER_ID, email: 'seller@test.pl', role: 'seller' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post('/api/store/invite')
+      .send({ email: 'collab@test.pl', role: 'manager' });
+    expect(res.status).toBe(401);
+  });
+
+  it('validates email', async () => {
+    const res = await request(app)
+      .post('/api/store/invite')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ email: 'not-an-email', role: 'manager' });
+    expect(res.status).toBe(422);
+  });
+
+  it('validates role', async () => {
+    const res = await request(app)
+      .post('/api/store/invite')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ email: 'collab@test.pl', role: 'supervillain' });
+    expect(res.status).toBe(422);
+  });
+
+  it('rejects inviting yourself', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: COLLAB_STORE_ID, owner_id: SELLER_ID }] });
+    const res = await request(app)
+      .post('/api/store/invite')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ email: 'seller@test.pl', role: 'manager' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/samego siebie/);
+  });
+
+  it('rejects inviting with owner role', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: COLLAB_STORE_ID, owner_id: SELLER_ID }] });
+    const res = await request(app)
+      .post('/api/store/invite')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ email: 'collab@test.pl', role: 'owner' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/owner/i);
+  });
+
+  it('returns 404 when seller has no store', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .post('/api/store/invite')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ email: 'collab@test.pl', role: 'manager' });
+    expect(res.status).toBe(404);
+  });
+
+  it('creates an invite successfully', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: COLLAB_STORE_ID, owner_id: SELLER_ID }] })
+      .mockResolvedValueOnce({
+        rows: [{
+          id: COLLAB_ID,
+          store_id: COLLAB_STORE_ID,
+          email: 'collab@test.pl',
+          role: 'manager',
+          status: 'pending',
+          invite_token: INVITE_TOKEN,
+          invited_at: new Date().toISOString(),
+        }],
+      });
+    const res = await request(app)
+      .post('/api/store/invite')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ email: 'collab@test.pl', role: 'manager' });
+    expect(res.status).toBe(201);
+    expect(res.body.role).toBe('manager');
+    expect(res.body.status).toBe('pending');
+    expect(res.body.invite_token).toBeTruthy();
+  });
+});
+
+describe('POST /api/store/accept-invite', () => {
+  let userToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    userToken = signToken({ id: SELLER_ID, email: 'collab@test.pl', role: 'seller' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post('/api/store/accept-invite')
+      .send({ token: INVITE_TOKEN });
+    expect(res.status).toBe(401);
+  });
+
+  it('validates token presence', async () => {
+    const res = await request(app)
+      .post('/api/store/accept-invite')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({});
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 404 for invalid token', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .post('/api/store/accept-invite')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ token: 'invalid-token' });
+    expect(res.status).toBe(404);
+  });
+
+  it('rejects token sent by wrong user', async () => {
+    const { signToken } = require('../src/middleware/auth');
+    const otherToken = signToken({ id: SELLER_ID, email: 'other@test.pl', role: 'seller' });
+    db.query.mockResolvedValueOnce({
+      rows: [{
+        id: COLLAB_ID,
+        store_id: COLLAB_STORE_ID,
+        email: 'collab@test.pl',
+        role: 'manager',
+        status: 'pending',
+        store_name: 'Test Store',
+      }],
+    });
+    const res = await request(app)
+      .post('/api/store/accept-invite')
+      .set('Authorization', `Bearer ${otherToken}`)
+      .send({ token: INVITE_TOKEN });
+    expect(res.status).toBe(403);
+  });
+
+  it('accepts the invite successfully', async () => {
+    db.query
+      .mockResolvedValueOnce({
+        rows: [{
+          id: COLLAB_ID,
+          store_id: COLLAB_STORE_ID,
+          email: 'collab@test.pl',
+          role: 'manager',
+          status: 'pending',
+          store_name: 'Test Store',
+        }],
+      })
+      .mockResolvedValueOnce({
+        rows: [{
+          id: COLLAB_ID,
+          store_id: COLLAB_STORE_ID,
+          role: 'manager',
+          status: 'active',
+          accepted_at: new Date().toISOString(),
+        }],
+      });
+    const res = await request(app)
+      .post('/api/store/accept-invite')
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({ token: INVITE_TOKEN });
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('active');
+    expect(res.body.role).toBe('manager');
+  });
+});
+
+describe('GET /api/store/team', () => {
+  let sellerToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    sellerToken = signToken({ id: SELLER_ID, email: 'seller@test.pl', role: 'seller' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/store/team');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 when seller has no store', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .get('/api/store/team')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns team members list', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: COLLAB_STORE_ID, owner_id: SELLER_ID }] })
+      .mockResolvedValueOnce({ rows: [{ count: '2' }] })
+      .mockResolvedValueOnce({
+        rows: [
+          { id: COLLAB_ID, email: 'mgr@test.pl', role: 'manager', status: 'active', invited_at: new Date().toISOString(), accepted_at: new Date().toISOString(), user_name: 'Manager' },
+          { id: 'c3', email: 'mktr@test.pl', role: 'marketer', status: 'pending', invited_at: new Date().toISOString(), accepted_at: null, user_name: null },
+        ],
+      });
+    const res = await request(app)
+      .get('/api/store/team')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(2);
+    expect(res.body.members).toHaveLength(2);
+    expect(res.body.members[0].role).toBe('manager');
+  });
+});
+
+describe('POST /api/store/revenue-split', () => {
+  let sellerToken;
+  beforeEach(() => {
+    const { signToken } = require('../src/middleware/auth');
+    sellerToken = signToken({ id: SELLER_ID, email: 'seller@test.pl', role: 'seller' });
+  });
+
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post('/api/store/revenue-split')
+      .send({ seller: 70, creator: 20, platform: 10 });
+    expect(res.status).toBe(401);
+  });
+
+  it('validates percentages', async () => {
+    const res = await request(app)
+      .post('/api/store/revenue-split')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ seller: 'abc', creator: 20, platform: 10 });
+    expect(res.status).toBe(422);
+  });
+
+  it('rejects sum exceeding 100%', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: COLLAB_STORE_ID }] });
+    const res = await request(app)
+      .post('/api/store/revenue-split')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ seller: 70, creator: 20, platform: 15 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/100/);
+  });
+
+  it('returns 404 when seller has no store', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .post('/api/store/revenue-split')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ seller: 70, creator: 20, platform: 10 });
+    expect(res.status).toBe(404);
+  });
+
+  it('saves revenue split successfully', async () => {
+    const now = new Date().toISOString();
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: COLLAB_STORE_ID }] })
+      .mockResolvedValueOnce({ rows: [{ participant: 'seller',   percentage: '70.00', updated_at: now }] })
+      .mockResolvedValueOnce({ rows: [{ participant: 'creator',  percentage: '20.00', updated_at: now }] })
+      .mockResolvedValueOnce({ rows: [{ participant: 'platform', percentage: '10.00', updated_at: now }] });
+    const res = await request(app)
+      .post('/api/store/revenue-split')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ seller: 70, creator: 20, platform: 10 });
+    expect(res.status).toBe(200);
+    expect(res.body.store_id).toBe(COLLAB_STORE_ID);
+    expect(res.body.revenue_shares).toHaveLength(3);
+    const sellerShare = res.body.revenue_shares.find((s) => s.participant === 'seller');
+    expect(sellerShare.percentage).toBe(70);
+  });
+});

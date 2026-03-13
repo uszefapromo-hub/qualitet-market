@@ -618,6 +618,19 @@
     adminStats()                           { return get('/affiliate/admin/stats'); },
   };
 
+  // ─── Store Team / Collaboration ───────────────────────────────────────────────
+
+  const StoreTeam = {
+    /** Invite a collaborator by email. POST /api/store/invite */
+    invite(data)               { return post('/store/invite', data); },
+    /** Accept an invite token. POST /api/store/accept-invite */
+    acceptInvite(data)         { return post('/store/accept-invite', data); },
+    /** List team members for owner's store. GET /api/store/team */
+    team(params)               { return get('/store/team', params); },
+    /** Configure revenue split. POST /api/store/revenue-split */
+    revenueSplit(data)         { return post('/store/revenue-split', data); },
+  };
+
   // ─── Public API surface ───────────────────────────────────────────────────────
 
   return {
@@ -637,6 +650,7 @@
     Referral,
     Announcements,
     Affiliate,
+    StoreTeam,
     health,
     /** Expose for advanced use cases. */
     _request: request,
