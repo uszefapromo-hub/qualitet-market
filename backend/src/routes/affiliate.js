@@ -757,10 +757,10 @@ router.get(
 // Per-link analytics for the authenticated creator: clicks and conversions over time
 
 router.get('/analytics', authenticate, async (req, res) => {
-  const days  = Math.min(90, Math.max(7, parseInt(req.query.days || '30', 10)))
-  const page  = Math.max(1, parseInt(req.query.page  || '1',  10))
-  const limit = Math.min(100, parseInt(req.query.limit || '20', 10))
-  const offset = (page - 1) * limit
+  const days   = Math.min(90, Math.max(7, parseInt(req.query.days  || '30', 10)));
+  const page   = Math.max(1,  parseInt(req.query.page  || '1',  10));
+  const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
+  const offset = (page - 1) * limit;
 
   try {
     const [overview, daily, topLinks] = await Promise.all([
@@ -786,7 +786,7 @@ router.get('/analytics', authenticate, async (req, res) => {
          FROM affiliate_clicks ac
          JOIN affiliate_links al ON al.id = ac.link_id
          WHERE al.creator_id = $1
-           AND ac.created_at >= NOW() - ($2 || ' days')::INTERVAL
+           AND ac.created_at >= NOW() - make_interval(days => $2)
          GROUP BY DATE(ac.created_at)
          ORDER BY day DESC`,
         [req.user.id, days]
@@ -808,7 +808,7 @@ router.get('/analytics', authenticate, async (req, res) => {
          LIMIT $2 OFFSET $3`,
         [req.user.id, limit, offset]
       ),
-    ])
+    ]);
 
     return res.json({
       overview: {
@@ -821,11 +821,11 @@ router.get('/analytics', authenticate, async (req, res) => {
       top_links: topLinks.rows,
       page,
       limit,
-    })
+    });
   } catch (err) {
-    console.error('affiliate analytics error:', err.message)
-    return res.status(500).json({ error: 'Błąd serwera' })
+    console.error('affiliate analytics error:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera' });
   }
-})
+});
 
 module.exports = router;

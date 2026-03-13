@@ -225,7 +225,8 @@ async function generateStore({ userId, niche, targetAudience = '', style = 'nowo
   try {
     const jsonMatch = content.match(/\{[\s\S]*\}/)
     storeData = jsonMatch ? JSON.parse(jsonMatch[0]) : { description: content }
-  } catch (_) {
+  } catch (parseErr) {
+    console.error('Failed to parse AI store response as JSON:', parseErr.message)
     storeData = { description: content }
   }
 

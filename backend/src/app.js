@@ -248,11 +248,14 @@ app.use('/api/store', storeRouter);
 app.use('/api/referral', referralRouter);
 app.use('/api/referrals', referralsRouter);
 app.use('/api/scripts', scriptsRouter);
+// analytics: snapshots (/api/analytics, /api/analytics/latest, /api/analytics/capture)
+//            + raw events (/api/analytics/events) – both routers share the same prefix,
+//            routes are non-overlapping so they chain without conflict.
 app.use('/api/analytics', analyticsRouter);
+app.use('/api/analytics', analyticsEventsRouter);
 app.use('/api/affiliate', affiliateRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/notifications', notificationsRouter);
-app.use('/api/analytics', analyticsEventsRouter);
 app.use('/api/stores/:id/settings', storeSettingsRouter);
 
 // ─── Public promo slots feed ───────────────────────────────────────────────────
