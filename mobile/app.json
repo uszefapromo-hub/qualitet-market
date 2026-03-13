@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Qualitet Market",
+    "slug": "qualitet-market",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0f"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": { "supportsTablet": false },
+    "android": { "adaptiveIcon": { "foregroundImage": "./assets/adaptive-icon.png", "backgroundColor": "#0a0a0f" } },
+    "web": { "favicon": "./assets/favicon.png" },
+    "scheme": "qualitet",
+    "plugins": ["expo-router"],
+    "experiments": { "typedRoutes": true }
+  }
+}
