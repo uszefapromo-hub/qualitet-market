@@ -1,6 +1,6 @@
 # RAPORT PROJEKTU – QUALITET PLATFORM
 
-> Data przeglądu: 2026-03-13 (aktualizacja po stabilizacji MVP)
+> Data przeglądu: 2026-03-13 (aktualizacja po stabilizacji MVP – PR#2: JWT refresh, mobile persistence, popup fix)
 
 ---
 
@@ -23,6 +23,9 @@
 | Zmiana | Status |
 |---|---|
 | JWT refresh: obsługa 401 w `js/api.js` (wyczyszczenie tokena + redirect do login) | ✅ GOTOWE |
+| **JWT refresh: endpoint `POST /api/auth/refresh` – bezpieczne odświeżanie tokena** | ✅ GOTOWE |
+| **JWT refresh: automatyczna próba odświeżenia przy 401 w `js/api.js` (przed redirect)** | ✅ GOTOWE |
+| **JWT refresh: `Auth.refresh()` w `window.QMApi` + proaktywne odświeżenie przy ładowaniu strony** | ✅ GOTOWE |
 | Usunięcie starych zapisów `app_user_logged` / `app_user_email` z `pwa-connect.js` | ✅ GOTOWE |
 | Usunięcie niebezpiecznego fallbacku: dostęp bez auth przy braku sieci | ✅ GOTOWE |
 | „Otwórz aplikację" – zmiana z modalki na bottom sheet (CSS + animacja slide-up) | ✅ GOTOWE |
@@ -50,6 +53,17 @@
 | Moje zamówienia | `mobile/app/orders.tsx` | ✅ GOTOWE |
 | Nawigacja dolna: dodano zakładkę Koszyk, Polskie etykiety | `mobile/app/_layout.tsx` | ✅ GOTOWE |
 
+### Expo React Native – persistence uwierzytelniania (nowe)
+
+| Zmiana | Status |
+|---|---|
+| Dodanie `expo-secure-store` do `mobile/package.json` | ✅ GOTOWE |
+| Token JWT persystowany w bezpiecznym przechowalniku urządzenia (`expo-secure-store`) | ✅ GOTOWE |
+| `loadPersistedToken()` wywoływane przy starcie aplikacji w `_layout.tsx` | ✅ GOTOWE |
+| `setAuthToken()` automatycznie zapisuje/usuwa token z secure store | ✅ GOTOWE |
+| Po zalogowaniu nawigacja do strony głównej (`router.replace('/')`) | ✅ GOTOWE |
+| Dodanie `api.auth.refresh` w kliencie mobilnym | ✅ GOTOWE |
+
 ### Expo React Native – poprawki homepage
 
 | Zmiana | Status |
@@ -71,7 +85,7 @@
 
 | Moduł | Endpointy | Status |
 |---|---|---|
-| **Auth** | POST /register, POST /login, GET /me, PUT /me | ✅ GOTOWE |
+| **Auth** | POST /register, POST /login, **POST /refresh**, GET /me, PUT /me | ✅ GOTOWE |
 | **Users** | GET /, GET /me, PUT /me, PUT /me/password | ✅ GOTOWE |
 | **Stores** | CRUD + lista sklepów, subdomeny | ✅ GOTOWE |
 | **Products** | CRUD + katalog centralny, tiery cen | ✅ GOTOWE |
@@ -172,10 +186,10 @@
 
 ### Mobile
 
-1. ❌ **Autentykacja** – brak ekranu logowania/rejestracji w apce mobilnej
-2. ❌ **Koszyk i zamówienia** – brak flow zakupowego w Expo
+1. ✅ **Autentykacja** – ekran logowania/rejestracji w apce mobilnej zaimplementowany; token persystowany przez `expo-secure-store`
+2. 🔄 **Koszyk i zamówienia** – UI koszyka i checkout istnieją, pełna integracja z API backendu w toku
 3. ❌ **Push Notifications** – brak systemu powiadomień push (np. expo-notifications)
-4. ❌ **Głęboka integracja z API** – większość ekranów mobilnych używa mock danych
+4. 🔄 **Głęboka integracja z API** – większość ekranów mobilnych używa mock danych
 
 ### Backend
 
@@ -207,9 +221,9 @@
 
 | # | Opis | Plik | Priorytet |
 |---|---|---|---|
-| M-1 | Hardcoded URL API (`localhost:5000`) nie działa na fizycznym urządzeniu ani w trybie produkcyjnym | `mobile/lib/api.ts:1` | Wysoki |
+| M-1 | Hardcoded URL API (`localhost:5000`) nie działa na fizycznym urządzeniu ani w trybie produkcyjnym | `mobile/lib/api.ts:1` | ✅ **NAPRAWIONE** – używa `EXPO_PUBLIC_API_URL` ze zmiennej środowiskowej |
 | M-2 | Brak obsługi błędów sieciowych w ekranach – crash przy braku połączenia | `mobile/app/*.tsx` | Średni |
-| M-3 | Brak ekranu ładowania/splash screen po starcie aplikacji | `mobile/app/_layout.tsx` | Niski |
+| M-3 | Brak ekranu ładowania/splash screen po starcie aplikacji | `mobile/app/_layout.tsx` | ✅ **NAPRAWIONE** – splash screen ładuje persystowany token |
 
 ---
 
@@ -256,7 +270,7 @@ Wszystkie endpointy zaimplementowane i działają:
 
 | Endpoint | Metody | Status |
 |---|---|---|
-| `/api/auth` | POST /register, POST /login, GET /me, PUT /me | GOTOWE |
+| `/api/auth` | POST /register, POST /login, **POST /refresh**, GET /me, PUT /me | GOTOWE |
 | `/api/users` | GET /, GET /me, PUT /me, PUT /me/password, POST /register, POST /login | GOTOWE |
 | `/api/stores` | GET /, GET /:id, POST /, PUT /:id, DELETE /:id | GOTOWE |
 | `/api/products` | GET /, GET /:id, POST /, PUT /:id, DELETE /:id | GOTOWE |

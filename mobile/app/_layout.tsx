@@ -5,6 +5,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import { Colors } from '@/constants/theme';
+import { loadPersistedToken } from '@/lib/api';
 
 /** Minimum time (ms) the in-app loading screen is shown before handing off. */
 const MIN_SPLASH_DURATION_MS = 500;
@@ -40,7 +41,8 @@ export default function RootLayout() {
   useEffect(() => {
     async function prepare() {
       try {
-        // Perform any async initialization here (load fonts, check auth, etc.)
+        // Load persisted auth token so the user stays logged in across app restarts.
+        await loadPersistedToken();
         // Simulate minimal async work so the loading screen is visible.
         await new Promise<void>(resolve => setTimeout(resolve, MIN_SPLASH_DURATION_MS));
       } catch {

@@ -1902,6 +1902,38 @@ describe('PUT /api/auth/me', () => {
   });
 });
 
+// ─── POST /api/auth/refresh – renew JWT ──────────────────────────────────────
+
+describe('POST /api/auth/refresh', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/auth/refresh');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns a fresh token for a valid session', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SELLER_ID, email: 'seller@test.pl', name: 'Seller', role: 'seller', plan: 'basic', trial_ends_at: null }],
+    });
+
+    const res = await request(app)
+      .post('/api/auth/refresh')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('token');
+    expect(typeof res.body.token).toBe('string');
+    expect(res.body.user).toMatchObject({ email: 'seller@test.pl', role: 'seller' });
+  });
+
+  it('returns 401 when user no longer exists', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .post('/api/auth/refresh')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(401);
+  });
+});
+
 // ─── PUT /api/users/me/password – change password ────────────────────────────
 
 describe('PUT /api/users/me/password', () => {

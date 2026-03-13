@@ -11,6 +11,7 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { GlassCard } from '@/components/GlassCard';
@@ -19,6 +20,7 @@ import { api, setAuthToken } from '@/lib/api';
 type Mode = 'login' | 'register';
 
 export default function LoginScreen() {
+  const router = useRouter();
   const [mode, setMode] = useState<Mode>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -53,14 +55,9 @@ export default function LoginScreen() {
       }
       if (result?.token) {
         setAuthToken(result.token);
+        // Navigate to the home tab after successful authentication
+        router.replace('/');
       }
-      // After login/register go back to the home tab
-      // (expo-router: use router.replace if router is available)
-      // For now we just clear the form and show success state
-      setEmail('');
-      setPassword('');
-      setName('');
-      setError(null);
     } catch (err: any) {
       setError(
         err?.message || (mode === 'login' ? 'Błąd logowania.' : 'Błąd rejestracji.'),

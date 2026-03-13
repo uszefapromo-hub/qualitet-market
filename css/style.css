@@ -2127,11 +2127,12 @@ table{word-break:break-word}
     max-height:85dvh;
     overflow-y:auto;
   }
-  /* When bottom nav is visible push the sheet above it */
+  /* When bottom nav is visible, stop the overlay above the nav bar so it
+     remains fully interactive (not blocked by the semi-transparent backdrop). */
   body.has-bottom-nav .app-promo-modal,
   body.has-bottom-nav .landing-modal,
   body.has-bottom-nav .survey-modal{
-    padding-bottom:var(--app-bar-height,70px);
+    bottom:calc(var(--app-bar-height,70px) + env(safe-area-inset-bottom));
   }
 
   /* Checkout / price-card new */

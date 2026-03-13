@@ -5,6 +5,7 @@
  *
  * POST /api/auth/register  – create a new account (default role: seller)
  * POST /api/auth/login     – obtain a JWT
+ * POST /api/auth/refresh   – exchange a valid JWT for a fresh one (extends session)
  * GET  /api/auth/me        – return the authenticated user's profile
  * PUT  /api/auth/me        – update the authenticated user's profile
  */
@@ -180,6 +181,40 @@ router.post(
     }
   }
 );
+
+// ─── POST /api/auth/refresh ───────────────────────────────────────────────────
+// Exchange a valid (non-expired) Bearer token for a fresh one.
+// The client should call this endpoint before the current token expires so that
+// the user never sees a forced logout.  A 401 here means the token has already
+// expired; the client must redirect to the login page in that case.
+
+router.post('/refresh', authenticate, async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT id, email, name, role, plan, trial_ends_at FROM users WHERE id = $1',
+      [req.user.id]
+    );
+    const user = result.rows[0];
+    if (!user) {
+      return res.status(401).json({ error: 'Użytkownik nie znaleziony' });
+    }
+    const token = signToken({ id: user.id, email: user.email, role: user.role });
+    return res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        plan: user.plan,
+        trialEndsAt: user.trial_ends_at,
+      },
+    });
+  } catch (err) {
+    console.error('auth refresh error:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
 
 // ─── GET /api/auth/me ─────────────────────────────────────────────────────────
 

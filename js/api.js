@@ -65,6 +65,42 @@
     try { return JSON.parse(localStorage.getItem(USER_KEY) || 'null'); } catch { return null; }
   }
 
+  // ─── Token refresh state ─────────────────────────────────────────────────────
+  // When a 401 is returned for a non-auth endpoint we attempt one silent token
+  // refresh before clearing credentials and redirecting to the login page.
+  // _refreshPromise serialises concurrent refresh attempts so that only one
+  // POST /auth/refresh request is in flight at any time.
+  let _refreshPromise = null;
+
+  async function attemptRefresh() {
+    if (_refreshPromise) return _refreshPromise;
+    _refreshPromise = (async () => {
+      try {
+        const token = getToken();
+        if (!token) throw new Error('no token');
+        const headers = {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        };
+        const res = await fetch(`${API_BASE}/auth/refresh`, { method: 'POST', headers });
+        if (!res.ok) throw new Error('refresh failed');
+        const data = await res.json();
+        if (data && data.token) {
+          setToken(data.token);
+          if (data.user) saveUser(data.user);
+          return true;
+        }
+        throw new Error('no token in refresh response');
+      } catch {
+        removeToken();
+        return false;
+      } finally {
+        _refreshPromise = null;
+      }
+    })();
+    return _refreshPromise;
+  }
+
   /**
    * Core fetch wrapper.
    * @param {string} path     - relative path, e.g. '/users/login'
@@ -90,12 +126,15 @@
     body = contentType.includes('application/json') ? await res.json() : await res.text();
 
     if (!res.ok) {
-      // When the token has expired or is invalid the server returns 401.
-      // Clear the stored credentials and redirect to the login page so the
-      // user can obtain a fresh token.  Skip the redirect for auth endpoints
-      // themselves (login / register) to avoid infinite loops.
+      // When the token has expired the server returns 401.
+      // Attempt one silent token refresh before clearing credentials and
+      // redirecting to the login page.  Skip for auth endpoints to avoid loops.
       if (res.status === 401 && !path.startsWith('/auth/')) {
-        removeToken();
+        const refreshed = await attemptRefresh();
+        if (refreshed) {
+          // Retry the original request with the new token
+          return request(path, options);
+        }
         if (typeof window !== 'undefined' && window.location) {
           const loginPage = window.location.origin + '/login.html';
           if (!window.location.href.includes('login.html')) {
@@ -176,6 +215,16 @@
 
     isLoggedIn() {
       return Boolean(getToken());
+    },
+
+    /**
+     * Proactively refresh the session token.
+     * Call this on page load to keep the session alive without requiring
+     * the user to re-login every 7 days.
+     * @returns {Promise<boolean>} true if the token was refreshed successfully.
+     */
+    refresh() {
+      return attemptRefresh();
     },
   };
 

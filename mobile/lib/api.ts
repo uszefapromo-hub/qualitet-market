@@ -10,10 +10,58 @@ const API_BASE: string =
 const RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1000;
 
+const TOKEN_STORAGE_KEY = 'qm_auth_token';
+
+// In-memory cache of the current auth token so we don't need an async read on
+// every request.  Populated by loadPersistedToken() on app startup.
 let authToken: string | null = null;
+
+// Lazy import of expo-secure-store to avoid crashing on web / test environments.
+async function getSecureStore() {
+  try {
+    return (await import('expo-secure-store')) as typeof import('expo-secure-store');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persist the token to secure device storage so it survives app restarts.
+ */
+async function persistToken(token: string | null): Promise<void> {
+  const store = await getSecureStore();
+  if (!store) return;
+  try {
+    if (token) {
+      await store.setItemAsync(TOKEN_STORAGE_KEY, token);
+    } else {
+      await store.deleteItemAsync(TOKEN_STORAGE_KEY);
+    }
+  } catch {
+    // Non-fatal: continue even if secure storage is unavailable.
+  }
+}
+
+/**
+ * Load the persisted token from secure storage on app startup.
+ * Call this once from the root layout's useEffect so the in-memory token is
+ * populated before any authenticated request is made.
+ */
+export async function loadPersistedToken(): Promise<string | null> {
+  const store = await getSecureStore();
+  if (!store) return null;
+  try {
+    const stored = await store.getItemAsync(TOKEN_STORAGE_KEY);
+    if (stored) authToken = stored;
+    return stored;
+  } catch {
+    return null;
+  }
+}
 
 export function setAuthToken(token: string | null) {
   authToken = token;
+  persistToken(token);
 }
 
 /** Returns the currently configured API base URL (useful for debugging). */
@@ -61,6 +109,7 @@ export const api = {
   auth: {
     login: (email: string, password: string) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
     register: (data: object) => request('/auth/register', { method: 'POST', body: JSON.stringify(data) }),
+    refresh: () => request('/auth/refresh', { method: 'POST' }),
   },
   products: {
     list: (params?: Record<string, string>) => {

@@ -686,6 +686,16 @@
     });
   }
 
+  // ─── Proactive session refresh ───────────────────────────────────────────────
+  // On each page load, if a token is stored, silently attempt to refresh it
+  // so the session is extended without forcing the user to re-login.
+  // This runs asynchronously and never blocks page rendering.
+  (function tryRefreshSession() {
+    var api = window.QMApi;
+    if (!api || !api.Auth || !api.Auth.isLoggedIn()) return;
+    api.Auth.refresh().catch(function () { /* ignore – user will be redirected on next 401 */ });
+  }());
+
   // ─── Entry point ─────────────────────────────────────────────────────────────
 
   var page = document.body ? document.body.dataset.page : null;
