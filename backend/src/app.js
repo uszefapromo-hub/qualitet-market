@@ -29,6 +29,12 @@ const analyticsRouter = require('./routes/analytics');
 const affiliateRouter = require('./routes/affiliate');
 const creatorRouter = require('./routes/creator');
 const aiRouter = require('./modules/ai/routes');
+const profileRouter = require('./routes/profile');
+const notificationsRouter = require('./routes/notifications');
+const socialRouter = require('./routes/social');
+const liveRouter = require('./routes/live');
+const gamificationRouter = require('./routes/gamification');
+const creatorReferralsRouter = require('./routes/creator-referrals');
 const errorHandler = require('./middleware/errorHandler');
 const { importSupplierProducts } = require('./services/supplier-import');
 const { getPromoSlots } = require('./helpers/promo');
@@ -240,6 +246,7 @@ app.get('/api/readiness', async (_req, res) => {
 
 // ─── API routes ────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRouter);
+app.use('/api/users/profile', profileRouter);  // must be before /api/users
 app.use('/api/users', usersRouter);
 app.use('/api/stores', storesRouter);
 app.use('/api/shops', shopsRouter);
@@ -259,8 +266,13 @@ app.use('/api/referrals', referralsRouter);
 app.use('/api/scripts', scriptsRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/affiliate', affiliateRouter);
+app.use('/api/creator/referrals', creatorReferralsRouter);  // must be before /api/creator
 app.use('/api/creator', creatorRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/social', socialRouter);
+app.use('/api/live', liveRouter);
+app.use('/api/gamification', gamificationRouter);
 
 // ─── Public promo slots feed ───────────────────────────────────────────────────
 // Shows how many early-access slots remain at each promotional tier.
