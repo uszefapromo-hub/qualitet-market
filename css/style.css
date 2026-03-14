@@ -943,6 +943,13 @@ body.has-bottom-nav.has-app-install-bar .install-banner{
   background:rgba(255,255,255,.15);
   margin:0 auto 18px;
 }
+
+/* Keep bottom navigation clickable when a modal sheet is open */
+body.has-bottom-nav .app-promo-modal,
+body.has-bottom-nav .landing-modal,
+body.has-bottom-nav .survey-modal{
+  bottom:calc(var(--app-bar-height,70px) + env(safe-area-inset-bottom));
+}
 .app-promo-close{
   position:absolute;
   top:18px;
