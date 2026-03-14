@@ -777,6 +777,24 @@
     addArtwork(data)                            { return post('/auctions/artworks', data); },
   };
 
+  // ─── Scripts (seller tracking integrations: FB Pixel, GA4, custom) ──────────
+  const Scripts = {
+    /** List scripts for the current seller's stores. GET /api/scripts */
+    list()                          { return get('/scripts'); },
+    /** Get scripts for a specific store (public). GET /api/scripts/store/:storeId */
+    listForStore(storeId)           { return get(`/scripts/store/${storeId}`); },
+    /** Get single script. GET /api/scripts/:id */
+    get(id)                         { return get(`/scripts/${id}`); },
+    /** Create a script. POST /api/scripts */
+    create(data)                    { return post('/scripts', data); },
+    /** Update a script. PUT /api/scripts/:id */
+    update(id, data)                { return put(`/scripts/${id}`, data); },
+    /** Delete a script. DELETE /api/scripts/:id */
+    delete(id)                      { return del(`/scripts/${id}`); },
+    /** Toggle script active state. PATCH /api/scripts/:id/toggle */
+    toggle(id, data)                { return patch(`/scripts/${id}/toggle`, data); },
+  };
+
   // ─── Campaigns ────────────────────────────────────────────────────────────────
   const Campaigns = {
     /** List active campaigns (public). GET /api/campaigns */
@@ -828,6 +846,7 @@
     Reputation,
     Auctions,
     Campaigns,
+    Scripts,
     health,
     /** Expose for advanced use cases. */
     _request: request,

@@ -53,6 +53,8 @@
         <a href="#" data-seller-tab="products">📦 Produkty</a>
         <a href="#" data-seller-tab="orders">🛒 Zamówienia</a>
         <a href="#" data-seller-tab="earnings">💰 Zarobki</a>
+        <a href="#" data-seller-tab="integrations">🔌 Integracje</a>
+        <a href="#" data-seller-tab="adgen">✨ Reklamy</a>
         <a href="#" data-seller-tab="settings">⚙️ Ustawienia</a>
         <hr class="sidebar-sep">
         <a href="sklep.html">Podgląd sklepu</a>
@@ -116,6 +118,8 @@
               <button class="btn btn-primary" type="button" data-goto-tab="products">Produkty</button>
               <button class="btn btn-secondary" type="button" data-goto-tab="orders">Zamówienia</button>
               <button class="btn btn-secondary" type="button" data-goto-tab="earnings">Zarobki</button>
+              <button class="btn btn-secondary" type="button" data-goto-tab="integrations">Integracje</button>
+              <button class="btn btn-secondary" type="button" data-goto-tab="adgen">Reklamy</button>
               <button class="btn btn-secondary" type="button" data-goto-tab="settings">Ustawienia</button>
             </div>
           </section>
@@ -225,6 +229,182 @@
               <span>Zarobek sprzedawcy</span>
               <strong data-earnings-seller>—</strong>
             </div>
+          </section>
+        </div>
+
+        <!-- ── TAB: INTEGRACJE ───────────────────────────────────── -->
+        <div class="owner-tab-panel" data-seller-tab-panel="integrations" hidden>
+          <section class="panel-card">
+            <span class="eyebrow">Integracje</span>
+            <h2>Śledzenie i analityka</h2>
+            <p class="hint">Dodaj kody śledzenia (Facebook Pixel, Google Analytics) do swojego sklepu. Skrypty są wstrzykiwane automatycznie do stron Twojego sklepu.</p>
+          </section>
+
+          <!-- Facebook Pixel quick-setup -->
+          <section class="panel-card">
+            <h3>📘 Facebook Pixel (Meta Pixel)</h3>
+            <p class="hint">Śledź odwiedziny, dodania do koszyka i zakupy. Wklej swój Pixel ID poniżej.</p>
+            <form data-fbpixel-form style="margin-top:14px">
+              <div class="form-field">
+                <label for="fbpixel-id">Facebook Pixel ID</label>
+                <input id="fbpixel-id" type="text" placeholder="np. 1234567890123456" data-fbpixel-input>
+              </div>
+              <div class="cta-row" style="margin-top:12px">
+                <button class="btn btn-primary" type="submit" data-fbpixel-save>Zapisz Pixel</button>
+              </div>
+              <p data-fbpixel-msg class="hint" hidden style="margin-top:8px"></p>
+            </form>
+          </section>
+
+          <!-- Google Analytics quick-setup -->
+          <section class="panel-card">
+            <h3>📊 Google Analytics 4 (GA4)</h3>
+            <p class="hint">Śledź ruch i konwersje za pomocą Google Analytics. Wklej swój Measurement ID.</p>
+            <form data-ga4-form style="margin-top:14px">
+              <div class="form-field">
+                <label for="ga4-id">GA4 Measurement ID</label>
+                <input id="ga4-id" type="text" placeholder="np. G-XXXXXXXXXX" data-ga4-input>
+              </div>
+              <div class="cta-row" style="margin-top:12px">
+                <button class="btn btn-primary" type="submit" data-ga4-save>Zapisz GA4</button>
+              </div>
+              <p data-ga4-msg class="hint" hidden style="margin-top:8px"></p>
+            </form>
+          </section>
+
+          <!-- Custom script -->
+          <section class="panel-card">
+            <h3>⚙️ Własny skrypt śledzący</h3>
+            <p class="hint">Dodaj dowolny skrypt śledzący (np. TikTok Pixel, Pinterest Tag, Google Tag Manager).</p>
+            <form data-custom-script-form style="margin-top:14px">
+              <div class="form-grid">
+                <div class="form-field">
+                  <label for="cscript-name">Nazwa skryptu</label>
+                  <input id="cscript-name" type="text" placeholder="np. TikTok Pixel" data-cscript-name>
+                </div>
+                <div class="form-field">
+                  <label for="cscript-type">Typ</label>
+                  <select id="cscript-type" data-cscript-type>
+                    <option value="pixel">Pixel</option>
+                    <option value="analytics">Analytics</option>
+                    <option value="tracking">Tracking</option>
+                    <option value="chat">Chat</option>
+                    <option value="custom">Własny</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label for="cscript-placement">Umieszczenie</label>
+                  <select id="cscript-placement" data-cscript-placement>
+                    <option value="head">head (przed &lt;/head&gt;)</option>
+                    <option value="body_start">body (na początku)</option>
+                    <option value="body_end">body (na końcu)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-field" style="margin-top:12px">
+                <label for="cscript-content">Kod skryptu</label>
+                <textarea id="cscript-content" rows="6" placeholder="&lt;script&gt;...&lt;/script&gt;" data-cscript-content style="font-family:monospace;font-size:13px;width:100%;padding:10px;border:1px solid var(--stroke);border-radius:8px;background:var(--surface);color:var(--fg);resize:vertical"></textarea>
+              </div>
+              <div class="cta-row" style="margin-top:12px">
+                <button class="btn btn-primary" type="submit" data-cscript-save>Dodaj skrypt</button>
+              </div>
+              <p data-cscript-msg class="hint" hidden style="margin-top:8px"></p>
+            </form>
+          </section>
+
+          <!-- Installed scripts list -->
+          <section class="panel-card">
+            <h3>Zainstalowane skrypty</h3>
+            <p data-scripts-loading class="hint">Ładowanie skryptów…</p>
+            <p data-scripts-empty class="hint" hidden>Brak zainstalowanych skryptów.</p>
+            <div class="owner-table-wrap" data-scripts-table-wrap hidden>
+              <table class="owner-table" aria-label="Zainstalowane skrypty">
+                <thead>
+                  <tr>
+                    <th>Nazwa</th>
+                    <th>Typ</th>
+                    <th>Umieszczenie</th>
+                    <th>Status</th>
+                    <th>Akcje</th>
+                  </tr>
+                </thead>
+                <tbody data-scripts-tbody></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <!-- ── TAB: GENERATOR REKLAM ─────────────────────────────── -->
+        <div class="owner-tab-panel" data-seller-tab-panel="adgen" hidden>
+          <section class="panel-card">
+            <span class="eyebrow">Narzędzie</span>
+            <h2>Generator reklam</h2>
+            <p class="hint">Wygeneruj gotowy tekst reklamy dla swojego produktu – szybko i bez AI, na podstawie sprawdzonych szablonów.</p>
+          </section>
+
+          <section class="panel-card">
+            <form data-adgen-seller-form style="margin-top:4px">
+              <div class="form-grid">
+                <div class="form-field">
+                  <label for="adgen-s-product">Nazwa produktu *</label>
+                  <input id="adgen-s-product" type="text" name="product" placeholder="np. Bezprzewodowe słuchawki BT500" required data-adgen-s-product>
+                </div>
+                <div class="form-field">
+                  <label for="adgen-s-price">Cena (zł)</label>
+                  <input id="adgen-s-price" type="number" name="price" min="0" step="0.01" placeholder="np. 149" data-adgen-s-price>
+                </div>
+                <div class="form-field">
+                  <label for="adgen-s-audience">Grupa docelowa *</label>
+                  <input id="adgen-s-audience" type="text" name="audience" placeholder="np. Miłośnicy muzyki 18–35 lat" required data-adgen-s-audience>
+                </div>
+                <div class="form-field">
+                  <label for="adgen-s-goal">Cel kampanii *</label>
+                  <select id="adgen-s-goal" name="goal" required data-adgen-s-goal>
+                    <option value="">Wybierz cel…</option>
+                    <option value="awareness">Świadomość marki</option>
+                    <option value="clicks">Kliknięcia / ruch</option>
+                    <option value="sales">Sprzedaż</option>
+                    <option value="followers">Obserwujący</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label for="adgen-s-platform">Platforma</label>
+                  <select id="adgen-s-platform" name="platform" data-adgen-s-platform>
+                    <option value="facebook">Facebook / Instagram</option>
+                    <option value="tiktok">TikTok</option>
+                    <option value="google">Google Ads</option>
+                    <option value="email">E-mail</option>
+                    <option value="sms">SMS</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label for="adgen-s-cta">Wezwanie do działania</label>
+                  <input id="adgen-s-cta" type="text" name="cta" placeholder="np. Kup teraz, Sprawdź ofertę" data-adgen-s-cta>
+                </div>
+              </div>
+              <div class="cta-row" style="margin-top:16px">
+                <button class="btn btn-primary" type="submit" data-adgen-s-submit>✨ Generuj tekst reklamy</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel-card" id="adgen-s-result-card" hidden>
+            <h3>Wygenerowany tekst reklamy</h3>
+            <textarea id="adgen-s-output" class="ad-output" readonly rows="8" style="width:100%;font-family:inherit;font-size:14px;padding:12px;border:1px solid var(--stroke);border-radius:8px;background:var(--surface);color:var(--fg);resize:vertical"></textarea>
+            <div class="cta-row" style="margin-top:10px">
+              <button class="btn btn-secondary" type="button" data-adgen-s-copy>📋 Kopiuj tekst</button>
+              <span data-adgen-s-copy-msg style="font-size:13px;color:var(--muted)" hidden>Skopiowano!</span>
+            </div>
+          </section>
+
+          <section class="panel-card">
+            <h3>📘 Wskazówki reklamowe</h3>
+            <ul style="padding-left:20px;line-height:1.8;color:var(--muted);font-size:14px">
+              <li>Zainstaluj <strong>Facebook Pixel</strong> w zakładce <em>Integracje</em>, aby śledzić konwersje z reklam.</li>
+              <li>Dodaj <strong>Google Analytics 4</strong>, by mierzyć ruch organiczny i płatny.</li>
+              <li>Promuj produkt w <strong>Kampaniach</strong> na stronie <a href="panel-firmy.html" style="color:var(--accent)">Panel firmy</a>.</li>
+              <li>Skróć link do produktu i udostępnij w mediach społecznościowych ze strony <a href="linki-sprzedazowe.html" style="color:var(--accent)">Linki sprzedażowe</a>.</li>
+            </ul>
           </section>
         </div>
 
@@ -376,6 +556,179 @@
 
       // Show first tab by default
       switchTab('dashboard');
+
+      // ── Integrations tab: FB Pixel quick-setup ──────────────────────────────
+      var storeId = null;
+
+      function getStoreId() {
+        return storeId;
+      }
+
+      // Capture store id from data loaded by stores.js / pwa-connect.js
+      document.addEventListener('qm:store-loaded', function (e) {
+        if (e.detail && e.detail.id) storeId = e.detail.id;
+      });
+
+      function saveScriptHelper(name, type, pixelId, placement, content, msgEl) {
+        if (!window.QMApi) { msgEl.textContent = 'Brak połączenia z API.'; msgEl.hidden = false; return; }
+        var sid = getStoreId();
+        if (!sid) { msgEl.textContent = 'Najpierw załaduj sklep (odśwież stronę).'; msgEl.hidden = false; return; }
+        window.QMApi.Scripts.create({ store_id: sid, name: name, type: type, placement: placement, content: content, active: true })
+          .then(function () { msgEl.textContent = '✅ Zapisano!'; msgEl.hidden = false; loadScripts(); })
+          .catch(function (err) { msgEl.textContent = '❌ ' + (err && err.error ? err.error : 'Błąd zapisu.'); msgEl.hidden = false; });
+      }
+
+      function escHtml(str) {
+        return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+      }
+
+      var fbPixelForm = document.querySelector('[data-fbpixel-form]');
+      if (fbPixelForm) {
+        fbPixelForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var pixelId = document.querySelector('[data-fbpixel-input]').value.trim();
+          var msgEl = document.querySelector('[data-fbpixel-msg]');
+          if (!pixelId) { msgEl.textContent = 'Podaj Pixel ID.'; msgEl.hidden = false; return; }
+          if (!/^\d{10,20}$/.test(pixelId)) { msgEl.textContent = 'Pixel ID musi składać się wyłącznie z cyfr (10–20 znaków).'; msgEl.hidden = false; return; }
+          var code = '<!-- Facebook Pixel -->\n<script>\n!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version=\'2.0\';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,\'script\',\'https://connect.facebook.net/en_US/fbevents.js\');fbq(\'init\',\'' + pixelId + '\');fbq(\'track\',\'PageView\');\n<\/script>';
+          saveScriptHelper('Facebook Pixel', 'pixel', pixelId, 'head', code, msgEl);
+        });
+      }
+
+      var ga4Form = document.querySelector('[data-ga4-form]');
+      if (ga4Form) {
+        ga4Form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var measureId = document.querySelector('[data-ga4-input]').value.trim();
+          var msgEl = document.querySelector('[data-ga4-msg]');
+          if (!measureId) { msgEl.textContent = 'Podaj Measurement ID.'; msgEl.hidden = false; return; }
+          if (!/^G-[A-Z0-9]{4,20}$/i.test(measureId)) { msgEl.textContent = 'Measurement ID musi mieć format G-XXXXXXXXXX.'; msgEl.hidden = false; return; }
+          var safeId = measureId.toUpperCase();
+          var code = '<!-- Google Analytics 4 -->\n<script async src="https://www.googletagmanager.com/gtag/js?id=' + safeId + '"><\/script>\n<script>\nwindow.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag(\'js\',new Date());gtag(\'config\',\'' + safeId + '\');\n<\/script>';
+          saveScriptHelper('Google Analytics 4', 'analytics', measureId, 'head', code, msgEl);
+        });
+      }
+
+      var cScriptForm = document.querySelector('[data-custom-script-form]');
+      if (cScriptForm) {
+        cScriptForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var name = document.querySelector('[data-cscript-name]').value.trim();
+          var type = document.querySelector('[data-cscript-type]').value;
+          var placement = document.querySelector('[data-cscript-placement]').value;
+          var content = document.querySelector('[data-cscript-content]').value.trim();
+          var msgEl = document.querySelector('[data-cscript-msg]');
+          if (!name || !content) { msgEl.textContent = 'Podaj nazwę i kod skryptu.'; msgEl.hidden = false; return; }
+          saveScriptHelper(name, type, null, placement, content, msgEl);
+        });
+      }
+
+      function loadScripts() {
+        var loadingEl = document.querySelector('[data-scripts-loading]');
+        var emptyEl = document.querySelector('[data-scripts-empty]');
+        var wrapEl = document.querySelector('[data-scripts-table-wrap]');
+        var tbody = document.querySelector('[data-scripts-tbody]');
+        if (!loadingEl || !window.QMApi) return;
+        loadingEl.hidden = false;
+        emptyEl.hidden = true;
+        wrapEl.hidden = true;
+        window.QMApi.Scripts.list()
+          .then(function (rows) {
+            loadingEl.hidden = true;
+            if (!rows || rows.length === 0) { emptyEl.hidden = false; return; }
+            wrapEl.hidden = false;
+            tbody.innerHTML = rows.map(function (s) {
+              var safeId = escHtml(s.id);
+              return '<tr><td>' + escHtml(s.name) + '</td><td>' + escHtml(s.type) + '</td><td>' + escHtml(s.placement) + '</td><td>' + (s.active ? '✅ Aktywny' : '⏸ Nieaktywny') + '</td><td><button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" data-delete-script="' + safeId + '">Usuń</button></td></tr>';
+            }).join('');
+          })
+          .catch(function () { loadingEl.hidden = true; emptyEl.hidden = false; });
+      }
+
+      document.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-delete-script]');
+        if (!btn || !window.QMApi) return;
+        window.QMApi.Scripts.delete(btn.dataset.deleteScript).then(loadScripts).catch(function () {});
+      });
+
+      // Load scripts when integrations tab is opened
+      nav.addEventListener('click', function (e) {
+        var link = e.target.closest('[data-seller-tab]');
+        if (link && link.dataset.sellerTab === 'integrations') loadScripts();
+      });
+
+      // ── Ad generator (seller) ────────────────────────────────────────────────
+      var adTemplates = {
+        awareness: {
+          facebook: '🌟 Poznaj {product}!\n\nIdealne rozwiązanie dla: {audience}.\n\nOdkryj dlaczego tysiące klientów nam zaufało. Sprawdź teraz w naszym sklepie!\n\n{cta}',
+          tiktok: '✨ {product} – must have dla {audience}! 🔥\nKliknij link w bio i sprawdź! 👇\n{cta}',
+          google: '{product} – oferta dla {audience} | Sprawdź teraz',
+          email: 'Temat: Poznaj {product} – stworzone z myślą o {audience}\n\nCześć!\n\nChcemy Ci przedstawić {product} – rozwiązanie idealne dla {audience}.\n\n{cta}',
+          sms: '{product} dla {audience} – sprawdź: {cta}',
+        },
+        clicks: {
+          facebook: '👆 Kliknij i sprawdź {product}!\n\nDla kogo? Dla: {audience}.\n\nCena już od {price} zł. Nie czekaj – oferta ograniczona!\n\n{cta} →',
+          tiktok: '🛒 {product} dla {audience} za {price} zł! Link w bio! {cta}',
+          google: '{product} – {price} zł | Dla {audience} | Kup teraz',
+          email: 'Temat: Specjalna oferta dla Ciebie – {product} za {price} zł\n\nHej!\n\n{product} czeka na Ciebie! Idealny wybór dla {audience}.\n\nCena: {price} zł\n\n{cta}',
+          sms: 'OFERTA: {product} {price}zł. Dla {audience}. {cta}',
+        },
+        sales: {
+          facebook: '🛍️ KUP TERAZ – {product}!\n\n✅ Idealne dla: {audience}\n✅ Cena: {price} zł\n✅ Szybka wysyłka\n\nZamów dziś i odbierz jutro! {cta}',
+          tiktok: '🔥 {product} ZA {price}ZŁ! Dla {audience} 🛒 Zamów teraz! {cta}',
+          google: 'Kup {product} za {price} zł – dla {audience} – szybka wysyłka',
+          email: 'Temat: Zamów {product} za {price} zł – tylko dla {audience}!\n\nDrogi Kliencie,\n\n{product} w cenie {price} zł czeka na Ciebie!\n\n{cta}\n\nPozdrawiamy,\nZespół sklepu',
+          sms: 'KUP {product} za {price}zł! {cta} Odpisz STOP by zrezygnować.',
+        },
+        followers: {
+          facebook: '❤️ Obserwuj nasz sklep i bądź na bieżąco!\n\nSpecjalizujemy się w produktach dla: {audience}.\n\nPolub i zaobserwuj, żeby nie przegapić promocji! {cta}',
+          tiktok: '👍 Obserwuj dla więcej produktów dla {audience}! {cta}',
+          google: 'Obserwuj {product} – nowości dla {audience}',
+          email: 'Temat: Zapisz się i bądź pierwszy – produkty dla {audience}!\n\nHej!\n\nZapisz się do naszego newslettera i jako pierwszy dowiedz się o nowych produktach i promocjach!\n\n{cta}',
+          sms: 'Obserwuj nasz sklep! Produkty dla {audience}. {cta}',
+        },
+      };
+
+      var adgenSellerForm = document.querySelector('[data-adgen-seller-form]');
+      if (adgenSellerForm) {
+        adgenSellerForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var product = document.querySelector('[data-adgen-s-product]').value.trim();
+          var price = document.querySelector('[data-adgen-s-price]').value.trim();
+          var audience = document.querySelector('[data-adgen-s-audience]').value.trim();
+          var goal = document.querySelector('[data-adgen-s-goal]').value;
+          var platform = document.querySelector('[data-adgen-s-platform]').value;
+          var cta = document.querySelector('[data-adgen-s-cta]').value.trim() || 'Sprawdź ofertę';
+          if (!product || !audience || !goal) return;
+          var tmpl = (adTemplates[goal] && adTemplates[goal][platform]) || adTemplates[goal]['facebook'];
+          var text = tmpl
+            .replace(/{product}/g, product)
+            .replace(/{audience}/g, audience)
+            .replace(/{price}/g, price || 'X')
+            .replace(/{cta}/g, cta);
+          document.getElementById('adgen-s-output').value = text;
+          document.getElementById('adgen-s-result-card').hidden = false;
+        });
+      }
+
+      var adgenCopyBtn = document.querySelector('[data-adgen-s-copy]');
+      if (adgenCopyBtn) {
+        adgenCopyBtn.addEventListener('click', function () {
+          var out = document.getElementById('adgen-s-output');
+          var msg = document.querySelector('[data-adgen-s-copy-msg]');
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(out.value).then(function () {
+              msg.hidden = false;
+              setTimeout(function () { msg.hidden = true; }, 2000);
+            }).catch(function () {});
+          } else {
+            out.select();
+            try { document.execCommand('copy'); } catch (_) {}
+            msg.hidden = false;
+            setTimeout(function () { msg.hidden = true; }, 2000);
+          }
+        });
+      }
     });
   </script>
 </body>
