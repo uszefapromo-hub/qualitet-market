@@ -7807,3 +7807,188 @@ describe('GET /api/auctions/:id/bids', () => {
     expect(res.body.total).toBe(0);
   });
 });
+
+// ── Campaigns ─────────────────────────────────────────────────────────────────
+
+const CAMPAIGN_ID     = 'c0000000-0000-4000-8000-000000000001';
+const PARTICIPANT_ID  = 'c0000000-0000-4000-8000-000000000002';
+
+describe('GET /api/campaigns', () => {
+  it('returns list of active campaigns', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: CAMPAIGN_ID, title: 'Kampania 1', status: 'active', budget: '500', commission_rate: '0.10', product_count: '2', participant_count: '1' }] });
+    const res = await request(app).get('/api/campaigns');
+    expect(res.status).toBe(200);
+    expect(res.body.campaigns).toHaveLength(1);
+  });
+
+  it('returns empty list when no campaigns exist', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get('/api/campaigns');
+    expect(res.status).toBe(200);
+    expect(res.body.campaigns).toHaveLength(0);
+  });
+});
+
+describe('POST /api/campaigns', () => {
+  it('returns 401 without auth', async () => {
+    const res = await request(app).post('/api/campaigns').send({ title: 'Test', budget: 100 });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 422 when title is missing', async () => {
+    const res = await request(app)
+      .post('/api/campaigns')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ budget: 100 });
+    expect(res.status).toBe(422);
+  });
+
+  it('creates a campaign', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: CAMPAIGN_ID, owner_id: SELLER_ID, title: 'Summer Sale', budget: '500', commission_rate: '0.10', status: 'draft' }] });
+    const res = await request(app)
+      .post('/api/campaigns')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ title: 'Summer Sale', budget: 500, commission_rate: 0.10 });
+    expect(res.status).toBe(201);
+    expect(res.body.campaign.title).toBe('Summer Sale');
+  });
+});
+
+describe('GET /api/campaigns/:id', () => {
+  it('returns 404 for non-existent campaign', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get(`/api/campaigns/${CAMPAIGN_ID}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns campaign with products and participants', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: CAMPAIGN_ID, title: 'Summer Sale', status: 'active', owner_name: 'Seller' }] })
+      .mockResolvedValueOnce({ rows: [] })  // products
+      .mockResolvedValueOnce({ rows: [] }); // participants
+    const res = await request(app).get(`/api/campaigns/${CAMPAIGN_ID}`);
+    expect(res.status).toBe(200);
+    expect(res.body.campaign.title).toBe('Summer Sale');
+  });
+});
+
+describe('PUT /api/campaigns/:id', () => {
+  it('returns 401 without auth', async () => {
+    const res = await request(app).put(`/api/campaigns/${CAMPAIGN_ID}`).send({ title: 'New' });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 for non-existent campaign', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .put(`/api/campaigns/${CAMPAIGN_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ title: 'Updated' });
+    expect(res.status).toBe(404);
+  });
+
+  it('updates own campaign', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: CAMPAIGN_ID, owner_id: SELLER_ID, title: 'Old', status: 'draft' }] })
+      .mockResolvedValueOnce({ rows: [{ id: CAMPAIGN_ID, owner_id: SELLER_ID, title: 'Updated', status: 'active' }] });
+    const res = await request(app)
+      .put(`/api/campaigns/${CAMPAIGN_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ title: 'Updated', status: 'active' });
+    expect(res.status).toBe(200);
+    expect(res.body.campaign.title).toBe('Updated');
+  });
+});
+
+describe('DELETE /api/campaigns/:id', () => {
+  it('returns 401 without auth', async () => {
+    const res = await request(app).delete(`/api/campaigns/${CAMPAIGN_ID}`);
+    expect(res.status).toBe(401);
+  });
+
+  it('deletes own campaign', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: CAMPAIGN_ID, owner_id: SELLER_ID }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .delete(`/api/campaigns/${CAMPAIGN_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/usunięta/i);
+  });
+
+  it('returns 403 when trying to delete another user campaign', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: CAMPAIGN_ID, owner_id: 'other-user-id' }] });
+    const res = await request(app)
+      .delete(`/api/campaigns/${CAMPAIGN_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('POST /api/campaigns/:id/join', () => {
+  it('returns 401 without auth', async () => {
+    const res = await request(app).post(`/api/campaigns/${CAMPAIGN_ID}/join`);
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 for inactive campaign', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .post(`/api/campaigns/${CAMPAIGN_ID}/join`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('joins an active campaign', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: CAMPAIGN_ID, status: 'active' }] })
+      .mockResolvedValueOnce({ rows: [{ id: PARTICIPANT_ID, campaign_id: CAMPAIGN_ID, creator_id: SELLER_ID, status: 'pending' }] });
+    const res = await request(app)
+      .post(`/api/campaigns/${CAMPAIGN_ID}/join`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(201);
+    expect(res.body.participant.status).toBe('pending');
+  });
+});
+
+describe('GET /api/campaigns/my/campaigns', () => {
+  it('returns 401 without auth', async () => {
+    const res = await request(app).get('/api/campaigns/my/campaigns');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns own campaigns', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: CAMPAIGN_ID, title: 'My Campaign', product_count: '0', participant_count: '0' }] });
+    const res = await request(app)
+      .get('/api/campaigns/my/campaigns')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.campaigns).toHaveLength(1);
+  });
+});
+
+describe('GET /api/campaigns/my/participations', () => {
+  it('returns 401 without auth', async () => {
+    const res = await request(app).get('/api/campaigns/my/participations');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns participations list', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: PARTICIPANT_ID, campaign_title: 'Summer Sale', campaign_status: 'active', commission_rate: '0.10', owner_name: 'BrandX' }] });
+    const res = await request(app)
+      .get('/api/campaigns/my/participations')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.participations).toHaveLength(1);
+  });
+});
+
+describe('GET /api/campaigns/promoted', () => {
+  it('returns promoted listings', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: 'promo-1', product_name: 'Laptop Pro', price: '2999', plan: '30d', active: true }] });
+    const res = await request(app).get('/api/campaigns/promoted');
+    expect(res.status).toBe(200);
+    expect(res.body.listings).toHaveLength(1);
+  });
+});

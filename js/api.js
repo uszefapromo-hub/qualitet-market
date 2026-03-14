@@ -777,6 +777,32 @@
     addArtwork(data)                            { return post('/auctions/artworks', data); },
   };
 
+  // ─── Campaigns ────────────────────────────────────────────────────────────────
+  const Campaigns = {
+    /** List active campaigns (public). GET /api/campaigns */
+    list(params)                                { return get('/campaigns', params); },
+    /** Get single campaign. GET /api/campaigns/:id */
+    get(id)                                     { return get(`/campaigns/${id}`); },
+    /** Create campaign (authenticated). POST /api/campaigns */
+    create(data)                                { return post('/campaigns', data); },
+    /** Update campaign. PUT /api/campaigns/:id */
+    update(id, data)                            { return put(`/campaigns/${id}`, data); },
+    /** Delete campaign. DELETE /api/campaigns/:id */
+    delete(id)                                  { return del(`/campaigns/${id}`); },
+    /** Join campaign as creator. POST /api/campaigns/:id/join */
+    join(id)                                    { return post(`/campaigns/${id}/join`); },
+    /** Approve/reject participant. PATCH /api/campaigns/:id/participants/:pid */
+    updateParticipant(id, pid, data)            { return patch(`/campaigns/${id}/participants/${pid}`, data); },
+    /** My campaigns (owner). GET /api/campaigns/my/campaigns */
+    myCampaigns()                               { return get('/campaigns/my/campaigns'); },
+    /** My participations (creator). GET /api/campaigns/my/participations */
+    myParticipations()                          { return get('/campaigns/my/participations'); },
+    /** Create promoted listing. POST /api/campaigns/promoted */
+    promoteProduct(data)                        { return post('/campaigns/promoted', data); },
+    /** List promoted listings (public). GET /api/campaigns/promoted */
+    listPromoted()                              { return get('/campaigns/promoted'); },
+  };
+
   // ─── Public API surface ───────────────────────────────────────────────────────
 
   return {
@@ -801,6 +827,7 @@
     Live,
     Reputation,
     Auctions,
+    Campaigns,
     health,
     /** Expose for advanced use cases. */
     _request: request,

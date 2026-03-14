@@ -12,6 +12,77 @@
   <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
   <link rel="stylesheet" href="panel.css">
+  <style>
+    .pricing-section { padding: 40px 0 10px; }
+    .pricing-section-title {
+      font-size: 1.35rem; font-weight: 700; color: var(--text, #111);
+      margin: 0 0 18px; padding-bottom: 10px;
+      border-bottom: 2px solid var(--border, #e5e7eb);
+    }
+    .pricing-section-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    .price-card-ext {
+      background: var(--surface, #fff);
+      border: 1.5px solid var(--border, #e5e7eb);
+      border-radius: 14px;
+      padding: 24px 22px 22px;
+      display: flex; flex-direction: column; gap: 10px;
+      position: relative;
+    }
+    .price-card-ext.card-highlight {
+      border-color: #7c3aed;
+      box-shadow: 0 2px 18px rgba(124,58,237,.12);
+    }
+    .price-card-ext .plan-name { font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #7c3aed; }
+    .price-card-ext .plan-price-block { display: flex; align-items: baseline; gap: 4px; }
+    .price-card-ext .plan-price { font-size: 1.7rem; font-weight: 800; color: var(--text, #111); }
+    .price-card-ext .plan-period { font-size: .85rem; color: var(--muted, #6b7280); }
+    .price-card-ext .plan-hint { font-size: .83rem; color: var(--muted, #6b7280); margin: 0; }
+    .price-card-ext ul { margin: 6px 0 0; padding-left: 18px; font-size: .88rem; color: var(--text, #333); display: flex; flex-direction: column; gap: 5px; }
+    .price-card-ext .btn-plan-ext {
+      margin-top: auto; padding-top: 14px;
+      display: inline-block; text-align: center;
+      background: #7c3aed; color: #fff; border-radius: 8px;
+      padding: 10px 16px; font-size: .9rem; font-weight: 600;
+      text-decoration: none; transition: background .2s;
+    }
+    .price-card-ext .btn-plan-ext:hover { background: #6d28d9; }
+    .price-card-ext .btn-plan-ext.btn-ghost {
+      background: transparent; border: 1.5px solid #7c3aed; color: #7c3aed;
+    }
+    .price-card-ext .btn-plan-ext.btn-ghost:hover { background: #7c3aed; color: #fff; }
+    .price-card-ext .badge-ext {
+      position: absolute; top: -11px; right: 16px;
+      background: #7c3aed; color: #fff;
+      font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 20px;
+    }
+    .price-card-ext .plan-commission { font-size: .8rem; color: #7c3aed; font-weight: 600; margin-top: 2px; }
+    .promo-card-ext {
+      background: linear-gradient(135deg, #7c3aed10, #ede9fe40);
+      border: 1.5px solid #c4b5fd;
+      border-radius: 14px;
+      padding: 22px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .promo-card-ext .plan-name { font-size: 1rem; font-weight: 700; color: #7c3aed; }
+    .promo-card-ext .plan-price { font-size: 1.5rem; font-weight: 800; color: var(--text, #111); }
+    .promo-card-ext p { font-size: .86rem; color: var(--muted, #6b7280); margin: 0; }
+    .promo-card-ext .btn-plan-ext {
+      margin-top: 8px; display: inline-block; text-align: center;
+      background: #7c3aed; color: #fff; border-radius: 8px;
+      padding: 9px 16px; font-size: .88rem; font-weight: 600;
+      text-decoration: none; transition: background .2s; width: fit-content;
+    }
+    .promo-card-ext .btn-plan-ext:hover { background: #6d28d9; }
+    @media (max-width: 600px) {
+      .pricing-section-grid { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body data-page="cennik" class="pricing-page has-bottom-nav">
   <div class="app-splash" data-app-splash>
@@ -51,7 +122,7 @@
       <div class="wrap">
         <span class="eyebrow">Cennik Qualitet</span>
         <h1>Wybierz plan subskrypcji</h1>
-        <p class="lead">Zacznij od planu BASIC i rozwijaj sprzedaż dzięki planom PRO i ELITE.</p>
+        <p class="lead">Wybierz plan dopasowany do Twojej roli — sprzedawca, dostawca, firma lub artysta.</p>
         <div class="pricing-billing-toggle" role="group" aria-label="Okres rozliczeniowy" style="margin-top:20px">
           <button class="pricing-billing-btn is-active" type="button" data-billing="monthly">Miesięcznie</button>
           <button class="pricing-billing-btn" type="button" data-billing="yearly">Rocznie<span class="pricing-discount-badge">-20%</span></button>
@@ -71,48 +142,71 @@
     </section>
 
     <section class="wrap pricing-grid-new" id="plany" style="padding:10px 0 30px">
+      <h2 class="pricing-section-title">Plany sprzedawcy</h2>
 
-      <!-- BASIC -->
-      <article class="price-card-new card-basic" id="basic" data-plan-card data-plan="basic">
-        <div class="plan-name">BASIC</div>
+      <!-- SELLER FREE -->
+      <article class="price-card-new card-basic" id="free" data-plan-card data-plan="free">
+        <div class="plan-name">SELLER FREE</div>
         <div class="plan-price-block">
           <span class="plan-price">
-            <span data-monthly-price>99 zł</span>
-            <span data-yearly-price>79 zł</span>
+            <span data-monthly-price>0 zł</span>
+            <span data-yearly-price>0 zł</span>
           </span>
-          <span class="plan-period">&nbsp;/ mies.</span>
+          <span class="plan-period">&nbsp;/ bezpłatny</span>
         </div>
-        <p class="plan-hint">Idealny start dropshippingu</p>
+        <p class="plan-hint">Zacznij sprzedawać bez opłat</p>
         <ul class="plan-features">
-          <li>Twój Sklep pod własną marką</li>
-          <li>Podstawowe moduły sprzedaży</li>
-          <li>1 Hurtownia w pakiecie</li>
-          <li>Wsparcie startowe</li>
+          <li>10 produktów</li>
+          <li>5% prowizji platformy</li>
+          <li>Podstawowy sklep</li>
         </ul>
         <span class="plan-current" data-current-plan hidden>AKTYWNY</span>
-        <a class="btn-plan" href="https://buy.stripe.com/28E4gz3qP0er3AL2P0ak000" data-plan-checkout data-plan="basic">Wybierz BASIC</a>
+        <a class="btn-plan" href="login.html">Zacznij za darmo</a>
       </article>
 
-      <!-- PRO -->
-      <article class="price-card-new card-pro" id="pro" data-plan-card data-plan="pro">
-        <span class="badge">Najczęściej wybierany</span>
-        <div class="plan-name">PRO</div>
+      <!-- SELLER PRO (dawniej BASIC) -->
+      <article class="price-card-new card-basic" id="basic" data-plan-card data-plan="basic">
+        <div class="plan-name">SELLER PRO</div>
         <div class="plan-price-block">
           <span class="plan-price">
-            <span data-monthly-price>199 zł</span>
-            <span data-yearly-price>159 zł</span>
+            <span data-monthly-price>79 zł</span>
+            <span data-yearly-price>63 zł</span>
           </span>
           <span class="plan-period">&nbsp;/ mies.</span>
         </div>
-        <p class="plan-hint">Pełny dostęp do hurtowni i CRM</p>
+        <p class="plan-hint">Nieograniczone produkty i analityka</p>
         <ul class="plan-features">
-          <li>Pełny Dostęp do platformy</li>
-          <li>Hurtownie + CRM sprzedaży</li>
-          <li>Automatyzacje procesów</li>
-          <li>Priorytetowe wsparcie 24/7</li>
+          <li>Nielimitowane produkty</li>
+          <li>Import produktów</li>
+          <li>Analityka sprzedaży</li>
+          <li>Narzędzia marketingowe</li>
+          <li>3% prowizji platformy</li>
         </ul>
         <span class="plan-current" data-current-plan hidden>AKTYWNY</span>
-        <a class="btn-plan" href="https://buy.stripe.com/aFa5kD9PdgdpgnxdtEak001" data-plan-checkout data-plan="pro">Wybierz PRO</a>
+        <a class="btn-plan" href="https://buy.stripe.com/28E4gz3qP0er3AL2P0ak000" data-plan-checkout data-plan="basic">Wybierz SELLER PRO</a>
+      </article>
+
+      <!-- SELLER BUSINESS (dawniej PRO) -->
+      <article class="price-card-new card-pro" id="pro" data-plan-card data-plan="pro">
+        <span class="badge">Najczęściej wybierany</span>
+        <div class="plan-name">SELLER BUSINESS</div>
+        <div class="plan-price-block">
+          <span class="plan-price">
+            <span data-monthly-price>249 zł</span>
+            <span data-yearly-price>199 zł</span>
+          </span>
+          <span class="plan-period">&nbsp;/ mies.</span>
+        </div>
+        <p class="plan-hint">Zaawansowane narzędzia i reklama</p>
+        <ul class="plan-features">
+          <li>Zaawansowana analityka</li>
+          <li>Narzędzia reklamowe</li>
+          <li>Narzędzia afiliacyjne</li>
+          <li>Priorytetowe wsparcie 24/7</li>
+          <li>2% prowizji platformy</li>
+        </ul>
+        <span class="plan-current" data-current-plan hidden>AKTYWNY</span>
+        <a class="btn-plan" href="https://buy.stripe.com/aFa5kD9PdgdpgnxdtEak001" data-plan-checkout data-plan="pro">Wybierz SELLER BUSINESS</a>
       </article>
 
       <!-- ELITE -->
@@ -136,6 +230,136 @@
         <a class="btn-plan" href="https://buy.stripe.com/7sY4gz5yX6CP0ozdtEak002" data-plan-checkout data-plan="elite">Wybierz ELITE</a>
       </article>
 
+    </section>
+
+    <!-- ===== PLANY DOSTAWCÓW ===== -->
+    <section class="wrap pricing-section" id="dostawcy">
+      <h2 class="pricing-section-title">Plany dostawców</h2>
+      <div class="pricing-section-grid">
+
+        <article class="price-card-ext">
+          <div class="plan-name">Supplier Basic</div>
+          <div class="plan-price-block">
+            <span class="plan-price">149 zł</span>
+            <span class="plan-period">&nbsp;/ mies.</span>
+          </div>
+          <p class="plan-hint">Idealny start dla dostawców</p>
+          <ul>
+            <li>Katalog produktów</li>
+            <li>Import CSV / XML</li>
+            <li>Zarządzanie magazynem</li>
+          </ul>
+          <a class="btn-plan-ext" href="zostan-dostawca.html">Wybierz Basic</a>
+        </article>
+
+        <article class="price-card-ext card-highlight">
+          <span class="badge-ext">Rekomendowany</span>
+          <div class="plan-name">Supplier Pro</div>
+          <div class="plan-price-block">
+            <span class="plan-price">399 zł</span>
+            <span class="plan-period">&nbsp;/ mies.</span>
+          </div>
+          <p class="plan-hint">Pełna moc dla aktywnych dostawców</p>
+          <ul>
+            <li>Wszystko z Basic</li>
+            <li>Priorytetowe pozycjonowanie</li>
+            <li>Dedykowany support</li>
+            <li>Zaawansowane raportowanie</li>
+          </ul>
+          <a class="btn-plan-ext" href="zostan-dostawca.html">Wybierz Pro</a>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ===== PLAN FIRMY ===== -->
+    <section class="wrap pricing-section" id="firmy">
+      <h2 class="pricing-section-title">Plan Firmy</h2>
+      <div class="pricing-section-grid" style="max-width:360px">
+
+        <article class="price-card-ext card-highlight">
+          <div class="plan-name">Brand Plan</div>
+          <div class="plan-price-block">
+            <span class="plan-price">999 zł</span>
+            <span class="plan-period">&nbsp;/ mies.</span>
+          </div>
+          <p class="plan-hint">Kompleksowa obecność marki na platformie</p>
+          <ul>
+            <li>Kampanie marketingowe</li>
+            <li>System twórców (creators)</li>
+            <li>Zaawansowane reklamy</li>
+            <li>Pełna analityka marki</li>
+          </ul>
+          <a class="btn-plan-ext" href="panel-firmy.html">Skontaktuj się</a>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ===== PLANY ARTYSTÓW ===== -->
+    <section class="wrap pricing-section" id="artysci">
+      <h2 class="pricing-section-title">Plany artystów</h2>
+      <div class="pricing-section-grid">
+
+        <article class="price-card-ext">
+          <div class="plan-name">Artist Basic</div>
+          <div class="plan-price-block">
+            <span class="plan-price">0 zł</span>
+            <span class="plan-period">&nbsp;/ bezpłatny</span>
+          </div>
+          <p class="plan-hint">Sprzedawaj swoje dzieła bez opłat wstępnych</p>
+          <ul>
+            <li>Nielimitowane dzieła</li>
+            <li>10% prowizji od sprzedaży</li>
+          </ul>
+          <a class="btn-plan-ext btn-ghost" href="panel-artysty.html">Zacznij za darmo</a>
+        </article>
+
+        <article class="price-card-ext card-highlight">
+          <div class="plan-name">Artist Pro</div>
+          <div class="plan-price-block">
+            <span class="plan-price">49 zł</span>
+            <span class="plan-period">&nbsp;/ mies.</span>
+          </div>
+          <p class="plan-hint">Więcej widoczności dla Twoich prac</p>
+          <ul>
+            <li>6% prowizji od sprzedaży</li>
+            <li>Promowane aukcje</li>
+            <li>Wyróżniony profil artysty</li>
+          </ul>
+          <a class="btn-plan-ext" href="panel-artysty.html">Wybierz Artist Pro</a>
+        </article>
+
+      </div>
+    </section>
+
+    <!-- ===== PROGRAM SZYBKIEGO STARTU ===== -->
+    <section class="wrap pricing-section" id="start">
+      <h2 class="pricing-section-title">Program szybkiego startu</h2>
+      <div class="pricing-section-grid">
+
+        <article class="promo-card-ext">
+          <div class="plan-name">🚀 Founders Seller Program</div>
+          <div class="plan-price"><span>199 zł</span> <span style="font-size:.85rem;font-weight:400;color:#6b7280">/ rok</span></div>
+          <p>Dla pierwszych 100 sprzedawców — pełny dostęp do platformy przez cały rok.</p>
+          <a class="btn-plan-ext" href="login.html">Dołącz do Founders</a>
+        </article>
+
+        <article class="promo-card-ext">
+          <div class="plan-name">🤝 Launch Partner Program</div>
+          <div class="plan-price"><span>1 999 zł</span> <span style="font-size:.85rem;font-weight:400;color:#6b7280">jednorazowo</span></div>
+          <p>Dla firm — pełne wsparcie wdrożenia i dedykowany opiekun klienta.</p>
+          <a class="btn-plan-ext" href="panel-firmy.html">Zostań partnerem</a>
+        </article>
+
+        <article class="promo-card-ext">
+          <div class="plan-name">📌 Promowane produkty</div>
+          <div class="plan-price"><span>29 zł</span> <span style="font-size:.85rem;font-weight:400;color:#6b7280">/ 7 dni</span> &nbsp;|&nbsp; <span>79 zł</span> <span style="font-size:.85rem;font-weight:400;color:#6b7280">/ 30 dni</span></div>
+          <p>Wyróżnienie produktu w katalogu — zwiększ widoczność i sprzedaż.</p>
+          <a class="btn-plan-ext" href="dashboard.html">Promuj produkt</a>
+        </article>
+
+      </div>
     </section>
 
     <section class="app-cta-section">

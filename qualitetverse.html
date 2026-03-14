@@ -766,6 +766,67 @@
       to{transform:translateX(-50%)}
     }
 
+    /* ─── Top Stores ──────────────────────────────────────────────── */
+    .stores-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:20px}
+    .store-card{text-align:center;padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:10px}
+    .store-avatar{font-size:40px;line-height:1}
+    .store-name{font-weight:700;font-size:16px}
+    .store-rating{font-size:13px;color:var(--muted)}
+    .store-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(0,229,255,.12);color:var(--cyan)}
+
+    /* ─── Creator Picks ───────────────────────────────────────────── */
+    .picks-scroll{display:flex;gap:20px;overflow-x:auto;padding-bottom:12px;scroll-snap-type:x mandatory}
+    .picks-scroll::-webkit-scrollbar{height:4px}
+    .picks-scroll::-webkit-scrollbar-track{background:var(--bg-2)}
+    .picks-scroll::-webkit-scrollbar-thumb{background:var(--purple);border-radius:2px}
+    .pick-card{flex:0 0 220px;scroll-snap-align:start;display:flex;flex-direction:column;gap:12px;padding:20px}
+    .pick-thumb{height:160px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:36px}
+    .pick-name{font-weight:700;font-size:15px}
+    .pick-creator{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+    .pick-creator-dot{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+    .pick-price{font-size:18px;font-weight:800;color:var(--cyan)}
+
+    /* ─── Community Feed ──────────────────────────────────────────── */
+    .feed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+    .feed-card{padding:24px;display:flex;flex-direction:column;gap:14px}
+    .feed-author{display:flex;align-items:center;gap:12px}
+    .feed-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+    .feed-author-info{display:flex;flex-direction:column;gap:2px}
+    .feed-author-name{font-weight:700;font-size:14px}
+    .feed-role{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:rgba(168,85,247,.18);color:var(--purple);width:fit-content}
+    .feed-text{font-size:14px;color:var(--muted);line-height:1.6}
+    .feed-actions{display:flex;gap:16px;font-size:13px;color:var(--muted)}
+    .feed-action{cursor:pointer;display:flex;align-items:center;gap:4px;transition:color .2s}
+    .feed-action:hover{color:var(--cyan)}
+
+    /* ─── Supplier Marketplace ────────────────────────────────────── */
+    .suppliers-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px}
+    .supplier-card{padding:28px 24px;display:flex;flex-direction:column;gap:12px}
+    .supplier-icon{font-size:36px}
+    .supplier-name{font-weight:700;font-size:16px}
+    .supplier-cat{font-size:12px;color:var(--muted)}
+    .supplier-count{font-size:13px;font-weight:600;color:var(--cyan)}
+    .verified-badge{font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(34,197,94,.12);color:var(--green);width:fit-content}
+
+    /* ─── Art Auctions Preview ────────────────────────────────────── */
+    .auctions-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:24px}
+    .auction-card{display:flex;flex-direction:column;overflow:hidden;padding:0}
+    .auction-thumb{height:200px;display:flex;align-items:center;justify-content:center;font-size:48px}
+    .auction-body{padding:20px;display:flex;flex-direction:column;gap:10px}
+    .auction-title{font-weight:700;font-size:16px}
+    .auction-artist{font-size:13px;color:var(--muted)}
+    .auction-bid{font-size:22px;font-weight:800;color:var(--cyan)}
+    .auction-meta{display:flex;gap:12px;font-size:12px;color:var(--muted)}
+    .auction-time{background:rgba(255,48,122,.15);color:var(--pink);padding:3px 10px;border-radius:20px;font-weight:700}
+
+    /* ─── Live Sales Feed ─────────────────────────────────────────── */
+    .live-feed-list{display:flex;flex-direction:column;gap:12px}
+    .live-item{display:flex;align-items:center;gap:14px;padding:16px 20px;border-radius:14px;background:var(--bg-2);border:1px solid var(--stroke-2)}
+    .live-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .live-text{flex:1;font-size:14px;color:var(--fg-2)}
+    .live-ts{font-size:12px;color:var(--muted);white-space:nowrap}
+    @keyframes slide-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+
     /* ─── Responsive misc ─────────────────────────────────────────── */
     @media(max-width:600px){
       .hero-stats{gap:24px}
@@ -794,6 +855,9 @@
         <a href="#ai-tools">AI Tools</a>
         <a href="#trending">Trending</a>
         <a href="#leaderboard">Leaderboard</a>
+        <a href="#top-stores">Sklepy</a>
+        <a href="#community">Community</a>
+        <a href="#suppliers">Dostawcy</a>
         <a href="cennik.html">Pricing</a>
       </nav>
       <div class="topbar-cta">
@@ -1444,6 +1508,340 @@
                 </div>
               </div>
             </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════
+         TOP STORES
+    ══════════════════════════════════════════ -->
+    <section class="section fade-in" id="top-stores" aria-labelledby="stores-heading">
+      <div class="wrap">
+        <span class="eyebrow">🏆 Najlepsze sklepy</span>
+        <h2 id="stores-heading">Top <span class="grad-cyan">Sklepy</span> tygodnia</h2>
+        <div class="stores-grid" style="margin-top:40px">
+
+          <div class="glass store-card">
+            <div class="store-avatar">🏪</div>
+            <div class="store-name">ModaSklep</div>
+            <div class="store-rating">⭐ 4.9 · 1 204 opinii</div>
+            <span class="store-badge">🔥 2 341 sprzedaży</span>
+            <a class="btn btn-ghost" href="sklep.html" style="margin-top:6px;padding:8px 18px;font-size:13px">Odwiedź sklep</a>
+          </div>
+
+          <div class="glass store-card">
+            <div class="store-avatar">💻</div>
+            <div class="store-name">TechHouse</div>
+            <div class="store-rating">⭐ 4.8 · 987 opinii</div>
+            <span class="store-badge">🔥 1 876 sprzedaży</span>
+            <a class="btn btn-ghost" href="sklep.html" style="margin-top:6px;padding:8px 18px;font-size:13px">Odwiedź sklep</a>
+          </div>
+
+          <div class="glass store-card">
+            <div class="store-avatar">⚡</div>
+            <div class="store-name">ElektroShop</div>
+            <div class="store-rating">⭐ 4.8 · 763 opinii</div>
+            <span class="store-badge">🔥 1 540 sprzedaży</span>
+            <a class="btn btn-ghost" href="sklep.html" style="margin-top:6px;padding:8px 18px;font-size:13px">Odwiedź sklep</a>
+          </div>
+
+          <div class="glass store-card">
+            <div class="store-avatar">🎨</div>
+            <div class="store-name">ArtCorner</div>
+            <div class="store-rating">⭐ 4.7 · 521 opinii</div>
+            <span class="store-badge">🔥 980 sprzedaży</span>
+            <a class="btn btn-ghost" href="sklep.html" style="margin-top:6px;padding:8px 18px;font-size:13px">Odwiedź sklep</a>
+          </div>
+
+          <div class="glass store-card">
+            <div class="store-avatar">🌿</div>
+            <div class="store-name">EkoMarket</div>
+            <div class="store-rating">⭐ 4.9 · 418 opinii</div>
+            <span class="store-badge">🔥 872 sprzedaży</span>
+            <a class="btn btn-ghost" href="sklep.html" style="margin-top:6px;padding:8px 18px;font-size:13px">Odwiedź sklep</a>
+          </div>
+
+          <div class="glass store-card">
+            <div class="store-avatar">🏋️</div>
+            <div class="store-name">FitZone</div>
+            <div class="store-rating">⭐ 4.7 · 312 opinii</div>
+            <span class="store-badge">🔥 654 sprzedaży</span>
+            <a class="btn btn-ghost" href="sklep.html" style="margin-top:6px;padding:8px 18px;font-size:13px">Odwiedź sklep</a>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════
+         CREATOR PICKS
+    ══════════════════════════════════════════ -->
+    <section class="section fade-in" id="creator-picks" aria-labelledby="picks-heading">
+      <div class="wrap">
+        <span class="eyebrow">✨ Polecane przez twórców</span>
+        <h2 id="picks-heading">Creator <span class="grad-pink">Picks</span></h2>
+        <div class="picks-scroll" style="margin-top:40px">
+
+          <div class="glass pick-card">
+            <div class="pick-thumb" style="background:linear-gradient(135deg,#7c3aed,#db2777)">🎧</div>
+            <div class="pick-name">Słuchawki Pro X</div>
+            <div class="pick-creator">
+              <div class="pick-creator-dot" style="background:#7c3aed">M</div>
+              @MarketingKing
+            </div>
+            <div class="pick-price">349 zł</div>
+            <button class="btn" style="background:var(--green);color:#000;font-size:13px;padding:8px 14px;border:none">Dodaj do koszyka</button>
+          </div>
+
+          <div class="glass pick-card">
+            <div class="pick-thumb" style="background:linear-gradient(135deg,#0e7490,#06b6d4)">👟</div>
+            <div class="pick-name">Buty Runner 2.0</div>
+            <div class="pick-creator">
+              <div class="pick-creator-dot" style="background:#0e7490">S</div>
+              @StyleQueen
+            </div>
+            <div class="pick-price">279 zł</div>
+            <button class="btn" style="background:var(--green);color:#000;font-size:13px;padding:8px 14px;border:none">Dodaj do koszyka</button>
+          </div>
+
+          <div class="glass pick-card">
+            <div class="pick-thumb" style="background:linear-gradient(135deg,#be185d,#f43f5e)">📚</div>
+            <div class="pick-name">Kurs E-Commerce 2025</div>
+            <div class="pick-creator">
+              <div class="pick-creator-dot" style="background:#be185d">E</div>
+              @EduMaster
+            </div>
+            <div class="pick-price">149 zł</div>
+            <button class="btn" style="background:var(--green);color:#000;font-size:13px;padding:8px 14px;border:none">Dodaj do koszyka</button>
+          </div>
+
+          <div class="glass pick-card">
+            <div class="pick-thumb" style="background:linear-gradient(135deg,#065f46,#10b981)">🌿</div>
+            <div class="pick-name">Zestaw Eko Premium</div>
+            <div class="pick-creator">
+              <div class="pick-creator-dot" style="background:#065f46">G</div>
+              @GreenLife
+            </div>
+            <div class="pick-price">189 zł</div>
+            <button class="btn" style="background:var(--green);color:#000;font-size:13px;padding:8px 14px;border:none">Dodaj do koszyka</button>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════
+         COMMUNITY FEED
+    ══════════════════════════════════════════ -->
+    <section class="section fade-in" id="community" aria-labelledby="community-heading">
+      <div class="wrap">
+        <span class="eyebrow">💬 Społeczność platformy</span>
+        <h2 id="community-heading">Community <span class="grad-green">Feed</span></h2>
+        <div class="feed-grid" style="margin-top:40px">
+
+          <div class="glass feed-card">
+            <div class="feed-author">
+              <div class="feed-avatar" style="background:linear-gradient(135deg,#7c3aed,#db2777)">AK</div>
+              <div class="feed-author-info">
+                <div class="feed-author-name">Anna Kowalska</div>
+                <span class="feed-role">Top Seller</span>
+              </div>
+            </div>
+            <div class="feed-text">Właśnie przekroczyłam 1000 zamówień miesięcznie! 🎉 QualitetVerse to najlepsza platforma dla małego biznesu. Dzięki AI narzędziom skróciłam czas zarządzania sklepem o połowę.</div>
+            <div class="feed-actions">
+              <span class="feed-action">❤️ 142</span>
+              <span class="feed-action">💬 28</span>
+              <span class="feed-action">📤 udostępnij</span>
+            </div>
+          </div>
+
+          <div class="glass feed-card">
+            <div class="feed-author">
+              <div class="feed-avatar" style="background:linear-gradient(135deg,#0e7490,#06b6d4)">PW</div>
+              <div class="feed-author-info">
+                <div class="feed-author-name">Piotr Wiśniewski</div>
+                <span class="feed-role" style="background:rgba(0,229,255,.15);color:var(--cyan)">Dostawca</span>
+              </div>
+            </div>
+            <div class="feed-text">Tip dla sprzedawców: używajcie opisów z konkretnymi danymi technicznymi. Nasze produkty ze szczegółowymi specyfikacjami sprzedają się 3x lepiej. Testy trwały 2 miesiące — wyniki mówią same za siebie 📊</div>
+            <div class="feed-actions">
+              <span class="feed-action">❤️ 89</span>
+              <span class="feed-action">💬 45</span>
+              <span class="feed-action">📤 udostępnij</span>
+            </div>
+          </div>
+
+          <div class="glass feed-card">
+            <div class="feed-author">
+              <div class="feed-avatar" style="background:linear-gradient(135deg,#065f46,#10b981)">MN</div>
+              <div class="feed-author-info">
+                <div class="feed-author-name">Marta Nowak</div>
+                <span class="feed-role" style="background:rgba(34,197,94,.15);color:var(--green)">Creator</span>
+              </div>
+            </div>
+            <div class="feed-text">Creator Economy na QualitetVerse naprawdę działa! W zeszłym miesiącu zarobiłam 4 200 zł z samych poleceń i afiliacji. Tworzę content o lifestyle i naturalnie wplatam produkty. 🌿✨</div>
+            <div class="feed-actions">
+              <span class="feed-action">❤️ 213</span>
+              <span class="feed-action">💬 67</span>
+              <span class="feed-action">📤 udostępnij</span>
+            </div>
+          </div>
+
+        </div>
+        <div style="text-align:center;margin-top:36px">
+          <a class="btn btn-primary" href="qualitetmarket.html" style="font-size:15px;padding:14px 32px">💬 Dołącz do community</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════
+         SUPPLIER MARKETPLACE
+    ══════════════════════════════════════════ -->
+    <section class="section fade-in" id="suppliers" aria-labelledby="suppliers-heading">
+      <div class="wrap">
+        <span class="eyebrow">🏭 Zweryfikowani dostawcy</span>
+        <h2 id="suppliers-heading">Supplier <span class="grad-cyan">Marketplace</span></h2>
+        <div class="suppliers-grid" style="margin-top:40px">
+
+          <div class="glass supplier-card">
+            <div class="supplier-icon">💻</div>
+            <div class="supplier-name">TechDistrib Polska</div>
+            <div class="supplier-cat">Elektronika & Gadżety</div>
+            <div class="supplier-count">1 240 produktów</div>
+            <span class="verified-badge">Zweryfikowany ✓</span>
+          </div>
+
+          <div class="glass supplier-card">
+            <div class="supplier-icon">👕</div>
+            <div class="supplier-name">ModaHurt Sp. z o.o.</div>
+            <div class="supplier-cat">Odzież & Akcesoria</div>
+            <div class="supplier-count">3 560 produktów</div>
+            <span class="verified-badge">Zweryfikowany ✓</span>
+          </div>
+
+          <div class="glass supplier-card">
+            <div class="supplier-icon">🌿</div>
+            <div class="supplier-name">EkoSource</div>
+            <div class="supplier-cat">Produkty ekologiczne</div>
+            <div class="supplier-count">680 produktów</div>
+            <span class="verified-badge">Zweryfikowany ✓</span>
+          </div>
+
+          <div class="glass supplier-card">
+            <div class="supplier-icon">🏠</div>
+            <div class="supplier-name">HomeGoods Hurtownia</div>
+            <div class="supplier-cat">Dom & Ogród</div>
+            <div class="supplier-count">2 100 produktów</div>
+            <span class="verified-badge">Zweryfikowany ✓</span>
+          </div>
+
+        </div>
+        <div style="text-align:center;margin-top:36px">
+          <a class="btn btn-primary" href="zostan-dostawca.html" style="font-size:15px;padding:14px 32px">🏭 Zostań dostawcą</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════
+         ART AUCTIONS PREVIEW
+    ══════════════════════════════════════════ -->
+    <section class="section fade-in" id="auctions-preview" aria-labelledby="auctions-heading">
+      <div class="wrap">
+        <span class="eyebrow">🎨 Aukcje artystów</span>
+        <h2 id="auctions-heading">Art <span class="grad-pink">Auctions</span></h2>
+        <div class="auctions-grid" style="margin-top:40px">
+
+          <div class="glass auction-card">
+            <div class="auction-thumb" style="background:linear-gradient(135deg,#7c3aed,#db2777,#f43f5e)">🖼️</div>
+            <div class="auction-body">
+              <div class="auction-title">Neon City Dreams</div>
+              <div class="auction-artist">by @PixelArtistKZ</div>
+              <div class="auction-bid">1 250 zł</div>
+              <div class="auction-meta">
+                <span class="auction-time">⏱ 2h 15m</span>
+                <span>🔨 14 licytacji</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass auction-card">
+            <div class="auction-thumb" style="background:linear-gradient(135deg,#0e7490,#7c3aed,#06b6d4)">🎭</div>
+            <div class="auction-body">
+              <div class="auction-title">Abstract Flow #7</div>
+              <div class="auction-artist">by @DigitalDreamer</div>
+              <div class="auction-bid">890 zł</div>
+              <div class="auction-meta">
+                <span class="auction-time">⏱ 5h 42m</span>
+                <span>🔨 8 licytacji</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass auction-card">
+            <div class="auction-thumb" style="background:linear-gradient(135deg,#065f46,#be185d,#f59e0b)">🌌</div>
+            <div class="auction-body">
+              <div class="auction-title">Cosmic Garden</div>
+              <div class="auction-artist">by @SpaceCanvas</div>
+              <div class="auction-bid">2 100 zł</div>
+              <div class="auction-meta">
+                <span class="auction-time">⏱ 1h 03m</span>
+                <span>🔨 22 licytacje</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <div style="text-align:center;margin-top:36px">
+          <a class="btn btn-ghost" href="auctions.html" style="font-size:15px;padding:14px 32px">🎨 Zobacz wszystkie aukcje</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════════════════════════════
+         LIVE SALES FEED
+    ══════════════════════════════════════════ -->
+    <section class="section fade-in" id="live-feed" aria-labelledby="live-heading">
+      <div class="wrap">
+        <span class="eyebrow" style="color:var(--green)">🟢 Na żywo</span>
+        <h2 id="live-heading">Live <span class="grad-green">Sales Feed</span></h2>
+        <div class="live-feed-list" style="margin-top:40px;max-width:800px;margin-left:auto;margin-right:auto">
+
+          <div class="live-item" style="animation:slide-in .4s ease both;animation-delay:0s">
+            <div class="live-dot" style="background:var(--cyan)"></div>
+            <div class="live-text">🛒 Anna K. kupiła <strong>Słuchawki Pro X</strong> — Sklep TechHouse</div>
+            <div class="live-ts">teraz</div>
+          </div>
+
+          <div class="live-item" style="animation:slide-in .4s ease both;animation-delay:.1s">
+            <div class="live-dot" style="background:var(--green)"></div>
+            <div class="live-text">📦 ModaSklep sprzedał <strong>23 sztuki</strong> w ostatniej godzinie</div>
+            <div class="live-ts">1 min temu</div>
+          </div>
+
+          <div class="live-item" style="animation:slide-in .4s ease both;animation-delay:.2s">
+            <div class="live-dot" style="background:var(--pink)"></div>
+            <div class="live-text">⭐ Klient zostawił recenzję <strong>5/5</strong> w ElektroShop</div>
+            <div class="live-ts">2 min temu</div>
+          </div>
+
+          <div class="live-item" style="animation:slide-in .4s ease both;animation-delay:.3s">
+            <div class="live-dot" style="background:var(--purple)"></div>
+            <div class="live-text">🎨 Nowa aukcja <strong>„Neon Horizon"</strong> od @PixelArtistKZ — licytacja startuje!</div>
+            <div class="live-ts">4 min temu</div>
+          </div>
+
+          <div class="live-item" style="animation:slide-in .4s ease both;animation-delay:.4s">
+            <div class="live-dot" style="background:var(--cyan)"></div>
+            <div class="live-text">🏭 EkoSource dodał <strong>45 nowych produktów</strong> do katalogu hurtowego</div>
+            <div class="live-ts">7 min temu</div>
+          </div>
+
+          <div class="live-item" style="animation:slide-in .4s ease both;animation-delay:.5s">
+            <div class="live-dot" style="background:var(--green)"></div>
+            <div class="live-text">💰 FitZone osiągnął <strong>1 000 zł przychodu</strong> w ciągu ostatnich 24h</div>
+            <div class="live-ts">12 min temu</div>
           </div>
 
         </div>

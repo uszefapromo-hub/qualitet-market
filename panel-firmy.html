@@ -1,0 +1,941 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Panel Firmy - QualitetVerse</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#7c3aed">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
+  <link rel="stylesheet" href="panel.css">
+  <style>
+    .brand-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;background:rgba(124,58,237,.25);border:1px solid rgba(124,58,237,.5);color:#d8b4fe;margin-left:8px}
+    .stats-row{display:flex;flex-wrap:wrap;gap:12px;margin-top:16px}
+    .stat-chip{display:flex;flex-direction:column;gap:2px;padding:12px 18px;border-radius:14px;border:1px solid var(--stroke);background:rgba(255,255,255,.04);min-width:110px}
+    .stat-chip span{font-size:12px;color:var(--muted)}
+    .stat-chip strong{font-size:22px;font-weight:700}
+    .quick-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-top:4px}
+    .qs-card{padding:18px 16px;border-radius:18px;border:1px solid var(--stroke);background:rgba(255,255,255,.04)}
+    .qs-card .qs-icon{font-size:26px;margin-bottom:6px}
+    .qs-card .qs-label{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+    .qs-card .qs-value{font-size:28px;font-weight:700;margin-top:2px}
+    .qs-card .qs-sub{font-size:12px;color:var(--muted);margin-top:2px}
+    .section-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+    .section-head h2{margin:0}
+    .form-grid{display:flex;flex-wrap:wrap;gap:14px}
+    .form-grid .form-field{flex:1 1 200px}
+    .form-field textarea{padding:10px 14px;border-radius:12px;border:1px solid var(--stroke);background:var(--card);color:var(--text);font-size:14px;resize:vertical;width:100%;box-sizing:border-box;font-family:inherit}
+    .form-field textarea:focus{outline:2px solid var(--accent-cyan,#35d9ff);outline-offset:1px}
+    .form-field--full{flex:1 1 100%}
+    .cta-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:4px}
+    .msg-box{padding:10px 14px;border-radius:12px;font-size:13px;margin-top:10px}
+    .msg-box.ok{background:rgba(84,255,176,.12);border:1px solid rgba(84,255,176,.3);color:#d9ffe9}
+    .msg-box.err{background:rgba(255,79,79,.1);border:1px solid rgba(255,79,79,.3);color:#ffd5d5}
+    .ad-output{font-family:monospace;font-size:13px;line-height:1.6;white-space:pre-wrap;background:rgba(0,0,0,.25);border:1px solid var(--stroke);border-radius:12px;padding:14px;min-height:120px;width:100%;box-sizing:border-box;resize:vertical;color:var(--text)}
+    .analytics-table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}
+    .analytics-table th,.analytics-table td{padding:8px 12px;text-align:left;border-bottom:1px solid var(--stroke)}
+    .analytics-table th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+    .bar-wrap{display:flex;align-items:center;gap:8px}
+    .bar{height:10px;border-radius:999px;background:rgba(124,58,237,.55);min-width:4px;transition:width .3s}
+    .bar-val{font-size:12px;color:var(--muted);white-space:nowrap}
+    .pixel-info{margin-top:14px;padding:14px 16px;border-radius:14px;background:rgba(255,216,77,.07);border:1px solid rgba(255,216,77,.25);font-size:13px;line-height:1.6;color:var(--text)}
+    .pixel-info strong{color:#ffd84d}
+    .pixel-info code{background:rgba(0,0,0,.3);padding:2px 6px;border-radius:6px;font-size:12px;font-family:monospace}
+    .nav-section-label{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);padding:14px 16px 4px;display:block}
+  </style>
+</head>
+<body data-page="panel-firmy" class="dashboard-page has-bottom-nav">
+
+  <div class="app-splash" data-app-splash>
+    <div class="app-splash-card">
+      <div class="app-splash-logo">
+        <img src="assets/icons/icon-192.svg" alt="QualitetVerse">
+      </div>
+      <div class="app-splash-title">
+        <strong>QualitetVerse</strong>
+        <span>Panel Firmy</span>
+      </div>
+      <div class="app-splash-loader"></div>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>QualitetVerse</strong>
+          <span>Panel Firmy</span>
+          <span class="brand-tag">BRAND</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Główna nawigacja">
+        <a href="index.html">Start</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="panel-firmy.html" class="active">Panel Firmy</a>
+        <a href="cennik.html">Cennik</a>
+      </nav>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <div class="dashboard-shell">
+    <aside class="sidebar">
+      <nav class="sidebar-nav" aria-label="Menu panelu firmy">
+        <a class="active" href="#sec-dashboard" data-nav-item="dashboard">📊 Dashboard</a>
+        <a href="#sec-campaigns" data-nav-item="campaigns">📣 Kampanie</a>
+        <a href="#sec-creators" data-nav-item="creators">🎨 Twórcy</a>
+        <a href="#sec-promoted" data-nav-item="promoted">🏷️ Promowane produkty</a>
+        <a href="#sec-adgen" data-nav-item="adgen">✨ Generator reklam</a>
+        <a href="#sec-analytics" data-nav-item="analytics">📈 Analityka</a>
+        <hr class="sidebar-sep">
+        <a href="#sec-profile" data-nav-item="profile">🏢 Profil firmy</a>
+        <a href="cennik.html">💎 Subskrypcja</a>
+      </nav>
+    </aside>
+
+    <main class="dashboard-main">
+
+      <!-- ── Welcome card ── -->
+      <section class="panel-card dashboard-welcome" id="sec-dashboard">
+        <span class="eyebrow">Panel zarządzania marką</span>
+        <h1>Panel Firmy <span class="brand-badge" data-brand-plan>Brand Plan</span></h1>
+        <p class="hint" data-company-name-display>Witaj w centrum zarządzania kampaniami reklamowymi.</p>
+        <div class="stats-row">
+          <div class="stat-chip">
+            <span>Aktywne kampanie</span>
+            <strong data-stat-campaigns>—</strong>
+          </div>
+          <div class="stat-chip">
+            <span>Połączeni twórcy</span>
+            <strong data-stat-creators>—</strong>
+          </div>
+          <div class="stat-chip">
+            <span>Łączny zasięg</span>
+            <strong data-stat-reach>—</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Quick stats ── -->
+      <section class="panel-card" style="margin-top:0">
+        <div class="quick-stats">
+          <div class="qs-card">
+            <div class="qs-icon">📣</div>
+            <div class="qs-label">Aktywne kampanie</div>
+            <div class="qs-value" data-qs-campaigns>0</div>
+            <div class="qs-sub">w tym miesiącu</div>
+          </div>
+          <div class="qs-card">
+            <div class="qs-icon">🎨</div>
+            <div class="qs-label">Twórcy</div>
+            <div class="qs-value" data-qs-creators>0</div>
+            <div class="qs-sub">zatwierdzonych</div>
+          </div>
+          <div class="qs-card">
+            <div class="qs-icon">👆</div>
+            <div class="qs-label">Kliknięcia</div>
+            <div class="qs-value" data-qs-clicks>0</div>
+            <div class="qs-sub">ostatnie 30 dni</div>
+          </div>
+          <div class="qs-card">
+            <div class="qs-icon">💰</div>
+            <div class="qs-label">Sprzedaż</div>
+            <div class="qs-value" data-qs-sales>0 zł</div>
+            <div class="qs-sub">wygenerowana przez twórców</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Campaigns list ── -->
+      <section class="panel-card" id="sec-campaigns">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Zarządzanie</span>
+            <h2>Kampanie</h2>
+          </div>
+          <button class="btn btn-primary" type="button" data-toggle-create-campaign>+ Nowa kampania</button>
+        </div>
+        <div class="owner-table-wrap">
+          <table class="owner-table" id="campaigns-table">
+            <thead>
+              <tr>
+                <th>Nazwa kampanii</th>
+                <th>Budżet (zł)</th>
+                <th>Prowizja</th>
+                <th>Status</th>
+                <th>Twórcy</th>
+                <th>Akcje</th>
+              </tr>
+            </thead>
+            <tbody id="campaigns-tbody">
+              <tr><td colspan="6" class="cell-muted" style="text-align:center;padding:24px">Wczytywanie kampanii&hellip;</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p data-campaigns-empty class="hint" hidden style="text-align:center;padding:16px">Brak kampanii. Utwórz pierwszą kampanię poniżej.</p>
+
+        <!-- Create campaign form -->
+        <div id="create-campaign-form" hidden style="margin-top:24px;padding-top:20px;border-top:1px solid var(--stroke)">
+          <span class="eyebrow">Nowa kampania</span>
+          <h3 style="margin:4px 0 16px">Utwórz kampanię</h3>
+          <form data-campaign-form>
+            <div class="form-grid">
+              <div class="form-field form-field--full">
+                <label for="camp-title">Tytuł kampanii *</label>
+                <input id="camp-title" type="text" name="title" placeholder="np. Letnia promocja 2025" required>
+              </div>
+              <div class="form-field form-field--full">
+                <label for="camp-desc">Opis kampanii</label>
+                <textarea id="camp-desc" name="description" rows="3" placeholder="Opisz cel i warunki kampanii dla twórców…"></textarea>
+              </div>
+              <div class="form-field">
+                <label for="camp-budget">Budżet (zł) *</label>
+                <input id="camp-budget" type="number" name="budget" min="0" step="0.01" placeholder="np. 5000" required>
+              </div>
+              <div class="form-field">
+                <label for="camp-commission">Stawka prowizji (%) *</label>
+                <input id="camp-commission" type="number" name="commissionRate" min="0" max="100" step="0.1" placeholder="np. 10" required>
+              </div>
+              <div class="form-field">
+                <label for="camp-start">Data rozpoczęcia *</label>
+                <input id="camp-start" type="date" name="startDate" required>
+              </div>
+              <div class="form-field">
+                <label for="camp-end">Data zakończenia *</label>
+                <input id="camp-end" type="date" name="endDate" required>
+              </div>
+              <div class="form-field form-field--full">
+                <label for="camp-products">ID produktów (jeden na linię)</label>
+                <textarea id="camp-products" name="products" rows="3" placeholder="prod_abc123&#10;prod_def456&#10;…"></textarea>
+              </div>
+            </div>
+            <div class="cta-row" style="margin-top:16px">
+              <button class="btn btn-primary" type="submit" data-campaign-submit>Utwórz kampanię</button>
+              <button class="btn btn-secondary" type="button" data-toggle-create-campaign>Anuluj</button>
+            </div>
+            <div data-campaign-msg hidden></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ── Active creators ── -->
+      <section class="panel-card" id="sec-creators">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Współpraca</span>
+            <h2>Twórcy</h2>
+          </div>
+        </div>
+        <p class="hint">Lista twórców, którzy dołączyli do Twoich kampanii. Zatwierdź lub odrzuć aplikacje.</p>
+        <div class="owner-table-wrap" style="margin-top:14px">
+          <table class="owner-table" id="creators-table">
+            <thead>
+              <tr>
+                <th>Twórca</th>
+                <th>Kampania</th>
+                <th>Data zgłoszenia</th>
+                <th>Status</th>
+                <th>Akcje</th>
+              </tr>
+            </thead>
+            <tbody id="creators-tbody">
+              <tr><td colspan="5" class="cell-muted" style="text-align:center;padding:24px">Wczytywanie twórców&hellip;</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p data-creators-empty class="hint" hidden style="text-align:center;padding:16px">Brak zgłoszeń od twórców do Twoich kampanii.</p>
+      </section>
+
+      <!-- ── Promoted listings ── -->
+      <section class="panel-card" id="sec-promoted">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Widoczność</span>
+            <h2>Promowane produkty</h2>
+          </div>
+        </div>
+        <div class="owner-table-wrap">
+          <table class="owner-table" id="promoted-table">
+            <thead>
+              <tr>
+                <th>Produkt</th>
+                <th>Plan</th>
+                <th>Ważność do</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="promoted-tbody">
+              <tr><td colspan="4" class="cell-muted" style="text-align:center;padding:24px">Wczytywanie promowanych produktów&hellip;</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p data-promoted-empty class="hint" hidden style="text-align:center;padding:16px">Brak promowanych produktów.</p>
+
+        <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--stroke)">
+          <span class="eyebrow">Dodaj promocję</span>
+          <h3 style="margin:4px 0 16px">Promuj produkt</h3>
+          <form data-promote-form>
+            <div class="form-grid">
+              <div class="form-field">
+                <label for="promo-product-id">ID produktu *</label>
+                <input id="promo-product-id" type="text" name="productId" placeholder="np. prod_abc123" required>
+              </div>
+              <div class="form-field">
+                <label for="promo-plan">Plan promocji *</label>
+                <select id="promo-plan" name="plan" required>
+                  <option value="">Wybierz plan…</option>
+                  <option value="7d">7 dni — 29 zł</option>
+                  <option value="30d">30 dni — 79 zł</option>
+                </select>
+              </div>
+            </div>
+            <div class="cta-row" style="margin-top:14px">
+              <button class="btn btn-primary" type="submit" data-promote-submit>Promuj produkt</button>
+            </div>
+            <div data-promote-msg hidden></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ── Ad Generator ── -->
+      <section class="panel-card" id="sec-adgen">
+        <span class="eyebrow">Narzędzie</span>
+        <h2>Generator reklam</h2>
+        <p class="hint">Wygeneruj gotowy tekst reklamy na podstawie danych produktu — bez AI, szablonowo.</p>
+        <form data-adgen-form style="margin-top:16px">
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="adgen-product">Nazwa produktu *</label>
+              <input id="adgen-product" type="text" name="product" placeholder="np. Bezprzewodowe słuchawki X200" required>
+            </div>
+            <div class="form-field">
+              <label for="adgen-audience">Grupa docelowa *</label>
+              <input id="adgen-audience" type="text" name="audience" placeholder="np. Gracze 18–35 lat" required>
+            </div>
+            <div class="form-field">
+              <label for="adgen-goal">Cel kampanii *</label>
+              <select id="adgen-goal" name="goal" required>
+                <option value="">Wybierz cel…</option>
+                <option value="awareness">Świadomość marki</option>
+                <option value="clicks">Kliknięcia / ruch</option>
+                <option value="sales">Sprzedaż</option>
+                <option value="followers">Obserwujący</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="adgen-cta">Wezwanie do działania</label>
+              <input id="adgen-cta" type="text" name="cta" placeholder="np. Kup teraz, Sprawdź ofertę">
+            </div>
+          </div>
+          <div class="cta-row" style="margin-top:14px">
+            <button class="btn btn-primary" type="submit" data-adgen-submit>Generuj tekst reklamy</button>
+          </div>
+        </form>
+
+        <div id="adgen-result" hidden style="margin-top:20px">
+          <label style="font-size:14px;font-weight:600;display:block;margin-bottom:8px">Wygenerowany tekst reklamy:</label>
+          <textarea class="ad-output" id="adgen-output" readonly rows="8"></textarea>
+          <div class="cta-row" style="margin-top:10px">
+            <button class="btn btn-secondary" type="button" data-adgen-copy>📋 Kopiuj tekst</button>
+            <span data-adgen-copy-msg style="font-size:13px;color:var(--muted)" hidden>Skopiowano!</span>
+          </div>
+        </div>
+
+        <div class="pixel-info">
+          <strong>📘 Integracja z Facebook Pixel</strong><br>
+          Aby śledzić konwersje z reklam w mediach społecznościowych, zintegruj Facebook Pixel ze swoim sklepem.<br>
+          Wstaw kod Pixela przed zamknięciem tagu <code>&lt;/head&gt;</code> w szablonie sklepu. Po zainstalowaniu
+          możesz śledzić zdarzenia takie jak <code>ViewContent</code>, <code>AddToCart</code> i <code>Purchase</code>.
+          Szczegółową instrukcję znajdziesz w
+          <a href="https://developers.facebook.com/docs/meta-pixel/get-started" target="_blank" rel="noopener noreferrer" style="color:#ffd84d">
+            dokumentacji Meta Pixel &rarr;
+          </a>
+        </div>
+      </section>
+
+      <!-- ── Analytics ── -->
+      <section class="panel-card" id="sec-analytics">
+        <span class="eyebrow">Wyniki</span>
+        <h2>Analityka</h2>
+        <p class="hint">Podgląd wyników kampanii — dane przykładowe. Pełna integracja dostępna w planie Pro.</p>
+
+        <table class="analytics-table">
+          <thead>
+            <tr><th>Kampania</th><th>Kliknięcia</th><th>Sprzedaż (zł)</th><th>Konwersja</th><th>Wykres</th></tr>
+          </thead>
+          <tbody id="analytics-tbody">
+            <!-- filled by JS -->
+          </tbody>
+        </table>
+
+        <div style="margin-top:20px">
+          <span class="eyebrow">Ostatnie 7 dni — kliknięcia</span>
+          <div id="bar-chart" style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+            <!-- filled by JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Company profile ── -->
+      <section class="panel-card" id="sec-profile">
+        <span class="eyebrow">Ustawienia</span>
+        <h2>Profil firmy</h2>
+        <p class="hint">Uzupełnij dane firmy widoczne dla twórców i kupujących.</p>
+        <form data-profile-form style="margin-top:16px">
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="prof-name">Nazwa firmy *</label>
+              <input id="prof-name" type="text" name="companyName" placeholder="Twoja Firma Sp. z o.o." required data-company-name>
+            </div>
+            <div class="form-field">
+              <label for="prof-nip">NIP</label>
+              <input id="prof-nip" type="text" name="nip" placeholder="000-000-00-00" data-company-nip>
+            </div>
+            <div class="form-field">
+              <label for="prof-industry">Branża</label>
+              <select id="prof-industry" name="industry" data-company-industry>
+                <option value="">Wybierz branżę…</option>
+                <option value="fashion">Moda i odzież</option>
+                <option value="electronics">Elektronika</option>
+                <option value="beauty">Uroda i kosmetyki</option>
+                <option value="sports">Sport i aktywność</option>
+                <option value="home">Dom i ogród</option>
+                <option value="food">Jedzenie i napoje</option>
+                <option value="health">Zdrowie i wellness</option>
+                <option value="other">Inne</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label for="prof-website">Strona internetowa</label>
+              <input id="prof-website" type="url" name="website" placeholder="https://twojafirma.pl" data-company-website>
+            </div>
+            <div class="form-field form-field--full">
+              <label for="prof-desc">Opis firmy</label>
+              <textarea id="prof-desc" name="description" rows="4" placeholder="Kilka zdań o Twojej firmie, produktach i wartościach…" data-company-desc></textarea>
+            </div>
+          </div>
+          <div class="cta-row" style="margin-top:16px">
+            <button class="btn btn-primary" type="submit" data-profile-save>Zapisz profil firmy</button>
+          </div>
+          <div data-profile-msg hidden></div>
+        </form>
+      </section>
+
+    </main>
+  </div>
+
+  <footer class="wrap panel-footer">
+    <div class="panel-footer-inner">
+      <span>© 2025 QualitetVerse &mdash; Panel Firmy</span>
+      <div class="panel-footer-links">
+        <a href="cennik.html">Cennik</a>
+        <a href="qualitetverse.html">QualitetVerse</a>
+        <a href="index.html">Strona główna</a>
+      </div>
+    </div>
+  </footer>
+
+  <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
+    <a href="index.html" rel="nofollow noreferrer" data-nav="index">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 11.5L12 4l9 7.5"></path>
+        <path d="M5 10.5V20h14v-9.5"></path>
+      </svg>
+      <span>Start</span>
+    </a>
+    <a href="sklep.html" rel="nofollow noreferrer" data-nav="sklep">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 9h18l-1.5 11H4.5L3 9z"></path>
+        <path d="M7 9V7a5 5 0 0 1 10 0v2"></path>
+      </svg>
+      <span>Sklep</span>
+    </a>
+    <a href="panel-firmy.html" rel="nofollow noreferrer" data-nav="panel-firmy" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="14" width="7" height="7" rx="1.2"></rect>
+        <rect x="3" y="14" width="7" height="7" rx="1.2"></rect>
+      </svg>
+      <span>Panel</span>
+    </a>
+    <a href="dashboard.html" rel="nofollow noreferrer" data-nav="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12H3M12 3v18"></path>
+      </svg>
+      <span>Dashboard</span>
+    </a>
+    <a href="login.html" rel="nofollow noreferrer" data-nav="login">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4 20c2-3.5 6-5 8-5s6 1.5 8 5"></path>
+      </svg>
+      <span>Konto</span>
+    </a>
+  </nav>
+
+  <script src="js/api.js" defer></script>
+  <script>
+  (function () {
+    'use strict'
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+    }
+
+    function showMsg(el, text, isError) {
+      if (!el) return
+      el.textContent = text
+      el.className = 'msg-box ' + (isError ? 'err' : 'ok')
+      el.hidden = false
+      setTimeout(function () { el.hidden = true }, 5000)
+    }
+
+    function formatDate(iso) {
+      if (!iso) return '—'
+      try { return new Date(iso).toLocaleDateString('pl-PL') } catch (e) { return iso }
+    }
+
+    function statusPill(status) {
+      var map = {
+        active: '<span class="pill-active">Aktywna</span>',
+        paused: '<span class="pill-trial">Wstrzymana</span>',
+        ended:  '<span class="pill-inactive">Zakończona</span>',
+        draft:  '<span class="pill-pending">Szkic</span>',
+        pending:  '<span class="pill-pending">Oczekuje</span>',
+        approved: '<span class="pill-active">Zatwierdzona</span>',
+        rejected: '<span class="pill-inactive">Odrzucona</span>'
+      }
+      return map[status] || '<span class="pill-pending">' + escHtml(status) + '</span>'
+    }
+
+    // ── Auth guard ──
+    var token = localStorage.getItem('qm_token') || sessionStorage.getItem('qm_token')
+    if (!token) {
+      window.location.replace('login.html')
+      return
+    }
+
+    var splash = document.querySelector('[data-app-splash]')
+    function hideSplash() { if (splash) splash.hidden = true }
+
+    // ── Sidebar smooth scroll ──
+    document.querySelectorAll('[data-nav-item]').forEach(function (link) {
+      link.addEventListener('click', function (e) {
+        var target = document.querySelector(link.getAttribute('href'))
+        if (target) {
+          e.preventDefault()
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          document.querySelectorAll('[data-nav-item]').forEach(function (a) { a.classList.remove('active') })
+          link.classList.add('active')
+        }
+      })
+    })
+
+    // ── Toggle create campaign form ──
+    document.querySelectorAll('[data-toggle-create-campaign]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var form = document.getElementById('create-campaign-form')
+        form.hidden = !form.hidden
+        if (!form.hidden) form.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    })
+
+    // ── Load company profile from localStorage (stub; real API would be /api/company/profile) ──
+    var profile = {}
+    try { profile = JSON.parse(localStorage.getItem('qm_company_profile') || '{}') } catch (e) {}
+    if (profile.companyName) {
+      var nameDisplay = document.querySelector('[data-company-name-display]')
+      if (nameDisplay) nameDisplay.textContent = 'Witaj, ' + profile.companyName + '!'
+    }
+    if (profile.companyName) { var el = document.querySelector('[data-company-name]'); if (el) el.value = profile.companyName }
+    if (profile.nip)         { var el = document.querySelector('[data-company-nip]');  if (el) el.value = profile.nip }
+    if (profile.website)     { var el = document.querySelector('[data-company-website]'); if (el) el.value = profile.website }
+    if (profile.description) { var el = document.querySelector('[data-company-desc]');  if (el) el.value = profile.description }
+    if (profile.industry) {
+      var sel = document.querySelector('[data-company-industry]')
+      if (sel) sel.value = profile.industry
+    }
+
+    // ── Load campaigns ──
+    function loadCampaigns() {
+      var tbody = document.getElementById('campaigns-tbody')
+      var emptyMsg = document.querySelector('[data-campaigns-empty]')
+
+      fetch('/api/campaigns/my/campaigns', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      })
+      .then(function (r) { return r.json() })
+      .then(function (data) {
+        var campaigns = data.campaigns || data || []
+        if (!Array.isArray(campaigns) || campaigns.length === 0) {
+          tbody.innerHTML = ''
+          if (emptyMsg) emptyMsg.hidden = false
+          updateStats({ campaigns: 0 })
+          loadCreators([])
+          return
+        }
+        if (emptyMsg) emptyMsg.hidden = true
+        renderCampaigns(campaigns)
+        updateStats({ campaigns: campaigns.filter(function (c) { return c.status === 'active' }).length })
+        loadCreators(campaigns)
+      })
+      .catch(function () {
+        tbody.innerHTML = '<tr><td colspan="6" class="cell-muted" style="text-align:center;padding:24px">Błąd ładowania kampanii.</td></tr>'
+        hideSplash()
+      })
+      .finally(hideSplash)
+    }
+
+    function renderCampaigns(campaigns) {
+      var tbody = document.getElementById('campaigns-tbody')
+      tbody.innerHTML = campaigns.map(function (c) {
+        return '<tr>' +
+          '<td><strong>' + escHtml(c.title || c.name || '—') + '</strong>' +
+            '<div class="cell-muted">' + escHtml(c.description ? c.description.slice(0, 60) + (c.description.length > 60 ? '…' : '') : '') + '</div></td>' +
+          '<td>' + escHtml(String(c.budget || 0)) + ' zł</td>' +
+          '<td>' + escHtml(String(c.commission_rate != null ? Math.round(c.commission_rate * 100) : 0)) + '%</td>' +
+          '<td>' + statusPill(c.status || 'draft') + '</td>' +
+          '<td>' + escHtml(String(c.participant_count || c.creatorCount || c.creator_count || 0)) + '</td>' +
+          '<td><div class="cta-row">' +
+            '<button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" onclick="editCampaign(\'' + escHtml(c.id) + '\')">Edytuj</button>' +
+            '<button class="btn btn-secondary" style="padding:4px 10px;font-size:12px" onclick="toggleCampaign(\'' + escHtml(c.id) + '\',\'' + escHtml(c.status) + '\')">Wstrzymaj</button>' +
+            '<button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#fca5a5" onclick="endCampaign(\'' + escHtml(c.id) + '\')">Zakończ</button>' +
+          '</div></td>' +
+        '</tr>'
+      }).join('')
+    }
+
+    function updateStats(data) {
+      if (data.campaigns != null) {
+        document.querySelector('[data-stat-campaigns]').textContent = data.campaigns
+        document.querySelector('[data-qs-campaigns]').textContent = data.campaigns
+      }
+    }
+
+    // ── Campaign actions ──
+    window.editCampaign = function (id) {
+      // Scroll to form and pre-fill would require fetching the campaign; for now just open form
+      document.getElementById('create-campaign-form').hidden = false
+      document.getElementById('create-campaign-form').scrollIntoView({ behavior: 'smooth' })
+    }
+
+    window.toggleCampaign = function (id, currentStatus) {
+      var newStatus = currentStatus === 'paused' ? 'active' : 'paused'
+      fetch('/api/campaigns/' + encodeURIComponent(id), {
+        method: 'PUT',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      }).then(function () { loadCampaigns() }).catch(function () {})
+    }
+
+    window.endCampaign = function (id) {
+      if (!confirm('Czy na pewno chcesz zakończyć tę kampanię?')) return
+      fetch('/api/campaigns/' + encodeURIComponent(id), {
+        method: 'PUT',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'ended' })
+      }).then(function () { loadCampaigns() }).catch(function () {})
+    }
+
+    // ── Create campaign form submit ──
+    var campaignForm = document.querySelector('[data-campaign-form]')
+    if (campaignForm) {
+      campaignForm.addEventListener('submit', function (e) {
+        e.preventDefault()
+        var msgEl = document.querySelector('[data-campaign-msg]')
+        var submitBtn = document.querySelector('[data-campaign-submit]')
+        var fd = new FormData(campaignForm)
+        var payload = {
+          title: fd.get('title'),
+          description: fd.get('description'),
+          budget: parseFloat(fd.get('budget')) || 0,
+          commission_rate: (parseFloat(fd.get('commissionRate')) || 0) / 100,
+          starts_at: fd.get('startDate') || undefined,
+          ends_at: fd.get('endDate') || undefined,
+          products: (fd.get('products') || '').split('\n').map(function (s) { return s.trim() }).filter(Boolean)
+        }
+        submitBtn.disabled = true
+        fetch('/api/campaigns', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d } }) })
+        .then(function (res) {
+          if (res.ok) {
+            showMsg(msgEl, 'Kampania została utworzona!', false)
+            campaignForm.reset()
+            document.getElementById('create-campaign-form').hidden = true
+            loadCampaigns()
+          } else {
+            showMsg(msgEl, res.data.error || 'Nie udało się utworzyć kampanii.', true)
+          }
+        })
+        .catch(function () { showMsg(msgEl, 'Błąd sieci. Spróbuj ponownie.', true) })
+        .finally(function () { submitBtn.disabled = false })
+      })
+    }
+
+    // ── Load creators ──
+    function loadCreators(campaigns) {
+      if (!campaigns || campaigns.length === 0) {
+        var tbody = document.getElementById('creators-tbody')
+        tbody.innerHTML = ''
+        document.querySelector('[data-creators-empty]').hidden = false
+        document.querySelector('[data-stat-creators]').textContent = '0'
+        document.querySelector('[data-qs-creators]').textContent = '0'
+        return
+      }
+      // Fetch participants from each campaign detail in parallel
+      var fetches = campaigns.map(function (c) {
+        return fetch('/api/campaigns/' + encodeURIComponent(c.id), {
+          headers: { 'Authorization': 'Bearer ' + token }
+        })
+        .then(function (r) { return r.json() })
+        .then(function (data) {
+          var participants = data.participants || []
+          return participants.map(function (p) {
+            return Object.assign({}, p, {
+              campaignId: c.id,
+              campaignTitle: c.title || data.campaign && data.campaign.title || ''
+            })
+          })
+        })
+        .catch(function () { return [] })
+      })
+      Promise.all(fetches).then(function (results) {
+        var all = [].concat.apply([], results)
+        renderCreators(all)
+        var approved = all.filter(function (p) { return p.status === 'approved' }).length
+        document.querySelector('[data-stat-creators]').textContent = approved
+        document.querySelector('[data-qs-creators]').textContent = approved
+      })
+    }
+
+    function renderCreators(participants) {
+      var tbody = document.getElementById('creators-tbody')
+      var emptyMsg = document.querySelector('[data-creators-empty]')
+      if (!participants || participants.length === 0) {
+        tbody.innerHTML = ''
+        if (emptyMsg) emptyMsg.hidden = false
+        return
+      }
+      if (emptyMsg) emptyMsg.hidden = true
+      tbody.innerHTML = participants.map(function (p) {
+        var canAct = p.status === 'pending'
+        var campId = escHtml(p.campaignId || '')
+        var partId = escHtml(p.id || '')
+        return '<tr>' +
+          '<td><strong>' + escHtml(p.creator_name || p.creatorName || p.creator_id || '—') + '</strong></td>' +
+          '<td>' + escHtml(p.campaignTitle || p.campaign_title || '—') + '</td>' +
+          '<td class="cell-muted">' + formatDate(p.joined_at || p.createdAt || p.created_at) + '</td>' +
+          '<td>' + statusPill(p.status || 'pending') + '</td>' +
+          '<td>' + (canAct
+            ? '<div class="cta-row">' +
+                '<button class="btn btn-primary" style="padding:4px 10px;font-size:12px" onclick="reviewCreator(\'' + campId + '\',\'' + partId + '\',\'approved\')">Zatwierdź</button>' +
+                '<button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#fca5a5" onclick="reviewCreator(\'' + campId + '\',\'' + partId + '\',\'rejected\')">Odrzuć</button>' +
+              '</div>'
+            : '<span class="cell-muted">—</span>'
+          ) + '</td>' +
+        '</tr>'
+      }).join('')
+    }
+
+    window.reviewCreator = function (campaignId, participantId, decision) {
+      fetch('/api/campaigns/' + encodeURIComponent(campaignId) + '/participants/' + encodeURIComponent(participantId), {
+        method: 'PATCH',
+        headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: decision })
+      })
+      .then(function () { loadCampaigns() })
+      .catch(function () {})
+    }
+
+    // ── Promoted listings ──
+    function loadPromoted() {
+      var tbody = document.getElementById('promoted-tbody')
+      fetch('/api/campaigns/promoted', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      })
+      .then(function (r) { return r.json() })
+      .then(function (data) {
+        var items = data.promoted || data || []
+        if (!Array.isArray(items) || items.length === 0) {
+          tbody.innerHTML = ''
+          document.querySelector('[data-promoted-empty]').hidden = false
+          return
+        }
+        document.querySelector('[data-promoted-empty]').hidden = true
+        tbody.innerHTML = items.map(function (item) {
+          return '<tr>' +
+            '<td><strong>' + escHtml(item.productId || item.product_id || '—') + '</strong></td>' +
+            '<td>' + escHtml(item.plan || '—') + '</td>' +
+            '<td class="cell-muted">' + formatDate(item.expiresAt || item.expires_at) + '</td>' +
+            '<td>' + statusPill(item.status || 'active') + '</td>' +
+          '</tr>'
+        }).join('')
+      })
+      .catch(function () {
+        tbody.innerHTML = '<tr><td colspan="4" class="cell-muted" style="text-align:center;padding:20px">Nie udało się załadować.</td></tr>'
+      })
+    }
+
+    var promoteForm = document.querySelector('[data-promote-form]')
+    if (promoteForm) {
+      promoteForm.addEventListener('submit', function (e) {
+        e.preventDefault()
+        var msgEl = document.querySelector('[data-promote-msg]')
+        var submitBtn = document.querySelector('[data-promote-submit]')
+        var fd = new FormData(promoteForm)
+        submitBtn.disabled = true
+        fetch('/api/campaigns/promoted', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product_id: fd.get('productId'), plan: fd.get('plan') })
+        })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d } }) })
+        .then(function (res) {
+          if (res.ok) {
+            showMsg(msgEl, 'Produkt został zgłoszony do promocji!', false)
+            promoteForm.reset()
+            loadPromoted()
+          } else {
+            showMsg(msgEl, res.data.error || 'Błąd przy dodawaniu promocji.', true)
+          }
+        })
+        .catch(function () { showMsg(msgEl, 'Błąd sieci.', true) })
+        .finally(function () { submitBtn.disabled = false })
+      })
+    }
+
+    // ── Ad generator ──
+    var adGenGoalTexts = {
+      awareness: 'Zwiększ rozpoznawalność swojej marki',
+      clicks:    'Przyciągnij ruch do swojego sklepu',
+      sales:     'Zwiększ sprzedaż swoich produktów',
+      followers: 'Zdobądź nowych obserwujących'
+    }
+
+    var adGenTemplates = [
+      '🔥 {product} – idealny wybór dla {audience}!\n\n{goal}. Sprawdź teraz i przekonaj się, dlaczego tysiące klientów już nam zaufało.\n\n✅ Wysoka jakość\n✅ Szybka dostawa\n✅ Gwarancja satysfakcji\n\n👉 {cta}!\n\n#QualitetVerse #sklep #{productTag}',
+      '💡 Uwaga {audience}! Mamy coś specjalnego dla Ciebie.\n\n{product} to rozwiązanie, którego szukasz. {goal}.\n\nNie czekaj – oferta limitowana!\n\n🛒 {cta} już dziś!\n\n#promocja #zakupy #{productTag}',
+      '✨ Poznaj {product} – stworzony z myślą o {audience}.\n\n{goal}. Dołącz do naszej rosnącej społeczności zadowolonych klientów.\n\n🎁 Specjalna oferta dostępna teraz!\n👉 {cta}\n\n#lifestyle #marka #{productTag}'
+    ]
+
+    var adGenForm = document.querySelector('[data-adgen-form]')
+    if (adGenForm) {
+      adGenForm.addEventListener('submit', function (e) {
+        e.preventDefault()
+        var fd = new FormData(adGenForm)
+        var product  = (fd.get('product') || '').trim()
+        var audience = (fd.get('audience') || '').trim()
+        var goal     = fd.get('goal') || 'awareness'
+        var cta      = (fd.get('cta') || 'Sprawdź ofertę').trim()
+        var goalText = adGenGoalTexts[goal] || goal
+        var template = adGenTemplates[Math.floor(Math.random() * adGenTemplates.length)]
+        var productTag = product.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '')
+        var text = template
+          .replace(/{product}/g,    product)
+          .replace(/{audience}/g,   audience)
+          .replace(/{goal}/g,       goalText)
+          .replace(/{cta}/g,        cta)
+          .replace(/{productTag}/g, productTag)
+        var output = document.getElementById('adgen-output')
+        var result = document.getElementById('adgen-result')
+        output.value = text
+        result.hidden = false
+        result.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    }
+
+    var copyBtn = document.querySelector('[data-adgen-copy]')
+    if (copyBtn) {
+      copyBtn.addEventListener('click', function () {
+        var output = document.getElementById('adgen-output')
+        var msg = document.querySelector('[data-adgen-copy-msg]')
+        output.select()
+        try {
+          navigator.clipboard.writeText(output.value).then(function () {
+            if (msg) { msg.hidden = false; setTimeout(function () { msg.hidden = true }, 2000) }
+          })
+        } catch (err) {
+          document.execCommand('copy')
+          if (msg) { msg.hidden = false; setTimeout(function () { msg.hidden = true }, 2000) }
+        }
+      })
+    }
+
+    // ── Analytics mock data ──
+    var mockAnalytics = [
+      { title: 'Kampania letnia 2025', clicks: 1240, sales: 8340, conversion: '3.2%' },
+      { title: 'Promocja back-to-school', clicks: 890, sales: 4210, conversion: '2.8%' },
+      { title: 'Flash sale – weekend', clicks: 3100, sales: 12600, conversion: '4.1%' }
+    ]
+    var analyticsTbody = document.getElementById('analytics-tbody')
+    var maxClicks = Math.max.apply(null, mockAnalytics.map(function (r) { return r.clicks }))
+    analyticsTbody.innerHTML = mockAnalytics.map(function (row) {
+      var barPct = Math.round((row.clicks / maxClicks) * 120)
+      return '<tr>' +
+        '<td>' + escHtml(row.title) + '</td>' +
+        '<td>' + escHtml(String(row.clicks)) + '</td>' +
+        '<td>' + escHtml(String(row.sales)) + ' zł</td>' +
+        '<td>' + escHtml(row.conversion) + '</td>' +
+        '<td><div class="bar-wrap"><div class="bar" style="width:' + barPct + 'px"></div><span class="bar-val">' + escHtml(String(row.clicks)) + '</span></div></td>' +
+      '</tr>'
+    }).join('')
+
+    var days = ['Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob', 'Niedz']
+    var mockDayClicks = [142, 98, 220, 187, 310, 450, 380]
+    var maxDay = Math.max.apply(null, mockDayClicks)
+    var barChart = document.getElementById('bar-chart')
+    barChart.innerHTML = days.map(function (day, i) {
+      var w = Math.round((mockDayClicks[i] / maxDay) * 200)
+      return '<div style="display:flex;align-items:center;gap:10px">' +
+        '<span style="width:32px;font-size:12px;color:var(--muted);text-align:right">' + escHtml(day) + '</span>' +
+        '<div class="bar" style="width:' + w + 'px"></div>' +
+        '<span class="bar-val">' + mockDayClicks[i] + '</span>' +
+      '</div>'
+    }).join('')
+
+    document.querySelector('[data-qs-clicks]').textContent = mockDayClicks.reduce(function (a, b) { return a + b }, 0)
+    document.querySelector('[data-qs-sales]').textContent = '25 150 zł'
+    document.querySelector('[data-stat-reach]').textContent = '48 tys.'
+
+    // ── Company profile save ──
+    var profileForm = document.querySelector('[data-profile-form]')
+    if (profileForm) {
+      profileForm.addEventListener('submit', function (e) {
+        e.preventDefault()
+        var msgEl = document.querySelector('[data-profile-msg]')
+        var fd = new FormData(profileForm)
+        var data = {
+          companyName: fd.get('companyName'),
+          nip: fd.get('nip'),
+          industry: fd.get('industry'),
+          website: fd.get('website'),
+          description: fd.get('description')
+        }
+        localStorage.setItem('qm_company_profile', JSON.stringify(data))
+        var nameDisplay = document.querySelector('[data-company-name-display]')
+        if (nameDisplay && data.companyName) nameDisplay.textContent = 'Witaj, ' + data.companyName + '!'
+        showMsg(msgEl, 'Profil firmy został zapisany.', false)
+      })
+    }
+
+    // ── Init ──
+    loadCampaigns()
+    loadPromoted()
+  }())
+  </script>
+</body>
+</html>
