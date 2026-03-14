@@ -20,7 +20,19 @@ const { nameToSlug, uniqueSlug } = require('../helpers/slug');
 
 const router = express.Router();
 
-// ─── POST /api/shops – create a new shop (seller onboarding) ─────────────────
+// ─── Helper: create a free subscription for a shop ────────────────────────────
+
+async function createFreeSubscription(shopId) {
+  const freeConfig = PLAN_CONFIG['free'];
+  await db.query(
+    `INSERT INTO subscriptions
+       (id, shop_id, plan, status, product_limit, commission_rate, started_at, expires_at, created_at)
+     VALUES ($1, $2, 'free', 'active', $3, $4, NOW(), NULL, NOW())`,
+    [uuidv4(), shopId, freeConfig.product_limit, freeConfig.commission_rate]
+  );
+}
+
+
 
 router.post(
   '/',
@@ -60,13 +72,7 @@ router.post(
       );
 
       // Auto-create free subscription for the new shop (no expiry)
-      const freeConfig = PLAN_CONFIG['free'];
-      await db.query(
-        `INSERT INTO subscriptions
-           (id, shop_id, plan, status, product_limit, commission_rate, started_at, expires_at, created_at)
-         VALUES ($1, $2, 'free', 'active', $3, $4, NOW(), NULL, NOW())`,
-        [uuidv4(), id, freeConfig.product_limit, freeConfig.commission_rate]
-      );
+      await createFreeSubscription(id);
 
       return res.status(201).json({
         ...result.rows[0],
@@ -195,13 +201,7 @@ router.post(
       );
 
       // 2. Create free subscription (no expiry)
-      const freeConfig = PLAN_CONFIG['free'];
-      await db.query(
-        `INSERT INTO subscriptions
-           (id, shop_id, plan, status, product_limit, commission_rate, started_at, expires_at, created_at)
-         VALUES ($1, $2, 'free', 'active', $3, $4, NOW(), NULL, NOW())`,
-        [uuidv4(), storeId, freeConfig.product_limit, freeConfig.commission_rate]
-      );
+      await createFreeSubscription(storeId);
 
       // 3. Auto-import first products from central catalogue (up to 5)
       const conditions = ['p.is_central = true', 'p.stock > 0'];
