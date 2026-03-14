@@ -3557,10 +3557,19 @@ describe('PLAN_CONFIG export', () => {
   it('is exported from subscriptions router', () => {
     const { PLAN_CONFIG } = require('../src/routes/subscriptions');
     expect(PLAN_CONFIG).toBeDefined();
-    expect(PLAN_CONFIG.trial.maxProducts).toBe(10);
-    expect(PLAN_CONFIG.pro.maxProducts).toBe(500);
+    expect(PLAN_CONFIG.trial.maxProducts).toBe(10);   // legacy free tier
+    expect(PLAN_CONFIG.free.maxProducts).toBe(10);    // free tier
+    expect(PLAN_CONFIG.pro.maxProducts).toBeNull();   // Seller Business – unlimited
     expect(PLAN_CONFIG.elite.maxProducts).toBeNull();
-    expect(PLAN_CONFIG.basic.platformMarginPct).toBe(10);
+    expect(PLAN_CONFIG.basic.platformMarginPct).toBe(3);  // Seller PRO – 3%
+    expect(PLAN_CONFIG.basic.price_pln).toBe(79);         // Seller PRO – 79 PLN
+    expect(PLAN_CONFIG.pro.price_pln).toBe(249);          // Seller Business – 249 PLN
+    expect(PLAN_CONFIG.elite.price_pln).toBe(499);        // Elite – 499 PLN
+    expect(PLAN_CONFIG.supplier_basic.price_pln).toBe(149);
+    expect(PLAN_CONFIG.supplier_pro.price_pln).toBe(399);
+    expect(PLAN_CONFIG.brand.price_pln).toBe(999);
+    expect(PLAN_CONFIG.artist_basic.price_pln).toBe(0);
+    expect(PLAN_CONFIG.artist_pro.price_pln).toBe(49);
   });
 });
 
@@ -4812,10 +4821,17 @@ describe('GET /api/subscriptions/plans', () => {
     expect(res.body).toHaveProperty('plans');
     expect(Array.isArray(res.body.plans)).toBe(true);
     const names = res.body.plans.map((p) => p.name);
-    expect(names).toContain('trial');
+    // 'trial' is a legacy alias and is excluded from the public listing
+    expect(names).not.toContain('trial');
+    expect(names).toContain('free');
     expect(names).toContain('basic');
     expect(names).toContain('pro');
     expect(names).toContain('elite');
+    expect(names).toContain('supplier_basic');
+    expect(names).toContain('supplier_pro');
+    expect(names).toContain('brand');
+    expect(names).toContain('artist_basic');
+    expect(names).toContain('artist_pro');
   });
 
   it('plans include price_pln and duration_days', async () => {
@@ -4823,8 +4839,9 @@ describe('GET /api/subscriptions/plans', () => {
     expect(res.status).toBe(200);
     const basic = res.body.plans.find((p) => p.name === 'basic');
     expect(basic).toBeDefined();
-    expect(basic.price_pln).toBe(49);
+    expect(basic.price_pln).toBe(79);      // Seller PRO – final price
     expect(basic.duration_days).toBe(30);
+    expect(basic.display_name).toBe('Seller PRO');
   });
 });
 

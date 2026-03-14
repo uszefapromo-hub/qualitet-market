@@ -20,14 +20,14 @@
       margin-top: 20px;
     }
     .artwork-card {
-      background: var(--card-bg, #fff);
-      border: 1px solid var(--border, #e5e7eb);
+      background: var(--card);
+      border: 1px solid var(--stroke);
       border-radius: 14px;
       overflow: hidden;
       transition: box-shadow 0.2s, transform 0.2s;
     }
     .artwork-card:hover {
-      box-shadow: 0 6px 24px rgba(0,0,0,.1);
+      box-shadow: 0 6px 24px rgba(0,0,0,.35);
       transform: translateY(-2px);
     }
     .artwork-card__thumb {
@@ -37,7 +37,7 @@
       align-items: center;
       justify-content: center;
       font-size: 64px;
-      background: linear-gradient(135deg, #f0e6ff, #e0f2fe);
+      background: linear-gradient(135deg, rgba(124,58,237,.25), rgba(14,165,233,.18));
       overflow: hidden;
     }
     .artwork-card__thumb img {
@@ -51,7 +51,7 @@
     .artwork-card__title {
       font-size: 15px;
       font-weight: 700;
-      color: var(--text, #111);
+      color: var(--text);
       margin-bottom: 4px;
       white-space: nowrap;
       overflow: hidden;
@@ -59,7 +59,7 @@
     }
     .artwork-card__meta {
       font-size: 12px;
-      color: var(--text-muted, #888);
+      color: var(--muted);
       margin-bottom: 10px;
     }
     .status-pill {
@@ -69,10 +69,10 @@
       font-size: 12px;
       font-weight: 600;
     }
-    .status-pill.available { background: #d1fae5; color: #065f46; }
-    .status-pill.on_auction { background: #ede9fe; color: #5b21b6; }
-    .status-pill.sold { background: #fee2e2; color: #991b1b; }
-    .status-pill.is-pending { background: #fef3c7; color: #92400e; }
+    .status-pill.available  { background: rgba(84,255,176,.18); border:1px solid rgba(84,255,176,.4); color: #d9ffe9; }
+    .status-pill.on_auction { background: rgba(158,119,255,.18); border:1px solid rgba(158,119,255,.4); color: #e8d9ff; }
+    .status-pill.sold       { background: rgba(255,79,79,.15); border:1px solid rgba(255,79,79,.35); color: #ffd5d5; }
+    .status-pill.is-pending { background: rgba(255,216,77,.18); border:1px solid rgba(255,216,77,.4); color: #fff1b6; }
 
     .data-table {
       width: 100%;
@@ -83,22 +83,23 @@
     .data-table th {
       text-align: left;
       padding: 10px 12px;
-      background: var(--bg-2, #f8fafc);
-      color: var(--text-muted, #888);
+      background: var(--bg-2);
+      color: var(--muted);
       font-weight: 600;
       font-size: 12px;
       text-transform: uppercase;
       letter-spacing: .04em;
-      border-bottom: 1px solid var(--border, #e5e7eb);
+      border-bottom: 1px solid var(--stroke);
     }
     .data-table td {
       padding: 12px;
-      border-bottom: 1px solid var(--border, #e5e7eb);
-      color: var(--text, #111);
+      border-bottom: 1px solid var(--stroke);
+      color: var(--text);
       vertical-align: middle;
     }
     .data-table tr:last-child td { border-bottom: none; }
-    .data-table tbody tr:hover { background: var(--bg-2, #f8fafc); }
+    .data-table tbody tr:hover { background: rgba(148,163,184,.07); }
+    .data-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
     .countdown-urgent { color: #ef4444; font-weight: 700; }
 
@@ -109,8 +110,8 @@
       margin-top: 20px;
     }
     .stat-card {
-      background: var(--card-bg, #fff);
-      border: 1px solid var(--border, #e5e7eb);
+      background: var(--card);
+      border: 1px solid var(--stroke);
       border-radius: 12px;
       padding: 18px 20px;
       text-align: center;
@@ -118,13 +119,13 @@
     .stat-card__value {
       font-size: 28px;
       font-weight: 800;
-      color: var(--primary, #7c3aed);
+      color: var(--purple, #8b5cf6);
       line-height: 1;
       margin-bottom: 6px;
     }
     .stat-card__label {
       font-size: 12px;
-      color: var(--text-muted, #888);
+      color: var(--muted);
       font-weight: 500;
     }
 
@@ -137,8 +138,8 @@
       font-size: 13px;
       font-weight: 700;
     }
-    .plan-badge.basic { background: #ede9fe; color: #5b21b6; }
-    .plan-badge.pro { background: linear-gradient(90deg,#7c3aed,#a78bfa); color: #fff; }
+    .plan-badge.basic { background: rgba(158,119,255,.18); border:1px solid rgba(158,119,255,.4); color: #e8d9ff; }
+    .plan-badge.pro   { background: linear-gradient(90deg,#7c3aed,#a78bfa); color: #fff; }
 
     .section-anchor { scroll-margin-top: 72px; }
 
@@ -150,6 +151,8 @@
     @media (max-width: 600px) {
       .form-row { grid-template-columns: 1fr; }
       .stats-row { grid-template-columns: 1fr 1fr; }
+      .artworks-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
+      .artwork-card__thumb { height: 130px; font-size: 48px; }
     }
 
     .plan-cards {
@@ -160,7 +163,7 @@
     }
     @media (max-width: 540px) { .plan-cards { grid-template-columns: 1fr; } }
     .plan-card {
-      border: 2px solid var(--border, #e5e7eb);
+      border: 2px solid var(--stroke);
       border-radius: 14px;
       padding: 20px;
       cursor: pointer;
@@ -168,14 +171,14 @@
       position: relative;
     }
     .plan-card.selected, .plan-card:has(input:checked) {
-      border-color: var(--primary, #7c3aed);
-      box-shadow: 0 0 0 3px rgba(124,58,237,.15);
+      border-color: var(--purple, #8b5cf6);
+      box-shadow: 0 0 0 3px rgba(139,92,246,.2);
     }
     .plan-card input[type="radio"] { position: absolute; opacity: 0; }
-    .plan-card__name { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
-    .plan-card__price { font-size: 22px; font-weight: 800; color: var(--primary, #7c3aed); }
-    .plan-card__price small { font-size: 13px; font-weight: 400; color: var(--text-muted, #888); }
-    .plan-card__features { font-size: 13px; color: var(--text-muted, #888); margin-top: 10px; line-height: 1.6; }
+    .plan-card__name { font-size: 17px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+    .plan-card__price { font-size: 22px; font-weight: 800; color: var(--purple, #8b5cf6); }
+    .plan-card__price small { font-size: 13px; font-weight: 400; color: var(--muted); }
+    .plan-card__features { font-size: 13px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
   </style>
 </head>
 <body data-page="panel-artysty" class="dashboard-page has-bottom-nav">
@@ -417,27 +420,27 @@
               <input id="prof-website" name="website" type="url" placeholder="https://…">
             </div>
 
-            <hr style="border:none;border-top:1px solid var(--border,#e2e8f0)">
+            <hr style="border:none;border-top:1px solid var(--stroke)">
             <h3 style="margin:0">Plan subskrypcji</h3>
             <p class="hint">Wybierz plan, który odpowiada Twoim potrzebom.</p>
 
             <div class="plan-cards">
               <label class="plan-card" id="plan-basic">
-                <input type="radio" name="plan" value="basic" checked>
-                <div class="plan-card__name">🎨 Basic</div>
-                <div class="plan-card__price">0 zł <small>/ mies.</small></div>
+                <input type="radio" name="plan" value="artist_basic" checked>
+                <div class="plan-card__name">🎨 Artist Basic</div>
+                <div class="plan-card__price">0 zł <small>/ bezpłatny</small></div>
                 <div class="plan-card__features">
-                  ✔ Do 10 dzieł<br>
+                  ✔ Nielimitowane dzieła<br>
                   ✔ Aukcje standardowe<br>
                   ✔ Opłata platformy 10%
                 </div>
               </label>
               <label class="plan-card" id="plan-pro">
-                <input type="radio" name="plan" value="pro">
-                <div class="plan-card__name">⭐ Pro</div>
+                <input type="radio" name="plan" value="artist_pro">
+                <div class="plan-card__name">⭐ Artist Pro</div>
                 <div class="plan-card__price">49 zł <small>/ mies.</small></div>
                 <div class="plan-card__features">
-                  ✔ Nieograniczone dzieła<br>
+                  ✔ Nielimitowane dzieła<br>
                   ✔ Aukcje wyróżnione<br>
                   ✔ Opłata platformy 6%<br>
                   ✔ Statystyki sprzedaży
@@ -585,9 +588,9 @@
       }
       if (nameEl) nameEl.textContent = user.name || user.email || 'Artysta';
       if (planEl) {
-        const plan = user.plan || 'basic';
-        const isPro = plan === 'pro' || plan === 'elite';
-        planEl.innerHTML = `<span class="plan-badge ${isPro ? 'pro' : 'basic'}">${isPro ? '⭐ Pro' : 'Basic'}</span>`;
+        const plan = user.plan || 'artist_basic';
+        const isPro = plan === 'artist_pro' || plan === 'pro' || plan === 'elite';
+        planEl.innerHTML = `<span class="plan-badge ${isPro ? 'pro' : 'basic'}">${isPro ? '⭐ Artist Pro' : 'Artist Basic'}</span>`;
       }
       return user;
     }
@@ -762,8 +765,8 @@
         earnTable.hidden = false;
         earnTbody.innerHTML = artworks.map(a => {
           const finalPrice = Number(a.sold_price || a.final_price || 0);
-          const plan = (user && (user.plan === 'pro' || user.plan === 'elite')) ? 'pro' : 'basic';
-          const feeRate = plan === 'pro' ? 0.06 : 0.10;
+          const plan = (user && (user.plan === 'artist_pro' || user.plan === 'pro' || user.plan === 'elite')) ? 'artist_pro' : 'artist_basic';
+          const feeRate = plan === 'artist_pro' ? 0.06 : 0.10;
           const fee = finalPrice * feeRate;
           const payout = finalPrice - fee;
           totalEarnings += payout;
@@ -772,7 +775,7 @@
               <td>${formatDate(a.sold_at || a.updated_at)}</td>
               <td>${escHtml(a.title)}</td>
               <td>${formatPrice(finalPrice)}</td>
-              <td>${formatPrice(fee)} <small style="color:var(--text-muted,#888)">(${plan === 'pro' ? '6%' : '10%'})</small></td>
+              <td>${formatPrice(fee)} <small style="color:var(--muted)">(${plan === 'artist_pro' ? '6%' : '10%'})</small></td>
               <td><strong>${formatPrice(payout)}</strong></td>
             </tr>
           `;
@@ -808,7 +811,7 @@
         if (bioEl) bioEl.value = src.bio || '';
         if (websiteEl) websiteEl.value = src.website || '';
 
-        const plan = src.plan || 'basic';
+        const plan = src.plan || 'artist_basic';
         const radios = document.querySelectorAll('input[name="plan"]');
         radios.forEach(r => { r.checked = r.value === plan; });
       } catch (_e) { /* profile stays empty */ }
@@ -881,7 +884,7 @@
         display_name: form.display_name.value.trim(),
         bio:          form.bio.value.trim(),
         website:      form.website.value.trim() || null,
-        plan:         selectedPlan ? selectedPlan.value : 'basic',
+        plan:         selectedPlan ? selectedPlan.value : 'artist_basic',
       };
 
       try {

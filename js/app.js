@@ -58,21 +58,35 @@
   const isUUID = id => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id));
   const DEFAULT_TRIAL_DAYS = 7;
   const PLAN_LEVELS = {
-    trial: 0,
-    basic: 0,
-    pro: 1,
-    elite: 2
+    free: 0,
+    trial: 0,          // legacy alias for free
+    basic: 1,          // Seller PRO
+    pro: 2,            // Seller Business
+    elite: 3,          // Elite
+    supplier_basic: 1,
+    supplier_pro: 2,
+    brand: 2,
+    artist_basic: 0,
+    artist_pro: 1,
   };
   const PLAN_LABELS = {
-    trial: 'Trial',
-    basic: 'Basic',
-    pro: 'PRO',
-    elite: 'ELITE'
+    free:           'Seller Free',
+    trial:          'Seller Free',
+    basic:          'Seller PRO',
+    pro:            'Seller Business',
+    elite:          'ELITE',
+    supplier_basic: 'Supplier Basic',
+    supplier_pro:   'Supplier Pro',
+    brand:          'Brand Plan',
+    artist_basic:   'Artist Basic',
+    artist_pro:     'Artist Pro',
   };
   const PLAN_DEFAULT_MARGINS = {
-    basic: 15,
-    pro: 25,
-    elite: 35
+    free: 15,
+    trial: 15,     // legacy alias
+    basic: 20,     // Seller PRO
+    pro: 28,       // Seller Business
+    elite: 35,     // Elite
   };
   const OWNER_EMAIL = 'uszefaqualitetpromo@gmail.com';
   const OWNER_EMAIL_NORMALIZED = OWNER_EMAIL.trim().toLowerCase();
@@ -3348,6 +3362,9 @@
     if(normalized === 'basic' || normalized === 'pro' || normalized === 'elite'){
       return normalized;
     }
+    if(normalized === 'free' || normalized === 'trial'){
+      return 'free';
+    }
     return 'basic';
   }
 
@@ -3419,7 +3436,7 @@
       return;
     }
     localStorage.setItem(STORAGE_KEYS.plan, normalized);
-    if(normalized !== 'trial'){
+    if(normalized !== 'trial' && normalized !== 'free'){
       localStorage.removeItem(STORAGE_KEYS.trialStart);
       localStorage.removeItem(STORAGE_KEYS.trialDays);
     }
@@ -3436,7 +3453,7 @@
     }
     if(logged){
       const remaining = getTrialRemainingDays();
-      return remaining > 0 ? 'trial' : 'basic';
+      return remaining > 0 ? 'free' : 'free';
     }
     return null;
   }
@@ -3446,24 +3463,27 @@
     if(!normalized){
       return 'Brak aktywnego planu';
     }
-    if(normalized === 'trial'){
-      return `Trial • ${remaining} ${getTrialLabel(remaining)}`;
+    if(normalized === 'trial' || normalized === 'free'){
+      return 'Free';
     }
     return 'Aktywny';
   }
 
   function getPlanHint(plan, remaining){
     const normalized = normalizePlan(plan);
-    if(normalized === 'trial'){
-      return `Trial Basic jest aktywny jeszcze przez ${remaining} ${getTrialLabel(remaining)}.`;
+    if(normalized === 'trial' || normalized === 'free'){
+      return 'Plan Seller Free — zacznij sprzedawać bez opłat. Ulepsz plan, aby odblokować więcej funkcji.';
+    }
+    if(normalized === 'basic'){
+      return 'Seller PRO — nielimitowane produkty, analityka i narzędzia marketingowe.';
     }
     if(normalized === 'pro'){
-      return 'Masz pełny dostęp do modułów PRO oraz hurtowni.';
+      return 'Seller Business — pełny dostęp do modułów, narzędzia reklamowe i priorytetowe wsparcie.';
     }
     if(normalized === 'elite'){
-      return 'Pełen pakiet ELITE odblokowuje wszystkie moduły i analitykę AI.';
+      return 'ELITE — AI, analityka predykcyjna, nieograniczone sklepy i wsparcie VIP.';
     }
-    return 'Plan Basic daje dostęp do podstawowych modułów sprzedaży.';
+    return 'Plan aktywny. Sprawdź cennik, aby zobaczyć dostępne opcje.';
   }
 
   function getDisplayTrialDaysForPlan(plan, remaining){
@@ -3646,7 +3666,7 @@
       });
     }
     const currentPlan = getCurrentPlan();
-    const highlightPlan = currentPlan === 'trial' ? 'basic' : currentPlan;
+    const highlightPlan = (currentPlan === 'trial' || currentPlan === 'free') ? 'basic' : currentPlan;
     const cards = document.querySelectorAll('[data-plan-card]');
     if(cards.length){
       cards.forEach(card => {

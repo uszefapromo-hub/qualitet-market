@@ -13,11 +13,14 @@
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
   <link rel="stylesheet" href="panel.css">
   <style>
+    /* ── Dark theme overrides for cennik.html ── */
     .pricing-section { padding: 40px 0 10px; }
     .pricing-section-title {
-      font-size: 1.35rem; font-weight: 700; color: var(--text, #111);
+      font-size: 1.35rem; font-weight: 700; color: var(--text, #f0f0ff);
       margin: 0 0 18px; padding-bottom: 10px;
-      border-bottom: 2px solid var(--border, #e5e7eb);
+      border-bottom: 2px solid var(--stroke, rgba(139,92,246,.22));
+      /* Span full width when used as a grid item inside pricing-grid-new */
+      grid-column: 1 / -1;
     }
     .pricing-section-grid {
       display: grid;
@@ -26,8 +29,8 @@
       margin-bottom: 40px;
     }
     .price-card-ext {
-      background: var(--surface, #fff);
-      border: 1.5px solid var(--border, #e5e7eb);
+      background: rgba(255,255,255,.04);
+      border: 1.5px solid var(--stroke, rgba(139,92,246,.22));
       border-radius: 14px;
       padding: 24px 22px 22px;
       display: flex; flex-direction: column; gap: 10px;
@@ -35,14 +38,15 @@
     }
     .price-card-ext.card-highlight {
       border-color: #7c3aed;
-      box-shadow: 0 2px 18px rgba(124,58,237,.12);
+      box-shadow: 0 2px 18px rgba(124,58,237,.22);
+      background: rgba(124,58,237,.07);
     }
-    .price-card-ext .plan-name { font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #7c3aed; }
+    .price-card-ext .plan-name { font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #a78bfa; }
     .price-card-ext .plan-price-block { display: flex; align-items: baseline; gap: 4px; }
-    .price-card-ext .plan-price { font-size: 1.7rem; font-weight: 800; color: var(--text, #111); }
-    .price-card-ext .plan-period { font-size: .85rem; color: var(--muted, #6b7280); }
-    .price-card-ext .plan-hint { font-size: .83rem; color: var(--muted, #6b7280); margin: 0; }
-    .price-card-ext ul { margin: 6px 0 0; padding-left: 18px; font-size: .88rem; color: var(--text, #333); display: flex; flex-direction: column; gap: 5px; }
+    .price-card-ext .plan-price { font-size: 1.7rem; font-weight: 800; color: var(--text, #f0f0ff); }
+    .price-card-ext .plan-period { font-size: .85rem; color: var(--muted, #8892b0); }
+    .price-card-ext .plan-hint { font-size: .83rem; color: var(--muted, #8892b0); margin: 0; }
+    .price-card-ext ul { margin: 6px 0 0; padding-left: 18px; font-size: .88rem; color: var(--text, #f0f0ff); display: flex; flex-direction: column; gap: 5px; }
     .price-card-ext .btn-plan-ext {
       margin-top: auto; padding-top: 14px;
       display: inline-block; text-align: center;
@@ -52,7 +56,7 @@
     }
     .price-card-ext .btn-plan-ext:hover { background: #6d28d9; }
     .price-card-ext .btn-plan-ext.btn-ghost {
-      background: transparent; border: 1.5px solid #7c3aed; color: #7c3aed;
+      background: transparent; border: 1.5px solid #7c3aed; color: #a78bfa;
     }
     .price-card-ext .btn-plan-ext.btn-ghost:hover { background: #7c3aed; color: #fff; }
     .price-card-ext .badge-ext {
@@ -61,17 +65,17 @@
       font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
       padding: 3px 10px; border-radius: 20px;
     }
-    .price-card-ext .plan-commission { font-size: .8rem; color: #7c3aed; font-weight: 600; margin-top: 2px; }
+    .price-card-ext .plan-commission { font-size: .8rem; color: #a78bfa; font-weight: 600; margin-top: 2px; }
     .promo-card-ext {
-      background: linear-gradient(135deg, #7c3aed10, #ede9fe40);
-      border: 1.5px solid #c4b5fd;
+      background: rgba(124,58,237,.08);
+      border: 1.5px solid rgba(196,181,253,.35);
       border-radius: 14px;
       padding: 22px;
       display: flex; flex-direction: column; gap: 8px;
     }
-    .promo-card-ext .plan-name { font-size: 1rem; font-weight: 700; color: #7c3aed; }
-    .promo-card-ext .plan-price { font-size: 1.5rem; font-weight: 800; color: var(--text, #111); }
-    .promo-card-ext p { font-size: .86rem; color: var(--muted, #6b7280); margin: 0; }
+    .promo-card-ext .plan-name { font-size: 1rem; font-weight: 700; color: #a78bfa; }
+    .promo-card-ext .plan-price { font-size: 1.5rem; font-weight: 800; color: var(--text, #f0f0ff); }
+    .promo-card-ext p { font-size: .86rem; color: var(--muted, #8892b0); margin: 0; }
     .promo-card-ext .btn-plan-ext {
       margin-top: 8px; display: inline-block; text-align: center;
       background: #7c3aed; color: #fff; border-radius: 8px;
@@ -79,8 +83,23 @@
       text-decoration: none; transition: background .2s; width: fit-content;
     }
     .promo-card-ext .btn-plan-ext:hover { background: #6d28d9; }
+    /* Mobile */
     @media (max-width: 600px) {
       .pricing-section-grid { grid-template-columns: 1fr; }
+      .price-card-ext { padding: 18px 16px; }
+      .promo-card-ext { padding: 16px; }
+    }
+    /* Plan current badge */
+    .plan-current {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(84,255,176,.18);
+      border: 1px solid rgba(84,255,176,.4);
+      color: #d9ffe9;
+      text-align: center;
     }
   </style>
 </head>

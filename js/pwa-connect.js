@@ -18,6 +18,24 @@
 
   var MS_PER_DAY = 86400000;
 
+  /** Human-readable plan display names (aligned with backend PLAN_DISPLAY_NAMES) */
+  var PLAN_DISPLAY_NAMES = {
+    free:           'Seller Free',
+    trial:          'Seller Free',
+    basic:          'Seller PRO',
+    pro:            'Seller Business',
+    elite:          'Elite',
+    supplier_basic: 'Supplier Basic',
+    supplier_pro:   'Supplier Pro',
+    brand:          'Brand Plan',
+    artist_basic:   'Artist Basic',
+    artist_pro:     'Artist Pro',
+  };
+
+  function getPlanDisplayName(plan) {
+    return PLAN_DISPLAY_NAMES[plan] || (plan ? plan.toUpperCase() : 'Free');
+  }
+
   function formatPrice(value) {
     return CURRENCY_FMT.format(Number(value) || 0);
   }
@@ -513,7 +531,7 @@
         if (nameEl) nameEl.textContent = store.name || 'Panel sklepu';
 
         var planEl = document.querySelector('[data-store-plan]');
-        if (planEl) planEl.textContent = (store.plan || 'trial').toUpperCase();
+        if (planEl) planEl.textContent = getPlanDisplayName(store.plan || 'free');
 
         var marginEl = document.querySelector('[data-store-margin]');
         if (marginEl) marginEl.textContent = (store.margin != null ? store.margin : 0) + '%';

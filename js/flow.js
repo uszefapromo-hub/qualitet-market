@@ -32,6 +32,24 @@
     style: 'currency', currency: 'PLN', maximumFractionDigits: 0
   });
 
+  /** Human-readable plan display names */
+  var PLAN_DISPLAY_NAMES = {
+    free:           'Seller Free',
+    trial:          'Seller Free',
+    basic:          'Seller PRO',
+    pro:            'Seller Business',
+    elite:          'Elite',
+    supplier_basic: 'Supplier Basic',
+    supplier_pro:   'Supplier Pro',
+    brand:          'Brand Plan',
+    artist_basic:   'Artist Basic',
+    artist_pro:     'Artist Pro',
+  };
+
+  function getPlanDisplayName(plan) {
+    return PLAN_DISPLAY_NAMES[plan] || (plan ? plan.toUpperCase() : 'Free');
+  }
+
   // ─── Utility helpers ─────────────────────────────────────────────────────────
 
   function api() { return window.QMApi || null; }
@@ -535,7 +553,7 @@
 
         // Update plan badge
         var planEl = document.querySelector('[data-store-plan]');
-        if (planEl) planEl.textContent = (store.plan || 'basic').toUpperCase();
+        if (planEl) planEl.textContent = getPlanDisplayName(store.plan || 'free');
 
         // Populate settings form
         var nameInput = document.querySelector('[data-settings-name]');

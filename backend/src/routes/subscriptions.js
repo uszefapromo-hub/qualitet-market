@@ -10,20 +10,60 @@ const { validate } = require('../middleware/validate');
 
 const router = express.Router();
 
-const VALID_PLANS = ['trial', 'basic', 'pro', 'elite'];
+const VALID_PLANS = [
+  'free', 'trial',                          // seller free (trial is legacy alias)
+  'basic', 'pro', 'elite',                  // seller paid plans
+  'supplier_basic', 'supplier_pro',         // supplier plans
+  'brand',                                  // company / brand plan
+  'artist_basic', 'artist_pro',             // artist plans
+];
 
 /**
- * Plan configuration.
+ * Plan configuration – aligned with cennik.html final pricing.
  *
  * product_limit / commission_rate are the DB column names used for persistence.
  * maxProducts / platformMarginPct are semantic aliases used in business logic.
  * durationDays is the default subscription period in days.
+ *
+ * Seller plans:  free → basic (Seller PRO, 79 zł) → pro (Seller Business, 249 zł) → elite (499 zł)
+ * Supplier:      supplier_basic (149 zł) → supplier_pro (399 zł)
+ * Company/Brand: brand (999 zł)
+ * Artist:        artist_basic (free) → artist_pro (49 zł)
  */
 const PLAN_CONFIG = {
-  trial:  { product_limit: 10,   maxProducts: 10,   commission_rate: 0.15, platformMarginPct: 15, duration_days: 14,  durationDays: 14,  price_pln: 0 },
-  basic:  { product_limit: 100,  maxProducts: 100,  commission_rate: 0.10, platformMarginPct: 10, duration_days: 30,  durationDays: 30,  price_pln: 49 },
-  pro:    { product_limit: 500,  maxProducts: 500,  commission_rate: 0.07, platformMarginPct: 7,  duration_days: 30,  durationDays: 30,  price_pln: 149 },
-  elite:  { product_limit: null, maxProducts: null, commission_rate: 0.05, platformMarginPct: 5,  duration_days: 30,  durationDays: 30,  price_pln: 299 },
+  // ── Seller Free (replaces legacy trial) ─────────────────────────────────────
+  free:           { product_limit: 10,   maxProducts: 10,   commission_rate: 0.05, platformMarginPct: 5,  duration_days: null, durationDays: null, price_pln: 0 },
+  trial:          { product_limit: 10,   maxProducts: 10,   commission_rate: 0.05, platformMarginPct: 5,  duration_days: null, durationDays: null, price_pln: 0 }, // legacy alias for free
+
+  // ── Seller paid plans ────────────────────────────────────────────────────────
+  basic:          { product_limit: null, maxProducts: null, commission_rate: 0.03, platformMarginPct: 3,  duration_days: 30,   durationDays: 30,   price_pln: 79 },   // Seller PRO
+  pro:            { product_limit: null, maxProducts: null, commission_rate: 0.02, platformMarginPct: 2,  duration_days: 30,   durationDays: 30,   price_pln: 249 },  // Seller Business
+  elite:          { product_limit: null, maxProducts: null, commission_rate: 0.01, platformMarginPct: 1,  duration_days: 30,   durationDays: 30,   price_pln: 499 },  // Elite
+
+  // ── Supplier plans ───────────────────────────────────────────────────────────
+  supplier_basic: { product_limit: null, maxProducts: null, commission_rate: 0.00, platformMarginPct: 0,  duration_days: 30,   durationDays: 30,   price_pln: 149 },  // Supplier Basic
+  supplier_pro:   { product_limit: null, maxProducts: null, commission_rate: 0.00, platformMarginPct: 0,  duration_days: 30,   durationDays: 30,   price_pln: 399 },  // Supplier Pro
+
+  // ── Company / Brand plan ─────────────────────────────────────────────────────
+  brand:          { product_limit: null, maxProducts: null, commission_rate: 0.00, platformMarginPct: 0,  duration_days: 30,   durationDays: 30,   price_pln: 999 },  // Brand Plan
+
+  // ── Artist plans ─────────────────────────────────────────────────────────────
+  artist_basic:   { product_limit: null, maxProducts: null, commission_rate: 0.10, platformMarginPct: 10, duration_days: null, durationDays: null, price_pln: 0 },   // Artist Basic (free)
+  artist_pro:     { product_limit: null, maxProducts: null, commission_rate: 0.06, platformMarginPct: 6,  duration_days: 30,   durationDays: 30,   price_pln: 49 },   // Artist Pro
+};
+
+// Human-readable display names for plans
+const PLAN_DISPLAY_NAMES = {
+  free:           'Seller Free',
+  trial:          'Seller Free',        // legacy alias
+  basic:          'Seller PRO',
+  pro:            'Seller Business',
+  elite:          'Elite',
+  supplier_basic: 'Supplier Basic',
+  supplier_pro:   'Supplier Pro',
+  brand:          'Brand Plan',
+  artist_basic:   'Artist Basic',
+  artist_pro:     'Artist Pro',
 };
 
 // Lazily initialised Stripe SDK instance
@@ -250,7 +290,7 @@ router.post(
 
       const pricePln = config.price_pln || 0;
       if (pricePln === 0) {
-        return res.status(400).json({ error: 'Plan trial jest bezpłatny – nie wymaga płatności' });
+        return res.status(400).json({ error: 'Ten plan jest bezpłatny – nie wymaga płatności' });
       }
 
       const stripe = getStripe();
@@ -270,8 +310,10 @@ router.post(
             price_data: {
               currency: 'pln',
               product_data: {
-                name: `Subskrypcja Qualitet – plan ${plan.charAt(0).toUpperCase() + plan.slice(1)}`,
-                description: `${config.duration_days} dni dostępu, do ${config.product_limit ?? '∞'} produktów`,
+                name: `Subskrypcja Qualitet – ${PLAN_DISPLAY_NAMES[plan] || plan}`,
+                description: config.duration_days
+                  ? `${config.duration_days} dni dostępu, ${config.product_limit == null ? 'nieograniczona' : `do ${config.product_limit}`} liczba produktów`
+                  : `Dostęp bez okresu ważności`,
               },
               unit_amount: pricePln * 100,
             },
@@ -301,15 +343,19 @@ router.post(
 // ─── GET /api/subscriptions/plans – public plan listing ───────────────────────
 
 router.get('/plans', async (_req, res) => {
-  const plans = Object.entries(PLAN_CONFIG).map(([name, cfg]) => ({
-    name,
-    price_pln: cfg.price_pln,
-    duration_days: cfg.duration_days,
-    product_limit: cfg.product_limit,
-    platform_margin_pct: cfg.platformMarginPct,
-  }));
+  // Exclude legacy 'trial' alias – expose 'free' instead
+  const plans = Object.entries(PLAN_CONFIG)
+    .filter(([name]) => name !== 'trial')
+    .map(([name, cfg]) => ({
+      name,
+      display_name: PLAN_DISPLAY_NAMES[name] || name,
+      price_pln: cfg.price_pln,
+      duration_days: cfg.duration_days,
+      product_limit: cfg.product_limit,
+      platform_margin_pct: cfg.platformMarginPct,
+    }));
   return res.json({ plans });
 });
 
-module.exports = { router, PLAN_CONFIG };
+module.exports = { router, PLAN_CONFIG, PLAN_DISPLAY_NAMES, VALID_PLANS };
 
