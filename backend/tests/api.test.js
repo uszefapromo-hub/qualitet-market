@@ -6858,6 +6858,120 @@ describe('GET /api/social/feed (video type filter)', () => {
   });
 });
 
+// ─── Creator profiles & follow system ────────────────────────────────────────
+
+const CREATOR_PROFILE_ID = 'd0000000-0000-4000-8000-000000000099';
+
+const mockCreatorProfile = {
+  id: CREATOR_PROFILE_ID,
+  name: 'TestCreator',
+  role: 'creator',
+  followers_count: 5,
+  created_at: new Date().toISOString(),
+  posts_count: '3',
+  sales_total: '1500.00',
+};
+
+describe('GET /api/social/creators/:id/profile', () => {
+  it('returns creator profile with stats', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [mockCreatorProfile] }) // creator SELECT
+      .mockResolvedValueOnce({ rows: [{ id: SOCIAL_POST_ID, content: 'Post', post_type: 'general', likes_count: 2, comments_count: 0, shares_count: 0, viral_score: '6', created_at: new Date().toISOString() }] }); // recent posts
+    const res = await request(app).get(`/api/social/creators/${CREATOR_PROFILE_ID}/profile`);
+    expect(res.status).toBe(200);
+    expect(res.body.creator.id).toBe(CREATOR_PROFILE_ID);
+    expect(res.body.creator.followers_count).toBe(5);
+    expect(res.body.recent_posts).toHaveLength(1);
+  });
+
+  it('returns 404 for unknown creator', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get(`/api/social/creators/${CREATOR_PROFILE_ID}/profile`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 400 for invalid UUID', async () => {
+    const res = await request(app).get('/api/social/creators/not-a-uuid/profile');
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /api/social/creators/:id/follow', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post(`/api/social/creators/${CREATOR_PROFILE_ID}/follow`);
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 400 when trying to follow yourself', async () => {
+    const res = await request(app)
+      .post(`/api/social/creators/${SELLER_ID}/follow`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/samego siebie/);
+  });
+
+  it('returns 404 for unknown creator', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // creator not found
+    const res = await request(app)
+      .post(`/api/social/creators/${CREATOR_PROFILE_ID}/follow`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('follows a creator successfully', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: CREATOR_PROFILE_ID }] }) // creator exists
+      .mockResolvedValueOnce({ rows: [] })                             // no existing follow
+      .mockResolvedValueOnce({ rows: [] })                             // INSERT follow
+      .mockResolvedValueOnce({ rows: [] })                             // UPDATE followers_count
+      .mockResolvedValueOnce({ rows: [{ followers_count: 6 }] });      // updated count
+    const res = await request(app)
+      .post(`/api/social/creators/${CREATOR_PROFILE_ID}/follow`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(201);
+    expect(res.body.following).toBe(true);
+    expect(res.body.followers_count).toBe(6);
+  });
+
+  it('returns 409 when already following', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: CREATOR_PROFILE_ID }] }) // creator exists
+      .mockResolvedValueOnce({ rows: [{ id: 'existing-follow' }] });  // already follows
+    const res = await request(app)
+      .post(`/api/social/creators/${CREATOR_PROFILE_ID}/follow`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(409);
+  });
+});
+
+describe('DELETE /api/social/creators/:id/follow', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).delete(`/api/social/creators/${CREATOR_PROFILE_ID}/follow`);
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 when not following', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // no follow record
+    const res = await request(app)
+      .delete(`/api/social/creators/${CREATOR_PROFILE_ID}/follow`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('unfollows a creator successfully', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'follow-id' }] })     // DELETE returns record
+      .mockResolvedValueOnce({ rows: [] })                          // UPDATE followers_count
+      .mockResolvedValueOnce({ rows: [{ followers_count: 4 }] });  // updated count
+    const res = await request(app)
+      .delete(`/api/social/creators/${CREATOR_PROFILE_ID}/follow`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.following).toBe(false);
+    expect(res.body.followers_count).toBe(4);
+  });
+});
+
 // ─── Products sort parameter ──────────────────────────────────────────────────
 
 describe('GET /api/products?sort=new', () => {

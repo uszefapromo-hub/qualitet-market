@@ -3,15 +3,18 @@
 /**
  * Social Commerce Routes – /api/social
  *
- * GET    /api/social/feed           – paginated product/post feed
- * GET    /api/social/trending       – trending posts by viral score
- * POST   /api/social/posts          – create a new post
- * GET    /api/social/posts/:id      – get single post with comments
- * DELETE /api/social/posts/:id      – delete own post
- * POST   /api/social/posts/:id/like   – toggle like on a post
- * POST   /api/social/posts/:id/comment – add a comment
+ * GET    /api/social/feed                          – paginated product/post feed
+ * GET    /api/social/trending                      – trending posts by viral score
+ * POST   /api/social/posts                         – create a new post
+ * GET    /api/social/posts/:id                     – get single post with comments
+ * DELETE /api/social/posts/:id                     – delete own post
+ * POST   /api/social/posts/:id/like                – toggle like on a post
+ * POST   /api/social/posts/:id/comment             – add a comment
  * DELETE /api/social/posts/:postId/comments/:commentId – delete comment
- * POST   /api/social/posts/:id/share   – record a share
+ * POST   /api/social/posts/:id/share               – record a share
+ * GET    /api/social/creators/:id/profile          – creator profile with stats
+ * POST   /api/social/creators/:id/follow           – follow a creator
+ * DELETE /api/social/creators/:id/follow           – unfollow a creator
  */
 
 const { Router } = require('express')
@@ -346,6 +349,111 @@ router.post(
 
       const updated = await db.query(`SELECT shares_count FROM social_posts WHERE id = $1`, [req.params.id])
       res.json({ shared: true, shares_count: updated.rows[0]?.shares_count ?? 0 })
+    } catch (err) {
+      next(err)
+    }
+  }
+)
+
+// ─── GET /api/social/creators/:id/profile ────────────────────────────────────
+router.get(
+  '/creators/:id/profile',
+  [param('id').isUUID().withMessage('Nieprawidłowy format id')],
+  async (req, res, next) => {
+    if (validationErrors(req, res)) return
+    try {
+      const creatorResult = await db.query(
+        `SELECT u.id, COALESCE(u.name, u.email) AS name, u.role,
+                u.followers_count, u.created_at,
+                COUNT(DISTINCT sp.id) FILTER (WHERE sp.is_active = TRUE) AS posts_count,
+                COALESCE(SUM(o.total_price) FILTER (WHERE o.status = 'paid'), 0) AS sales_total
+           FROM users u
+      LEFT JOIN social_posts sp ON sp.user_id = u.id
+      LEFT JOIN orders o ON o.seller_id = u.id
+          WHERE u.id = $1
+          GROUP BY u.id`,
+        [req.params.id]
+      )
+
+      if (!creatorResult.rows.length) return res.status(404).json({ error: 'Twórca nie istnieje' })
+
+      const recentPostsResult = await db.query(
+        `SELECT sp.id, sp.content, sp.post_type, sp.likes_count, sp.comments_count,
+                sp.shares_count, sp.viral_score, sp.created_at
+           FROM social_posts sp
+          WHERE sp.user_id = $1 AND sp.is_active = TRUE
+          ORDER BY sp.created_at DESC
+          LIMIT 10`,
+        [req.params.id]
+      )
+
+      res.json({ creator: creatorResult.rows[0], recent_posts: recentPostsResult.rows })
+    } catch (err) {
+      next(err)
+    }
+  }
+)
+
+// ─── POST /api/social/creators/:id/follow ────────────────────────────────────
+router.post(
+  '/creators/:id/follow',
+  authenticate,
+  [param('id').isUUID().withMessage('Nieprawidłowy format id')],
+  async (req, res, next) => {
+    if (validationErrors(req, res)) return
+    try {
+      if (req.params.id === req.user.id) {
+        return res.status(400).json({ error: 'Nie możesz obserwować samego siebie' })
+      }
+
+      const creatorCheck = await db.query(`SELECT id FROM users WHERE id = $1`, [req.params.id])
+      if (!creatorCheck.rows.length) return res.status(404).json({ error: 'Twórca nie istnieje' })
+
+      const existing = await db.query(
+        `SELECT id FROM creator_follows WHERE follower_id = $1 AND creator_id = $2`,
+        [req.user.id, req.params.id]
+      )
+      if (existing.rows.length) return res.status(409).json({ error: 'Już obserwujesz tego twórcę' })
+
+      await db.query(
+        `INSERT INTO creator_follows (follower_id, creator_id) VALUES ($1, $2)`,
+        [req.user.id, req.params.id]
+      )
+      await db.query(
+        `UPDATE users SET followers_count = followers_count + 1 WHERE id = $1`,
+        [req.params.id]
+      )
+
+      const updated = await db.query(`SELECT followers_count FROM users WHERE id = $1`, [req.params.id])
+      res.status(201).json({ following: true, followers_count: updated.rows[0]?.followers_count ?? 0 })
+    } catch (err) {
+      next(err)
+    }
+  }
+)
+
+// ─── DELETE /api/social/creators/:id/follow ──────────────────────────────────
+router.delete(
+  '/creators/:id/follow',
+  authenticate,
+  [param('id').isUUID().withMessage('Nieprawidłowy format id')],
+  async (req, res, next) => {
+    if (validationErrors(req, res)) return
+    try {
+      const result = await db.query(
+        `DELETE FROM creator_follows WHERE follower_id = $1 AND creator_id = $2 RETURNING id`,
+        [req.user.id, req.params.id]
+      )
+
+      if (!result.rows.length) return res.status(404).json({ error: 'Nie obserwujesz tego twórcy' })
+
+      await db.query(
+        `UPDATE users SET followers_count = GREATEST(0, followers_count - 1) WHERE id = $1`,
+        [req.params.id]
+      )
+
+      const updated = await db.query(`SELECT followers_count FROM users WHERE id = $1`, [req.params.id])
+      res.json({ following: false, followers_count: updated.rows[0]?.followers_count ?? 0 })
     } catch (err) {
       next(err)
     }
