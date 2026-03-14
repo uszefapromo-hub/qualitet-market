@@ -4142,6 +4142,21 @@ describe('POST /api/admin/scripts/:id/run', () => {
     expect(res.body.ok).toBe(true);
     expect(res.body.result).toContain('42');
   });
+
+  it('runs cleanup-demo-data script successfully', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sp-1' }, { id: 'sp-2' }] }) // DELETE shop_products
+      .mockResolvedValueOnce({ rows: [{ id: 'p-1' }, { id: 'p-2' }, { id: 'p-3' }] }) // DELETE products
+      .mockResolvedValueOnce({ rows: [] }); // INSERT script_runs
+
+    const res = await request(app)
+      .post('/api/admin/scripts/cleanup-demo-data/run')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.script_id).toBe('cleanup-demo-data');
+    expect(res.body.result).toContain('3');
+  });
 });
 // ─── Referral codes ───────────────────────────────────────────────────────────
 
@@ -8290,5 +8305,81 @@ describe('GET /api/campaigns/promoted', () => {
     const res = await request(app).get('/api/campaigns/promoted');
     expect(res.status).toBe(200);
     expect(res.body.listings).toHaveLength(1);
+  });
+});
+
+// ─── Unit: mapCategorySlug ────────────────────────────────────────────────────
+
+describe('mapCategorySlug (supplier-import service)', () => {
+  const { mapCategorySlug } = require('../src/services/supplier-import');
+
+  it('returns null for null/undefined input', () => {
+    expect(mapCategorySlug(null)).toBeNull();
+    expect(mapCategorySlug(undefined)).toBeNull();
+  });
+
+  it('maps smartphone keywords', () => {
+    expect(mapCategorySlug('Smartfony i telefony')).toBe('smartfony');
+    expect(mapCategorySlug('Mobile phones')).toBe('smartfony');
+  });
+
+  it('maps laptop/computer keywords', () => {
+    expect(mapCategorySlug('Laptopy')).toBe('komputery-i-laptopy');
+    expect(mapCategorySlug('Computers')).toBe('komputery-i-laptopy');
+  });
+
+  it('maps TV/audio keywords', () => {
+    expect(mapCategorySlug('TV i Audio')).toBe('tv-i-audio');
+  });
+
+  it('maps gaming keywords', () => {
+    expect(mapCategorySlug('Gaming accessories')).toBe('gaming');
+    expect(mapCategorySlug('Konsole do gier')).toBe('gaming');
+  });
+
+  it('maps fashion keywords', () => {
+    expect(mapCategorySlug('Buty sportowe')).toBe('obuwie');
+    expect(mapCategorySlug('Odzież damska')).toBe('odziez-damska');
+    expect(mapCategorySlug('Odzież męska')).toBe('odziez-meska');
+  });
+
+  it('maps health/beauty keywords', () => {
+    expect(mapCategorySlug('Kosmetyki do makijażu')).toBe('kosmetyki');
+    expect(mapCategorySlug('Perfumes')).toBe('perfumy');
+    expect(mapCategorySlug('Hair care')).toBe('pielegnacja-wlosow');
+    expect(mapCategorySlug('Skin cream')).toBe('pielegnacja-skory');
+  });
+
+  it('maps sports keywords', () => {
+    expect(mapCategorySlug('Sprzęt fitness')).toBe('sprzet-fitness');
+    expect(mapCategorySlug('Camping gear')).toBe('camping');
+    expect(mapCategorySlug('Rowery')).toBe('kolarstwo');
+  });
+
+  it('maps kids keywords', () => {
+    expect(mapCategorySlug('Zabawki dla dzieci')).toBe('zabawki');
+    expect(mapCategorySlug('Baby products')).toBe('produkty-dla-niemowlat');
+    expect(mapCategorySlug('Artykuły szkolne')).toBe('artykuly-szkolne');
+  });
+
+  it('maps automotive keywords', () => {
+    expect(mapCategorySlug('Car accessories')).toBe('akcesoria-samochodowe');
+    expect(mapCategorySlug('Narzędzia warsztatowe')).toBe('narzedzia');
+    expect(mapCategorySlug('Akcesoria motocyklowe')).toBe('akcesoria-motocyklowe');
+  });
+
+  it('maps pet keywords', () => {
+    expect(mapCategorySlug('Karma dla psa')).toBe('dla-psa');
+    expect(mapCategorySlug('Dla kotów')).toBe('dla-kota');
+    expect(mapCategorySlug('Akwarium')).toBe('akwaria');
+  });
+
+  it('maps office keywords', () => {
+    expect(mapCategorySlug('Drukarki laserowe')).toBe('drukarki');
+    expect(mapCategorySlug('Biurko i biuro')).toBe('sprzet-biurowy');
+  });
+
+  it('returns null for unrecognised category', () => {
+    expect(mapCategorySlug('XYZ Unknown 12345')).toBeNull();
   });
 });

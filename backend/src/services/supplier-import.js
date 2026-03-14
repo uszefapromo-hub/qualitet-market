@@ -11,12 +11,16 @@
  *   supplier_name        → name
  *   supplier_sku         → sku
  *   supplier_description → description
- *   supplier_price       → price_gross
+ *   supplier_price       → supplier_price / price_gross
  *   supplier_stock       → stock
  *   supplier_image       → image_url
  *
+ * Pricing chain (Step 4):
+ *   supplier_price → platform_price (tiered margin) → min_selling_price
+ *   selling_price = platform_price (sellers can apply their own store margin on top)
+ *
  * Deduplication key: supplier_id + sku (per spec section 4).
- * On conflict: updates price_gross, stock, description, image_url.
+ * On conflict: updates supplier_price, platform_price, stock, description, image_url.
  */
 
 const { v4: uuidv4 } = require('uuid');
@@ -25,9 +29,76 @@ const { parse: csvParse } = require('csv-parse/sync');
 const xml2js = require('xml2js');
 
 const db = require('../config/database');
+const { computePlatformPrice } = require('../helpers/pricing');
 
 const DEFAULT_TAX_RATE = 23; // Polish standard VAT rate (%)
 const FETCH_TIMEOUT_MS = 15000; // 15 seconds
+
+// ─── Category mapping ──────────────────────────────────────────────────────────
+
+/**
+ * Maps a free-text category from the supplier feed to one of our platform
+ * category slugs.  Uses keyword matching; returns null if no match.
+ *
+ * @param {string|null} rawCategory  Category text from the supplier.
+ * @returns {string|null}            Matching platform category slug or null.
+ */
+function mapCategorySlug(rawCategory) {
+  if (!rawCategory) return null;
+  // Normalize: lowercase + strip diacritics so Polish chars (ę→e, ś→s, etc.) match
+  // NFD decomposes most Polish chars into base+combining; ł needs an explicit replacement
+  const c = rawCategory.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l');
+
+  if (/smartfon|phone|mobil|telefon/.test(c))           return 'smartfony';
+  if (/laptop|notebook|komputer|computer/.test(c))      return 'komputery-i-laptopy';
+  if (/tv|telewizor|audio|glosnik|sound/.test(c))       return 'tv-i-audio';
+  if (/gaming|gier|konsol|controller/.test(c))          return 'gaming';
+  if (/elektronika|electronic/.test(c))                 return 'elektronika';
+
+  if (/mebel|furniture|sofa|krzeslo/.test(c))            return 'meble';
+  if (/dekor|decor|obraz|swiecznik/.test(c))            return 'dekoracje';
+  if (/agd|kuchenn|piekarnik|lodowk/.test(c))           return 'sprzet-agd';
+  if (/lampa|swiat|oswietl|lighting/.test(c))           return 'oswietlenie';
+  if (/dom|home|ogrod|garden/.test(c))                  return 'dom-i-ogrod';
+
+  if (/koszul|shirt|bluza|sweter|men.cloth|mesk/.test(c)) return 'odziez-meska';
+  if (/sukienk|bluzk|women.cloth|damsk/.test(c))          return 'odziez-damska';
+  if (/but|shoe|sneaker|obuwie/.test(c))                   return 'obuwie';
+  if (/toreb|bizuter/.test(c))                             return 'dodatki';
+  if (/moda|fashion|odziez|clothing/.test(c))              return 'moda';
+
+  if (/kosmetyk|makeup|cosmetic/.test(c))               return 'kosmetyki';
+  if (/perfum|fragrance/.test(c))                       return 'perfumy';
+  if (/wlos|hair/.test(c))                              return 'pielegnacja-wlosow';
+  if (/skor|skin|krem|cream/.test(c))                   return 'pielegnacja-skory';
+  if (/zdrowie|health|uroda|beauty/.test(c))            return 'zdrowie-i-uroda';
+
+  if (/fitness|silown|gym|hantel/.test(c))              return 'sprzet-fitness';
+  if (/rower|cycl|bike/.test(c))                        return 'kolarstwo';
+  if (/camping|kemping|namiot|tent/.test(c))            return 'camping';
+  if (/sport|outdoor/.test(c))                          return 'sport-i-outdoor';
+
+  if (/zabawk|toy/.test(c))                             return 'zabawki';
+  if (/niemowl|baby|infant/.test(c))                    return 'produkty-dla-niemowlat';
+  if (/szkoln|school|plecak|zeszyt/.test(c))            return 'artykuly-szkolne';
+  if (/dzieci|kids|child/.test(c))                      return 'dzieci-i-zabawki';
+
+  if (/samochod|car\b|car\s|auto/.test(c))              return 'akcesoria-samochodowe';
+  if (/narzedzi|tool|wiertl/.test(c))                   return 'narzedzia';
+  if (/motocykl|motorcycle|moto/.test(c))               return 'akcesoria-motocyklowe';
+  if (/motoryzacj|automotive/.test(c))                  return 'motoryzacja';
+
+  if (/pies|psa|psu|psom|dog|szczeni/.test(c))          return 'dla-psa';
+  if (/kot|cat|kitten/.test(c))                         return 'dla-kota';
+  if (/akwarium|aquar|ryb/.test(c))                     return 'akwaria';
+  if (/zwierz|pet|zool/.test(c))                        return 'zoologia';
+
+  if (/drukark|printer/.test(c))                        return 'drukarki';
+  if (/biurk|biuro|office|desk/.test(c))                return 'sprzet-biurowy';
+  if (/mebel.*biur|office.*furni/.test(c))              return 'meble-biurowe';
+
+  return null;
+}
 
 // ─── Field mapping ─────────────────────────────────────────────────────────────
 
@@ -115,8 +186,13 @@ async function fetchSupplierProducts(supplier) {
  * Upsert products into the central catalogue for the given supplier.
  *
  * Deduplication: supplier_id + sku.
- *   - Existing product → update price_gross, stock, description, image_url.
+ *   - Existing product → update supplier_price, platform_price, stock,
+ *                        description, image_url.
  *   - New product      → insert with status = 'active', is_central = true.
+ *
+ * Pricing chain (Step 4):
+ *   supplier_price → platform_price (tiered margin) = min_selling_price
+ *   selling_price is set to platform_price; sellers apply their own margin on top.
  *
  * @param {string}   supplierId
  * @param {object[]} rawProducts  Array of mapped product objects.
@@ -128,7 +204,13 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
   for (const raw of rawProducts) {
     if (!raw.name) continue;
 
-    const priceGross = parseFloat(raw.price_gross) || 0;
+    const supplierPrice = parseFloat(raw.price_gross) || 0;
+    const platformPrice = computePlatformPrice(supplierPrice);
+    const categorySlug  = mapCategorySlug(raw.category);
+
+    if (!categorySlug && raw.category) {
+      console.warn(`[import] Unmapped category "${raw.category}" for product "${raw.name}" – stored as free-text`);
+    }
 
     if (raw.sku) {
       const existing = await db.query(
@@ -140,15 +222,20 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
         // Update mutable fields per spec (section 4)
         await db.query(
           `UPDATE products SET
-             price_gross = $1,
-             stock       = $2,
-             description = COALESCE($3, description),
-             image_url   = COALESCE($4, image_url),
-             status      = 'active',
-             updated_at  = NOW()
-           WHERE supplier_id = $5 AND sku = $6`,
+             supplier_price  = $1,
+             platform_price  = $2,
+             price_gross     = $2,
+             selling_price   = $2,
+             min_selling_price = $2,
+             stock           = $3,
+             description     = COALESCE($4, description),
+             image_url       = COALESCE($5, image_url),
+             status          = 'active',
+             updated_at      = NOW()
+           WHERE supplier_id = $6 AND sku = $7`,
           [
-            priceGross.toFixed(2),
+            supplierPrice.toFixed(2),
+            platformPrice.toFixed(2),
             raw.stock,
             raw.description || null,
             raw.image_url   || null,
@@ -164,21 +251,23 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
     // Insert new central-catalogue product
     await db.query(
       `INSERT INTO products
-         (id, store_id, supplier_id, name, sku, price_net, tax_rate, price_gross,
+         (id, store_id, supplier_id, name, sku, price_net, tax_rate,
+          supplier_price, price_gross, platform_price, min_selling_price,
           selling_price, margin, stock, category, description, image_url,
           is_central, status, created_at)
-       VALUES ($1, NULL, $2, $3, $4, 0, $5, $6, $6, 0, $7, $8, $9, $10, true, 'active', NOW())`,
+       VALUES ($1, NULL, $2, $3, $4, 0, $5, $6, $7, $7, $7, $7, 0, $8, $9, $10, $11, true, 'active', NOW())`,
       [
         uuidv4(),
         supplierId,
         raw.name,
-        raw.sku      || null,
+        raw.sku            || null,
         DEFAULT_TAX_RATE,
-        priceGross.toFixed(2),
+        supplierPrice.toFixed(2),
+        platformPrice.toFixed(2),
         raw.stock,
-        raw.category    || null,
-        raw.description || null,
-        raw.image_url   || null,
+        categorySlug       || raw.category || null,
+        raw.description    || null,
+        raw.image_url      || null,
       ]
     );
     count++;
@@ -212,4 +301,4 @@ async function importSupplierProducts(supplier_id) {
   return count;
 }
 
-module.exports = { importSupplierProducts, upsertSupplierProducts, fetchSupplierProducts, mapSupplierProduct };
+module.exports = { importSupplierProducts, upsertSupplierProducts, fetchSupplierProducts, mapSupplierProduct, mapCategorySlug };

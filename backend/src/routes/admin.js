@@ -1425,6 +1425,7 @@ const SYSTEM_SCRIPTS = [
   { id: 'recalculate-prices', name: 'Przeliczenie cen',               description: 'Aktualizuje ceny sprzedażowe wg aktualnych progów marży' },
   { id: 'csv-import',         name: 'Import produktów CSV',           description: 'Importuje produkty z pliku CSV do katalogu centralnego' },
   { id: 'cleanup-accounts',   name: 'Czyszczenie nieaktywnych kont',  description: 'Oznacza wygasłe konta trial bez aktywności (>30 dni)' },
+  { id: 'cleanup-demo-data',  name: 'Usuń dane demonstracyjne',       description: 'Usuwa wszystkie produkty demonstracyjne i zastępcze z katalogu centralnego' },
   { id: 'export-report',      name: 'Eksport raportów finansowych',   description: 'Generuje raport przychodów i prowizji za bieżący miesiąc' },
 ];
 
@@ -1511,6 +1512,30 @@ router.post('/scripts/:id/run', authenticate, requireRole('owner', 'admin'), asy
          RETURNING id`
       );
       resultMessage = `Oznaczono ${result.rows.length} nieaktywnych kont`;
+
+    } else if (scriptId === 'cleanup-demo-data') {
+      // Remove demo / placeholder products from the central catalogue.
+      // Demo products are identified by picsum.photos images or seed SKU prefixes.
+      const spResult = await db.query(
+        `DELETE FROM shop_products
+         WHERE product_id IN (
+           SELECT id FROM products
+           WHERE is_central = true
+             AND (image_url LIKE '%picsum.photos%'
+                  OR sku ~ '^(EL|AT|DG|FT|GD|DS)-'
+                  OR supplier_id IS NULL)
+         )
+         RETURNING id`
+      );
+      const pResult = await db.query(
+        `DELETE FROM products
+         WHERE is_central = true
+           AND (image_url LIKE '%picsum.photos%'
+                OR sku ~ '^(EL|AT|DG|FT|GD|DS)-'
+                OR supplier_id IS NULL)
+         RETURNING id`
+      );
+      resultMessage = `Usunięto ${pResult.rows.length} produktów demonstracyjnych (${spResult.rows.length} wpisów ze sklepów)`;
 
     } else if (scriptId === 'export-report') {
       const report = await db.query(
