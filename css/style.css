@@ -154,7 +154,7 @@ a{color:#fff;text-decoration:none}
 .product-card .hint{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .product-card .price{font-size:28px;font-weight:800}
 .footer{margin-top:24px;padding:28px 0}
-.footer-grid{grid-template-columns:2fr 1fr 1fr}
+.footer-grid{grid-template-columns:2fr 1fr 1fr 1.5fr}
 .footer a{display:block;color:var(--muted);margin:8px 0}
 .footer-logo{width:72px}
 .checkout-bar{padding:18px;margin:18px auto 36px}
