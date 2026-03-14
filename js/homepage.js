@@ -273,12 +273,280 @@
 
   // ── Init ──────────────────────────────────────────────────────────────────────
 
+  // ── New Products ─────────────────────────────────────────────────────────────
+
+  function loadNewProducts() {
+    var container = document.getElementById('homepage-new-products');
+    if (!container) return;
+    renderSkeletons(container, 4, 220);
+    apiGet('/products', { limit: 8, sort: 'new', is_central: 'true' })
+      .then(function (data) {
+        var items = Array.isArray(data) ? data : (data.products || []);
+        if (items.length === 0) throw new Error('empty');
+        container.innerHTML = items.slice(0, 4).map(productCard).join('');
+      })
+      .catch(function () {
+        container.innerHTML = placeholderProducts();
+      });
+  }
+
+  // ── Bestsellers ─────────────────────────────────────────────────────────────
+
+  function loadBestsellers() {
+    var container = document.getElementById('homepage-bestsellers');
+    if (!container) return;
+    renderSkeletons(container, 4, 220);
+    apiGet('/products', { limit: 8, sort: 'bestsellers', is_central: 'true' })
+      .then(function (data) {
+        var items = Array.isArray(data) ? data : (data.products || []);
+        if (items.length === 0) throw new Error('empty');
+        container.innerHTML = items.slice(0, 4).map(productCard).join('');
+      })
+      .catch(function () {
+        container.innerHTML = placeholderProducts();
+      });
+  }
+
+  // ── Viral Products ───────────────────────────────────────────────────────────
+
+  function loadViralProducts() {
+    var container = document.getElementById('homepage-viral-products');
+    if (!container) return;
+    renderSkeletons(container, 4, 220);
+    // Use trending social posts to find promoted products; fall back to newest central products
+    apiGet('/social/trending', { limit: 10 })
+      .then(function (data) {
+        var posts = Array.isArray(data) ? data : (data.posts || []);
+        var withProduct = posts.filter(function (p) { return p.product_id; });
+        if (withProduct.length === 0) throw new Error('no viral products');
+        var products = withProduct.map(function (p) {
+          return {
+            id: p.product_id,
+            name: p.product_name || 'Produkt viral',
+            price_gross: p.product_price,
+            image_url: (p.media_urls && p.media_urls[0]) || '',
+            store_name: p.author_name,
+          };
+        });
+        container.innerHTML = products.slice(0, 4).map(productCard).join('');
+      })
+      .catch(function () {
+        // Fallback: newest central products
+        return apiGet('/products', { limit: 4, is_central: 'true', sort: 'new' })
+          .then(function (data) {
+            var items = Array.isArray(data) ? data : (data.products || []);
+            container.innerHTML = items.length > 0 ? items.slice(0, 4).map(productCard).join('') : placeholderProducts();
+          });
+      })
+      .catch(function () {
+        container.innerHTML = placeholderProducts();
+      });
+  }
+
+  // ── Social Video Embed ───────────────────────────────────────────────────────
+
+  /**
+   * Build an inline iframe embed URL for TikTok or YouTube.
+   * Uses the oembed/embed URL format. For privacy, no autoplay.
+   */
+  function buildVideoEmbed(videoUrl, videoType) {
+    if (!videoUrl) return null;
+
+    // YouTube / Shorts
+    if (videoType === 'youtube' || videoType === 'short') {
+      var ytMatch = videoUrl.match(/(?:v=|\/embed\/|\.be\/|\/shorts\/)([A-Za-z0-9_-]{11})/);
+      if (ytMatch) {
+        return {
+          src: 'https://www.youtube.com/embed/' + ytMatch[1] + '?rel=0',
+          aspect: videoType === 'short' ? 'aspect-vertical' : 'aspect-horizontal',
+        };
+      }
+    }
+
+    // TikTok – use the tiktok embed player
+    if (videoType === 'tiktok') {
+      var ttMatch = videoUrl.match(/video\/(\d+)/);
+      if (ttMatch) {
+        return {
+          src: 'https://www.tiktok.com/embed/v2/' + ttMatch[1],
+          aspect: 'aspect-vertical',
+        };
+      }
+    }
+
+    // Instagram Reels – Instagram doesn't allow iframes from external domains,
+    // so we show a link-out card instead
+    if (videoType === 'reel') return { external: true, url: videoUrl, aspect: 'aspect-vertical' };
+
+    return null;
+  }
+
+  function socialVideoCard(post) {
+    var embed = buildVideoEmbed(post.video_url, post.video_type);
+    var productLink = post.product_id
+      ? '<a class="social-video-product-link" href="listing.html?product=' + escHtml(post.product_id) + '">🛒 Kup produkt</a>'
+      : '';
+    var label = escHtml(post.content ? post.content.substring(0, 80) : 'Video post');
+
+    if (!embed) return '';
+
+    if (embed.external) {
+      return '<div class="social-video-card">'
+        + '<div class="social-video-iframe-wrap ' + embed.aspect + '" style="background:linear-gradient(135deg,rgba(225,48,108,.3),rgba(139,92,246,.2));display:flex;align-items:center;justify-content:center">'
+        + '<a href="' + escHtml(embed.url) + '" target="_blank" rel="noopener noreferrer" style="color:#fff;text-align:center;padding:20px">'
+        + '<div style="font-size:40px">📱</div><div style="margin-top:8px;font-size:14px">Obejrzyj Reel na Instagram</div>'
+        + '</a></div>'
+        + '<p class="social-video-label">' + label + '</p>'
+        + productLink
+        + '</div>';
+    }
+
+    return '<div class="social-video-card">'
+      + '<div class="social-video-iframe-wrap ' + embed.aspect + '">'
+      + '<iframe src="' + escHtml(embed.src) + '" loading="lazy" allowfullscreen title="' + label + '" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>'
+      + '</div>'
+      + '<p class="social-video-label">' + label + '</p>'
+      + productLink
+      + '</div>';
+  }
+
+  function loadSocialVideo() {
+    var container = document.getElementById('homepage-social-video');
+    if (!container) return;
+
+    // Static demo video cards — will be replaced with API data when posts with video_url exist
+    var demoVideos = [
+      {
+        id: 'demo-1',
+        content: 'Sprawdź te bezprzewodowe słuchawki — najlepszy deal tygodnia!',
+        video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        video_type: 'youtube',
+        product_id: null,
+      },
+      {
+        id: 'demo-2',
+        content: 'TikTok viral — modne sneakersy w promocji!',
+        video_url: 'https://www.tiktok.com/@example/video/7123456789012345678',
+        video_type: 'tiktok',
+        product_id: null,
+      },
+      {
+        id: 'demo-3',
+        content: 'YouTube Shorts — gadżety które musisz mieć',
+        video_url: 'https://www.youtube.com/shorts/dQw4w9WgXcQ',
+        video_type: 'short',
+        product_id: null,
+      },
+    ];
+
+    apiGet('/social/feed', { type: 'video', limit: 6 })
+      .then(function (data) {
+        var posts = Array.isArray(data) ? data : (data.posts || []);
+        var withVideo = posts.filter(function (p) { return p.video_url; });
+        var items = withVideo.length > 0 ? withVideo : demoVideos;
+        var html = items.slice(0, 3).map(socialVideoCard).join('');
+        container.innerHTML = html || container.innerHTML;
+      })
+      .catch(function () {
+        var html = demoVideos.map(socialVideoCard).join('');
+        container.innerHTML = html || container.innerHTML;
+      });
+  }
+
+  // ── Social Product Posts ─────────────────────────────────────────────────────
+
+  function socialPostCard(post) {
+    var hasVideo = !!post.video_url;
+    var imgSrc = (post.media_urls && post.media_urls[0]) || '';
+    var mediaSrc = imgSrc || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=60';
+    var embed = hasVideo ? buildVideoEmbed(post.video_url, post.video_type) : null;
+    var price = post.product_price ? formatPrice(post.product_price) : '';
+
+    var mediaHtml;
+    if (embed && !embed.external) {
+      mediaHtml = '<div class="social-post-media">'
+        + '<div class="social-video-iframe-wrap aspect-horizontal" style="aspect-ratio:4/3">'
+        + '<iframe src="' + escHtml(embed.src) + '" loading="lazy" allowfullscreen title="' + escHtml(post.content || '') + '" sandbox="allow-scripts allow-same-origin allow-popups"></iframe>'
+        + '</div>'
+        + '<span class="social-post-video-badge">▶ Video</span>'
+        + '</div>';
+    } else {
+      mediaHtml = '<div class="social-post-media">'
+        + '<img src="' + escHtml(mediaSrc) + '" alt="' + escHtml(post.product_name || post.content || '') + '" loading="lazy">'
+        + (hasVideo ? '<span class="social-post-video-badge">▶ Video</span>' : '')
+        + '</div>';
+    }
+
+    var buyLink = post.product_id
+      ? '<a class="btn btn-primary social-post-buy" href="listing.html?product=' + escHtml(post.product_id) + '">🛒 Kup produkt</a>'
+      : '<a class="btn btn-secondary social-post-buy" href="qualitetmarket.html">Przeglądaj →</a>';
+
+    return '<div class="social-post-card">'
+      + mediaHtml
+      + '<div class="social-post-body">'
+      + (post.product_name ? '<h4 class="social-post-title">' + escHtml(post.product_name) + '</h4>' : '')
+      + '<p class="social-post-desc">' + escHtml((post.content || '').substring(0, 120)) + '</p>'
+      + (price ? '<div class="social-post-price">' + price + '</div>' : '')
+      + '<div class="social-post-actions">' + buyLink + '</div>'
+      + '</div></div>';
+  }
+
+  var demoSocialPosts = [
+    {
+      id: 'demo-p1',
+      content: 'Viral produkt — bezprzewodowe słuchawki z redukcją szumów. Tysiące pozytywnych recenzji na TikTok!',
+      product_name: 'Słuchawki BT Pro X',
+      product_price: '149.99',
+      media_urls: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=60'],
+      video_url: null,
+      product_id: null,
+    },
+    {
+      id: 'demo-p2',
+      content: 'Ten smartwatch bije rekordy sprzedaży! Sprawdź zanim skończy się promocja 🔥',
+      product_name: 'Smartwatch Fit Ultra',
+      product_price: '199.00',
+      media_urls: ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=60'],
+      video_url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      video_type: 'youtube',
+      product_id: null,
+    },
+    {
+      id: 'demo-p3',
+      content: 'Modne sneakersy z najnowszej kolekcji — polecane przez influencerów na Instagram i TikTok.',
+      product_name: 'Sneakersy Urban Pro',
+      product_price: '299.00',
+      media_urls: ['https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=60'],
+      video_url: null,
+      product_id: null,
+    },
+  ];
+
+  function loadSocialPosts() {
+    var container = document.getElementById('homepage-social-posts');
+    if (!container) return;
+    apiGet('/social/feed', { type: 'product', limit: 6 })
+      .then(function (data) {
+        var posts = Array.isArray(data) ? data : (data.posts || []);
+        var items = posts.length > 0 ? posts : demoSocialPosts;
+        container.innerHTML = items.slice(0, 3).map(socialPostCard).join('');
+      })
+      .catch(function () {
+        container.innerHTML = demoSocialPosts.map(socialPostCard).join('');
+      });
+  }
+
   function init() {
     // Stagger requests to avoid hammering the API simultaneously
     loadTrendingProducts();
     setTimeout(loadTopStores, 150);
     setTimeout(loadProfitableProducts, 300);
     setTimeout(loadTopSellers, 450);
+    setTimeout(loadNewProducts, 600);
+    setTimeout(loadBestsellers, 750);
+    setTimeout(loadViralProducts, 900);
+    setTimeout(loadSocialVideo, 1050);
+    setTimeout(loadSocialPosts, 1200);
   }
 
   if (document.readyState === 'loading') {

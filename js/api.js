@@ -254,13 +254,18 @@
   const Products = {
     /**
      * List products.
-     * @param {{ store_id?, category?, search?, is_central?, status?, page?, limit? }} params
+     * @param {{ store_id?, category?, search?, is_central?, status?, sort?, page?, limit? }} params
+     * sort: 'new' | 'bestsellers' | 'price_asc' | 'price_desc'
      */
     list(params)          { return get('/products', params); },
     get(id)               { return get(`/products/${id}`); },
     create(data)          { return post('/products', data); },
     update(id, data)      { return put(`/products/${id}`, data); },
     remove(id)            { return del(`/products/${id}`); },
+    /** Newest central catalogue products. GET /api/products?sort=new&is_central=true */
+    listNew(params)       { return get('/products', { is_central: 'true', sort: 'new', ...params }); },
+    /** Best-selling central catalogue products. GET /api/products?sort=bestsellers&is_central=true */
+    listBestsellers(params) { return get('/products', { is_central: 'true', sort: 'bestsellers', ...params }); },
   };
 
   // ─── Shop products (seller's store ← central catalogue) ──────────────────────
@@ -821,6 +826,34 @@
     listPromoted()                              { return get('/campaigns/promoted'); },
   };
 
+  // ─── Social Commerce ──────────────────────────────────────────────────────────
+  const Social = {
+    /** Paginated post feed (public). GET /api/social/feed */
+    feed(params)               { return get('/social/feed', params); },
+    /** Trending posts by viral score (public). GET /api/social/trending */
+    trending(params)           { return get('/social/trending', params); },
+    /** Create a post (auth). POST /api/social/posts */
+    createPost(data)           { return post('/social/posts', data); },
+    /** Get single post with comments (public). GET /api/social/posts/:id */
+    getPost(id)                { return get(`/social/posts/${id}`); },
+    /** Delete own post (auth). DELETE /api/social/posts/:id */
+    deletePost(id)             { return del(`/social/posts/${id}`); },
+    /** Toggle like on a post (auth). POST /api/social/posts/:id/like */
+    likePost(id)               { return post(`/social/posts/${id}/like`); },
+    /** Comment on a post (auth). POST /api/social/posts/:id/comment */
+    commentPost(id, content)   { return post(`/social/posts/${id}/comment`, { content }); },
+    /** Share a post (auth). POST /api/social/posts/:id/share */
+    sharePost(id, platform)    { return post(`/social/posts/${id}/share`, { platform }); },
+    /**
+     * Create a video post with product link (auth).
+     * POST /api/social/posts
+     * @param {{ content, video_url, video_type, product_id?, store_id?, media_urls? }} data
+     */
+    createVideoPost(data)      { return post('/social/posts', { post_type: 'video', ...data }); },
+    /** Feed filtered to video posts only (public). GET /api/social/feed?type=video */
+    videoFeed(params)          { return get('/social/feed', { ...params, type: 'video' }); },
+  };
+
   // ─── Public API surface ───────────────────────────────────────────────────────
 
   return {
@@ -847,6 +880,7 @@
     Auctions,
     Campaigns,
     Scripts,
+    Social,
     health,
     /** Expose for advanced use cases. */
     _request: request,

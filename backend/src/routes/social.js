@@ -49,7 +49,7 @@ router.get(
   [
     query('limit').optional().isInt({ min: 1, max: 50 }),
     query('offset').optional().isInt({ min: 0 }),
-    query('type').optional().isIn(['general', 'product', 'promotion', 'live_recap']),
+    query('type').optional().isIn(['general', 'product', 'promotion', 'live_recap', 'video']),
   ],
   async (req, res, next) => {
     if (validationErrors(req, res)) return
@@ -60,6 +60,7 @@ router.get(
 
       const result = await db.query(
         `SELECT sp.id, sp.content, sp.media_urls, sp.post_type,
+                sp.video_url, sp.video_type,
                 sp.likes_count, sp.comments_count, sp.shares_count, sp.views_count,
                 sp.viral_score, sp.created_at,
                 u.id AS author_id,
@@ -100,6 +101,7 @@ router.get('/trending', async (req, res, next) => {
 
     const result = await db.query(
       `SELECT sp.id, sp.content, sp.media_urls, sp.post_type,
+              sp.video_url, sp.video_type,
               sp.likes_count, sp.comments_count, sp.shares_count, sp.viral_score,
               sp.created_at,
               u.id AS author_id,
@@ -127,21 +129,26 @@ router.post(
   authenticate,
   [
     body('content').notEmpty().withMessage('Treść jest wymagana').isLength({ max: 2000 }).withMessage('Treść zbyt długa'),
-    body('post_type').optional().isIn(['general', 'product', 'promotion', 'live_recap']).withMessage('Nieprawidłowy typ posta'),
+    body('post_type').optional().isIn(['general', 'product', 'promotion', 'live_recap', 'video']).withMessage('Nieprawidłowy typ posta'),
     body('product_id').optional().isUUID().withMessage('Nieprawidłowy format product_id'),
     body('store_id').optional().isUUID().withMessage('Nieprawidłowy format store_id'),
     body('media_urls').optional().isArray().withMessage('media_urls musi być tablicą'),
+    body('video_url').optional().isURL().withMessage('Nieprawidłowy URL video'),
+    body('video_type').optional().isIn(['tiktok', 'youtube', 'short', 'reel']).withMessage('Nieprawidłowy typ video'),
   ],
   async (req, res, next) => {
     if (validationErrors(req, res)) return
     try {
-      const { content, post_type = 'general', product_id = null, store_id = null, media_urls = [] } = req.body
+      const {
+        content, post_type = 'general', product_id = null, store_id = null,
+        media_urls = [], video_url = null, video_type = null,
+      } = req.body
 
       const result = await db.query(
-        `INSERT INTO social_posts (user_id, store_id, product_id, content, media_urls, post_type)
-              VALUES ($1, $2, $3, $4, $5::jsonb, $6)
-           RETURNING id, content, post_type, likes_count, comments_count, shares_count, created_at`,
-        [req.user.id, store_id, product_id, content, JSON.stringify(media_urls), post_type]
+        `INSERT INTO social_posts (user_id, store_id, product_id, content, media_urls, post_type, video_url, video_type)
+              VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8)
+           RETURNING id, content, post_type, video_url, video_type, likes_count, comments_count, shares_count, created_at`,
+        [req.user.id, store_id, product_id, content, JSON.stringify(media_urls), post_type, video_url, video_type]
       )
 
       res.status(201).json({ post: result.rows[0] })
@@ -160,6 +167,7 @@ router.get(
     try {
       const postResult = await db.query(
         `SELECT sp.id, sp.content, sp.media_urls, sp.post_type,
+                sp.video_url, sp.video_type,
                 sp.likes_count, sp.comments_count, sp.shares_count, sp.views_count,
                 sp.viral_score, sp.created_at,
                 u.id AS author_id,

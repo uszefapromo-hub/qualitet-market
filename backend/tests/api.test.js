@@ -6811,6 +6811,91 @@ describe('POST /api/social/posts/:id/share', () => {
   });
 });
 
+// ─── Social video embed ───────────────────────────────────────────────────────
+
+describe('POST /api/social/posts (video embed)', () => {
+  it('creates a video post with video_url and video_type', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{
+        id: SOCIAL_POST_ID,
+        content: 'Viral product on TikTok!',
+        post_type: 'video',
+        video_url: 'https://www.tiktok.com/@test/video/7123456789012345678',
+        video_type: 'tiktok',
+        likes_count: 0,
+        comments_count: 0,
+        shares_count: 0,
+        created_at: new Date().toISOString(),
+      }],
+    });
+    const res = await request(app)
+      .post('/api/social/posts')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({
+        content: 'Viral product on TikTok!',
+        post_type: 'video',
+        video_url: 'https://www.tiktok.com/@test/video/7123456789012345678',
+        video_type: 'tiktok',
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.post.post_type).toBe('video');
+    expect(res.body.post.video_url).toBe('https://www.tiktok.com/@test/video/7123456789012345678');
+    expect(res.body.post.video_type).toBe('tiktok');
+  });
+
+  it('rejects invalid video_url', async () => {
+    const res = await request(app)
+      .post('/api/social/posts')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ content: 'Bad url', post_type: 'video', video_url: 'not-a-url' });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects invalid video_type', async () => {
+    const res = await request(app)
+      .post('/api/social/posts')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ content: 'Bad type', post_type: 'video', video_url: 'https://example.com/video.mp4', video_type: 'unknown' });
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('GET /api/social/feed (video type filter)', () => {
+  it('filters feed by type=video', async () => {
+    const videoPost = { ...mockPost, post_type: 'video', video_url: 'https://youtu.be/abc123', video_type: 'youtube' };
+    db.query
+      .mockResolvedValueOnce({ rows: [videoPost] })
+      .mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get('/api/social/feed?type=video');
+    expect(res.status).toBe(200);
+    expect(res.body.posts).toHaveLength(1);
+  });
+});
+
+// ─── Products sort parameter ──────────────────────────────────────────────────
+
+describe('GET /api/products?sort=new', () => {
+  it('returns products ordered newest first (sort=new)', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '2' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'p2', name: 'Nowy', created_at: '2026-01-02' }, { id: 'p1', name: 'Stary', created_at: '2026-01-01' }] });
+    const res = await request(app).get('/api/products?sort=new&is_central=true');
+    expect(res.status).toBe(200);
+    expect(res.body.products).toHaveLength(2);
+  });
+});
+
+describe('GET /api/products?sort=bestsellers', () => {
+  it('returns products with sort=bestsellers', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'p1', name: 'Bestseller', stock: 500 }] });
+    const res = await request(app).get('/api/products?sort=bestsellers&is_central=true');
+    expect(res.status).toBe(200);
+    expect(res.body.products).toHaveLength(1);
+  });
+});
+
 // ─── Gamification module ──────────────────────────────────────────────────────
 
 describe('GET /api/gamification/leaderboard', () => {

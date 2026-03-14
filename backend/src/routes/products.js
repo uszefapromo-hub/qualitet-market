@@ -29,7 +29,7 @@ async function loadPlatformTiers() {
 
 // ─── List products ─────────────────────────────────────────────────────────────
 // Public endpoint – anyone can browse products.
-// Query params: store_id, category, search, is_central, status, page, limit
+// Query params: store_id, category, search, is_central, status, page, limit, sort
 
 router.get('/', async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page || '1', 10));
@@ -43,6 +43,16 @@ router.get('/', async (req, res) => {
     ? req.query.is_central === 'true'
     : null;
   const status = req.query.status || null;
+  const sort = req.query.sort || null;
+
+  // Determine ORDER BY clause
+  const ORDER_BY_MAP = {
+    new: 'created_at DESC',
+    bestsellers: 'stock DESC, created_at DESC',
+    price_asc: 'selling_price ASC',
+    price_desc: 'selling_price DESC',
+  };
+  const orderBy = ORDER_BY_MAP[sort] || 'created_at DESC';
 
   try {
     const conditions = [];
@@ -66,7 +76,7 @@ router.get('/', async (req, res) => {
     const total = parseInt(countResult.rows[0].count, 10);
 
     const result = await db.query(
-      `SELECT * FROM products ${where} ORDER BY created_at DESC LIMIT $${nextParamIndex} OFFSET $${nextParamIndex + 1}`,
+      `SELECT * FROM products ${where} ORDER BY ${orderBy} LIMIT $${nextParamIndex} OFFSET $${nextParamIndex + 1}`,
       [...params, limit, offset]
     );
 
