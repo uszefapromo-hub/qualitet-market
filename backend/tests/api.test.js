@@ -4644,7 +4644,7 @@ describe('GET /api/subscriptions/plans', () => {
     expect(res.status).toBe(200);
     const basic = res.body.plans.find((p) => p.name === 'basic');
     expect(basic).toBeDefined();
-    expect(basic.price_pln).toBe(49);
+    expect(basic.price_pln).toBe(99);
     expect(basic.duration_days).toBe(30);
   });
 });
