@@ -25,6 +25,8 @@
     .supplier-cat{font-size:11px;padding:2px 9px;border-radius:20px;background:rgba(124,58,237,.12);color:var(--purple-bright);border:1px solid rgba(124,58,237,.2)}
     .supplier-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
     .btn-sm{font-size:13px;padding:7px 14px}
+    .supplier-selector-card{cursor:pointer;padding:16px}
+    .supplier-selector-card.is-selected{border:2px solid var(--purple)}
     [data-admin-only]{display:none}
     body[data-role="admin"] [data-admin-only],
     body[data-role="owner"] [data-admin-only]{display:inline-flex}
@@ -70,7 +72,7 @@
         <h1>Hurtownie</h1>
         <p class="lead">Wybieraj hurtownie, importuj produkty i ustawiaj marże bez wychodzenia z panelu.</p>
          <div class="cta-row">
-           <a class="btn btn-primary" href="sklep.html">Przejdź do QualitetMarket Hurt/Detal</a>
+           <a class="btn btn-primary" href="sklep.html">Przejdź do QualitetMarket Hurt / Detal</a>
            <a class="btn btn-secondary" href="dashboard.html">Panel zarządzania</a>
          </div>
       </div>
@@ -440,6 +442,9 @@
     var selectedSupplierId = null;
     var currentProducts = [];
     var filtersInitialized = false;
+    var DEFAULT_PRODUCT_COUNT = 18;
+    var MIN_IMPORTS_PER_DAY = 6;
+    var MAX_IMPORTS_PER_DAY = 48;
     var STATIC_SUPPLIERS = [
       {
         id: 'bigbuy',
@@ -569,9 +574,29 @@
       });
       var avgCost = costs.length ? (costs.reduce(function (a, b) { return a + b; }, 0) / costs.length) : 0;
       setText('[data-suppliers-count]', suppliersCount);
-      setText('[data-products-count]', productsCount || 18);
+      setText('[data-products-count]', productsCount || DEFAULT_PRODUCT_COUNT);
       setText('[data-average-cost]', Math.round(avgCost));
-      setText('[data-imports-today]', Math.max(6, Math.min(48, Math.round(productsCount / 2))));
+      setText('[data-imports-today]', Math.max(MIN_IMPORTS_PER_DAY, Math.min(MAX_IMPORTS_PER_DAY, Math.round(productsCount / 2))));
+    }
+
+    function computePriceWithMargin(cost, margin) {
+      var numericCost = typeof cost === 'number' ? cost : parseFloat(cost) || 0;
+      var numericMargin = isNaN(margin) ? 0 : margin;
+      return numericCost * (1 + numericMargin / 100);
+    }
+
+    function mergeWithFallback(apiSupplier, fallback) {
+      var slug = apiSupplier.slug || fallback.slug || normaliseSlug(apiSupplier.name || apiSupplier.id || '');
+      return {
+        id: apiSupplier.id || fallback.id || slug,
+        slug: slug,
+        name: apiSupplier.name || fallback.name || 'Hurtownia',
+        integration_type: apiSupplier.integration_type || fallback.integration_type || 'API',
+        notes: apiSupplier.notes || fallback.notes || '',
+        categories: apiSupplier.categories || fallback.categories || [],
+        products: fallback.products || [],
+        url: apiSupplier.url || fallback.url || '#',
+      };
     }
 
     function setProducts(products) {
@@ -606,7 +631,7 @@
       });
 
       grid.innerHTML = filtered.map(function (p) {
-        var finalPrice = p.cost * (1 + margin / 100);
+        var finalPrice = computePriceWithMargin(p.cost, margin);
         return '<article class="panel-card product-card">'
           + '<strong>' + escHtml(p.name) + '</strong>'
           + '<p class="hint" style="margin:6px 0 10px">' + escHtml(p.category || 'Produkt') + '</p>'
@@ -644,7 +669,11 @@
       var grid = document.querySelector('[data-suppliers-grid]');
       if (grid) {
         grid.querySelectorAll('[data-supplier-card]').forEach(function (c) {
-          c.style.border = c.dataset.sid === selectedSupplierId ? '2px solid var(--purple)' : '';
+          if (c.dataset.sid === selectedSupplierId) {
+            c.classList.add('is-selected');
+          } else {
+            c.classList.remove('is-selected');
+          }
         });
       }
 
@@ -666,7 +695,7 @@
 
       if (empty) empty.hidden = true;
       grid.innerHTML = list.map(function (s) {
-        return '<div class="panel-card" style="cursor:pointer;padding:16px" data-supplier-card data-sid="' + escHtml(s.id) + '" data-supplier-slug="' + escHtml(s.slug || s.id) + '">'
+        return '<div class="panel-card supplier-selector-card" data-supplier-card data-sid="' + escHtml(s.id) + '" data-supplier-slug="' + escHtml(s.slug || s.id) + '">'
           + '<strong>' + escHtml(s.name) + '</strong>'
           + '<p style="font-size:13px;color:var(--muted);margin:4px 0 0">' + escHtml(s.integration_type || 'API') + '</p>'
           + '</div>';
@@ -689,18 +718,8 @@
         .then(function (data) {
           var items = Array.isArray(data) ? data : (data.suppliers || []);
           var mapped = items.map(function (s) {
-            var fallback = findStaticSupplier(s.id || s.name || s.slug) || {};
-            var slug = s.slug || fallback.slug || normaliseSlug(s.name || s.id || '');
-            return {
-              id: s.id || fallback.id || slug,
-              slug: slug,
-              name: s.name || fallback.name || 'Hurtownia',
-              integration_type: s.integration_type || fallback.integration_type || 'API',
-              notes: s.notes || fallback.notes || '',
-              categories: s.categories || fallback.categories || [],
-              products: fallback.products || [],
-              url: s.url || fallback.url || '#',
-            };
+            var fallback = findStaticSupplier(s.id || s.name || s.slug) || { slug: normaliseSlug(s.name || s.id || '') };
+            return mergeWithFallback(s, fallback);
           });
           var finalList = mapped.length ? mapped : STATIC_SUPPLIERS;
           renderSupplierGrid(finalList);
