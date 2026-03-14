@@ -456,55 +456,8 @@
   }
 
   function initAppInstallBar(){
-    if(!document.body){
-      return null;
-    }
-    // Only show on the homepage (index.html or root path)
-    const path = window.location.pathname;
-    const isHomepage = path === '/' || path.endsWith('/index.html') || path.endsWith('/index');
-    if(!isHomepage){
-      return null;
-    }
-    // Check if user already dismissed this banner (persisted in localStorage)
-    try{
-      if(localStorage.getItem(APP_INSTALL_BAR_DISMISSED_KEY)){
-        return null;
-      }
-    } catch(_){}
-    const existing = document.querySelector('[data-app-install-bar]');
-    if(existing){
-      return existing;
-    }
-    const bar = document.createElement('div');
-    bar.className = 'app-install-bar';
-    bar.setAttribute('data-app-install-bar', '');
-    bar.innerHTML = `
-      <button class="app-install-bar__close" type="button" data-app-install-bar-close aria-label="Zamknij panel">×</button>
-      <div class="app-install-bar__text">
-        <span class="app-install-bar__pill">Aplikacja</span>
-        <strong>Dodaj do ekranu głównego</strong>
-        <span>Szybki dostęp do platformy QualitetVerse</span>
-      </div>
-      <div class="app-install-bar__actions">
-        <a class="btn btn-primary" href="dashboard.html" style="min-height:36px;font-size:13px;padding:0 14px">Otwórz</a>
-      </div>
-    `;
-    document.body.appendChild(bar);
-    document.body.classList.add('has-app-install-bar');
-    const dismiss = () => {
-      bar.remove();
-      document.body.classList.remove('has-app-install-bar');
-      try{
-        localStorage.setItem(APP_INSTALL_BAR_DISMISSED_KEY, 'true');
-      } catch(_){}
-    };
-    const closeBtn = bar.querySelector('[data-app-install-bar-close]');
-    if(closeBtn){
-      closeBtn.addEventListener('click', dismiss);
-    }
-    // Auto-dismiss after 6 seconds
-    window.setTimeout(dismiss, APP_INSTALL_BAR_AUTO_DISMISS_MS);
-    return bar;
+    // App install bar disabled — removed to prevent it from overlapping page content.
+    return null;
   }
 
   function bindAppInstallOpeners(){
@@ -5759,7 +5712,8 @@
     }
 
     const resolveSupplierPlan = supplier => normalizePlan(supplier && supplier.plan) || 'basic';
-    const isSupplierLocked = supplier => getPlanLevel(resolveSupplierPlan(supplier)) > currentPlanLevel;
+    // Subscription plan gates removed — all suppliers are available to all users.
+    const isSupplierLocked = () => false;
     const getSupplierPlanTagClass = plan => {
       const planMap = {elite: 'tag-elite', pro: 'tag-premium', basic: 'tag-basic'};
       return planMap[plan] || 'tag-basic';
