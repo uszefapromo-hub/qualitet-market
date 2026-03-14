@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Aukcje artystów — QualitetVerse</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#7c3aed">
+  <meta name="description" content="Aukcje dzieł sztuki na platformie QualitetVerse. Licytuj oryginalne dzieła od utalentowanych artystów.">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="stylesheet" href="panel.css">
+  <style>
+    .auctions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 24px;
+      margin-top: 32px;
+    }
+    .auction-card {
+      background: var(--card-bg, #fff);
+      border: 1px solid var(--border, #e5e7eb);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+    .auction-card:hover {
+      box-shadow: 0 8px 32px rgba(0,0,0,.12);
+      transform: translateY(-2px);
+    }
+    .auction-card__image {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      background: var(--bg-2, #f5f5f5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+    }
+    .auction-card__body {
+      padding: 20px;
+    }
+    .auction-card__artist {
+      font-size: 13px;
+      color: var(--text-muted, #888);
+      margin-bottom: 4px;
+    }
+    .auction-card__title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text, #111);
+      margin-bottom: 12px;
+    }
+    .auction-card__price-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .auction-card__price {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--primary, #7c3aed);
+    }
+    .auction-card__bids {
+      font-size: 13px;
+      color: var(--text-muted, #888);
+    }
+    .auction-card__timer {
+      font-size: 13px;
+      color: var(--text-muted, #888);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .auction-card__timer--urgent {
+      color: #ef4444;
+      font-weight: 700;
+    }
+    .auction-card__btn {
+      width: 100%;
+      padding: 12px;
+      background: var(--primary, #7c3aed);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .auction-card__btn:hover { background: #6d28d9; }
+    .auction-card__btn:disabled {
+      background: var(--border, #e5e7eb);
+      color: var(--text-muted, #888);
+      cursor: not-allowed;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.6);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--card-bg, #fff);
+      border-radius: 20px;
+      padding: 32px;
+      max-width: 480px;
+      width: 90%;
+      position: relative;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal__close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      font-size: 22px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted, #888);
+    }
+    .modal__title { font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+    .modal__price { font-size: 28px; font-weight: 900; color: var(--primary, #7c3aed); margin-bottom: 20px; }
+    .modal__input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 2px solid var(--border, #e5e7eb);
+      border-radius: 10px;
+      font-size: 16px;
+      margin-bottom: 12px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .modal__input:focus { border-color: var(--primary, #7c3aed); }
+    .modal__submit {
+      width: 100%;
+      padding: 14px;
+      background: var(--primary, #7c3aed);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .modal__msg { margin-top: 12px; font-size: 14px; text-align: center; }
+    .modal__msg.ok { color: #16a34a; }
+    .modal__msg.err { color: #ef4444; }
+
+    /* filters */
+    .filters-bar {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+    }
+    .filter-btn {
+      padding: 8px 20px;
+      border-radius: 100px;
+      border: 2px solid var(--border, #e5e7eb);
+      background: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--text, #111);
+    }
+    .filter-btn.active {
+      background: var(--primary, #7c3aed);
+      border-color: var(--primary, #7c3aed);
+      color: #fff;
+    }
+
+    /* empty state */
+    .empty-state {
+      text-align: center;
+      padding: 80px 24px;
+      color: var(--text-muted, #888);
+    }
+    .empty-state__icon { font-size: 64px; margin-bottom: 16px; }
+    .empty-state__title { font-size: 20px; font-weight: 700; margin-bottom: 8px; color: var(--text, #111); }
+
+    /* loading */
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg-2,#f0f0f0) 25%, var(--border,#e5e7eb) 50%, var(--bg-2,#f0f0f0) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  </style>
+</head>
+<body data-page="auctions" class="has-bottom-nav">
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="qualitetverse.html">
+        <div>
+          <strong>QualitetVerse</strong>
+          <span>Art Auctions</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Główna nawigacja">
+        <a href="qualitetverse.html">Platforma</a>
+        <a href="hurtownie.html">Hurtownie</a>
+        <a href="zarabiaj.html">Zarabiaj</a>
+        <a href="auctions.html" class="active">Aukcje</a>
+        <a href="cennik.html">Cennik</a>
+      </nav>
+      <a class="btn btn-primary topbar-cta" href="login.html">Wejdź do platformy</a>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero -->
+    <section class="page-hero" style="padding:64px 0 40px">
+      <div class="wrap" style="text-align:center">
+        <span style="display:inline-block;background:rgba(124,58,237,.1);color:#7c3aed;padding:6px 16px;border-radius:100px;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:16px">🎨 Art Auctions</span>
+        <h1>Aukcje artystów</h1>
+        <p class="lead" style="max-width:560px;margin:16px auto 0">Licytuj oryginalne dzieła sztuki od utalentowanych artystów. Każdy zakup wspiera twórców bezpośrednio.</p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px">
+          <a href="login.html" class="btn btn-primary">🎨 Zostań artystą</a>
+          <a href="#how-it-works" class="btn btn-ghost">Jak to działa?</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats bar -->
+    <section style="padding:0 0 40px">
+      <div class="wrap">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px">
+          <div class="card" style="padding:20px;text-align:center">
+            <div style="font-size:28px;font-weight:900;color:#7c3aed" id="stat-auctions">—</div>
+            <div style="font-size:13px;color:var(--text-muted,#888);margin-top:4px">Aktywnych aukcji</div>
+          </div>
+          <div class="card" style="padding:20px;text-align:center">
+            <div style="font-size:28px;font-weight:900;color:#7c3aed" id="stat-artists">—</div>
+            <div style="font-size:13px;color:var(--text-muted,#888);margin-top:4px">Artystów</div>
+          </div>
+          <div class="card" style="padding:20px;text-align:center">
+            <div style="font-size:28px;font-weight:900;color:#7c3aed" id="stat-artworks">—</div>
+            <div style="font-size:13px;color:var(--text-muted,#888);margin-top:4px">Dzieł sztuki</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Auctions list -->
+    <section style="padding:0 0 80px" id="auctions-list">
+      <div class="wrap">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <h2 style="font-size:24px;font-weight:800">Aktywne aukcje</h2>
+          <a href="login.html" class="btn btn-outline btn-sm">+ Dodaj aukcję</a>
+        </div>
+
+        <div class="filters-bar">
+          <button class="filter-btn active" data-status="active">Aktywne</button>
+          <button class="filter-btn" data-status="ended">Zakończone</button>
+          <button class="filter-btn" data-status="all">Wszystkie</button>
+        </div>
+
+        <div class="auctions-grid" id="auctions-container">
+          <!-- skeleton loaders -->
+          <div class="auction-card">
+            <div class="auction-card__image skeleton" style="height:220px"></div>
+            <div class="auction-card__body">
+              <div class="skeleton" style="height:14px;width:60%;margin-bottom:8px"></div>
+              <div class="skeleton" style="height:20px;width:80%;margin-bottom:16px"></div>
+              <div class="skeleton" style="height:32px;width:100%"></div>
+            </div>
+          </div>
+          <div class="auction-card">
+            <div class="auction-card__image skeleton" style="height:220px"></div>
+            <div class="auction-card__body">
+              <div class="skeleton" style="height:14px;width:60%;margin-bottom:8px"></div>
+              <div class="skeleton" style="height:20px;width:80%;margin-bottom:16px"></div>
+              <div class="skeleton" style="height:32px;width:100%"></div>
+            </div>
+          </div>
+          <div class="auction-card">
+            <div class="auction-card__image skeleton" style="height:220px"></div>
+            <div class="auction-card__body">
+              <div class="skeleton" style="height:14px;width:60%;margin-bottom:8px"></div>
+              <div class="skeleton" style="height:20px;width:80%;margin-bottom:16px"></div>
+              <div class="skeleton" style="height:32px;width:100%"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="auctions-empty" class="empty-state" style="display:none">
+          <div class="empty-state__icon">🎨</div>
+          <div class="empty-state__title">Brak aktywnych aukcji</div>
+          <p>Wróć później lub zostań artystą i wystaw swoje dzieła.</p>
+          <a href="login.html" class="btn btn-primary" style="margin-top:20px">Zostań artystą</a>
+        </div>
+
+        <div id="load-more-wrap" style="text-align:center;margin-top:32px;display:none">
+          <button class="btn btn-outline" id="load-more-btn">Pokaż więcej</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section style="padding:0 0 80px;background:var(--bg-2,#f9fafb)" id="how-it-works">
+      <div class="wrap">
+        <h2 style="font-size:24px;font-weight:800;text-align:center;margin-bottom:40px">Jak działają aukcje?</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px">
+          <div class="card" style="padding:28px;text-align:center">
+            <div style="font-size:40px;margin-bottom:12px">🎨</div>
+            <h3 style="font-size:17px;font-weight:700;margin-bottom:8px">Artysta tworzy profil</h3>
+            <p style="font-size:14px;color:var(--text-muted,#888)">Zarejestruj się, utwórz profil artysty i dodaj swoje dzieła do platformy.</p>
+          </div>
+          <div class="card" style="padding:28px;text-align:center">
+            <div style="font-size:40px;margin-bottom:12px">🏷️</div>
+            <h3 style="font-size:17px;font-weight:700;margin-bottom:8px">Uruchom aukcję</h3>
+            <p style="font-size:14px;color:var(--text-muted,#888)">Ustaw cenę wywoławczą, czas trwania i szczegóły dzieła. Aukcja startuje natychmiast.</p>
+          </div>
+          <div class="card" style="padding:28px;text-align:center">
+            <div style="font-size:40px;margin-bottom:12px">⚡</div>
+            <h3 style="font-size:17px;font-weight:700;margin-bottom:8px">Licytacja na żywo</h3>
+            <p style="font-size:14px;color:var(--text-muted,#888)">Kolekcjonerzy składają oferty w czasie rzeczywistym. Najwyższa oferta wygrywa dzieło.</p>
+          </div>
+          <div class="card" style="padding:28px;text-align:center">
+            <div style="font-size:40px;margin-bottom:12px">💸</div>
+            <h3 style="font-size:17px;font-weight:700;margin-bottom:8px">Artysta zarabia</h3>
+            <p style="font-size:14px;color:var(--text-muted,#888)">Po zakończeniu aukcji artysta otrzymuje należność minus prowizja platformy (6–10%).</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Artist plans -->
+    <section style="padding:0 0 80px">
+      <div class="wrap">
+        <h2 style="font-size:24px;font-weight:800;text-align:center;margin-bottom:8px">Plany dla artystów</h2>
+        <p style="text-align:center;color:var(--text-muted,#888);margin-bottom:40px">Wybierz plan dopasowany do Twoich potrzeb</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;max-width:640px;margin:0 auto">
+          <div class="card" style="padding:32px;text-align:center">
+            <h3 style="font-size:20px;font-weight:800;margin-bottom:4px">Basic</h3>
+            <div style="font-size:36px;font-weight:900;color:#7c3aed;margin:16px 0">0 zł</div>
+            <p style="font-size:14px;color:var(--text-muted,#888);margin-bottom:20px">Bezpłatny dostęp do aukcji</p>
+            <ul style="list-style:none;padding:0;font-size:14px;text-align:left;margin-bottom:24px">
+              <li style="padding:6px 0;border-bottom:1px solid var(--border,#e5e7eb)">✅ Nieograniczone dzieła</li>
+              <li style="padding:6px 0;border-bottom:1px solid var(--border,#e5e7eb)">✅ Aukcje publiczne</li>
+              <li style="padding:6px 0;border-bottom:1px solid var(--border,#e5e7eb)">⚠️ Prowizja 10%</li>
+              <li style="padding:6px 0">❌ Promowanie aukcji</li>
+            </ul>
+            <a href="login.html" class="btn btn-outline" style="width:100%;display:block;text-align:center">Zacznij za darmo</a>
+          </div>
+          <div class="card" style="padding:32px;text-align:center;border:2px solid #7c3aed;position:relative">
+            <span style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:#7c3aed;color:#fff;padding:4px 16px;border-radius:100px;font-size:12px;font-weight:700">POPULARNE</span>
+            <h3 style="font-size:20px;font-weight:800;margin-bottom:4px">Pro</h3>
+            <div style="font-size:36px;font-weight:900;color:#7c3aed;margin:16px 0">49 zł<span style="font-size:16px;color:var(--text-muted,#888)">/mies.</span></div>
+            <p style="font-size:14px;color:var(--text-muted,#888);margin-bottom:20px">Dla poważnych artystów</p>
+            <ul style="list-style:none;padding:0;font-size:14px;text-align:left;margin-bottom:24px">
+              <li style="padding:6px 0;border-bottom:1px solid var(--border,#e5e7eb)">✅ Nieograniczone dzieła</li>
+              <li style="padding:6px 0;border-bottom:1px solid var(--border,#e5e7eb)">✅ Aukcje publiczne</li>
+              <li style="padding:6px 0;border-bottom:1px solid var(--border,#e5e7eb)">✅ Prowizja tylko 6%</li>
+              <li style="padding:6px 0">✅ Promowanie aukcji</li>
+            </ul>
+            <a href="login.html" class="btn btn-primary" style="width:100%;display:block;text-align:center">Wybierz Pro</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bid modal -->
+  <div class="modal-backdrop" id="bid-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
+      <button class="modal__close" id="modal-close" aria-label="Zamknij">✕</button>
+      <div class="modal__title" id="modal-title">Złóż ofertę</div>
+      <div id="modal-artwork-title" style="color:var(--text-muted,#888);font-size:14px;margin-bottom:16px"></div>
+      <div>Aktualna cena: <span class="modal__price" id="modal-current-price">—</span></div>
+      <input type="number" class="modal__input" id="bid-amount" placeholder="Twoja oferta (zł)" min="0" step="0.01">
+      <button class="modal__submit" id="bid-submit">Licytuję →</button>
+      <div class="modal__msg" id="bid-msg"></div>
+    </div>
+  </div>
+
+  <nav class="bottom-nav" aria-label="Nawigacja dolna">
+    <a href="qualitetverse.html" rel="nofollow noreferrer" data-nav="qualitetverse">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9.5z"></path>
+      </svg>
+      <span>Start</span>
+    </a>
+    <a href="hurtownie.html" rel="nofollow noreferrer" data-nav="hurtownie">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="7" width="7" height="10" rx="1.4"></rect>
+        <rect x="14" y="7" width="7" height="10" rx="1.4"></rect>
+        <path d="M6.5 7V5.5a1.5 1.5 0 0 1 3 0V7"></path>
+      </svg>
+      <span>Hurtownie</span>
+    </a>
+    <a href="auctions.html" rel="nofollow noreferrer" data-nav="auctions" class="active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"></path>
+      </svg>
+      <span>Aukcje</span>
+    </a>
+    <a href="dashboard.html" rel="nofollow noreferrer" data-nav="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="14" width="7" height="7" rx="1.2"></rect>
+        <rect x="3" y="14" width="7" height="7" rx="1.2"></rect>
+      </svg>
+      <span>Panel</span>
+    </a>
+    <a href="login.html" rel="nofollow noreferrer" data-nav="login">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4 20c2-3.5 6-5 8-5s6 1.5 8 5"></path>
+      </svg>
+      <span>Konto</span>
+    </a>
+  </nav>
+
+  <script src="js/api.js" defer></script>
+  <script src="js/app.js" defer></script>
+  <script>
+    /* ── State ── */
+    let currentStatus = 'active';
+    let currentPage = 1;
+    let totalAuctions = 0;
+    let activeAuctionId = null;
+    const PAGE_SIZE = 12;
+
+    /* ── Helpers ── */
+    function formatPrice(n) {
+      return Number(n).toLocaleString('pl-PL', { style: 'currency', currency: 'PLN' });
+    }
+
+    function formatTimeLeft(endsAt) {
+      const ms = new Date(endsAt) - Date.now();
+      if (ms <= 0) return { text: 'Zakończona', urgent: false };
+      const h = Math.floor(ms / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      if (h < 1) return { text: `${m} min`, urgent: true };
+      if (h < 24) return { text: `${h}h ${m}min`, urgent: h < 3 };
+      const d = Math.floor(h / 24);
+      return { text: `${d} dni`, urgent: false };
+    }
+
+    function artEmoji(i) {
+      return ['🖼️', '🎨', '🖌️', '🏺', '🗿', '🎭'][i % 6];
+    }
+
+    function renderCard(a, idx) {
+      const timer = formatTimeLeft(a.ends_at);
+      const ended = a.status === 'ended';
+      return `
+        <div class="auction-card" data-id="${a.id}">
+          <div class="auction-card__image">
+            ${a.artwork_image
+              ? `<img src="${a.artwork_image}" alt="${a.artwork_title || a.title}" style="width:100%;height:220px;object-fit:cover">`
+              : `<div style="width:100%;height:220px;display:flex;align-items:center;justify-content:center;font-size:80px;background:linear-gradient(135deg,#f0e6ff,#e0f2fe)">${artEmoji(idx)}</div>`}
+          </div>
+          <div class="auction-card__body">
+            <div class="auction-card__artist">🎨 ${a.artist_name || 'Artysta'}</div>
+            <div class="auction-card__title">${a.title}</div>
+            <div class="auction-card__price-row">
+              <div class="auction-card__price">${formatPrice(a.current_price || a.starting_price)}</div>
+              <div class="auction-card__bids">${a.bid_count || 0} ofert</div>
+            </div>
+            <div class="auction-card__timer ${timer.urgent ? 'auction-card__timer--urgent' : ''}">
+              ⏱ ${timer.text}
+            </div>
+            <button class="auction-card__btn js-bid-btn"
+              data-auction-id="${a.id}"
+              data-auction-price="${a.current_price || a.starting_price}"
+              ${ended ? 'disabled' : ''}>
+              ${ended ? 'Zakończona' : '⚡ Licytuj teraz'}
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    /* ── Load auctions ── */
+    async function loadAuctions(status, page, append) {
+      const container = document.getElementById('auctions-container');
+      const empty = document.getElementById('auctions-empty');
+      const loadMoreWrap = document.getElementById('load-more-wrap');
+
+      if (!append) {
+        container.innerHTML = `
+          <div class="auction-card"><div class="auction-card__image skeleton" style="height:220px"></div><div class="auction-card__body"><div class="skeleton" style="height:14px;width:60%;margin-bottom:8px"></div><div class="skeleton" style="height:20px;width:80%;margin-bottom:16px"></div><div class="skeleton" style="height:32px;width:100%"></div></div></div>
+          <div class="auction-card"><div class="auction-card__image skeleton" style="height:220px"></div><div class="auction-card__body"><div class="skeleton" style="height:14px;width:60%;margin-bottom:8px"></div><div class="skeleton" style="height:20px;width:80%;margin-bottom:16px"></div><div class="skeleton" style="height:32px;width:100%"></div></div></div>
+          <div class="auction-card"><div class="auction-card__image skeleton" style="height:220px"></div><div class="auction-card__body"><div class="skeleton" style="height:14px;width:60%;margin-bottom:8px"></div><div class="skeleton" style="height:20px;width:80%;margin-bottom:16px"></div><div class="skeleton" style="height:32px;width:100%"></div></div></div>
+        `;
+        empty.style.display = 'none';
+        loadMoreWrap.style.display = 'none';
+      }
+
+      try {
+        const api = window.QMApi || window.QualitetAPI;
+        if (!api || !api.Auctions) {
+          renderDemoAuctions(container, empty);
+          return;
+        }
+        const data = await api.Auctions.list({ status, page, limit: PAGE_SIZE });
+        totalAuctions = data.total || 0;
+        const auctions = data.auctions || [];
+
+        if (auctions.length === 0 && !append) {
+          container.innerHTML = '';
+          empty.style.display = 'block';
+          return;
+        }
+
+        if (!append) container.innerHTML = '';
+        auctions.forEach((a, i) => {
+          container.insertAdjacentHTML('beforeend', renderCard(a, (page - 1) * PAGE_SIZE + i));
+        });
+
+        const shown = (page - 1) * PAGE_SIZE + auctions.length;
+        loadMoreWrap.style.display = shown < totalAuctions ? 'block' : 'none';
+      } catch (_e) {
+        renderDemoAuctions(container, empty);
+      }
+    }
+
+    function renderDemoAuctions(container, empty) {
+      const demos = [
+        { id: 'd1', title: 'Krajobraz o świcie', artist_name: 'Anna Kowalska', starting_price: 450, current_price: 620, bid_count: 8, status: 'active', ends_at: new Date(Date.now() + 3600000 * 47).toISOString(), artwork_image: null },
+        { id: 'd2', title: 'Portret w błękicie', artist_name: 'Marek Nowak', starting_price: 300, current_price: 300, bid_count: 0, status: 'active', ends_at: new Date(Date.now() + 3600000 * 120).toISOString(), artwork_image: null },
+        { id: 'd3', title: 'Abstrakcja #7', artist_name: 'Julia Wiśniewska', starting_price: 890, current_price: 1250, bid_count: 14, status: 'active', ends_at: new Date(Date.now() + 3600000 * 2).toISOString(), artwork_image: null },
+        { id: 'd4', title: 'Miasto nocą', artist_name: 'Piotr Zając', starting_price: 550, current_price: 710, bid_count: 5, status: 'active', ends_at: new Date(Date.now() + 3600000 * 72).toISOString(), artwork_image: null },
+        { id: 'd5', title: 'Morze w burzy', artist_name: 'Katarzyna Lis', starting_price: 1200, current_price: 1200, bid_count: 0, status: 'active', ends_at: new Date(Date.now() + 3600000 * 96).toISOString(), artwork_image: null },
+        { id: 'd6', title: 'Kwiaty w wazonie', artist_name: 'Tomasz Wróbel', starting_price: 250, current_price: 380, bid_count: 11, status: 'active', ends_at: new Date(Date.now() + 3600000 * 6).toISOString(), artwork_image: null },
+      ];
+      container.innerHTML = '';
+      demos.forEach((a, i) => { container.insertAdjacentHTML('beforeend', renderCard(a, i)); });
+      empty.style.display = 'none';
+      document.getElementById('stat-auctions').textContent = demos.length;
+      document.getElementById('stat-artists').textContent = 24;
+      document.getElementById('stat-artworks').textContent = 87;
+    }
+
+    /* ── Load stats ── */
+    async function loadStats() {
+      try {
+        const api = window.QMApi || window.QualitetAPI;
+        if (!api || !api.Auctions) return;
+        const [a, ar, art] = await Promise.all([
+          api.Auctions.list({ status: 'active', limit: 1 }),
+          api.Auctions.listArtists({ limit: 1 }),
+          api.Auctions.listArtworks({ limit: 1 }),
+        ]);
+        document.getElementById('stat-auctions').textContent = a.total || 0;
+        document.getElementById('stat-artists').textContent = ar.total || 0;
+        document.getElementById('stat-artworks').textContent = art.total || 0;
+      } catch (_e) { /* ignore */ }
+    }
+
+    /* ── Bid modal ── */
+    function openBidModal(id, title, currentPrice) {
+      activeAuctionId = id;
+      document.getElementById('modal-artwork-title').textContent = title;
+      document.getElementById('modal-current-price').textContent = formatPrice(currentPrice);
+      document.getElementById('bid-amount').value = '';
+      document.getElementById('bid-amount').min = Number(currentPrice) + 0.01;
+      document.getElementById('bid-msg').textContent = '';
+      document.getElementById('bid-msg').className = 'modal__msg';
+      document.getElementById('bid-modal').classList.add('open');
+    }
+
+    document.getElementById('modal-close').addEventListener('click', () => {
+      document.getElementById('bid-modal').classList.remove('open');
+    });
+    document.getElementById('bid-modal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('bid-modal')) {
+        document.getElementById('bid-modal').classList.remove('open');
+      }
+    });
+
+    document.getElementById('bid-submit').addEventListener('click', async () => {
+      const amount = parseFloat(document.getElementById('bid-amount').value);
+      const msg = document.getElementById('bid-msg');
+      if (!amount || amount <= 0) { msg.className = 'modal__msg err'; msg.textContent = 'Podaj kwotę oferty.'; return; }
+
+      const btn = document.getElementById('bid-submit');
+      btn.disabled = true;
+      btn.textContent = 'Wysyłanie…';
+      msg.textContent = '';
+
+      try {
+        const api = window.QMApi || window.QualitetAPI;
+        if (!api || !api.Auctions) throw new Error('API niedostępne — zaloguj się, aby licytować.');
+        await api.Auctions.placeBid(activeAuctionId, amount);
+        msg.className = 'modal__msg ok';
+        msg.textContent = '✅ Oferta złożona pomyślnie!';
+        setTimeout(() => {
+          document.getElementById('bid-modal').classList.remove('open');
+          loadAuctions(currentStatus, 1, false);
+        }, 1500);
+      } catch (e) {
+        msg.className = 'modal__msg err';
+        msg.textContent = e.message || 'Błąd podczas składania oferty.';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Licytuję →';
+      }
+    });
+
+    /* ── Filter buttons ── */
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentStatus = btn.dataset.status;
+        currentPage = 1;
+        loadAuctions(currentStatus, currentPage, false);
+      });
+    });
+
+    /* ── Bid button delegation (avoids inline onclick) ── */
+    document.getElementById('auctions-container').addEventListener('click', (e) => {
+      const btn = e.target.closest('.js-bid-btn');
+      if (!btn || btn.disabled) return;
+      const card = btn.closest('.auction-card');
+      const titleEl = card ? card.querySelector('.auction-card__title') : null;
+      const title = titleEl ? titleEl.textContent : '';
+      openBidModal(btn.dataset.auctionId, title, btn.dataset.auctionPrice);
+    });
+
+    /* ── Load more ── */
+    document.getElementById('load-more-btn').addEventListener('click', () => {
+      currentPage++;
+      loadAuctions(currentStatus, currentPage, true);
+    });
+
+    /* ── Init ── */
+    window.addEventListener('DOMContentLoaded', () => {
+      loadAuctions('active', 1, false);
+      loadStats();
+    });
+  </script>
+</body>
+</html>

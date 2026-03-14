@@ -7532,3 +7532,278 @@ describe('PUT /api/reputation/creators/:creatorId/score', () => {
     expect(typeof res.body.reputation_score).toBe('number');
   });
 });
+
+// ════════════════════════════════════════════════════════════════════════════════
+// ART AUCTIONS
+// ════════════════════════════════════════════════════════════════════════════════
+
+const ARTIST_ID  = 'a1100000-0000-4000-8000-000000000011';
+const ARTWORK_ID = 'a2200000-0000-4000-8000-000000000022';
+const AUCTION_ID = 'a3300000-0000-4000-8000-000000000033';
+
+// ── GET /api/auctions ─────────────────────────────────────────────────────────
+
+describe('GET /api/auctions', () => {
+  it('returns active auctions list', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '2' }] })
+      .mockResolvedValueOnce({
+        rows: [
+          { id: AUCTION_ID, title: 'Dzieło 1', starting_price: '500', current_price: '620',
+            bid_count: 4, status: 'active', ends_at: new Date(Date.now() + 86400000).toISOString(),
+            artwork_image: null, artwork_title: 'Dzieło 1', artist_name: 'Anna K.', artist_id: ARTIST_ID },
+          { id: 'a3300000-0000-4000-8000-000000000044', title: 'Dzieło 2', starting_price: '300',
+            current_price: '300', bid_count: 0, status: 'active',
+            ends_at: new Date(Date.now() + 172800000).toISOString(),
+            artwork_image: null, artwork_title: 'Dzieło 2', artist_name: 'Marek N.', artist_id: ARTIST_ID },
+        ],
+      });
+    const res = await request(app).get('/api/auctions');
+    expect(res.status).toBe(200);
+    expect(res.body.auctions).toHaveLength(2);
+    expect(res.body.total).toBe(2);
+  });
+
+  it('accepts status filter', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get('/api/auctions?status=ended');
+    expect(res.status).toBe(200);
+    expect(res.body.auctions).toHaveLength(0);
+  });
+});
+
+// ── GET /api/auctions/:id ─────────────────────────────────────────────────────
+
+describe('GET /api/auctions/:id', () => {
+  it('returns 404 for unknown auction', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get(`/api/auctions/${AUCTION_ID}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns auction with top bids', async () => {
+    db.query
+      .mockResolvedValueOnce({
+        rows: [{
+          id: AUCTION_ID, title: 'Dzieło 1', starting_price: '500', current_price: '620',
+          bid_count: 4, status: 'active', ends_at: new Date(Date.now() + 86400000).toISOString(),
+          artwork_title: 'Dzieło 1', artwork_description: null, artwork_image: null,
+          medium: 'Akryl', dimensions: '60x80', year_created: 2025,
+          artist_name: 'Anna K.', artist_bio: null, winner_name: null,
+        }],
+      })
+      .mockResolvedValueOnce({ rows: [{ id: 'bid-1', amount: '620', created_at: new Date().toISOString(), bidder_name: 'Kupujący 1' }] });
+    const res = await request(app).get(`/api/auctions/${AUCTION_ID}`);
+    expect(res.status).toBe(200);
+    expect(res.body.auction.title).toBe('Dzieło 1');
+    expect(res.body.auction.top_bids).toHaveLength(1);
+  });
+});
+
+// ── GET /api/auctions/artists ─────────────────────────────────────────────────
+
+describe('GET /api/auctions/artists', () => {
+  it('returns artist profiles list', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({
+        rows: [{ id: ARTIST_ID, display_name: 'Anna K.', bio: 'Malarka', plan: 'pro', verified: true, created_at: new Date().toISOString(), user_name: 'Anna Kowalska' }],
+      });
+    const res = await request(app).get('/api/auctions/artists');
+    expect(res.status).toBe(200);
+    expect(res.body.artists).toHaveLength(1);
+    expect(res.body.artists[0].display_name).toBe('Anna K.');
+  });
+});
+
+// ── POST /api/auctions/artists ────────────────────────────────────────────────
+
+describe('POST /api/auctions/artists', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/auctions/artists').send({ display_name: 'Test' });
+    expect(res.status).toBe(401);
+  });
+
+  it('creates artist profile', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] }) // no existing profile
+      .mockResolvedValueOnce({ rows: [{ id: ARTIST_ID, user_id: SELLER_ID, display_name: 'Test Artist', plan: 'basic', bio: null, website: null }] });
+    const res = await request(app)
+      .post('/api/auctions/artists')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ display_name: 'Test Artist' });
+    expect(res.status).toBe(200);
+    expect(res.body.profile.display_name).toBe('Test Artist');
+  });
+
+  it('updates existing artist profile', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: ARTIST_ID }] }) // existing profile
+      .mockResolvedValueOnce({ rows: [{ id: ARTIST_ID, user_id: SELLER_ID, display_name: 'Updated', plan: 'basic', bio: 'Bio', website: null }] });
+    const res = await request(app)
+      .post('/api/auctions/artists')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ display_name: 'Updated', bio: 'Bio' });
+    expect(res.status).toBe(200);
+    expect(res.body.profile.display_name).toBe('Updated');
+  });
+});
+
+// ── GET /api/auctions/artworks ────────────────────────────────────────────────
+
+describe('GET /api/auctions/artworks', () => {
+  it('returns artworks list', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({
+        rows: [{ id: ARTWORK_ID, title: 'Krajobraz', status: 'available', artist_name: 'Anna K.', artist_id: ARTIST_ID }],
+      });
+    const res = await request(app).get('/api/auctions/artworks');
+    expect(res.status).toBe(200);
+    expect(res.body.artworks).toHaveLength(1);
+  });
+});
+
+// ── POST /api/auctions/artworks ───────────────────────────────────────────────
+
+describe('POST /api/auctions/artworks', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/auctions/artworks').send({ title: 'Test' });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 403 when user has no artist profile', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .post('/api/auctions/artworks')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ title: 'Mój obraz' });
+    expect(res.status).toBe(403);
+  });
+
+  it('creates artwork for artist', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: ARTIST_ID }] }) // artist profile
+      .mockResolvedValueOnce({ rows: [{ id: ARTWORK_ID, artist_id: ARTIST_ID, title: 'Mój obraz', status: 'available' }] });
+    const res = await request(app)
+      .post('/api/auctions/artworks')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ title: 'Mój obraz', medium: 'Olej na płótnie' });
+    expect(res.status).toBe(201);
+    expect(res.body.artwork.title).toBe('Mój obraz');
+  });
+});
+
+// ── POST /api/auctions ────────────────────────────────────────────────────────
+
+describe('POST /api/auctions', () => {
+  const endsAt = new Date(Date.now() + 86400000).toISOString();
+
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/auctions').send({});
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 403 when user has no artist profile', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .post('/api/auctions')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ artwork_id: ARTWORK_ID, title: 'Aukcja', starting_price: 100, ends_at: endsAt });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 400 for artwork not available', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: ARTIST_ID }] }) // artist profile
+      .mockResolvedValueOnce({ rows: [] }); // artwork not found
+    const res = await request(app)
+      .post('/api/auctions')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ artwork_id: ARTWORK_ID, title: 'Aukcja', starting_price: 100, ends_at: endsAt });
+    expect(res.status).toBe(400);
+  });
+
+  it('creates auction and marks artwork on_auction', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: ARTIST_ID }] }) // artist profile
+      .mockResolvedValueOnce({ rows: [{ id: ARTWORK_ID }] }) // artwork available
+      .mockResolvedValueOnce({ rows: [{ id: AUCTION_ID, artist_id: ARTIST_ID, artwork_id: ARTWORK_ID, title: 'Aukcja', status: 'active', starting_price: '100', current_price: '100', bid_count: 0, ends_at: endsAt }] }) // insert
+      .mockResolvedValueOnce({ rows: [] }); // update artwork status
+    const res = await request(app)
+      .post('/api/auctions')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ artwork_id: ARTWORK_ID, title: 'Aukcja', starting_price: 100, ends_at: endsAt });
+    expect(res.status).toBe(201);
+    expect(res.body.auction.title).toBe('Aukcja');
+  });
+});
+
+// ── POST /api/auctions/:id/bid ────────────────────────────────────────────────
+
+describe('POST /api/auctions/:id/bid', () => {
+  const endsAt = new Date(Date.now() + 86400000).toISOString();
+
+  it('requires authentication', async () => {
+    const res = await request(app).post(`/api/auctions/${AUCTION_ID}/bid`).send({ amount: 200 });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 for unknown auction', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .post(`/api/auctions/${AUCTION_ID}/bid`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ amount: 200 });
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 400 when bid not higher than current price', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: AUCTION_ID, status: 'active', ends_at: endsAt, current_price: '500', artist_id: ARTIST_ID }] });
+    const res = await request(app)
+      .post(`/api/auctions/${AUCTION_ID}/bid`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ amount: 300 });
+    expect(res.status).toBe(400);
+  });
+
+  it('places a valid bid', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: AUCTION_ID, status: 'active', ends_at: endsAt, current_price: '500', artist_id: ARTIST_ID }] }) // auction
+      .mockResolvedValueOnce({ rows: [{ user_id: 'different-user-id' }] }) // artist user_id check
+      .mockResolvedValueOnce({ rows: [{ id: 'bid-new', auction_id: AUCTION_ID, bidder_id: SELLER_ID, amount: '650' }] }) // insert bid
+      .mockResolvedValueOnce({ rows: [] }); // update auction
+    const res = await request(app)
+      .post(`/api/auctions/${AUCTION_ID}/bid`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ amount: 650 });
+    expect(res.status).toBe(201);
+    expect(res.body.bid.amount).toBe('650');
+  });
+});
+
+// ── GET /api/auctions/:id/bids ────────────────────────────────────────────────
+
+describe('GET /api/auctions/:id/bids', () => {
+  it('returns bid list for auction', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'bid-1', amount: '650', created_at: new Date().toISOString(), bidder_name: 'Kupujący' }] });
+    const res = await request(app).get(`/api/auctions/${AUCTION_ID}/bids`);
+    expect(res.status).toBe(200);
+    expect(res.body.bids).toHaveLength(1);
+    expect(res.body.bids[0].amount).toBe('650');
+  });
+
+  it('returns empty bids when none exist', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const res = await request(app).get(`/api/auctions/${AUCTION_ID}/bids`);
+    expect(res.status).toBe(200);
+    expect(res.body.bids).toHaveLength(0);
+    expect(res.body.total).toBe(0);
+  });
+});

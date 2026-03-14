@@ -754,6 +754,29 @@
     updateCreatorScore(creatorId, data)         { return put(`/reputation/creators/${creatorId}/score`, data); },
   };
 
+  // ─── Art Auctions ─────────────────────────────────────────────────────────────
+
+  const Auctions = {
+    /** List active auctions (public). GET /api/auctions */
+    list(params)                                { return get('/auctions', params); },
+    /** Get single auction details (public). GET /api/auctions/:id */
+    get(id)                                     { return get(`/auctions/${id}`); },
+    /** Create a new auction (artist). POST /api/auctions */
+    create(data)                                { return post('/auctions', data); },
+    /** Place a bid (authenticated). POST /api/auctions/:id/bid */
+    placeBid(id, amount)                        { return post(`/auctions/${id}/bid`, { amount }); },
+    /** List bids for an auction (public). GET /api/auctions/:id/bids */
+    listBids(id, params)                        { return get(`/auctions/${id}/bids`, params); },
+    /** List all artist profiles (public). GET /api/auctions/artists */
+    listArtists(params)                         { return get('/auctions/artists', params); },
+    /** Create or update own artist profile (authenticated). POST /api/auctions/artists */
+    saveArtistProfile(data)                     { return post('/auctions/artists', data); },
+    /** List artworks (public). GET /api/auctions/artworks */
+    listArtworks(params)                        { return get('/auctions/artworks', params); },
+    /** Add an artwork (artist). POST /api/auctions/artworks */
+    addArtwork(data)                            { return post('/auctions/artworks', data); },
+  };
+
   // ─── Public API surface ───────────────────────────────────────────────────────
 
   return {
@@ -777,6 +800,7 @@
     CreatorReferrals,
     Live,
     Reputation,
+    Auctions,
     health,
     /** Expose for advanced use cases. */
     _request: request,
