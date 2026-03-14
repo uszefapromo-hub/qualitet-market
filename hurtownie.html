@@ -25,7 +25,7 @@
     .supplier-cat{font-size:11px;padding:2px 9px;border-radius:20px;background:rgba(124,58,237,.12);color:var(--purple-bright);border:1px solid rgba(124,58,237,.2)}
     .supplier-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
     .btn-sm{font-size:13px;padding:7px 14px}
-    .supplier-selector-card{cursor:pointer;padding:16px;width:100%;text-align:left;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--stroke)}
+    .supplier-selector-card{cursor:pointer;padding:16px;width:100%;text-align:left;font:inherit;color:inherit;appearance:none;-webkit-appearance:none}
     .supplier-selector-card.is-selected{border:2px solid var(--purple)}
     [data-admin-only]{display:none}
     body[data-role="admin"] [data-admin-only],
@@ -696,9 +696,11 @@
         return;
       }
 
+      var activeSupplier = list.find(function (s) { return s.id === selectedSupplierId; }) || list[0];
       if (empty) empty.hidden = true;
       grid.innerHTML = list.map(function (s) {
-        return '<button type="button" class="panel-card supplier-selector-card" data-supplier-card data-sid="' + escHtml(s.id) + '" data-supplier-slug="' + escHtml(s.slug || s.id) + '" aria-pressed="false">'
+        var isSelected = activeSupplier && s.id === activeSupplier.id;
+        return '<button type="button" class="panel-card supplier-selector-card' + (isSelected ? ' is-selected' : '') + '" data-supplier-card data-sid="' + escHtml(s.id) + '" data-supplier-slug="' + escHtml(s.slug || s.id) + '" aria-pressed="' + (isSelected ? 'true' : 'false') + '">'
           + '<strong>' + escHtml(s.name) + '</strong>'
           + '<p style="font-size:13px;color:var(--muted);margin:4px 0 0">' + escHtml(s.integration_type || 'API') + '</p>'
           + '</button>';
@@ -711,7 +713,7 @@
         if (supplier) selectSupplier(supplier, list);
       };
 
-      selectSupplier(list[0], list);
+      selectSupplier(activeSupplier, list);
     }
 
     function loadSuppliers() {
