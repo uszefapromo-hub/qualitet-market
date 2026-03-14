@@ -34,6 +34,7 @@ const socialRouter = require('./routes/social');
 const gamificationRouter = require('./routes/gamification');
 const collaborationRouter = require('./routes/collaboration');
 const reputationRouter = require('./routes/reputation');
+const auctionsRouter = require('./routes/auctions');
 const aiRouter = require('./modules/ai/routes');
 const errorHandler = require('./middleware/errorHandler');
 const { importSupplierProducts } = require('./services/supplier-import');
@@ -287,6 +288,17 @@ app.get('/api/readiness', async (_req, res) => {
     ],
   };
 
+  // Art auctions system
+  checks.auctions_system = {
+    list_auctions:    'GET  /api/auctions',
+    get_auction:      'GET  /api/auctions/:id',
+    create_auction:   'POST /api/auctions',
+    place_bid:        'POST /api/auctions/:id/bid',
+    list_bids:        'GET  /api/auctions/:id/bids',
+    artist_profile:   'POST /api/auctions/artists',
+    artwork_upload:   'POST /api/auctions/artworks',
+  };
+
   const status = allOk ? 'ready' : 'degraded';
   return res.status(allOk ? 200 : 503).json({
     status,
@@ -326,6 +338,7 @@ app.use('/api/social', socialRouter);
 app.use('/api/gamification', gamificationRouter);
 app.use('/api/collaboration', collaborationRouter);
 app.use('/api/reputation', reputationRouter);
+app.use('/api/auctions', auctionsRouter);
 app.use('/api/ai', aiRouter);
 
 // ─── Public promo slots feed ───────────────────────────────────────────────────
