@@ -2320,3 +2320,78 @@ html,body{max-width:100vw;overflow-x:hidden}
 body.has-bottom-nav .site-footer{
   padding-bottom:calc(92px + 20px + env(safe-area-inset-bottom));
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVENESS — comprehensive overflow and layout guards
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Overflow guard — prevent media elements from pushing past viewport */
+img,video,iframe,embed,object,table{max-width:100%}
+
+/* Flex / grid children must not overflow */
+.wrap,.wrap-mini{box-sizing:border-box;overflow-x:hidden}
+
+/* Grids that use minmax with fixed minimums — override for tiny screens */
+@media(max-width:360px){
+  .social-video-grid{grid-template-columns:1fr !important}
+  .social-posts-feed{grid-template-columns:1fr !important}
+  .products-grid,.mkt-products-grid,.mkt-stores-grid,.mkt-hub-grid,.sellers-grid{grid-template-columns:1fr !important}
+  .stats-grid{grid-template-columns:repeat(2,1fr) !important}
+  .filter-row{grid-template-columns:1fr !important}
+  .live-banner{flex-direction:column;align-items:flex-start}
+  .live-banner h3{font-size:16px}
+}
+
+@media(max-width:480px){
+  /* Fix filter row that uses a 3-column grid */
+  .filter-row{grid-template-columns:1fr}
+  /* Live banner — allow text to wrap properly */
+  .live-banner{flex-wrap:wrap}
+  /* Ensure form inputs don't zoom on iOS */
+  input,select,textarea{font-size:16px !important}
+}
+
+/* ── App Install Bar — compact, never blocks content ── */
+/* Make bar always sit above bottom nav (even without .has-bottom-nav) */
+.app-install-bar{
+  /* Compact height override */
+  padding:10px 14px;
+}
+@media(max-width:640px){
+  .app-install-bar{
+    flex-direction:row;
+    align-items:center;
+    gap:10px;
+    padding:10px 12px;
+    left:8px;
+    right:8px;
+  }
+  .app-install-bar__text{gap:2px}
+  .app-install-bar__text strong{font-size:13px}
+  .app-install-bar__text span{display:none} /* hide subtitle to keep bar compact */
+  .app-install-bar__pill{display:none}
+  .app-install-bar__actions{flex-shrink:0}
+  .app-install-bar__actions .btn{min-height:32px;font-size:12px;padding:0 12px;flex:none;width:auto}
+}
+
+/* ── Ensure bottom nav is always accessible ── */
+@media(max-width:980px){
+  /* Banner sits above bottom nav */
+  body.has-bottom-nav .app-install-bar{
+    bottom:calc(var(--app-bar-height,70px) + 8px + env(safe-area-inset-bottom));
+  }
+  /* Body padding already accounts for banner + nav */
+  body.has-bottom-nav.has-app-install-bar{
+    padding-bottom:calc(var(--app-bar-height,70px) + 72px + env(safe-area-inset-bottom));
+  }
+}
+
+/* ── Products grid: single column on very small screens ── */
+@media(max-width:320px){
+  .products-grid,.mkt-products-grid,.mkt-stores-grid,.mkt-hub-grid,.sellers-grid,
+  .mkt-auctions-grid,.mkt-community-grid{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .wrap{width:calc(100% - 12px)}
+  .hero h1,.page-hero h1{font-size:18px}
+  .btn{min-height:40px;font-size:13px;padding:0 10px}
+}

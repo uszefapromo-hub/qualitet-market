@@ -23,7 +23,7 @@
   const SURVEY_SUCCESS_TIMEOUT = 1500;
   const SPLASH_STORAGE_KEY = 'app_splash_seen';
   const INSTALL_BANNER_DISMISSED_KEY = 'app_install_banner_dismissed';
-  const APP_INSTALL_BAR_DISMISSED_KEY = 'app_install_bar_dismissed';
+  const APP_INSTALL_BAR_DISMISSED_KEY = 'pwa_banner_closed';
   const APP_PROMO_LAST_SHOWN_KEY = 'app_promo_last_shown';
   const APP_PROMO_INDEX_KEY = 'app_promo_index';
   const APP_PROMO_MIN_INTERVAL = 1000 * 60 * 4;
@@ -31,7 +31,7 @@
   const APP_PROMO_SCROLL_TRIGGER = 260;
   const APP_PROMO_DEFAULT_DELAY = 3800;
   const APP_PROMO_FOCUS_DELAY = 2200;
-  const APP_INSTALL_BAR_AUTO_DISMISS_MS = 8000;
+  const APP_INSTALL_BAR_AUTO_DISMISS_MS = 6000;
   const DEFAULT_LOCALE = 'pl-PL';
   const DEFAULT_TEST_SLOTS = 20;
   const DEFAULT_LIVE_STEP_MIN = 1;
@@ -459,9 +459,15 @@
     if(!document.body){
       return null;
     }
+    // Only show on the homepage (index.html or root path)
+    const path = window.location.pathname;
+    const isHomepage = path === '/' || path.endsWith('/index.html') || path.endsWith('/index');
+    if(!isHomepage){
+      return null;
+    }
     // Check if user already dismissed this banner (persisted in localStorage)
     try{
-      if(localStorage.getItem(APP_INSTALL_BAR_DISMISSED_KEY) === 'true'){
+      if(localStorage.getItem(APP_INSTALL_BAR_DISMISSED_KEY)){
         return null;
       }
     } catch(_){}
@@ -496,7 +502,7 @@
     if(closeBtn){
       closeBtn.addEventListener('click', dismiss);
     }
-    // Auto-dismiss after a few seconds
+    // Auto-dismiss after 6 seconds
     window.setTimeout(dismiss, APP_INSTALL_BAR_AUTO_DISMISS_MS);
     return bar;
   }
