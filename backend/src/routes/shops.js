@@ -59,14 +59,13 @@ router.post(
         [id, req.user.id, safeName, slug, subdomain, safeDescription, margin, plan]
       );
 
-      // Auto-create trial subscription for the new shop
-      const trialConfig = PLAN_CONFIG['trial'];
-      const trialExpiresAt = new Date(Date.now() + trialConfig.duration_days * 24 * 60 * 60 * 1000);
+      // Auto-create free subscription for the new shop (no expiry)
+      const freeConfig = PLAN_CONFIG['free'];
       await db.query(
         `INSERT INTO subscriptions
            (id, shop_id, plan, status, product_limit, commission_rate, started_at, expires_at, created_at)
-         VALUES ($1, $2, 'trial', 'active', $3, $4, NOW(), $5, NOW())`,
-        [uuidv4(), id, trialConfig.product_limit, trialConfig.commission_rate, trialExpiresAt]
+         VALUES ($1, $2, 'free', 'active', $3, $4, NOW(), NULL, NOW())`,
+        [uuidv4(), id, freeConfig.product_limit, freeConfig.commission_rate]
       );
 
       return res.status(201).json({
@@ -158,6 +157,89 @@ router.get('/:slug/products', async (req, res) => {
     return res.status(500).json({ error: 'Błąd serwera' });
   }
 });
+
+// ─── POST /api/shops/quick-setup – create shop + auto-import products ─────────
+// "Sklep w 60 sekund": seller provides name + category, system auto-creates shop,
+// imports first products from central catalogue, and sets default margin.
+
+router.post(
+  '/quick-setup',
+  authenticate,
+  requireRole('seller', 'owner', 'admin'),
+  [
+    body('name').trim().notEmpty(),
+    body('category').optional().trim(),
+    body('margin').optional().isFloat({ min: 0, max: 100 }),
+  ],
+  validate,
+  async (req, res) => {
+    const {
+      name,
+      category = null,
+      margin = 20,
+    } = req.body;
+    const safeName = sanitizeText(name);
+
+    try {
+      // 1. Create store
+      const baseSlug = nameToSlug(safeName);
+      const slug = await uniqueSlug(baseSlug);
+      const subdomain = `${slug}.qualitetmarket.pl`;
+      const storeId = uuidv4();
+
+      const storeResult = await db.query(
+        `INSERT INTO stores (id, owner_id, name, slug, subdomain, description, margin, plan, status, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'free', 'active', NOW())
+         RETURNING *`,
+        [storeId, req.user.id, safeName, slug, subdomain, null, margin]
+      );
+
+      // 2. Create free subscription (no expiry)
+      const freeConfig = PLAN_CONFIG['free'];
+      await db.query(
+        `INSERT INTO subscriptions
+           (id, shop_id, plan, status, product_limit, commission_rate, started_at, expires_at, created_at)
+         VALUES ($1, $2, 'free', 'active', $3, $4, NOW(), NULL, NOW())`,
+        [uuidv4(), storeId, freeConfig.product_limit, freeConfig.commission_rate]
+      );
+
+      // 3. Auto-import first products from central catalogue (up to 5)
+      const conditions = ['p.is_central = true', 'p.stock > 0'];
+      const params = [];
+      if (category) {
+        conditions.push(`p.category ILIKE $${params.length + 1}`);
+        params.push(`%${category}%`);
+      }
+      const where = `WHERE ${conditions.join(' AND ')}`;
+      const productResult = await db.query(
+        `SELECT id, selling_price, margin FROM products p ${where} ORDER BY p.created_at DESC LIMIT 5`,
+        params
+      );
+
+      const importedProducts = [];
+      for (const product of productResult.rows) {
+        const spId = uuidv4();
+        await db.query(
+          `INSERT INTO shop_products (id, store_id, product_id, active, margin_override, sort_order, created_at)
+           VALUES ($1, $2, $3, true, $4, 0, NOW())
+           ON CONFLICT (store_id, product_id) DO NOTHING`,
+          [spId, storeId, product.id, margin]
+        );
+        importedProducts.push(product.id);
+      }
+
+      return res.status(201).json({
+        ...storeResult.rows[0],
+        imported_products: importedProducts.length,
+        next_step: 'add_products',
+        message: `Sklep "${safeName}" utworzony! Zaimportowano ${importedProducts.length} produktów.`,
+      });
+    } catch (err) {
+      console.error('quick-setup error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
 
 module.exports = router;
 

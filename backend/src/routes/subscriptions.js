@@ -217,7 +217,7 @@ router.put(
   requireRole('owner', 'admin'),
   [
     param('id').isUUID(),
-    body('status').optional().isIn(['active', 'cancelled', 'expired']),
+    body('status').optional().isIn(['active', 'cancelled', 'expired', 'legacy']),
     body('plan').optional().isIn(VALID_PLANS),
     body('expires_at').optional().isISO8601(),
     body('commission_rate').optional().isFloat({ min: 0, max: 1 }),
@@ -246,6 +246,7 @@ router.put(
            expires_at      = COALESCE($3::timestamptz, expires_at),
            commission_rate = COALESCE($4, commission_rate),
            product_limit   = COALESCE($5, product_limit),
+           is_legacy       = CASE WHEN $1 = 'legacy' THEN true ELSE is_legacy END,
            updated_at      = NOW()
          WHERE id = $6
          RETURNING *`,

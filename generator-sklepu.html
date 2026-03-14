@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pl">
 <head>
-  <title>Generator sklepu - HurtDetal Uszefa QUALITET</title>
+  <title>Generator sklepu | QualitetVerse</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="manifest" href="manifest.json">
@@ -21,7 +21,7 @@
       </div>
       <div class="app-splash-title">
         <strong>QualitetVerse</strong>
-        <span>AI Commerce Platform</span>
+        <span>Marketplace B2B/B2C</span>
       </div>
       <div class="app-splash-loader"></div>
     </div>
@@ -31,8 +31,8 @@
       <a class="brand" href="index.html">
         <div>
           <strong>QualitetVerse</strong>
-          <span>AI Commerce Platform</span>
-          <span class="brand-tag">U SZEFA</span>
+          <span>Marketplace B2B/B2C</span>
+          
         </div>
       </a>
       <nav class="nav" aria-label="Główna nawigacja">
@@ -49,7 +49,42 @@
     <section class="page-hero compact">
       <span class="eyebrow">Kreator sklepu</span>
       <h1>Generator sklepu</h1>
-      <p class="lead">Uzupełnij dane, aby stworzyć sklep na platformie U SZEFA.</p>
+      <p class="lead">Uzupełnij dane, aby stworzyć sklep na platformie QualitetVerse.</p>
+    </section>
+
+    <!-- Sklep w 60 sekund -->
+    <section class="panel-card" style="max-width:860px;margin:0 auto 24px;border:2px solid rgba(139,92,246,.45)">
+      <div class="section-head">
+        <span class="eyebrow">🚀 Sklep w 60 sekund</span>
+        <h2>Błyskawiczny start sklepu</h2>
+        <p class="hint">Wpisz nazwę sklepu i wybierz kategorię. System automatycznie: tworzy sklep, importuje pierwsze produkty i ustawia marżę.</p>
+      </div>
+      <div class="owner-toolbar" style="flex-wrap:wrap;gap:12px">
+        <label class="form-field" style="flex:2;min-width:200px">
+          Nazwa sklepu *
+          <input type="text" id="quickName" class="owner-input" placeholder="np. Sklep z elektroniką">
+        </label>
+        <label class="form-field" style="flex:1;min-width:160px">
+          Kategoria
+          <input type="text" id="quickCategory" class="owner-input" placeholder="np. elektronika">
+        </label>
+        <label class="form-field" style="min-width:110px">
+          Marża (%)
+          <input type="number" id="quickMargin" class="owner-input" min="0" max="100" value="20">
+        </label>
+      </div>
+      <div class="cta-row" style="margin-top:12px">
+        <button class="btn btn-primary" type="button" id="quickSetupBtn" style="background:linear-gradient(135deg,#7c3aed,#0ea5e9)">🚀 Utwórz sklep teraz</button>
+        <span class="hint" id="quickStatus"></span>
+      </div>
+      <div id="quickResult" hidden style="margin-top:16px;padding:16px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.3);border-radius:12px">
+        <strong style="color:#22c55e">✅ Sklep został utworzony!</strong>
+        <p id="quickResultMsg" style="color:var(--muted);margin:6px 0 12px"></p>
+        <div class="cta-row">
+          <a class="btn btn-primary" id="quickResultShopLink" href="panel-sklepu.html">Przejdź do panelu sklepu</a>
+          <a class="btn btn-secondary" href="hurtownie.html">Importuj więcej produktów</a>
+        </div>
+      </div>
     </section>
 
     <!-- Auto-generate section -->
@@ -258,7 +293,7 @@
 
   <footer class="wrap panel-footer">
     <div class="panel-footer-inner">
-      <span>© 2025 QualitetVerse &mdash; Platforma dropshipping</span>
+      <span>© 2026 QualitetVerse — All rights reserved. Project created by Henryk Ślusarski</span>
       <div class="panel-footer-links">
         <a href="dashboard.html">Dashboard</a>
         <a href="cennik.html">Cennik</a>
@@ -386,6 +421,58 @@
       const applyBtn = document.getElementById('genApplyBtn');
       if (genBtn)   genBtn.addEventListener('click', generateStore);
       if (applyBtn) applyBtn.addEventListener('click', applyGenerated);
+
+      // ── Sklep w 60 sekund ──────────────────────────────────────────────────
+      const quickBtn = document.getElementById('quickSetupBtn');
+      if (quickBtn) {
+        quickBtn.addEventListener('click', async () => {
+          const nameInput   = document.getElementById('quickName');
+          const catInput    = document.getElementById('quickCategory');
+          const marginInput = document.getElementById('quickMargin');
+          const statusEl    = document.getElementById('quickStatus');
+          const resultEl    = document.getElementById('quickResult');
+          const msgEl       = document.getElementById('quickResultMsg');
+
+          const name     = (nameInput   || {}).value || '';
+          const category = (catInput    || {}).value || '';
+          const margin   = parseFloat((marginInput || {}).value || '20');
+
+          if (!name.trim()) {
+            if (statusEl) statusEl.textContent = '❌ Wpisz nazwę sklepu';
+            return;
+          }
+
+          quickBtn.disabled = true;
+          quickBtn.textContent = '⏳ Tworzę sklep…';
+          if (statusEl) statusEl.textContent = '';
+
+          try {
+            const apiBase = window.QM_API_BASE || '/api';
+            const token = localStorage.getItem('token') || '';
+            const res = await fetch(apiBase.replace(/\/api$/, '') + '/api/shops/quick-setup', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: 'Bearer ' + token } : {}),
+              },
+              body: JSON.stringify({ name, category: category || undefined, margin }),
+            });
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({}));
+              throw new Error(err.error || 'Błąd tworzenia sklepu');
+            }
+            const data = await res.json();
+            if (msgEl) msgEl.textContent = data.message || 'Sklep gotowy!';
+            if (resultEl) resultEl.hidden = false;
+            if (statusEl) statusEl.textContent = '';
+          } catch (err) {
+            if (statusEl) statusEl.textContent = '❌ ' + (err.message || 'Błąd. Upewnij się, że jesteś zalogowany jako sprzedawca.');
+          } finally {
+            quickBtn.disabled = false;
+            quickBtn.textContent = '🚀 Utwórz sklep teraz';
+          }
+        });
+      }
     });
   })();
   </script>

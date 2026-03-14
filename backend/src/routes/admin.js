@@ -669,8 +669,8 @@ router.patch(
   requireRole('owner', 'admin'),
   [
     param('id').isUUID(),
-    body('plan').optional().isIn(['trial', 'basic', 'pro', 'elite']),
-    body('status').optional().isIn(['active', 'cancelled', 'expired', 'superseded']),
+    body('plan').optional().isIn(['trial', 'basic', 'pro', 'elite', 'free', 'supplier_basic', 'supplier_pro', 'brand', 'artist_basic', 'artist_pro']),
+    body('status').optional().isIn(['active', 'cancelled', 'expired', 'superseded', 'legacy']),
     body('expires_at').optional().isISO8601(),
     body('commission_rate').optional().isFloat({ min: 0, max: 1 }),
     body('product_limit').optional({ nullable: true }).isInt({ min: 0 }),
@@ -695,6 +695,7 @@ router.patch(
            expires_at      = COALESCE($3::timestamptz, expires_at),
            commission_rate = COALESCE($4, commission_rate),
            product_limit   = COALESCE($5, product_limit),
+           is_legacy       = CASE WHEN $2 = 'legacy' THEN true ELSE is_legacy END,
            updated_at      = NOW()
          WHERE id = $6
          RETURNING *`,

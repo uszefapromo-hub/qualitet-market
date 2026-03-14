@@ -2315,6 +2315,58 @@ describe('POST /api/shops – auto trial subscription', () => {
   });
 });
 
+// ─── POST /api/shops/quick-setup ──────────────────────────────────────────────
+
+describe('POST /api/shops/quick-setup', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post('/api/shops/quick-setup')
+      .send({ name: 'Szybki Sklep' });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 422 when name is missing', async () => {
+    const res = await request(app)
+      .post('/api/shops/quick-setup')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({});
+    expect(res.status).toBe(422);
+  });
+
+  it('creates shop with auto-imported products', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })  // slug free
+      .mockResolvedValueOnce({ rows: [{ id: 'qs-shop-id', name: 'Szybki Sklep', slug: 'szybki-sklep', margin: 20, status: 'active' }] })  // INSERT store
+      .mockResolvedValueOnce({ rows: [] })  // INSERT free subscription
+      .mockResolvedValueOnce({ rows: [{ id: 'prod-1', selling_price: 99, margin: 20 }] })  // central products query
+      .mockResolvedValueOnce({ rows: [] }); // INSERT shop_product
+
+    const res = await request(app)
+      .post('/api/shops/quick-setup')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ name: 'Szybki Sklep', category: 'elektronika', margin: 20 });
+    expect(res.status).toBe(201);
+    expect(res.body.next_step).toBe('add_products');
+    expect(res.body.imported_products).toBe(1);
+  });
+
+  it('creates shop without category filter', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })  // slug free
+      .mockResolvedValueOnce({ rows: [{ id: 'qs-shop-2', name: 'Ogólny Sklep', slug: 'ogolny-sklep', margin: 20, status: 'active' }] })
+      .mockResolvedValueOnce({ rows: [] })  // subscription
+      .mockResolvedValueOnce({ rows: [] }); // no central products
+
+    const res = await request(app)
+      .post('/api/shops/quick-setup')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ name: 'Ogólny Sklep' });
+    expect(res.status).toBe(201);
+    expect(res.body.imported_products).toBe(0);
+  });
+});
+
+
 describe('POST /api/my/store/products – subscription checks', () => {
   it('blocks adding product when subscription is expired', async () => {
     // requireActiveSubscription middleware returns no active subscription
@@ -2704,9 +2756,23 @@ describe('PATCH /api/admin/subscriptions/:id', () => {
     expect(res.status).toBe(200);
     expect(res.body.commission_rate).toBe(0.08);
   });
+
+  it('marks subscription as legacy when status is set to legacy', async () => {
+    const SUB_ID = '00000000-0000-4000-8000-000000000001';
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SUB_ID, plan: 'basic', status: 'legacy', is_legacy: true, commission_rate: 0.03 }],
+    });
+
+    const res = await request(app)
+      .patch(`/api/admin/subscriptions/${SUB_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'legacy' });
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('legacy');
+  });
 });
 
-// ─── Subdomain store routes (GET /api/store) ──────────────────────────────────
+
 
 describe('GET /api/store (subdomain)', () => {
   it('returns 404 when no subdomain is present', async () => {
