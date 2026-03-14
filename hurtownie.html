@@ -25,8 +25,9 @@
     .supplier-cat{font-size:11px;padding:2px 9px;border-radius:20px;background:rgba(124,58,237,.12);color:var(--purple-bright);border:1px solid rgba(124,58,237,.2)}
     .supplier-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
     .btn-sm{font-size:13px;padding:7px 14px}
-    .supplier-selector-card{cursor:pointer;padding:16px}
+    .supplier-selector-card{cursor:pointer;padding:16px;width:100%;text-align:left;font:inherit;color:inherit;appearance:none}
     .supplier-selector-card.is-selected{border:2px solid var(--purple)}
+    .supplier-selector-card:focus-visible{outline:2px solid var(--purple);outline-offset:2px}
     [data-admin-only]{display:none}
     body[data-role="admin"] [data-admin-only],
     body[data-role="owner"] [data-admin-only]{display:inline-flex}
@@ -631,12 +632,13 @@
       });
 
       grid.innerHTML = filtered.map(function (p) {
-        var finalPrice = computePriceWithMargin(p.cost, margin);
+        var cost = Number(p.cost) || 0;
+        var finalPrice = computePriceWithMargin(cost, margin);
         return '<article class="panel-card product-card">'
           + '<strong>' + escHtml(p.name) + '</strong>'
           + '<p class="hint" style="margin:6px 0 10px">' + escHtml(p.category || 'Produkt') + '</p>'
           + '<div class="cta-row" style="gap:8px;align-items:center">'
-          + '<span style="font-size:13px;color:var(--muted)">Koszt: ' + escHtml(p.cost.toFixed(2)) + ' zł</span>'
+          + '<span style="font-size:13px;color:var(--muted)">Koszt: ' + escHtml(cost.toFixed(2)) + ' zł</span>'
           + '<span style="font-size:13px;color:var(--muted)">Cena z marżą: ' + escHtml(finalPrice.toFixed(2)) + ' zł</span>'
           + '</div>'
           + '</article>';
@@ -671,8 +673,10 @@
         grid.querySelectorAll('[data-supplier-card]').forEach(function (c) {
           if (c.dataset.sid === selectedSupplierId) {
             c.classList.add('is-selected');
+            c.setAttribute('aria-pressed', 'true');
           } else {
             c.classList.remove('is-selected');
+            c.setAttribute('aria-pressed', 'false');
           }
         });
       }
@@ -695,10 +699,10 @@
 
       if (empty) empty.hidden = true;
       grid.innerHTML = list.map(function (s) {
-        return '<div class="panel-card supplier-selector-card" data-supplier-card data-sid="' + escHtml(s.id) + '" data-supplier-slug="' + escHtml(s.slug || s.id) + '">'
+        return '<button type="button" class="panel-card supplier-selector-card" data-supplier-card data-sid="' + escHtml(s.id) + '" data-supplier-slug="' + escHtml(s.slug || s.id) + '" aria-pressed="false">'
           + '<strong>' + escHtml(s.name) + '</strong>'
           + '<p style="font-size:13px;color:var(--muted);margin:4px 0 0">' + escHtml(s.integration_type || 'API') + '</p>'
-          + '</div>';
+          + '</button>';
       }).join('');
 
       grid.onclick = function (e) {
@@ -718,7 +722,7 @@
         .then(function (data) {
           var items = Array.isArray(data) ? data : (data.suppliers || []);
           var mapped = items.map(function (s) {
-            var fallback = findStaticSupplier(s.id || s.name || s.slug) || { slug: normaliseSlug(s.name || s.id || '') };
+            var fallback = findStaticSupplier(s.slug || s.name || s.id) || { slug: normaliseSlug(s.name || s.id || '') };
             return mergeWithFallback(s, fallback);
           });
           var finalList = mapped.length ? mapped : STATIC_SUPPLIERS;
