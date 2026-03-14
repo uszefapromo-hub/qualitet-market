@@ -23,6 +23,7 @@
   const SURVEY_SUCCESS_TIMEOUT = 1500;
   const SPLASH_STORAGE_KEY = 'app_splash_seen';
   const INSTALL_BANNER_DISMISSED_KEY = 'app_install_banner_dismissed';
+  const APP_INSTALL_BAR_DISMISSED_KEY = 'app_install_bar_dismissed';
   const APP_PROMO_LAST_SHOWN_KEY = 'app_promo_last_shown';
   const APP_PROMO_INDEX_KEY = 'app_promo_index';
   const APP_PROMO_MIN_INTERVAL = 1000 * 60 * 4;
@@ -30,6 +31,7 @@
   const APP_PROMO_SCROLL_TRIGGER = 260;
   const APP_PROMO_DEFAULT_DELAY = 3800;
   const APP_PROMO_FOCUS_DELAY = 2200;
+  const APP_INSTALL_BAR_AUTO_DISMISS_MS = 8000;
   const DEFAULT_LOCALE = 'pl-PL';
   const DEFAULT_TEST_SLOTS = 20;
   const DEFAULT_LIVE_STEP_MIN = 1;
@@ -323,31 +325,13 @@
         imageAlt: 'QualitetVerse Mobile App'
       },
       {
-        eyebrow: 'Mobile PRO',
+        eyebrow: 'Mobile',
         title: 'Uruchom sklep szybciej z aplikacji',
         description: 'Zarządzaj hurtowniami i ofertą sprzedaży bezpośrednio z telefonu.',
         points: ['Mobilne zarządzanie hurtowniami', 'Szybkie dodawanie produktów', 'Powiadomienia o sprzedaży'],
         tag: 'Sklep + Hurt',
         image: 'https://github.com/user-attachments/assets/bf1aaeec-617f-4741-9bd6-f4924b362ea8',
         imageAlt: 'Zarządzanie sklepem z telefonu'
-      },
-      {
-        eyebrow: 'Platforma PRO',
-        title: 'Wejdź do platformy PRO',
-        description: 'Aktywuj plan i działaj. Dostęp do hurtowni, CRM i modułów sprzedaży.',
-        points: ['Pełny dostęp do hurtowni', 'CRM i listing produktów', 'Wyniki sprzedaży w aplikacji'],
-        tag: 'Upgrade',
-        image: 'https://github.com/user-attachments/assets/5e136c43-153f-4e14-8136-79e0715b622d',
-        imageAlt: 'Plan PRO w platformie QualitetVerse'
-      },
-      {
-        eyebrow: 'AI premium',
-        title: 'AI pomocnik tylko dla ELITE',
-        description: 'Asystent premium analizuje sprzedaż i podpowiada najlepsze ruchy.',
-        points: ['AI asystent sprzedaży', 'Analizy predykcyjne', 'Dostęp tylko w ELITE'],
-        tag: 'Elite AI',
-        image: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=900&q=80',
-        imageAlt: 'Zespół biznesowy planujący sprzedaż'
       }
     ];
   }
@@ -475,6 +459,12 @@
     if(!document.body){
       return null;
     }
+    // Check if user already dismissed this banner (persisted in localStorage)
+    try{
+      if(localStorage.getItem(APP_INSTALL_BAR_DISMISSED_KEY) === 'true'){
+        return null;
+      }
+    } catch(_){}
     const existing = document.querySelector('[data-app-install-bar]');
     if(existing){
       return existing;
@@ -485,24 +475,29 @@
     bar.innerHTML = `
       <button class="app-install-bar__close" type="button" data-app-install-bar-close aria-label="Zamknij panel">×</button>
       <div class="app-install-bar__text">
-        <span class="app-install-bar__pill">Panel mobilny</span>
-        <strong>Otwórz aplikację</strong>
-        <span>Zainstaluj aplikację • Dodaj do ekranu głównego</span>
+        <span class="app-install-bar__pill">Aplikacja</span>
+        <strong>Dodaj do ekranu głównego</strong>
+        <span>Szybki dostęp do platformy QualitetVerse</span>
       </div>
       <div class="app-install-bar__actions">
-        <button class="btn btn-primary" type="button" data-app-install-open>Otwórz aplikację</button>
-        <button class="btn btn-secondary" type="button" data-app-install-open>Instrukcja instalacji</button>
+        <a class="btn btn-primary" href="dashboard.html" style="min-height:36px;font-size:13px;padding:0 14px">Otwórz</a>
       </div>
     `;
     document.body.appendChild(bar);
     document.body.classList.add('has-app-install-bar');
+    const dismiss = () => {
+      bar.remove();
+      document.body.classList.remove('has-app-install-bar');
+      try{
+        localStorage.setItem(APP_INSTALL_BAR_DISMISSED_KEY, 'true');
+      } catch(_){}
+    };
     const closeBtn = bar.querySelector('[data-app-install-bar-close]');
     if(closeBtn){
-      closeBtn.addEventListener('click', () => {
-        bar.remove();
-        document.body.classList.remove('has-app-install-bar');
-      });
+      closeBtn.addEventListener('click', dismiss);
     }
+    // Auto-dismiss after a few seconds
+    window.setTimeout(dismiss, APP_INSTALL_BAR_AUTO_DISMISS_MS);
     return bar;
   }
 
@@ -517,47 +512,9 @@
   }
 
   function scheduleAppPromoTriggers(){
-    const page = document.body.dataset.page || '';
-    const delay = (page === 'sklep' || page === 'hurtownie') ? APP_PROMO_FOCUS_DELAY : APP_PROMO_DEFAULT_DELAY;
-    if(canShowAppPromo()){
-      window.setTimeout(() => {
-        openAppPromo();
-      }, delay);
-    }
-    let repeatIntervalId = null;
-    const startRepeatInterval = () => {
-      if(repeatIntervalId){
-        return;
-      }
-      repeatIntervalId = window.setInterval(() => {
-        openAppPromo();
-      }, APP_PROMO_REPEAT_INTERVAL);
-    };
-    const stopRepeatInterval = () => {
-      if(repeatIntervalId){
-        clearInterval(repeatIntervalId);
-        repeatIntervalId = null;
-      }
-    };
-    const handleVisibility = () => {
-      if(document.hidden){
-        stopRepeatInterval();
-      } else {
-        startRepeatInterval();
-      }
-    };
-    handleVisibility();
-    document.addEventListener('visibilitychange', handleVisibility);
-    let scrollTriggered = false;
-    window.addEventListener('scroll', () => {
-      if(scrollTriggered){
-        return;
-      }
-      if(window.scrollY > APP_PROMO_SCROLL_TRIGGER){
-        scrollTriggered = true;
-        openAppPromo();
-      }
-    }, {passive: true});
+    // Auto-triggers disabled — the app promo modal should only open
+    // when the user explicitly clicks an "Otwórz aplikację" button.
+    // This prevents the popup from blocking the screen and bottom menu.
   }
 
   function initAppInstallExperience(){
@@ -3774,40 +3731,13 @@
   }
 
   function initPlanGates(){
-    const currentPlan = getCurrentPlan();
-    const currentLevel = getPlanLevel(currentPlan);
-    const elements = Array.from(document.querySelectorAll('[data-require]:not(body)'));
-    if(elements.length){
-      elements.forEach(element => {
-        const requiredPlan = normalizePlan(element.dataset.require);
-        if(!requiredPlan){
-          return;
-        }
-        const requiredLevel = getPlanLevel(requiredPlan);
-        if(requiredLevel < 0){
-          return;
-        }
-        const allowed = currentLevel >= requiredLevel;
-        element.classList.toggle('is-locked', !allowed);
-        if(!allowed){
-          element.setAttribute('aria-disabled', 'true');
-        }
-        element.addEventListener('click', event => {
-          const latestLevel = getPlanLevel(getCurrentPlan());
-          if(latestLevel < requiredLevel){
-            event.preventDefault();
-            event.stopPropagation();
-            showUpgradeModal(requiredPlan);
-          }
-        });
-      });
-    }
-    const pageRequirement = normalizePlan(document.body.dataset.require);
-    const pageRequirementLevel = getPlanLevel(pageRequirement);
-    if(pageRequirement && pageRequirementLevel >= 0 && currentLevel < pageRequirementLevel){
-      document.body.classList.add('page-locked');
-      showUpgradeModal(pageRequirement, {lockPage: true});
-    }
+    // Subscription plan gates removed — platform operates without Basic/PRO/Elite locks.
+    // All features are available to all users.
+    // Only remove the locked visual state from any elements that may have been marked.
+    document.querySelectorAll('[data-require]').forEach(el => {
+      el.classList.remove('is-locked');
+      el.removeAttribute('aria-disabled');
+    });
   }
 
   // ── isAppLoggedIn: checks both the API JWT token and the legacy localStorage flag ──

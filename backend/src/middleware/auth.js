@@ -72,29 +72,9 @@ function signToken(user) {
  * On success, attaches the subscription record to req.subscription.
  */
 async function requireActiveSubscription(req, res, next) {
-  const storeId = req.body.store_id || req.params.store_id || req.query.store_id;
-  if (!storeId) return next(); // no shop context – caller is responsible
-
-  try {
-    const result = await getDb().query(
-      `SELECT * FROM subscriptions
-       WHERE shop_id = $1
-         AND status = 'active'
-         AND (expires_at IS NULL OR expires_at > NOW())
-       ORDER BY created_at DESC LIMIT 1`,
-      [storeId]
-    );
-
-    if (!result.rows[0]) {
-      return res.status(403).json({ error: 'subscription_expired' });
-    }
-
-    req.subscription = result.rows[0];
-    next();
-  } catch (err) {
-    console.error('requireActiveSubscription error:', err.message);
-    return res.status(500).json({ error: 'Błąd serwera' });
-  }
+  // Subscription gates removed — platform operates without subscription requirements.
+  // All authenticated sellers can add products regardless of subscription status.
+  return next();
 }
 
 module.exports = { authenticate, requireRole, requireSuperAdmin, requireActiveSubscription, signToken };

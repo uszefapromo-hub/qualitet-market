@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Blog | QualitetVerse</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Blog platformy QualitetVerse — trendy produkty, poradniki sprzedaży, viral produkty i aktualności marketplace.">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#7c3aed">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
+  <link rel="stylesheet" href="panel.css">
+  <style>
+    .blog-hero{padding:40px 0 28px;text-align:center}
+    .blog-hero h1{font-size:clamp(28px,5vw,44px);margin:0 0 12px}
+    .blog-hero p{font-size:16px;color:var(--muted);max-width:600px;margin:0 auto 24px}
+    .blog-tabs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:32px}
+    .blog-tab{padding:9px 18px;border-radius:999px;border:1px solid var(--stroke);background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s}
+    .blog-tab:hover,.blog-tab.is-active{background:var(--purple);border-color:var(--purple);color:#fff}
+    .blog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:22px;margin-bottom:48px}
+    .blog-card{border:1px solid var(--stroke);border-radius:18px;overflow:hidden;background:var(--card);display:flex;flex-direction:column;transition:box-shadow .2s,border-color .2s}
+    .blog-card:hover{box-shadow:0 8px 32px rgba(0,0,0,.25);border-color:var(--purple)}
+    .blog-card-img{aspect-ratio:16/9;overflow:hidden;background:#0d0d20;position:relative}
+    .blog-card-img img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s}
+    .blog-card:hover .blog-card-img img{transform:scale(1.04)}
+    .blog-card-badge{position:absolute;top:10px;left:10px;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+    .badge-trend{background:rgba(139,92,246,.85);color:#fff}
+    .badge-guide{background:rgba(0,212,255,.85);color:#000}
+    .badge-viral{background:rgba(255,79,216,.85);color:#fff}
+    .badge-news{background:rgba(34,197,94,.85);color:#000}
+    .blog-card-body{padding:18px;flex:1;display:flex;flex-direction:column;gap:10px}
+    .blog-card-category{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--purple-bright);font-weight:700}
+    .blog-card-title{font-size:17px;font-weight:700;line-height:1.35;margin:0}
+    .blog-card-desc{font-size:13px;color:var(--muted);line-height:1.55;margin:0;flex:1}
+    .blog-card-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;padding-top:12px;border-top:1px solid var(--stroke)}
+    .blog-card-date{font-size:12px;color:var(--muted)}
+    .blog-card-read{font-size:12px;color:var(--cyan);font-weight:600;text-decoration:none}
+    .blog-card-read:hover{text-decoration:underline}
+    .blog-tags{display:flex;flex-wrap:wrap;gap:6px}
+    .blog-tag{font-size:11px;padding:3px 9px;border-radius:20px;background:rgba(139,92,246,.12);color:var(--purple-bright);border:1px solid rgba(139,92,246,.2)}
+    .blog-section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:8px}
+    .blog-section-head h2{margin:0;font-size:22px}
+    @media(max-width:640px){
+      .blog-grid{grid-template-columns:1fr}
+      .blog-hero{padding:28px 0 16px}
+      .blog-hero h1{font-size:26px}
+    }
+  </style>
+  <script>window.QM_API_BASE = 'https://api.uszefaqualitet.pl/api';</script>
+</head>
+<body data-page="blog" class="feature-page has-bottom-nav">
+  <div class="app-splash" data-app-splash>
+    <div class="app-splash-card">
+      <div class="app-splash-logo">
+        <img src="assets/icons/icon-192.svg" alt="QualitetVerse">
+      </div>
+      <div class="app-splash-title">
+        <strong>QualitetVerse</strong>
+        <span>Marketplace B2B/B2C</span>
+      </div>
+      <div class="app-splash-loader"></div>
+    </div>
+  </div>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>QualitetVerse</strong>
+          <span>Marketplace B2B/B2C</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Główna nawigacja">
+        <a href="index.html">Start</a>
+        <a href="hurtownie.html">Hurtownie</a>
+        <a href="dashboard.html">Dashboard</a>
+      </nav>
+      <a class="btn btn-primary topbar-cta" href="dashboard.html">Panel</a>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="blog-hero">
+      <div class="wrap">
+        <span class="eyebrow">📚 Wiedza i trendy</span>
+        <h1>Blog QualitetVerse</h1>
+        <p>Trendy produkty, poradniki sprzedaży, viral produkty i aktualności ze świata e-commerce.</p>
+      </div>
+    </section>
+
+    <div class="wrap">
+      <div class="blog-tabs">
+        <button class="blog-tab is-active" data-tab="all">Wszystko</button>
+        <button class="blog-tab" data-tab="trend">🔥 Trendy</button>
+        <button class="blog-tab" data-tab="guide">📖 Poradniki</button>
+        <button class="blog-tab" data-tab="viral">🚀 Viral</button>
+        <button class="blog-tab" data-tab="news">📢 Aktualności</button>
+      </div>
+
+      <!-- TRENDING PRODUCTS -->
+      <section data-section="trend">
+        <div class="blog-section-head">
+          <h2>🔥 Trendy Produkty</h2>
+          <a class="btn btn-secondary" href="hurtownie.html" style="font-size:13px;min-height:36px;padding:0 14px">Zobacz hurtownie</a>
+        </div>
+        <div class="blog-grid">
+          <article class="blog-card">
+            <div class="blog-card-img">
+              <img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=600&q=80" alt="Smartwatche 2026 — top trendy">
+              <span class="blog-card-badge badge-trend">Trend</span>
+            </div>
+            <div class="blog-card-body">
+              <span class="blog-card-category">Elektronika</span>
+              <h3 class="blog-card-title">Smartwatche 2026 — 5 modeli które się najlepiej sprzedają</h3>
+              <p class="blog-card-desc">Zegarki smart to jeden z najgorętszych trendów w dropshippingu. Sprawdź które modele generują najwyższe marże i skąd je importować.</p>
+              <div class="blog-tags">
+                <span class="blog-tag">#smartwatch</span>
+                <span class="blog-tag">#elektronika</span>
+                <span class="blog-tag">#trend</span>
+              </div>
+              <div class="blog-card-footer">
+                <span class="blog-card-date">Marzec 2026</span>
+                <a class="blog-card-read" href="hurtownie.html">Importuj produkty →</a>
+              </div>
+            </div>
+          </article>
+
+          <article class="blog-card">
+            <div class="blog-card-img">
+              <img src="https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&w=600&q=80" alt="Produkty do domu — top sprzedaż">
+              <span class="blog-card-badge badge-trend">Trend</span>
+            </div>
+            <div class="blog-card-body">
+              <span class="blog-card-category">Dom i ogród</span>
+              <h3 class="blog-card-title">Top 10 produktów dom&ogród — najlepiej sprzedające się w 2026</h3>
+              <p class="blog-card-desc">Produkty do domu i ogrodu notują rekordowe wzrosty. Zestawy do organizacji, oświetlenie LED i akcesoria kuchenne na topie.</p>
+              <div class="blog-tags">
+                <span class="blog-tag">#dom</span>
+                <span class="blog-tag">#ogród</span>
+                <span class="blog-tag">#bestseller</span>
+              </div>
+              <div class="blog-card-footer">
+                <span class="blog-card-date">Marzec 2026</span>
+                <a class="blog-card-read" href="hurtownie.html">Znajdź dostawcę →</a>
+              </div>
+            </div>
+          </article>
+
+          <article class="blog-card">
+            <div class="blog-card-img">
+              <img src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=600&q=80" alt="Fitness i sport dropshipping">
+              <span class="blog-card-badge badge-trend">Trend</span>
+            </div>
+            <div class="blog-card-body">
+              <span class="blog-card-category">Sport i fitness</span>
+              <h3 class="blog-card-title">Sprzęt fitness — kategoria z 340% wzrostem sprzedaży</h3>
+              <p class="blog-card-desc">Produkty fitness to złoto dropshippingu. Maty do jogi, gumy oporowe, hantle — dostępne u hurtowników BigBuy i VidaXL.</p>
+              <div class="blog-tags">
+                <span class="blog-tag">#fitness</span>
+                <span class="blog-tag">#sport</span>
+                <span class="blog-tag">#dropshipping</span>
+              </div>
+              <div class="blog-card-footer">
+                <span class="blog-card-date">Luty 2026</span>
+                <a class="blog-card-read" href="hurtownie.html">Importuj →</a>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- GUIDES -->
+      <section data-section="guide">
+        <div class="blog-section-head">
+          <h2>📖 Poradniki Sprzedaży</h2>
+          <a class="btn btn-secondary" href="generator-sklepu.html" style="font-size:13px;min-height:36px;padding:0 14px">Załóż sklep</a>
+        </div>
+        <div class="blog-grid">
+          <article class="blog-card">
+            <div class="blog-card-img">
+              <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=600&q=80" alt="Jak założyć sklep online">
+              <span class="blog-card-badge badge-guide">Poradnik</span>
+            </div>
+            <div class="blog-card-body">
+              <span class="blog-card-category">Dla początkujących</span>
+              <h3 class="blog-card-title">Jak założyć sklep online w 60 sekund na QualitetVerse?</h3>
+              <p class="blog-card-desc">Krok po kroku — rejestracja, konfiguracja sklepu, import produktów z hurtowni i ustawienie marży. Wszystko w jednym miejscu.</p>
+              <div class="blog-tags">
+                <span class="blog-tag">#poradnik</span>
+                <span class="blog-tag">#sklep</span>
+                <span class="blog-tag">#start</span>
+              </div>
+              <div class="blog-card-footer">
+                <span class="blog-card-date">Marzec 2026</span>
+                <a class="blog-card-read" href="generator-sklepu.html">Załóż sklep →</a>
+              </div>
+            </div>
+          </article>
+
+          <article class="blog-card">
+            <div class="blog-card-img">
+              <img src="https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&w=600&q=80" alt="Import produktów z hurtowni">
+              <span class="blog-card-badge badge-guide">Poradnik</span>
+            </div>
+            <div class="blog-card-body">
+              <span class="blog-card-category">Import i hurtownie</span>
+              <h3 class="blog-card-title">Jak importować produkty z hurtowni BigBuy, Syncee i VidaXL?</h3>
+              <p class="blog-card-desc">Pełny przewodnik importu produktów CSV/XML od wiodących hurtowników. Automatyczne ustawianie marży i zarządzanie katalogiem.</p>
+              <div class="blog-tags">
+                <span class="blog-tag">#import</span>
+                <span class="blog-tag">#hurtownia</span>
+                <span class="blog-tag">#CSV</span>
+              </div>
+              <div class="blog-card-footer">
+                <span class="blog-card-date">Marzec 2026</span>
+                <a class="blog-card-read" href="hurtownie.html">Przejdź do hurtowni →</a>
+              </div>
+            </div>
+          </article>
+
+          <article class="blog-card">
+            <div class="blog-card-img">
+              <img src="https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&w=600&q=80" alt="Dropshipping w Polsce poradnik">
+              <span class="blog-card-badge badge-guide">Poradnik</span>
+            </div>
+            <div class="blog-card-body">
+              <span class="blog-card-category">Biznes i marże</span>
+              <h3 class="blog-card-title">Dropshipping w Polsce 2026 — jak ustawić marże i zarabiać?</h3>
+              <p class="blog-card-desc">Model B2B/B2C na platformie QualitetVerse — od wyboru produktów przez ustawianie cen po realizację i obsługę zamówień.</p>
+              <div class="blog-tags">
+                <span class="blog-tag">#dropshipping</span>
+                <span class="blog-tag">#marża</span>
+                <span class="blog-tag">#zarobki</span>
+              </div>
+              <div class="blog-card-footer">
+                <span class="blog-card-date">Luty 2026</span>
+                <a class="blog-card-read" href="zarabiaj.html">Zacznij zarabiać →</a>
+              </div>
+            </div>
+          </article>
+
+          <article class="blog-card">
+            <div class="blog-card-img">
+              <img src="https://images.unsplash.com/photo-1611532736597-de2d4265fba3?auto=format&fit=crop&w=600&q=80" alt="Social media sprzedaż TikTok">
+              <span class="blog-card-badge badge-guide">Poradnik</span>
+            </div>
+            <div class="blog-card-body">
+              <span class="blog-card-category">Marketing</span>
+              <h3 class="blog-card-title">Jak sprzedawać przez TikTok i Instagram w 2026?</h3>
+              <p class="blog-card-desc">Social commerce to przyszłość sprzedaży online. Dowiedz się jak podłączyć sklep QualitetVerse do social media i zwiększyć konwersję.</p>
+              <div class="blog-tags">
+                <span class="blog-tag">#tiktok</span>
+                <span class="blog-tag">#instagram</span>
+                <span class="blog-tag">#marketing</span>
+              </div>
+              <div class="blog-card-footer">
+                <span class="blog-card-date">Luty 2026</span>
+                <a class="blog-card-read" href="index.html#social-media">Social media →</a>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- VIRAL PRODUCTS -->
+      <section data-section="viral">
+        <div class="blog-section-head">
+          <h2>🚀 Viral Produkty</h2>
+          <a class="btn btn-secondary" href="sklep.html" style="font-size:13px;min-height:36px;padding:0 14px">Przeglądaj sklep</a>
+        </div>
+        <div class="blog-grid">
+          <article class="blog-card">
+            <div class="blog-card-img">
+              <img src="https://images.unsplash.com/photo-1585386959984-a4155224a1ad?auto=format&fit=crop&w=600&q=80" alt="Produkty kosmetyczne viral">
+              <span class="blog-card-badge badge-viral">Viral</span>
+            </div>
+            <div class="blog-card-body">
+              <span class="blog-card-category">Uroda i kosmetyki</span>
+              <h3 class="blog-card-title">Te produkty kosmetyczne eksplodowały na TikToku — importuj je teraz</h3>
+              <p class="blog-card-desc">Maseczki, serum i gadżety do pielęgnacji ciała zdobyły miliony wyświetleń. Dostępne u dostawców Spocket i Syncee z szybką dostawą EU.</p>
+              <div class="blog-tags">
+                <span class="blog-tag">#kosmetyki</span>
+                <span class="blog-tag">#tiktok</span>
+                <span class="blog-tag">#viral</span>
+              </div>
+              <div class="blog-card-footer">
+                <span class="blog-card-date">Marzec 2026</span>
+                <a class="blog-card-read" href="hurtownie.html">Importuj →</a>
+              </div>
+            </div>
+          </article>
+
+          <article class="blog-card">
+            <div class="blog-card-img">
+              <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=600&q=80" alt="Gadżety kuchenne viral">
+              <span class="blog-card-badge badge-viral">Viral</span>
+            </div>
+            <div class="blog-card-body">
+              <span class="blog-card-category">Kuchnia i gotowanie</span>
+              <h3 class="blog-card-title">Viral gadżety kuchenne — produkty które sprzedają się po milion sztuk</h3>
+              <p class="blog-card-desc">Krajalnice, pojemniki próżniowe, wielofunkcyjne noże — kategoria, która nie przestaje rosnąć. Dostępne w hurtowni VidaXL i EU-Trade.</p>
+              <div class="blog-tags">
+                <span class="blog-tag">#kuchnia</span>
+                <span class="blog-tag">#gadżety</span>
+                <span class="blog-tag">#viral</span>
+              </div>
+              <div class="blog-card-footer">
+                <span class="blog-card-date">Marzec 2026</span>
+                <a class="blog-card-read" href="hurtownie.html">Znajdź dostawcę →</a>
+              </div>
+            </div>
+          </article>
+
+          <article class="blog-card">
+            <div class="blog-card-img">
+              <img src="https://images.unsplash.com/photo-1606318313647-13b4c30e1006?auto=format&fit=crop&w=600&q=80" alt="Produkty dla dzieci viral">
+              <span class="blog-card-badge badge-viral">Viral</span>
+            </div>
+            <div class="blog-card-body">
+              <span class="blog-card-category">Dzieci i zabawki</span>
+              <h3 class="blog-card-title">Zabawki edukacyjne viral 2026 — które generują największy zysk?</h3>
+              <p class="blog-card-desc">Klocki STEM, interaktywne zabawki i zestawy kreatywne to jedne z najlepiej sprzedających się produktów na polskim rynku.</p>
+              <div class="blog-tags">
+                <span class="blog-tag">#zabawki</span>
+                <span class="blog-tag">#dzieci</span>
+                <span class="blog-tag">#edukacja</span>
+              </div>
+              <div class="blog-card-footer">
+                <span class="blog-card-date">Luty 2026</span>
+                <a class="blog-card-read" href="hurtownie.html">Importuj →</a>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- NEWS -->
+      <section data-section="news">
+        <div class="blog-section-head">
+          <h2>📢 Aktualności Platformy</h2>
+        </div>
+        <div class="blog-grid">
+          <article class="blog-card">
+            <div class="blog-card-img">
+              <img src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=600&q=80" alt="QualitetVerse nowe funkcje">
+              <span class="blog-card-badge badge-news">Nowość</span>
+            </div>
+            <div class="blog-card-body">
+              <span class="blog-card-category">Platforma</span>
+              <h3 class="blog-card-title">QualitetVerse: nowe funkcje w marcu 2026 — blog, hurtownie i sklep główny</h3>
+              <p class="blog-card-desc">Dodajemy blog, rozszerzamy katalog hurtowni i uruchamiamy QualitetMarket — główny sklep platformy z produktami ze wszystkich hurtowni.</p>
+              <div class="blog-tags">
+                <span class="blog-tag">#platforma</span>
+                <span class="blog-tag">#nowości</span>
+                <span class="blog-tag">#QualitetVerse</span>
+              </div>
+              <div class="blog-card-footer">
+                <span class="blog-card-date">Marzec 2026</span>
+                <a class="blog-card-read" href="qualitetmarket.html">QualitetMarket →</a>
+              </div>
+            </div>
+          </article>
+
+          <article class="blog-card">
+            <div class="blog-card-img">
+              <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80" alt="Rynek dropshipping Polska 2026">
+              <span class="blog-card-badge badge-news">Raport</span>
+            </div>
+            <div class="blog-card-body">
+              <span class="blog-card-category">Rynek e-commerce</span>
+              <h3 class="blog-card-title">Rynek dropshipping w Polsce 2026 — dane, trendy, prognozy</h3>
+              <p class="blog-card-desc">Polski rynek e-commerce przekroczył 100 mld PLN w 2025. Dropshipping rośnie w tempie 28% rocznie. Sprawdź jak skorzystać na tym trendzie.</p>
+              <div class="blog-tags">
+                <span class="blog-tag">#rynek</span>
+                <span class="blog-tag">#e-commerce</span>
+                <span class="blog-tag">#Polska</span>
+              </div>
+              <div class="blog-card-footer">
+                <span class="blog-card-date">Styczeń 2026</span>
+                <a class="blog-card-read" href="zarabiaj.html">Zacznij →</a>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- CTA -->
+      <section style="background:linear-gradient(135deg,rgba(139,92,246,.12),rgba(0,212,255,.08));border:1px solid var(--stroke);border-radius:22px;padding:32px;text-align:center;margin-bottom:48px">
+        <span class="eyebrow">🚀 Zacznij sprzedawać</span>
+        <h2 style="margin:12px 0 8px;font-size:24px">Dołącz do QualitetVerse i zacznij zarabiać</h2>
+        <p style="color:var(--muted);margin:0 0 24px;font-size:15px">Import produktów z wiodących hurtowni, własny sklep i pełne narzędzia sprzedaży — bezpłatnie.</p>
+        <div class="cta-row" style="justify-content:center">
+          <a class="btn btn-primary" href="generator-sklepu.html">Załóż sklep</a>
+          <a class="btn btn-secondary" href="hurtownie.html">Przeglądaj hurtownie</a>
+        </div>
+      </section>
+    </div>
+
+    <footer class="wrap panel-footer">
+      <div class="panel-footer-inner">
+        <span>© 2026 QualitetVerse — Wszelkie prawa zastrzeżone. Projekt i marka platformy stworzone przez Henryka Ślusarskiego</span>
+        <div class="panel-footer-links">
+          <a href="dashboard.html">Dashboard</a>
+          <a href="hurtownie.html">Hurtownie</a>
+          <a href="index.html">Strona główna</a>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
+    <a href="index.html" rel="nofollow noreferrer" data-nav="index">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 11.5L12 4l9 7.5"></path>
+        <path d="M5 10.5V20h14v-9.5"></path>
+      </svg>
+      <span>Start</span>
+    </a>
+    <a href="sklep.html" rel="nofollow noreferrer" data-nav="sklep">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 9h18l-1.5 11H4.5L3 9z"></path>
+        <path d="M7 9V7a5 5 0 0 1 10 0v2"></path>
+      </svg>
+      <span>Sklep</span>
+    </a>
+    <a href="hurtownie.html" rel="nofollow noreferrer" data-nav="hurtownie">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="7" width="7" height="10" rx="1.4"></rect>
+        <rect x="14" y="7" width="7" height="10" rx="1.4"></rect>
+        <path d="M6.5 7V5.5a1.5 1.5 0 0 1 3 0V7"></path>
+      </svg>
+      <span>Hurtownie</span>
+    </a>
+    <a href="dashboard.html" rel="nofollow noreferrer" data-nav="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="14" width="7" height="7" rx="1.2"></rect>
+        <rect x="3" y="14" width="7" height="7" rx="1.2"></rect>
+      </svg>
+      <span>Panel</span>
+    </a>
+    <a href="login.html" rel="nofollow noreferrer" data-nav="login">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4 20c2-3.5 6-5 8-5s6 1.5 8 5"></path>
+      </svg>
+      <span>Konto</span>
+    </a>
+  </nav>
+
+  <script src="js/app.js" defer></script>
+  <script>
+    (function(){
+      // Blog tab filtering
+      var tabs = document.querySelectorAll('.blog-tab');
+      var sections = document.querySelectorAll('[data-section]');
+      tabs.forEach(function(tab){
+        tab.addEventListener('click', function(){
+          tabs.forEach(function(t){ t.classList.remove('is-active'); });
+          tab.classList.add('is-active');
+          var filter = tab.dataset.tab;
+          sections.forEach(function(section){
+            if(filter === 'all' || section.dataset.section === filter){
+              section.style.display = '';
+            } else {
+              section.style.display = 'none';
+            }
+          });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

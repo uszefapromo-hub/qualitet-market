@@ -1576,9 +1576,7 @@ describe('POST /api/my/store/products', () => {
 
   it('adds product to my store', async () => {
     db.query
-      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 100, commission_rate: 0.10, status: 'active' }] }) // requireActiveSubscription
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
-      .mockResolvedValueOnce({ rows: [{ count: '5' }] })           // product count (limit check)
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })       // product exists
       .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] }); // insert
 
@@ -1592,9 +1590,7 @@ describe('POST /api/my/store/products', () => {
 
   it('supports custom_title and custom_description', async () => {
     db.query
-      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 100, commission_rate: 0.10, status: 'active' }] }) // requireActiveSubscription
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
-      .mockResolvedValueOnce({ rows: [{ count: '5' }] })           // product count (limit check)
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })       // product exists
       .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true, custom_title: 'Mój Fotel', custom_description: 'Super jakość' }] }); // insert
 
@@ -2368,37 +2364,35 @@ describe('POST /api/shops/quick-setup', () => {
 
 
 describe('POST /api/my/store/products – subscription checks', () => {
-  it('blocks adding product when subscription is expired', async () => {
-    // requireActiveSubscription middleware returns no active subscription
-    db.query.mockResolvedValueOnce({ rows: [] }); // no active subscription
+  it('adds product regardless of subscription status (subscription system removed)', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })       // product exists
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] }); // insert
 
     const res = await request(app)
       .post('/api/my/store/products')
       .set('Authorization', `Bearer ${sellerToken}`)
       .send({ store_id: STORE_ID, product_id: PRODUCT_ID });
-    expect(res.status).toBe(403);
-    expect(res.body.error).toBe('subscription_expired');
+    expect(res.status).toBe(201);
   });
 
-  it('blocks adding product when product_limit is reached', async () => {
+  it('adds product without product limit enforcement (subscription system removed)', async () => {
     db.query
-      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 10, commission_rate: 0.15, status: 'active' }] }) // subscription
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
-      .mockResolvedValueOnce({ rows: [{ count: '10' }] });          // product count = limit
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })       // product exists
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] }); // insert
 
     const res = await request(app)
       .post('/api/my/store/products')
       .set('Authorization', `Bearer ${sellerToken}`)
       .send({ store_id: STORE_ID, product_id: PRODUCT_ID });
-    expect(res.status).toBe(403);
-    expect(res.body.error).toBe('product_limit_reached');
+    expect(res.status).toBe(201);
   });
 
   it('allows adding product when limit is not reached', async () => {
     db.query
-      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 100, commission_rate: 0.10, status: 'active' }] }) // subscription
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
-      .mockResolvedValueOnce({ rows: [{ count: '5' }] })            // product count < limit
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })        // product exists
       .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] }); // insert
 
@@ -2409,11 +2403,9 @@ describe('POST /api/my/store/products – subscription checks', () => {
     expect(res.status).toBe(201);
   });
 
-  it('allows adding product when subscription has no product_limit (elite/null)', async () => {
+  it('allows adding product (no subscription required)', async () => {
     db.query
-      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: null, commission_rate: 0.05, status: 'active' }] }) // elite subscription
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
-      // no count query – skipped when product_limit is null
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })        // product exists
       .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] }); // insert
 
@@ -2458,37 +2450,38 @@ describe('POST /api/my/store/products/bulk', () => {
   });
 
   it('blocks when subscription is expired', async () => {
-    db.query.mockResolvedValueOnce({ rows: [] }); // no active subscription
+    // Subscription system removed — route should proceed to owner check now
+    db.query
+      .mockResolvedValueOnce({ rows: [] }); // store not found → 404
 
     const res = await request(app)
       .post('/api/my/store/products/bulk')
       .set('Authorization', `Bearer ${sellerToken}`)
       .send({ store_id: STORE_ID, product_ids: [PRODUCT_ID] });
-    expect(res.status).toBe(403);
-    expect(res.body.error).toBe('subscription_expired');
+    expect(res.status).toBe(404);
   });
 
   it('blocks when product_limit would be exceeded by bulk add', async () => {
+    // Subscription system removed — no product limit enforcement
     db.query
-      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 10, commission_rate: 0.10, status: 'active' }] }) // subscription
-      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
-      .mockResolvedValueOnce({ rows: [{ count: '9' }] });           // current count = 9, adding 2 would exceed limit 10
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })   // store ownership
+      .mockResolvedValueOnce({ rows: [] }) // batch products fetch – none found
+    ;
 
     const res = await request(app)
       .post('/api/my/store/products/bulk')
       .set('Authorization', `Bearer ${sellerToken}`)
       .send({ store_id: STORE_ID, product_ids: [PRODUCT_ID, PRODUCT_ID_2] });
-    expect(res.status).toBe(403);
-    expect(res.body.error).toBe('product_limit_reached');
+    expect(res.status).toBe(201);
+    expect(res.body.added).toBe(0);
+    expect(res.body.skipped).toBe(2);
   });
 
   it('adds multiple products and returns results', async () => {
     mockDb.products.push({ id: PRODUCT_ID_2, store_id: null, name: 'Produkt 2', selling_price: 200, stock: 5 });
 
     db.query
-      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 100, commission_rate: 0.10, status: 'active' }] }) // subscription
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })   // store ownership
-      .mockResolvedValueOnce({ rows: [{ count: '0' }] })             // product count
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, selling_price: 141.45 }, { id: PRODUCT_ID_2, selling_price: 200 }] }) // batch products fetch
       .mockResolvedValueOnce({ rows: [{ id: 'sp-bulk-1', store_id: STORE_ID, product_id: PRODUCT_ID, margin_override: 20, active: true }] }) // insert 1
       .mockResolvedValueOnce({ rows: [{ id: 'sp-bulk-2', store_id: STORE_ID, product_id: PRODUCT_ID_2, margin_override: 20, active: true }] }); // insert 2
@@ -2507,9 +2500,7 @@ describe('POST /api/my/store/products/bulk', () => {
     const MISSING_ID = 'a0000000-0000-4000-8000-000000000099';
 
     db.query
-      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: null, commission_rate: 0.05, status: 'active' }] }) // elite subscription
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })   // store ownership
-      // no count query for null limit
       .mockResolvedValueOnce({ rows: [] }); // batch products fetch – none found → skipped
 
     const res = await request(app)
@@ -2523,7 +2514,6 @@ describe('POST /api/my/store/products/bulk', () => {
 
   it('uses 20% default margin for added products', async () => {
     db.query
-      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: null, commission_rate: 0.05, status: 'active' }] })
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, selling_price: 100 }] }) // batch products fetch
       .mockResolvedValueOnce({ rows: [{ id: 'sp-new', store_id: STORE_ID, product_id: PRODUCT_ID, margin_type: 'percent', margin_override: 20, active: true }] });
@@ -3187,9 +3177,7 @@ describe('PUT /api/shop-products/:id – seller_margin enforcement', () => {
 describe('POST /api/my/store/products – platform minimum price enforcement', () => {
   it('rejects price_override below platform_price', async () => {
     db.query
-      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 100, commission_rate: 0.10, status: 'active' }] }) // requireActiveSubscription
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
-      .mockResolvedValueOnce({ rows: [{ count: '5' }] })           // product count
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, platform_price: 100, min_selling_price: 100, selling_price: 100 }] }); // product
 
     const res = await request(app)
@@ -3202,9 +3190,7 @@ describe('POST /api/my/store/products – platform minimum price enforcement', (
 
   it('accepts price_override equal to platform_price', async () => {
     db.query
-      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, product_limit: 100, commission_rate: 0.10, status: 'active' }] }) // requireActiveSubscription
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
-      .mockResolvedValueOnce({ rows: [{ count: '5' }] })           // product count
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, platform_price: 100, min_selling_price: 100, selling_price: 100 }] }) // product
       .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, price_override: 100, active: true }] }); // insert
 
