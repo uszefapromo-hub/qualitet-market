@@ -3601,6 +3601,38 @@ describe('requireActiveSubscription middleware', () => {
     const { requireActiveSubscription } = require('../src/middleware/auth');
     expect(typeof requireActiveSubscription).toBe('function');
   });
+
+  it('rejects invalid store_id values', async () => {
+    const { requireActiveSubscription } = require('../src/middleware/auth');
+    const req = { body: { store_id: 'invalid-store-id' }, params: {}, query: {} };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+    const next = jest.fn();
+
+    await requireActiveSubscription(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Nieprawidłowy store_id' });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('attaches a null subscription for valid store_id values', async () => {
+    const { requireActiveSubscription } = require('../src/middleware/auth');
+    const req = { body: { store_id: STORE_ID }, params: {}, query: {} };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+    const next = jest.fn();
+
+    await requireActiveSubscription(req, res, next);
+
+    expect(req.subscription).toBeNull();
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
+  });
 });
 
 // ─── PLAN_CONFIG export ───────────────────────────────────────────────────────

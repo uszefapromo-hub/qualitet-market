@@ -41,6 +41,9 @@ const errorHandler = require('./middleware/errorHandler');
 const { importSupplierProducts } = require('./services/supplier-import');
 const { getPromoSlots } = require('./helpers/promo');
 const db = require('./config/database');
+const { getAllowedOrigins, validateRuntimeConfig } = require('./config/runtime');
+
+validateRuntimeConfig();
 
 const app = express();
 
@@ -48,19 +51,19 @@ const app = express();
 app.use(helmet());
 
 // ─── CORS ──────────────────────────────────────────────────────────────────────
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
+const allowedOrigins = getAllowedOrigins();
+const allowAllOrigins = allowedOrigins.length === 0 && process.env.NODE_ENV !== 'production';
 
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (e.g. mobile apps, curl)
-      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+      if (!origin || allowAllOrigins || allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      callback(new Error('CORS policy: origin not allowed'));
+      const err = new Error('CORS policy: origin not allowed');
+      err.status = 403;
+      return callback(err);
     },
     credentials: true,
   })

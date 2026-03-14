@@ -1,14 +1,26 @@
 'use strict';
 
 const jwt = require('jsonwebtoken');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret';
+const { validate: isUuid } = require('uuid');
+const { getJwtSecret } = require('../config/runtime');
 
 // Lazy-require db to avoid circular dependency issues
 let db;
 function getDb() {
   if (!db) db = require('../config/database');
   return db;
+}
+
+function resolveStoreId(req) {
+  const sources = [req.body, req.params, req.query];
+
+  for (const source of sources) {
+    if (source && Object.prototype.hasOwnProperty.call(source, 'store_id')) {
+      return source.store_id;
+    }
+  }
+
+  return undefined;
 }
 
 /**
@@ -22,7 +34,7 @@ function authenticate(req, res, next) {
 
   const token = authHeader.slice(7);
   try {
-    const payload = jwt.verify(token, JWT_SECRET);
+    const payload = jwt.verify(token, getJwtSecret());
     req.user = payload;
     next();
   } catch {
@@ -61,7 +73,7 @@ function requireSuperAdmin(req, res, next) {
 function signToken(user) {
   return jwt.sign(
     { id: user.id, email: user.email, role: user.role },
-    JWT_SECRET,
+    getJwtSecret(),
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 }
@@ -72,8 +84,13 @@ function signToken(user) {
  * On success, attaches the subscription record to req.subscription.
  */
 async function requireActiveSubscription(req, res, next) {
-  // Subscription gates removed — platform operates without subscription requirements.
-  // All authenticated sellers can add products regardless of subscription status.
+  const storeId = resolveStoreId(req);
+
+  if (storeId !== undefined && storeId !== null && !isUuid(String(storeId))) {
+    return res.status(400).json({ error: 'Nieprawidłowy store_id' });
+  }
+
+  req.subscription = null;
   return next();
 }
 
