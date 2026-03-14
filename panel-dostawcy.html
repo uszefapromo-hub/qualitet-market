@@ -1,0 +1,892 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <title>Panel Dostawcy - QualitetVerse</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#7c3aed">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
+  <link rel="stylesheet" href="panel.css">
+  <style>
+    .supplier-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .supplier-stat-card {
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--stroke);
+      border-radius: 16px;
+      padding: 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .supplier-stat-card .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    .supplier-stat-card .stat-value {
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 1;
+    }
+    .supplier-stat-card .stat-sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .supplier-stat-card.is-accent { border-color: rgba(124,58,237,.5); background: rgba(124,58,237,.08); }
+    .supplier-stat-card.is-green  { border-color: rgba(84,255,176,.4); background: rgba(84,255,176,.06); }
+    .supplier-stat-card.is-yellow { border-color: rgba(255,216,77,.4); background: rgba(255,216,77,.06); }
+
+    .section-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .section-head h2 { margin: 0; }
+
+    .import-zone {
+      border: 2px dashed var(--stroke);
+      border-radius: 16px;
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .import-zone:hover, .import-zone.drag-over {
+      border-color: var(--brand, #7c3aed);
+      background: rgba(124,58,237,.06);
+    }
+    .import-zone input[type=file] { display: none; }
+    .import-zone-icon { font-size: 36px; display: block; margin-bottom: 8px; }
+    .import-zone p { margin: 0; color: var(--muted); font-size: 14px; }
+    .import-zone strong { color: var(--text); }
+
+    .import-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .import-divider::before,
+    .import-divider::after {
+      content: '';
+      flex: 1;
+      border-top: 1px solid var(--stroke);
+    }
+
+    .pill-pending  { display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;background:rgba(255,165,0,.18);border:1px solid rgba(255,165,0,.4);color:#ffe0a0 }
+    .pill-inactive { display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;background:rgba(148,163,184,.14);border:1px solid rgba(148,163,184,.3);color:var(--muted) }
+    .pill-new      { display:inline-flex;align-items:center;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;background:rgba(53,217,255,.15);border:1px solid rgba(53,217,255,.4);color:#b0f4ff }
+
+    .table-empty { padding: 28px; text-align: center; color: var(--muted); font-size: 14px; }
+    .table-loading { padding: 20px; text-align: center; color: var(--muted); font-size: 14px; }
+
+    @media (max-width: 640px) {
+      .supplier-stat-grid { grid-template-columns: repeat(2, 1fr); }
+      .supplier-stat-card .stat-value { font-size: 20px; }
+    }
+  </style>
+</head>
+<body data-page="panel-dostawcy" class="dashboard-page has-bottom-nav">
+
+  <div class="app-splash" data-app-splash>
+    <div class="app-splash-card">
+      <div class="app-splash-logo">
+        <img src="assets/icons/icon-192.svg" alt="QualitetVerse">
+      </div>
+      <div class="app-splash-title">
+        <strong>QualitetVerse</strong>
+        <span>AI Commerce Platform</span>
+      </div>
+      <div class="app-splash-loader"></div>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="index.html">
+        <div>
+          <strong>QualitetVerse</strong>
+          <span>AI Commerce Platform</span>
+          <span class="brand-tag">U SZEFA</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="Główna nawigacja">
+        <a href="index.html">Start</a>
+        <a href="dashboard.html">Dashboard</a>
+        <a href="zostan-dostawca.html">Dostawcy</a>
+        <a href="cennik.html">Cennik</a>
+      </nav>
+      <a class="btn btn-primary topbar-cta" href="panel-dostawcy.html">Panel Dostawcy</a>
+      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+    </div>
+  </header>
+
+  <div class="dashboard-shell">
+    <aside class="sidebar">
+      <nav class="sidebar-nav" aria-label="Menu panelu dostawcy">
+        <a class="active" href="panel-dostawcy.html" data-section="dashboard">Dashboard</a>
+        <a href="#produkty" data-section="produkty">Produkty</a>
+        <a href="#magazyn" data-section="magazyn">Magazyn</a>
+        <a href="#zamowienia" data-section="zamowienia">Zamówienia</a>
+        <a href="#analityka" data-section="analityka">Analityka</a>
+        <a href="#import" data-section="import">Import produktów</a>
+        <a href="#weryfikacja" data-section="weryfikacja">Weryfikacja</a>
+        <a href="#profil" data-section="profil">Profil firmy</a>
+        <a href="cennik.html">Subskrypcja</a>
+      </nav>
+    </aside>
+
+    <main class="dashboard-main">
+
+      <!-- ── Welcome card ── -->
+      <section class="panel-card dashboard-welcome">
+        <span class="eyebrow">Panel Dostawcy</span>
+        <h1>Witaj, <span data-supplier-name>Dostawco</span>!</h1>
+        <p class="hint">Zarządzaj swoim katalogiem produktów, śledź zamówienia i analizuj sprzedaż w jednym miejscu.</p>
+        <div class="dashboard-meta">
+          <div aria-label="Liczba produktów">
+            <span>Produkty</span>
+            <strong data-stat-products data-loading>—</strong>
+          </div>
+          <div aria-label="Aktywne zamówienia">
+            <span>Aktywne zamówienia</span>
+            <strong data-stat-orders data-loading>—</strong>
+          </div>
+          <div aria-label="Przychód w tym miesiącu">
+            <span>Przychód (mies.)</span>
+            <strong data-stat-revenue data-loading>—</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Quick stats ── -->
+      <section class="panel-card" id="analityka">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Statystyki</span>
+            <h2>Przegląd konta</h2>
+          </div>
+        </div>
+        <div class="supplier-stat-grid">
+          <div class="supplier-stat-card is-accent">
+            <span class="stat-label">Produkty</span>
+            <span class="stat-value" data-qs-products data-loading>—</span>
+            <span class="stat-sub">w katalogu</span>
+          </div>
+          <div class="supplier-stat-card">
+            <span class="stat-label">Zamówienia</span>
+            <span class="stat-value" data-qs-orders data-loading>—</span>
+            <span class="stat-sub">łącznie</span>
+          </div>
+          <div class="supplier-stat-card is-green">
+            <span class="stat-label">Przychód</span>
+            <span class="stat-value" data-qs-revenue data-loading>—</span>
+            <span class="stat-sub">ten miesiąc (zł)</span>
+          </div>
+          <div class="supplier-stat-card is-yellow">
+            <span class="stat-label">Klienci</span>
+            <span class="stat-value" data-qs-clients data-loading>—</span>
+            <span class="stat-sub">aktywni detaliści</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Products list ── -->
+      <section class="panel-card" id="produkty">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Katalog</span>
+            <h2>Moje produkty</h2>
+            <p class="hint">Ostatnio dodane i zaktualizowane produkty.</p>
+          </div>
+          <a class="btn btn-primary" href="#import">+ Importuj produkty</a>
+        </div>
+        <div class="owner-table-wrap">
+          <table class="owner-table" aria-label="Lista produktów">
+            <thead>
+              <tr>
+                <th>Nazwa</th>
+                <th>Kategoria</th>
+                <th>Cena hurt. (zł)</th>
+                <th>Stan mag.</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody data-products-tbody>
+              <tr><td colspan="5" class="table-loading" data-products-loading>Wczytywanie produktów&hellip;</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── Inventory summary ── -->
+      <section class="panel-card" id="magazyn">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Magazyn</span>
+            <h2>Stan magazynowy</h2>
+            <p class="hint">Produkty z niskim stanem wymagają uzupełnienia.</p>
+          </div>
+        </div>
+        <div class="supplier-stat-grid">
+          <div class="supplier-stat-card">
+            <span class="stat-label">Wszystkie SKU</span>
+            <span class="stat-value" data-inv-total data-loading>—</span>
+            <span class="stat-sub">pozycje magazynowe</span>
+          </div>
+          <div class="supplier-stat-card is-yellow">
+            <span class="stat-label">Niski stan</span>
+            <span class="stat-value" data-inv-low data-loading>—</span>
+            <span class="stat-sub">poniżej 10 szt.</span>
+          </div>
+          <div class="supplier-stat-card" style="border-color:rgba(255,80,80,.4);background:rgba(255,80,80,.06)">
+            <span class="stat-label">Brak na stanie</span>
+            <span class="stat-value" data-inv-out data-loading>—</span>
+            <span class="stat-sub">produkty niedostępne</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Recent orders ── -->
+      <section class="panel-card" id="zamowienia">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Zamówienia</span>
+            <h2>Ostatnie zamówienia</h2>
+            <p class="hint">Zamówienia złożone przez sprzedawców detalicznych.</p>
+          </div>
+        </div>
+        <div class="owner-table-wrap">
+          <table class="owner-table" aria-label="Lista zamówień">
+            <thead>
+              <tr>
+                <th>ID zamówienia</th>
+                <th>Sklep / Kupujący</th>
+                <th>Ilość</th>
+                <th>Wartość (zł)</th>
+                <th>Status</th>
+                <th>Data</th>
+              </tr>
+            </thead>
+            <tbody data-orders-tbody>
+              <tr><td colspan="6" class="table-loading" data-orders-loading>Wczytywanie zamówień&hellip;</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── Import section ── -->
+      <section class="panel-card" id="import">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Import danych</span>
+            <h2>Import produktów</h2>
+            <p class="hint">Dodaj produkty hurtowo przez plik CSV lub podaj adres kanału XML.</p>
+          </div>
+        </div>
+
+        <form data-import-form novalidate>
+          <!-- CSV upload -->
+          <label class="import-zone" for="csv-file-input" data-csv-drop-zone>
+            <span class="import-zone-icon">📂</span>
+            <strong>Przeciągnij plik CSV lub kliknij, aby wybrać</strong>
+            <p>Obsługiwane: .csv (maks. 10 MB)</p>
+            <p data-csv-filename style="margin-top:6px;color:var(--text)"></p>
+            <input type="file" id="csv-file-input" name="csv" accept=".csv,text/csv" data-csv-input>
+          </label>
+
+          <p class="hint" style="margin-top:10px">
+            Wymagane kolumny CSV: <code>nazwa, kategoria, cena_hurtowa, ilosc_sztuk, opis, ean</code>.<br>
+            Opcjonalnie: <code>zdjecie_url, waga_kg, wymiary</code>.
+            <a href="#" data-csv-template-link>Pobierz szablon CSV</a>.
+          </p>
+
+          <div class="import-divider">lub</div>
+
+          <!-- XML feed URL -->
+          <div class="form-field">
+            <label for="xml-feed-url">Adres URL kanału XML</label>
+            <input id="xml-feed-url" type="url" name="xml_url" placeholder="https://twoja-hurtownia.pl/feed.xml"
+                   autocomplete="off" data-xml-url>
+          </div>
+          <p class="hint" style="margin-top:6px">
+            Platforma automatycznie synchronizuje dane z kanału co 24 godziny.
+          </p>
+
+          <div class="cta-row" style="margin-top:20px">
+            <button class="btn btn-primary" type="submit" data-import-submit>Importuj produkty</button>
+            <button class="btn btn-secondary" type="button" data-import-reset>Wyczyść</button>
+          </div>
+          <p data-import-msg class="hint" hidden style="margin-top:10px"></p>
+        </form>
+      </section>
+
+      <!-- ── Verification status ── -->
+      <section class="panel-card" id="weryfikacja">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Weryfikacja</span>
+            <h2>Status weryfikacji konta</h2>
+            <p class="hint">Zweryfikowani dostawcy otrzymują znaczek zaufanego partnera i wyższy priorytet wyświetlania.</p>
+          </div>
+        </div>
+        <div class="store-summary-grid">
+          <div class="store-summary-item">
+            <span>Status weryfikacji</span>
+            <strong class="status-pill" data-verification-status>Oczekuje</strong>
+          </div>
+          <div class="store-summary-item">
+            <span>NIP / KRS</span>
+            <strong data-verification-nip>—</strong>
+          </div>
+          <div class="store-summary-item">
+            <span>Dokumenty</span>
+            <strong data-verification-docs>—</strong>
+          </div>
+        </div>
+        <p class="hint" data-verification-hint style="margin-top:12px">
+          Prześlij dokumenty rejestracyjne firmy, aby przyspieszyć weryfikację.
+        </p>
+        <div class="cta-row" style="margin-top:16px">
+          <a class="btn btn-primary" href="zostan-dostawca.html">Uzupełnij dokumenty</a>
+        </div>
+      </section>
+
+      <!-- ── Company profile ── -->
+      <section class="panel-card" id="profil">
+        <span class="eyebrow">Profil firmy</span>
+        <h2>Dane firmy</h2>
+        <p class="hint">Informacje widoczne dla sprzedawców detalicznych na platformie.</p>
+        <form data-company-form style="margin-top:16px">
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;flex-wrap:wrap;gap:16px">
+              <div class="form-field">
+                <label for="company-name">Nazwa firmy</label>
+                <input id="company-name" type="text" name="company_name" placeholder="Hurtownia Sp. z o.o."
+                       autocomplete="organization" data-company-name>
+              </div>
+              <div class="form-field">
+                <label for="company-nip">NIP</label>
+                <input id="company-nip" type="text" name="nip" placeholder="0000000000"
+                       autocomplete="off" data-company-nip maxlength="10">
+              </div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:16px">
+              <div class="form-field">
+                <label for="company-phone">Telefon kontaktowy</label>
+                <input id="company-phone" type="tel" name="phone" placeholder="+48 600 000 000"
+                       autocomplete="tel" data-company-phone>
+              </div>
+              <div class="form-field">
+                <label for="company-email">E-mail handlowy</label>
+                <input id="company-email" type="email" name="email" placeholder="handel@firma.pl"
+                       autocomplete="email" data-company-email>
+              </div>
+            </div>
+            <div class="form-field">
+              <label for="company-desc">Opis działalności</label>
+              <input id="company-desc" type="text" name="description"
+                     placeholder="Czym się zajmujemy, co oferujemy…" data-company-desc>
+            </div>
+            <div class="cta-row">
+              <button class="btn btn-primary" type="submit" data-company-save>Zapisz profil</button>
+            </div>
+            <p data-company-msg class="hint" hidden></p>
+          </div>
+        </form>
+      </section>
+
+      <footer class="wrap panel-footer" style="padding:0;margin-top:32px">
+        <div class="panel-footer-inner">
+          <span>© 2025 QualitetVerse &mdash; Panel Dostawcy</span>
+          <div class="panel-footer-links">
+            <a href="cennik.html">Cennik</a>
+            <a href="zostan-dostawca.html">Zostań dostawcą</a>
+            <a href="index.html">Strona główna</a>
+          </div>
+        </div>
+      </footer>
+
+    </main>
+  </div>
+
+  <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
+    <a href="index.html" rel="nofollow noreferrer" data-nav="index">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 11.5L12 4l9 7.5"></path>
+        <path d="M5 10.5V20h14v-9.5"></path>
+      </svg>
+      <span>Start</span>
+    </a>
+    <a href="hurtownie.html" rel="nofollow noreferrer" data-nav="hurtownie">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="7" width="7" height="10" rx="1.4"></rect>
+        <rect x="14" y="7" width="7" height="10" rx="1.4"></rect>
+        <path d="M6.5 7V5.5a1.5 1.5 0 0 1 3 0V7"></path>
+      </svg>
+      <span>Hurtownie</span>
+    </a>
+    <a href="panel-dostawcy.html" rel="nofollow noreferrer" data-nav="panel-dostawcy" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="3" width="7" height="7" rx="1.2"></rect>
+        <rect x="14" y="14" width="7" height="7" rx="1.2"></rect>
+        <rect x="3" y="14" width="7" height="7" rx="1.2"></rect>
+      </svg>
+      <span>Panel</span>
+    </a>
+    <a href="dashboard.html" rel="nofollow noreferrer" data-nav="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4 20c2-3.5 6-5 8-5s6 1.5 8 5"></path>
+      </svg>
+      <span>Konto</span>
+    </a>
+  </nav>
+
+  <script src="js/api.js" defer></script>
+  <script src="js/pwa-connect.js" defer></script>
+  <script src="js/flow.js" defer></script>
+  <script>
+  (function () {
+    'use strict'
+
+    // ── Auth guard ──────────────────────────────────────────────────────────────
+    function getToken() {
+      try { return localStorage.getItem('qm_token') } catch { return null }
+    }
+    function getCachedUser() {
+      try { return JSON.parse(localStorage.getItem('qm_user') || 'null') } catch { return null }
+    }
+
+    // ── Utility helpers ─────────────────────────────────────────────────────────
+    function qs(sel) { return document.querySelector(sel) }
+    function setText(sel, val) {
+      const el = typeof sel === 'string' ? qs(sel) : sel
+      if (el) el.textContent = val ?? '—'
+    }
+    function fmtPrice(val) {
+      const n = parseFloat(val)
+      return isNaN(n) ? '—' : n.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł'
+    }
+    function fmtDate(iso) {
+      if (!iso) return '—'
+      return new Date(iso).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    }
+    function statusPill(status) {
+      const map = {
+        active:    ['pill-active',  'Aktywny'],
+        inactive:  ['pill-inactive','Nieaktywny'],
+        pending:   ['pill-pending', 'Oczekuje'],
+        new:       ['pill-new',     'Nowy'],
+        completed: ['pill-active',  'Zrealizowane'],
+        cancelled: ['pill-inactive','Anulowane'],
+        processing:['pill-pending', 'W realizacji'],
+      }
+      const [cls, label] = map[status] || ['pill-inactive', status || '—']
+      return `<span class="${cls}">${label}</span>`
+    }
+    function escHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+    }
+
+    // ── Splash / init ───────────────────────────────────────────────────────────
+    function hideSplash() {
+      const splash = qs('[data-app-splash]')
+      if (splash) {
+        splash.style.opacity = '0'
+        splash.style.transition = 'opacity .4s'
+        setTimeout(() => { splash.style.display = 'none' }, 420)
+      }
+    }
+
+    // ── Load supplier stats ─────────────────────────────────────────────────────
+    async function loadStats(api) {
+      try {
+        const [prodRes, ordRes] = await Promise.allSettled([
+          api.Products ? api.Products.list({ limit: 100 }) : fetch('/api/products?limit=100').then(r => r.json()),
+          api.Orders   ? api.Orders.list({ limit: 100 })   : fetch('/api/orders?limit=100').then(r => r.json()),
+        ])
+
+        const products = (prodRes.status === 'fulfilled' ? (prodRes.value.products || prodRes.value.data || []) : [])
+        const orders   = (ordRes.status  === 'fulfilled' ? (ordRes.value.orders   || ordRes.value.data || []) : [])
+
+        const productCount  = products.length
+        const activeOrders  = orders.filter(o => o.status === 'processing' || o.status === 'new').length
+        const monthRevenue  = orders
+          .filter(o => {
+            const d = new Date(o.created_at || o.createdAt || 0)
+            const now = new Date()
+            return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
+          })
+          .reduce((sum, o) => sum + parseFloat(o.total_price || o.totalPrice || o.total || 0), 0)
+
+        // Welcome card
+        setText('[data-stat-products]', productCount)
+        setText('[data-stat-orders]',   activeOrders)
+        setText('[data-stat-revenue]',  fmtPrice(monthRevenue))
+
+        // Quick stats
+        setText('[data-qs-products]', productCount)
+        setText('[data-qs-orders]',   orders.length)
+        setText('[data-qs-revenue]',  monthRevenue.toLocaleString('pl-PL', { maximumFractionDigits: 0 }))
+
+        const uniqueClients = new Set(orders.map(o => o.buyer_id || o.buyerId || o.user_id)).size
+        setText('[data-qs-clients]', uniqueClients)
+
+        // Inventory mini-stats
+        const lowStock = products.filter(p => {
+          const q = parseInt(p.stock_quantity ?? p.stockQuantity ?? p.quantity ?? 0)
+          return q > 0 && q < 10
+        }).length
+        const outOfStock = products.filter(p => {
+          const q = parseInt(p.stock_quantity ?? p.stockQuantity ?? p.quantity ?? 0)
+          return q <= 0
+        }).length
+        setText('[data-inv-total]', productCount)
+        setText('[data-inv-low]',   lowStock)
+        setText('[data-inv-out]',   outOfStock)
+
+        // Render products table
+        renderProducts(products.slice(0, 20))
+
+        // Render orders table
+        renderOrders(orders.slice(0, 20))
+
+      } catch (err) {
+        console.error('[panel-dostawcy] loadStats error:', err)
+      }
+    }
+
+    // ── Render products table ───────────────────────────────────────────────────
+    function renderProducts(products) {
+      const tbody = qs('[data-products-tbody]')
+      if (!tbody) return
+      if (!products.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="table-empty">Brak produktów. Zaimportuj pierwszy katalog.</td></tr>'
+        return
+      }
+      tbody.innerHTML = products.map(p => {
+        const qty = parseInt(p.stock_quantity ?? p.stockQuantity ?? p.quantity ?? 0)
+        const stockStatus = qty <= 0 ? 'inactive' : qty < 10 ? 'pending' : 'active'
+        return `<tr>
+          <td>${escHtml(p.name || p.nazwa || '—')}</td>
+          <td class="cell-muted">${escHtml(p.category_name || p.category || p.kategoria || '—')}</td>
+          <td>${fmtPrice(p.price_gross || p.supplier_price || p.cena_hurtowa || p.price)}</td>
+          <td>${statusPill(stockStatus)} <span style="margin-left:4px;font-size:12px">${qty} szt.</span></td>
+          <td>${statusPill(p.status || 'active')}</td>
+        </tr>`
+      }).join('')
+    }
+
+    // ── Render orders table ─────────────────────────────────────────────────────
+    function renderOrders(orders) {
+      const tbody = qs('[data-orders-tbody]')
+      if (!tbody) return
+      if (!orders.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="table-empty">Brak zamówień od sprzedawców.</td></tr>'
+        return
+      }
+      tbody.innerHTML = orders.map(o => {
+        const id     = escHtml((o.id || o.order_id || '').toString().slice(0, 8))
+        const buyer  = escHtml(o.store_name || o.buyer_name || o.email || o.buyer_id || '—')
+        const qty    = o.quantity || o.total_quantity || '—'
+        const total  = fmtPrice(o.total_price || o.totalPrice || o.total)
+        const status = o.status || 'pending'
+        const date   = fmtDate(o.created_at || o.createdAt)
+        return `<tr>
+          <td class="cell-mono">#${id}&hellip;</td>
+          <td>${buyer}</td>
+          <td>${qty}</td>
+          <td>${total}</td>
+          <td>${statusPill(status)}</td>
+          <td class="cell-muted">${date}</td>
+        </tr>`
+      }).join('')
+    }
+
+    // ── CSV import form ─────────────────────────────────────────────────────────
+    function initImportForm() {
+      const form      = qs('[data-import-form]')
+      const csvInput  = qs('[data-csv-input]')
+      const dropZone  = qs('[data-csv-drop-zone]')
+      const fileLabel = qs('[data-csv-filename]')
+      const msgEl     = qs('[data-import-msg]')
+      const resetBtn  = qs('[data-import-reset]')
+      const submitBtn = qs('[data-import-submit]')
+
+      if (!form) return
+
+      function showMsg(text, isError) {
+        if (!msgEl) return
+        msgEl.textContent = text
+        msgEl.style.color = isError ? '#ff6b6b' : '#54ffb0'
+        msgEl.hidden = false
+      }
+
+      function clearMsg() { if (msgEl) msgEl.hidden = true }
+
+      // File selection label feedback
+      if (csvInput) {
+        csvInput.addEventListener('change', () => {
+          const file = csvInput.files[0]
+          if (fileLabel) fileLabel.textContent = file ? `✓ ${file.name}` : ''
+          clearMsg()
+        })
+      }
+
+      // Drag-and-drop
+      if (dropZone) {
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over') })
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'))
+        dropZone.addEventListener('drop', e => {
+          e.preventDefault()
+          dropZone.classList.remove('drag-over')
+          const file = e.dataTransfer.files[0]
+          if (file && csvInput) {
+            const dt = new DataTransfer()
+            dt.items.add(file)
+            csvInput.files = dt.files
+            if (fileLabel) fileLabel.textContent = `✓ ${file.name}`
+            clearMsg()
+          }
+        })
+      }
+
+      // CSV template download (stub)
+      const templateLink = qs('[data-csv-template-link]')
+      if (templateLink) {
+        templateLink.addEventListener('click', e => {
+          e.preventDefault()
+          const header = 'nazwa,kategoria,cena_hurtowa,ilosc_sztuk,opis,ean,zdjecie_url,waga_kg,wymiary\n'
+          const example = 'Przykładowy produkt,Elektronika,49.99,100,Opis produktu,5901234123457,,0.5,10x5x3\n'
+          const blob = new Blob([header + example], { type: 'text/csv;charset=utf-8;' })
+          const url  = URL.createObjectURL(blob)
+          const a    = document.createElement('a')
+          a.href = url; a.download = 'szablon-produkty.csv'; a.click()
+          URL.revokeObjectURL(url)
+        })
+      }
+
+      // Reset
+      if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+          form.reset()
+          if (fileLabel) fileLabel.textContent = ''
+          clearMsg()
+        })
+      }
+
+      // Submit
+      form.addEventListener('submit', async e => {
+        e.preventDefault()
+        clearMsg()
+
+        const csvFile = csvInput && csvInput.files[0]
+        const xmlUrl  = (qs('[data-xml-url]') || {}).value || ''
+
+        if (!csvFile && !xmlUrl.trim()) {
+          showMsg('Wybierz plik CSV lub podaj adres URL kanału XML.', true)
+          return
+        }
+
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Importowanie…' }
+
+        try {
+          const api = window.QMApi
+
+          if (csvFile) {
+            const fd = new FormData()
+            fd.append('csv', csvFile)
+            const token = localStorage.getItem('qm_token')
+            const res = await fetch('/api/products/import/csv', {
+              method: 'POST',
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+              body: fd,
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+            showMsg(`✓ Import zakończony. Zaimportowano ${data.imported ?? '?'} produktów.`, false)
+          } else {
+            const token = localStorage.getItem('qm_token')
+            const res = await fetch('/api/products/import/xml', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              body: JSON.stringify({ url: xmlUrl.trim() }),
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+            showMsg(`✓ Kanał XML zapisany. Synchronizacja będzie uruchamiana co 24h.`, false)
+          }
+
+          // Reload stats after successful import
+          if (window.QMApi) setTimeout(() => loadStats(window.QMApi), 1000)
+
+        } catch (err) {
+          showMsg('Błąd importu: ' + (err.message || 'Nieznany błąd.'), true)
+        } finally {
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Importuj produkty' }
+        }
+      })
+    }
+
+    // ── Company profile form ────────────────────────────────────────────────────
+    function initCompanyForm() {
+      const form   = qs('[data-company-form]')
+      const msgEl  = qs('[data-company-msg]')
+      if (!form) return
+
+      form.addEventListener('submit', async e => {
+        e.preventDefault()
+        if (msgEl) msgEl.hidden = true
+        const btn = qs('[data-company-save]')
+        if (btn) { btn.disabled = true; btn.textContent = 'Zapisywanie…' }
+
+        const payload = {
+          company_name: (qs('[data-company-name]') || {}).value || '',
+          nip:          (qs('[data-company-nip]')  || {}).value || '',
+          phone:        (qs('[data-company-phone]') || {}).value || '',
+          email:        (qs('[data-company-email]') || {}).value || '',
+          description:  (qs('[data-company-desc]')  || {}).value || '',
+        }
+
+        try {
+          const token = localStorage.getItem('qm_token')
+          const res = await fetch('/api/suppliers/profile', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(payload),
+          })
+          const data = await res.json()
+          if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+          if (msgEl) { msgEl.textContent = '✓ Profil zapisany.'; msgEl.style.color = '#54ffb0'; msgEl.hidden = false }
+        } catch (err) {
+          if (msgEl) { msgEl.textContent = 'Błąd: ' + (err.message || 'Nieznany błąd.'); msgEl.style.color = '#ff6b6b'; msgEl.hidden = false }
+        } finally {
+          if (btn) { btn.disabled = false; btn.textContent = 'Zapisz profil' }
+        }
+      })
+    }
+
+    // ── Supplier profile info ───────────────────────────────────────────────────
+    async function loadSupplierProfile(api) {
+      try {
+        const token = localStorage.getItem('qm_token')
+        const res = await fetch('/api/suppliers/profile', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        const profile = data.profile || data
+
+        const nameEl = qs('[data-supplier-name]')
+        if (nameEl && (profile.company_name || profile.name)) {
+          nameEl.textContent = profile.company_name || profile.name
+        }
+
+        // Prefill company form
+        const fill = (sel, val) => { const el = qs(sel); if (el && val) el.value = val }
+        fill('[data-company-name]',  profile.company_name)
+        fill('[data-company-nip]',   profile.nip)
+        fill('[data-company-phone]', profile.phone)
+        fill('[data-company-email]', profile.email)
+        fill('[data-company-desc]',  profile.description)
+
+        // Verification status
+        const vSel = qs('[data-verification-status]')
+        if (vSel) {
+          const st = profile.verification_status || 'pending'
+          const map = { verified: 'pill-active', pending: 'pill-pending', rejected: 'pill-inactive' }
+          const label = { verified: 'Zweryfikowany', pending: 'Oczekuje', rejected: 'Odrzucony' }
+          vSel.className = 'status-pill ' + (map[st] || 'pill-pending')
+          vSel.textContent = label[st] || st
+        }
+        setText('[data-verification-nip]',  profile.nip || '—')
+        setText('[data-verification-docs]', profile.documents_submitted ? 'Przesłane' : 'Brak')
+
+      } catch { /* silent – profile endpoint may not exist yet */ }
+    }
+
+    // ── Sidebar section navigation ──────────────────────────────────────────────
+    function initSidebarNav() {
+      document.querySelectorAll('.sidebar-nav a[data-section]').forEach(link => {
+        link.addEventListener('click', e => {
+          document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'))
+          link.classList.add('active')
+        })
+      })
+    }
+
+    // ── Main init ───────────────────────────────────────────────────────────────
+    async function init() {
+      // Auth guard – redirect to login if no token
+      if (!getToken()) {
+        window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname)
+        return
+      }
+
+      // Populate name from cached user
+      const user = getCachedUser()
+      if (user) {
+        const nameEl = qs('[data-supplier-name]')
+        if (nameEl && (user.name || user.email)) {
+          nameEl.textContent = user.name || user.email
+        }
+      }
+
+      hideSplash()
+      initSidebarNav()
+      initImportForm()
+      initCompanyForm()
+
+      // Wait for api.js to register window.QMApi, then load data
+      const waitForApi = (resolve, tries = 0) => {
+        if (window.QMApi) return resolve(window.QMApi)
+        if (tries > 40) return resolve({})
+        setTimeout(() => waitForApi(resolve, tries + 1), 50)
+      }
+
+      const api = await new Promise(waitForApi)
+      await Promise.allSettled([
+        loadStats(api),
+        loadSupplierProfile(api),
+      ])
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init)
+    } else {
+      init()
+    }
+  }())
+  </script>
+</body>
+</html>
