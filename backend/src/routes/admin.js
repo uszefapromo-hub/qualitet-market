@@ -13,7 +13,7 @@ const { authenticate, requireRole, requireSuperAdmin } = require('../middleware/
 const { validate } = require('../middleware/validate');
 const { PLAN_CONFIG } = require('./subscriptions');
 const { upsertSupplierProducts, fetchSupplierProducts } = require('../services/supplier-import');
-const { computePlatformPrice, dbTiersToArray, DEFAULT_PLATFORM_TIERS, computeQualityScore, isProductFeatured, isLowQuality } = require('../helpers/pricing');
+const { computePlatformPrice, dbTiersToArray, DEFAULT_PLATFORM_TIERS, computeQualityScore, isProductFeatured, isLowQuality, computeResellerPrice, computeProfits } = require('../helpers/pricing');
 const { getPromoSlots } = require('../helpers/promo');
 const { sendImportNotification } = require('../helpers/mailer');
 
@@ -540,6 +540,243 @@ router.post(
   }
 );
 
+// ─── POST /api/admin/suppliers/sync-all – sync all active suppliers ─────────────
+// Triggers an immediate full sync of every active supplier that has a configured
+// endpoint.  Returns per-supplier results and overall totals.
+
+router.post(
+  '/suppliers/sync-all',
+  authenticate,
+  requireRole('owner', 'admin'),
+  async (req, res) => {
+    const { importSupplierProducts } = require('../services/supplier-import');
+
+    try {
+      const result = await db.query(
+        `SELECT id, name FROM suppliers
+          WHERE status = 'active'
+            AND (api_url IS NOT NULL OR xml_endpoint IS NOT NULL OR csv_endpoint IS NOT NULL)
+          ORDER BY name ASC`
+      );
+      const suppliers = result.rows;
+      if (suppliers.length === 0) {
+        return res.json({
+          message: 'Brak aktywnych hurtowni z skonfigurowanym endpointem',
+          suppliers: [],
+          totals: { count: 0, updated: 0, featured: 0, skipped: 0 },
+          synced_at: new Date().toISOString(),
+        });
+      }
+
+      const syncResults = [];
+      let totalCount    = 0;
+      let totalUpdated  = 0;
+      let totalFeatured = 0;
+      let totalSkipped  = 0;
+
+      for (const s of suppliers) {
+        try {
+          const report = await importSupplierProducts(s.id, { syncMode: 'api' });
+          syncResults.push({
+            supplier_id:   s.id,
+            supplier_name: s.name,
+            status:        'success',
+            count:         report.count,
+            updated:       report.updated || 0,
+            featured:      report.featured,
+            skipped:       report.skipped,
+          });
+          totalCount    += report.count    || 0;
+          totalUpdated  += report.updated  || 0;
+          totalFeatured += report.featured || 0;
+          totalSkipped  += report.skipped  || 0;
+          sendImportNotification({ supplierName: s.name, count: report.count, status: 'success' });
+        } catch (err) {
+          console.error(`[sync-all] supplier ${s.id} error:`, err.message);
+          syncResults.push({
+            supplier_id:   s.id,
+            supplier_name: s.name,
+            status:        'failure',
+            error:         err.message,
+          });
+          sendImportNotification({ supplierName: s.name, count: 0, status: 'failure', errorMessage: err.message });
+        }
+      }
+
+      return res.json({
+        message:    `Synchronizacja zakończona: ${syncResults.filter((r) => r.status === 'success').length}/${suppliers.length} hurtowni`,
+        suppliers:  syncResults,
+        totals:     { count: totalCount, updated: totalUpdated, featured: totalFeatured, skipped: totalSkipped },
+        synced_at:  new Date().toISOString(),
+      });
+    } catch (err) {
+      console.error('admin sync-all error:', err.message);
+      return res.status(500).json({ error: 'Błąd synchronizacji: ' + err.message });
+    }
+  }
+);
+
+// ─── GET /api/admin/import-center – Import / Product Control Center ───────────
+// Returns comprehensive stats for the Import Control Center (task 10):
+//   - list of all suppliers with sync status, counts, last sync time
+//   - import log entries (paginated)
+//   - platform-wide product counts (imported, featured, skipped)
+
+router.get('/import-center', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+  const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
+  const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
+  const offset = (page - 1) * limit;
+
+  try {
+    // 1. Supplier sync status overview
+    const suppliersResult = await db.query(
+      `SELECT
+         s.id,
+         s.name,
+         s.integration_type,
+         s.status,
+         s.last_sync_at,
+         COUNT(p.id)::INT AS product_count,
+         COUNT(p.id) FILTER (WHERE p.is_featured)::INT AS featured_count
+       FROM suppliers s
+       LEFT JOIN products p ON p.supplier_id = s.id AND p.is_central = true
+       GROUP BY s.id
+       ORDER BY s.name ASC`
+    );
+
+    // 2. Import log entries (paginated)
+    let logs = [];
+    let logTotal = 0;
+    try {
+      const logCountResult = await db.query('SELECT COUNT(*) FROM import_logs');
+      logTotal = parseInt(logCountResult.rows[0].count, 10);
+      const logResult = await db.query(
+        `SELECT il.*, s.name AS supplier_name
+           FROM import_logs il
+           LEFT JOIN suppliers s ON s.id = il.supplier_id
+          ORDER BY il.started_at DESC
+          LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      );
+      logs = logResult.rows;
+    } catch (_err) {
+      // import_logs table may not exist yet – return empty
+    }
+
+    // 3. Platform-wide product totals
+    const totalsResult = await db.query(
+      `SELECT
+         COUNT(*) FILTER (WHERE is_central = true)::INT                 AS central_count,
+         COUNT(*) FILTER (WHERE is_central = true AND is_featured)::INT AS featured_count,
+         COUNT(*) FILTER (WHERE is_central = true AND status = 'active')::INT AS active_count,
+         COUNT(*) FILTER (WHERE is_central = true AND stock > 0)::INT   AS in_stock_count
+       FROM products`
+    );
+    const totals = totalsResult.rows[0] || {};
+
+    return res.json({
+      suppliers:  suppliersResult.rows,
+      totals,
+      logs:       { total: logTotal, page, limit, items: logs },
+    });
+  } catch (err) {
+    console.error('admin import-center error:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// ─── POST /api/admin/suppliers/select-best-source – compare & select best supplier
+// Given a list of competing supplier offers for the same product, returns the
+// best offer based on the requested selection mode (lowest_cost | best_margin | best_quality).
+// Optionally saves the selection to a product record.
+
+router.post(
+  '/suppliers/select-best-source',
+  authenticate,
+  requireRole('owner', 'admin'),
+  [
+    body('offers').isArray({ min: 1 }),
+    body('mode').optional().isIn(['lowest_cost', 'best_margin', 'best_quality']),
+    body('product_id').optional().isUUID(),
+  ],
+  validate,
+  async (req, res) => {
+    const { selectBestSupplier, computeResellerPrice, computeProfits, computeSourceQualityScore } = require('../helpers/pricing');
+
+    const { offers, mode = 'best_quality', product_id = null } = req.body;
+
+    try {
+      const best = selectBestSupplier(offers, mode);
+      if (!best) return res.status(422).json({ error: 'Brak ofert do porównania' });
+
+      const supplierPrice  = parseFloat(best.price_gross) || 0;
+      const platformPrice  = computePlatformPrice(supplierPrice);
+      const resellerPrice  = computeResellerPrice(platformPrice);
+      const { platformProfit, resellerProfit } = computeProfits(supplierPrice, platformPrice, resellerPrice);
+      const bestSourceScore = computeSourceQualityScore(best);
+
+      // Exclude the winning offer using a price+supplier_id key to avoid reference comparison issues
+      const bestKey = `${best.supplier_id}|${best.price_gross}`;
+      const alternatives = offers
+        .filter((o) => `${o.supplier_id}|${o.price_gross}` !== bestKey)
+        .map((o) => ({
+          supplier_id:   o.supplier_id || null,
+          supplier_name: o.supplier_name || null,
+          price_gross:   parseFloat(o.price_gross) || 0,
+          stock:         parseInt(o.stock, 10) || 0,
+          quality_score: computeSourceQualityScore(o),
+        }));
+
+      // Optionally persist selection to a product record
+      if (product_id) {
+        await db.query(
+          `UPDATE products SET
+             supplier_id                 = COALESCE($2, supplier_id),
+             supplier_price              = $3,
+             platform_price              = $4,
+             min_selling_price           = $4,
+             selling_price               = $4,
+             recommended_reseller_price  = $5,
+             expected_platform_profit    = $6,
+             expected_reseller_profit    = $7,
+             alternative_suppliers       = $8,
+             source_quality_score        = $9,
+             updated_at                  = NOW()
+           WHERE id = $1`,
+          [
+            product_id,
+            best.supplier_id || null,
+            supplierPrice.toFixed(2),
+            platformPrice.toFixed(2),
+            resellerPrice.toFixed(2),
+            platformProfit.toFixed(2),
+            resellerProfit.toFixed(2),
+            JSON.stringify(alternatives),
+            bestSourceScore,
+          ]
+        );
+      }
+
+      return res.json({
+        selected_supplier:             best.supplier_id || null,
+        selected_supplier_name:        best.supplier_name || null,
+        mode,
+        supplier_cost:                 supplierPrice,
+        platform_price:                platformPrice,
+        recommended_reseller_price:    resellerPrice,
+        expected_platform_profit:      platformProfit,
+        expected_reseller_profit:      resellerProfit,
+        source_quality_score:          bestSourceScore,
+        alternative_suppliers:         alternatives,
+        product_id,
+      });
+    } catch (err) {
+      console.error('admin select-best-source error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
 // ─── PATCH /api/admin/stores/:id/status – change store status ─────────────────
 
 router.patch(
@@ -1058,6 +1295,7 @@ async function adminFetchApiProducts(supplier) {
 
 async function upsertCentralProducts(rawProducts, supplierId) {
   let count    = 0;
+  let updated  = 0;
   let featured = 0;
   let skipped  = 0;
 
@@ -1096,6 +1334,8 @@ async function upsertCentralProducts(rawProducts, supplierId) {
     const formattedPriceGross = parseFloat(priceGross).toFixed(2);
     const supplierPrice = parseFloat(formattedPriceGross);
     const platformPrice = computePlatformPrice(supplierPrice, tiers);
+    const resellerPrice = computeResellerPrice(platformPrice);
+    const { platformProfit, resellerProfit } = computeProfits(supplierPrice, platformPrice, resellerPrice);
 
     const qualityScore    = computeQualityScore({ ...raw, price_gross: supplierPrice });
     const productFeatured = isProductFeatured({ ...raw, price_gross: supplierPrice });
@@ -1111,26 +1351,31 @@ async function upsertCentralProducts(rawProducts, supplierId) {
         // if not provided by the supplier (COALESCE keeps existing value when null)
         await db.query(
           `UPDATE products SET
-             name              = $1,
-             price_net         = $2,
-             price_gross       = $3,
-             supplier_price    = $3,
-             platform_price    = $4,
-             min_selling_price = $4,
-             stock             = $5,
-             category          = COALESCE($6, category),
-             description       = COALESCE($7, description),
-             image_url         = COALESCE($8, image_url),
-             supplier_id       = $9,
-             quality_score     = $11,
-             is_featured       = $12,
-             status            = 'active',
-             updated_at        = NOW()
+             name                        = $1,
+             price_net                   = $2,
+             price_gross                 = $3,
+             supplier_price              = $3,
+             platform_price              = $4,
+             min_selling_price           = $4,
+             recommended_reseller_price  = $14,
+             expected_platform_profit    = $15,
+             expected_reseller_profit    = $16,
+             stock                       = $5,
+             category                    = COALESCE($6, category),
+             description                 = COALESCE($7, description),
+             image_url                   = COALESCE($8, image_url),
+             supplier_id                 = $9,
+             quality_score               = $11,
+             is_featured                 = $12,
+             status                      = 'active',
+             updated_at                  = NOW()
            WHERE is_central = true AND sku = $10`,
           [raw.name, priceNet, formattedPriceGross, platformPrice, raw.stock,
            raw.category, raw.description, raw.image_url, supplierId, raw.sku,
-           qualityScore, productFeatured]
+           qualityScore, productFeatured, null,
+           resellerPrice.toFixed(2), platformProfit.toFixed(2), resellerProfit.toFixed(2)]
         );
+        updated++;
         count++;
         if (productFeatured) featured++;
         continue;
@@ -1142,21 +1387,25 @@ async function upsertCentralProducts(rawProducts, supplierId) {
          (id, store_id, supplier_id, name, sku, price_net, tax_rate, price_gross,
           supplier_price, platform_price, min_selling_price,
           selling_price, margin, stock, category, description, image_url,
+          recommended_reseller_price, expected_platform_profit, expected_reseller_profit,
           is_central, status, quality_score, is_featured, created_at)
        VALUES ($1, NULL, $2, $3, $4, $5, $6, $7,
                $7, $8, $8,
-               $8, 0, $9, $10, $11, $12, true, 'active', $13, $14, NOW())`,
+               $8, 0, $9, $10, $11, $12,
+               $13, $14, $15,
+               true, 'active', $16, $17, NOW())`,
       [uuidv4(), supplierId, raw.name, raw.sku || null,
        priceNet, DEFAULT_TAX_RATE, formattedPriceGross,
        platformPrice,
        raw.stock, raw.category, raw.description, raw.image_url,
+       resellerPrice.toFixed(2), platformProfit.toFixed(2), resellerProfit.toFixed(2),
        qualityScore, productFeatured]
     );
     count++;
     if (productFeatured) featured++;
   }
 
-  return { count, featured, skipped };
+  return { count, updated, featured, skipped };
 }
 
 // ─── GET /api/admin/settings – read platform settings ────────────────────────

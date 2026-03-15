@@ -8937,3 +8937,333 @@ describe('PATCH /api/admin/products/:id/pinned', () => {
     expect(res.body).toHaveProperty('is_pinned', false);
   });
 });
+
+// ─── Supplier comparison & auto-publish system ─────────────────────────────────
+
+describe('POST /api/admin/suppliers/sync-all', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/sync-all')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns empty result when no active suppliers with endpoints', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // no active suppliers
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/sync-all')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('suppliers');
+    expect(Array.isArray(res.body.suppliers)).toBe(true);
+    expect(res.body.suppliers).toHaveLength(0);
+    expect(res.body).toHaveProperty('totals');
+    expect(res.body.totals).toMatchObject({ count: 0, updated: 0, featured: 0, skipped: 0 });
+  });
+
+  it('syncs multiple active suppliers and returns totals', async () => {
+    const SUP_A = 'b1000000-0000-4000-8000-000000000001';
+    const SUP_B = 'b1000000-0000-4000-8000-000000000002';
+
+    // active suppliers list
+    db.query
+      .mockResolvedValueOnce({ rows: [
+        { id: SUP_A, name: 'Hurtownia A', api_url: 'http://a.example.com/products.json' },
+        { id: SUP_B, name: 'Hurtownia B', api_url: 'http://b.example.com/products.json' },
+      ] })
+      // SUP_A import: supplier lookup, import_logs insert, no products to process, import_logs update, last_sync_at update
+      .mockResolvedValueOnce({ rows: [{ id: SUP_A, name: 'Hurtownia A', api_url: 'http://a.example.com/products.json' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'log-a' }] }) // import_logs insert
+      .mockResolvedValueOnce({ rows: [] }) // import_logs update
+      .mockResolvedValueOnce({ rows: [] }) // last_sync_at update
+      // SUP_B import: supplier lookup, import_logs insert, no products, import_logs update, last_sync_at update
+      .mockResolvedValueOnce({ rows: [{ id: SUP_B, name: 'Hurtownia B', api_url: 'http://b.example.com/products.json' }] })
+      .mockResolvedValueOnce({ rows: [{ id: 'log-b' }] }) // import_logs insert
+      .mockResolvedValueOnce({ rows: [] }) // import_logs update
+      .mockResolvedValueOnce({ rows: [] }); // last_sync_at update
+
+    // Mock fetch so fetchSupplierProducts returns empty arrays
+    const nodeFetch = require('node-fetch');
+    jest.spyOn(nodeFetch, 'default').mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => [],
+    });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/sync-all')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('suppliers');
+    expect(res.body).toHaveProperty('totals');
+    expect(res.body).toHaveProperty('synced_at');
+
+    nodeFetch.default.mockRestore();
+  });
+
+  it('reports supplier failures without aborting other syncs', async () => {
+    const SUP_FAIL = 'b2000000-0000-4000-8000-000000000003';
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SUP_FAIL, name: 'Failing Supplier', api_url: 'http://fail.example.com' }] })
+      .mockResolvedValueOnce({ rows: [] }); // supplier lookup fails (not found)
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/sync-all')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    const failEntry = res.body.suppliers.find((s) => s.status === 'failure');
+    expect(failEntry).toBeTruthy();
+    expect(failEntry).toHaveProperty('error');
+  });
+});
+
+describe('GET /api/admin/import-center', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .get('/api/admin/import-center')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns suppliers, totals, and logs', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [
+        { id: SUPPLIER_ID, name: 'Test Supplier', integration_type: 'csv', status: 'active', last_sync_at: null, product_count: 5, featured_count: 2 },
+      ] })
+      .mockResolvedValueOnce({ rows: [{ count: '2' }] }) // import_logs count
+      .mockResolvedValueOnce({ rows: [
+        { id: 'log-1', supplier_id: SUPPLIER_ID, supplier_name: 'Test Supplier', status: 'success', imported_count: 5, started_at: new Date().toISOString() },
+        { id: 'log-2', supplier_id: SUPPLIER_ID, supplier_name: 'Test Supplier', status: 'failure', imported_count: 0, started_at: new Date().toISOString() },
+      ] })
+      .mockResolvedValueOnce({ rows: [{ central_count: 5, featured_count: 2, active_count: 5, in_stock_count: 3 }] });
+
+    const res = await request(app)
+      .get('/api/admin/import-center')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('suppliers');
+    expect(Array.isArray(res.body.suppliers)).toBe(true);
+    expect(res.body.suppliers[0]).toHaveProperty('product_count');
+    expect(res.body).toHaveProperty('totals');
+    expect(res.body.totals).toHaveProperty('central_count');
+    expect(res.body).toHaveProperty('logs');
+    expect(res.body.logs).toHaveProperty('items');
+    expect(res.body.logs.items).toHaveLength(2);
+  });
+
+  it('returns empty logs when import_logs table unavailable', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] }) // suppliers
+      .mockRejectedValueOnce(Object.assign(new Error('relation does not exist'), { code: '42P01' })) // import_logs not found
+      .mockResolvedValueOnce({ rows: [{ central_count: 0, featured_count: 0, active_count: 0, in_stock_count: 0 }] });
+
+    const res = await request(app)
+      .get('/api/admin/import-center')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.logs.items).toHaveLength(0);
+  });
+});
+
+describe('POST /api/admin/suppliers/select-best-source', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ offers: [{ price_gross: 100, stock: 5 }] });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 422 when offers array is empty', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ offers: [] });
+    expect(res.status).toBe(422);
+  });
+
+  it('selects best offer in lowest_cost mode', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        offers: [
+          { supplier_id: SUPPLIER_ID, supplier_name: 'Supplier A', price_gross: 80, stock: 5, image_url: 'https://img.example.com/a.jpg', description: 'A great product' },
+          { supplier_id: SUPPLIER_ID, supplier_name: 'Supplier B', price_gross: 60, stock: 3, image_url: null, description: '' },
+        ],
+        mode: 'lowest_cost',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('supplier_cost', 60);
+    expect(res.body).toHaveProperty('platform_price');
+    expect(res.body).toHaveProperty('recommended_reseller_price');
+    expect(res.body).toHaveProperty('expected_platform_profit');
+    expect(res.body).toHaveProperty('expected_reseller_profit');
+    expect(res.body.expected_platform_profit).toBeGreaterThan(0);
+    expect(res.body.expected_reseller_profit).toBeGreaterThan(0);
+  });
+
+  it('selects best offer in best_quality mode', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        offers: [
+          { supplier_id: SUPPLIER_ID, supplier_name: 'Supplier A', price_gross: 80, stock: 5, image_url: 'https://img.example.com/a.jpg', description: 'A great product description here' },
+          { supplier_id: SUPPLIER_ID, supplier_name: 'Supplier B', price_gross: 60, stock: 0, image_url: null, description: '' },
+        ],
+        mode: 'best_quality',
+      });
+
+    expect(res.status).toBe(200);
+    // Supplier A wins: has image + description + stock = higher quality
+    expect(res.body.supplier_cost).toBe(80);
+    expect(res.body).toHaveProperty('alternative_suppliers');
+    expect(Array.isArray(res.body.alternative_suppliers)).toBe(true);
+    expect(res.body.alternative_suppliers).toHaveLength(1);
+  });
+
+  it('selects best offer in best_margin mode', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        offers: [
+          { supplier_id: SUPPLIER_ID, supplier_name: 'Supplier A', price_gross: 10, stock: 5 },
+          { supplier_id: SUPPLIER_ID, supplier_name: 'Supplier B', price_gross: 500, stock: 5 },
+        ],
+        mode: 'best_margin',
+      });
+
+    expect(res.status).toBe(200);
+    // Supplier B (price 500) has higher absolute margin amount
+    expect(res.body.supplier_cost).toBe(500);
+    expect(res.body.expected_platform_profit).toBeGreaterThan(0);
+  });
+
+  it('optionally updates a product with selected source', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // UPDATE products
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        offers: [
+          { supplier_id: SUPPLIER_ID, supplier_name: 'Best Supplier', price_gross: 100, stock: 10, image_url: 'https://img.example.com/b.jpg', description: 'Great item with all details' },
+        ],
+        mode: 'best_quality',
+        product_id: PRODUCT_ID,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('product_id', PRODUCT_ID);
+    expect(db.query).toHaveBeenCalledWith(
+      expect.stringContaining('UPDATE products'),
+      expect.arrayContaining([PRODUCT_ID])
+    );
+  });
+});
+
+describe('Pricing helpers – reseller & comparison', () => {
+  const {
+    computeResellerPrice,
+    computeProfits,
+    selectBestSupplier,
+    computeSourceQualityScore,
+    SELECTION_MODES,
+  } = require('../src/helpers/pricing');
+
+  describe('computeResellerPrice', () => {
+    it('applies default 15% margin on platform price', () => {
+      expect(computeResellerPrice(100)).toBeCloseTo(115, 2);
+    });
+
+    it('applies custom margin', () => {
+      expect(computeResellerPrice(100, 20)).toBeCloseTo(120, 2);
+    });
+
+    it('returns 0 for zero price', () => {
+      expect(computeResellerPrice(0)).toBe(0);
+    });
+  });
+
+  describe('computeProfits', () => {
+    it('computes correct platform and reseller profits', () => {
+      // supplierCost=100, platformPrice=130, resellerPrice=150
+      const { platformProfit, resellerProfit } = computeProfits(100, 130, 150);
+      expect(platformProfit).toBeCloseTo(30, 2);
+      expect(resellerProfit).toBeCloseTo(20, 2);
+    });
+
+    it('handles zero inputs gracefully', () => {
+      const { platformProfit, resellerProfit } = computeProfits(0, 0, 0);
+      expect(platformProfit).toBe(0);
+      expect(resellerProfit).toBe(0);
+    });
+  });
+
+  describe('selectBestSupplier', () => {
+    const offers = [
+      { supplier_id: 'sup-1', price_gross: 100, stock: 10, image_url: 'https://img.com/1.jpg', description: 'Good description here' },
+      { supplier_id: 'sup-2', price_gross: 80,  stock: 0,  image_url: null,                    description: '' },
+      { supplier_id: 'sup-3', price_gross: 120, stock: 5,  image_url: 'https://img.com/3.jpg', description: 'Another good description' },
+    ];
+
+    it('returns null for empty array', () => {
+      expect(selectBestSupplier([])).toBeNull();
+    });
+
+    it('returns sole element without comparison', () => {
+      expect(selectBestSupplier([offers[0]])).toBe(offers[0]);
+    });
+
+    it('lowest_cost selects cheapest supplier', () => {
+      const winner = selectBestSupplier(offers, 'lowest_cost');
+      expect(winner.supplier_id).toBe('sup-2');
+    });
+
+    it('best_margin selects highest absolute margin', () => {
+      const winner = selectBestSupplier(offers, 'best_margin');
+      expect(winner.supplier_id).toBe('sup-1'); // 100 * 0.40 = 40 profit (40% tier) beats 120 * 0.25 = 30 (25% tier)
+    });
+
+    it('best_quality selects supplier with best quality score', () => {
+      const winner = selectBestSupplier(offers, 'best_quality');
+      // sup-1 and sup-3 have images + descriptions + stock; sup-1 has stock>5 bonus
+      expect(winner.supplier_id).toBe('sup-1');
+    });
+
+    it('defaults to best_quality mode', () => {
+      const winner = selectBestSupplier(offers);
+      expect(winner.supplier_id).toBe('sup-1');
+    });
+
+    it('SELECTION_MODES contains all three modes', () => {
+      expect(SELECTION_MODES).toContain('lowest_cost');
+      expect(SELECTION_MODES).toContain('best_margin');
+      expect(SELECTION_MODES).toContain('best_quality');
+    });
+  });
+
+  describe('computeSourceQualityScore', () => {
+    it('returns 0 for empty product', () => {
+      expect(computeSourceQualityScore({})).toBe(0);
+    });
+
+    it('returns 100 for perfect product', () => {
+      expect(computeSourceQualityScore({
+        image_url: 'https://img.com/x.jpg',
+        description: 'This is a great product description',
+        stock: 10,
+        price_gross: 99.99,
+      })).toBe(100);
+    });
+  });
+});
