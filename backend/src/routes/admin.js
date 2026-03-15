@@ -1600,7 +1600,7 @@ const SYSTEM_SCRIPTS = [
   { id: 'export-report',           name: 'Eksport raportów finansowych',      description: 'Generuje raport przychodów i prowizji za bieżący miesiąc',                     destructive: false },
 ];
 
-router.get('/scripts', authenticate, requireSuperAdmin, async (req, res) => {
+router.get('/scripts', authenticate, requireRole('owner'), async (req, res) => {
   try {
     const result = await db.query(
       `SELECT script_id, status, last_run_at, last_result, run_count
@@ -1632,7 +1632,7 @@ router.get('/scripts', authenticate, requireSuperAdmin, async (req, res) => {
 
 // ─── POST /api/admin/scripts/:id/run – trigger a system script ────────────────
 
-router.post('/scripts/:id/run', authenticate, requireSuperAdmin, async (req, res) => {
+router.post('/scripts/:id/run', authenticate, requireRole('owner'), async (req, res) => {
   const scriptId = req.params.id;
   const isDryRun = req.body && (req.body.dry_run === true || req.body.dry_run === 'true');
   const script = SYSTEM_SCRIPTS.find((s) => s.id === scriptId);

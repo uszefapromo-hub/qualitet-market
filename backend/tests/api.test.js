@@ -402,6 +402,7 @@ function setupDbMock() {
 let app;
 let sellerToken;
 let adminToken;
+let adminOnlyToken;
 const SELLER_ID    = 'a0000000-0000-4000-8000-000000000001';
 const ADMIN_ID     = 'a0000000-0000-4000-8000-000000000002';
 const STORE_ID     = 'a0000000-0000-4000-8000-000000000003';
@@ -418,8 +419,9 @@ beforeAll(async () => {
   app = require('../src/app');
 
   const { signToken } = require('../src/middleware/auth');
-  sellerToken = signToken({ id: SELLER_ID, email: 'seller@test.pl', role: 'seller' });
-  adminToken  = signToken({ id: ADMIN_ID,  email: 'admin@test.pl',  role: 'owner'  });
+  sellerToken   = signToken({ id: SELLER_ID, email: 'seller@test.pl', role: 'seller' });
+  adminToken    = signToken({ id: ADMIN_ID,  email: 'admin@test.pl',  role: 'owner'  });
+  adminOnlyToken = signToken({ id: ADMIN_ID, email: 'admin@test.pl',  role: 'admin'  });
 
   // Pre-seed users
   const hash = await bcrypt.hash('Password123!', 12);
@@ -4077,14 +4079,21 @@ describe('POST /api/auth/register – promo tier', () => {
 // ─── GET /api/admin/scripts ───────────────────────────────────────────────────
 
 describe('GET /api/admin/scripts', () => {
-  it('requires admin role', async () => {
+  it('requires owner role (seller blocked)', async () => {
     const res = await request(app)
       .get('/api/admin/scripts')
       .set('Authorization', `Bearer ${sellerToken}`);
     expect(res.status).toBe(403);
   });
 
-  it('returns list of system scripts', async () => {
+  it('blocks admin role – only owner may access scripts', async () => {
+    const res = await request(app)
+      .get('/api/admin/scripts')
+      .set('Authorization', `Bearer ${adminOnlyToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns list of system scripts for owner', async () => {
     db.query.mockResolvedValueOnce({ rows: [] }); // no existing run logs
     const res = await request(app)
       .get('/api/admin/scripts')
@@ -4102,10 +4111,17 @@ describe('GET /api/admin/scripts', () => {
 // ─── POST /api/admin/scripts/:id/run ─────────────────────────────────────────
 
 describe('POST /api/admin/scripts/:id/run', () => {
-  it('requires admin role', async () => {
+  it('requires owner role (seller blocked)', async () => {
     const res = await request(app)
       .post('/api/admin/scripts/warehouse-sync/run')
       .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('blocks admin role – only owner may run scripts', async () => {
+    const res = await request(app)
+      .post('/api/admin/scripts/warehouse-sync/run')
+      .set('Authorization', `Bearer ${adminOnlyToken}`);
     expect(res.status).toBe(403);
   });
 
