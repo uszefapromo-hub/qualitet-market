@@ -536,6 +536,66 @@
       });
   }
 
+  // ── Community Posts ──────────────────────────────────────────────────────────
+
+  var defaultCommunityPosts = [
+    {
+      author_name: 'Marek K.',
+      content: 'Właśnie uruchomiłem swój sklep na QualitetVerse! Pierwsze produkty z katalogu BigBuy już online. Zapraszam do przeglądania 🎉',
+      likes_count: 14,
+      comments_count: 3,
+    },
+    {
+      author_name: 'Anna W.',
+      content: 'Polecam te słuchawki BT Pro — niesamowita jakość dźwięku w tej cenie! Klienci bardzo zadowoleni 🎧',
+      likes_count: 38,
+      comments_count: 7,
+    },
+    {
+      author_name: 'Piotr J.',
+      content: 'Tip dla nowych sprzedawców: ustawiajcie marżę min. 30% i korzystajcie z narzędzia do generowania opisów AI 💡',
+      likes_count: 22,
+      comments_count: 5,
+    },
+  ];
+
+  function communityPostCard(post) {
+    var name = String(post.author_name || 'Użytkownik');
+    var initials = name.trim().split(/\s+/).map(function (w) { return w[0]; }).slice(0, 2).join('').toUpperCase();
+    var text = String(post.content || '');
+    var likesCount = parseInt(post.likes_count, 10) || 0;
+    var commentsCount = parseInt(post.comments_count, 10) || 0;
+    return '<div class="feed-card">'
+      + '<div class="feed-author">'
+      + '<div class="feed-avatar">' + escHtml(initials) + '</div>'
+      + '<div>'
+      + '<h4>' + escHtml(name) + '</h4>'
+      + '<span class="feed-time">' + (post.created_at ? new Date(post.created_at).toLocaleDateString('pl-PL') : 'Niedawno') + '</span>'
+      + '</div>'
+      + '</div>'
+      + '<p>' + escHtml(text.substring(0, 140)) + (text.length > 140 ? '…' : '') + '</p>'
+      + '<div class="feed-tags">'
+      + '<span class="feed-tag">❤ ' + likesCount + '</span>'
+      + '<span class="feed-tag">💬 ' + commentsCount + '</span>'
+      + '</div>'
+      + '</div>';
+  }
+
+  function loadCommunityPosts() {
+    var container = document.getElementById('homepage-community-posts');
+    if (!container) return;
+    renderSkeletons(container, 3, 160);
+    apiGet('/social/feed', { limit: 6 })
+      .then(function (data) {
+        var posts = Array.isArray(data) ? data : (data.posts || []);
+        var items = posts.length > 0 ? posts : defaultCommunityPosts;
+        container.innerHTML = items.slice(0, 3).map(communityPostCard).join('');
+      })
+      .catch(function () {
+        container.innerHTML = defaultCommunityPosts.map(communityPostCard).join('');
+      });
+  }
+
   function init() {
     // Stagger requests to avoid hammering the API simultaneously
     loadTrendingProducts();
@@ -547,6 +607,7 @@
     setTimeout(loadViralProducts, 900);
     setTimeout(loadSocialVideo, 1050);
     setTimeout(loadSocialPosts, 1200);
+    setTimeout(loadCommunityPosts, 1350);
   }
 
   if (document.readyState === 'loading') {

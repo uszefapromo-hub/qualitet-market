@@ -679,61 +679,23 @@
     </section>
 
     <!-- Community Feed -->
-    <!-- Blog / Poradniki -->
-    <section class="mkt-section" id="blog-poradniki" style="background:rgba(0,212,255,.03);padding-top:40px;padding-bottom:40px">
+    <section class="mkt-section" id="community-feed" style="background:rgba(0,212,255,.03);padding-top:40px;padding-bottom:40px">
       <div class="wrap">
         <div class="mkt-section-head">
           <div>
-            <span class="eyebrow" style="margin-bottom:8px;display:inline-block">📚 Wiedza i porady</span>
-            <h2>Blog / Poradniki</h2>
+            <span class="eyebrow" style="margin-bottom:8px;display:inline-block">💬 Społeczność</span>
+            <h2>Posty społeczności</h2>
           </div>
+          <a href="community.html">Przejdź do społeczności →</a>
         </div>
-        <div class="mkt-community-grid">
-          <div class="feed-card">
-            <div class="feed-author">
-              <div class="feed-avatar" style="background:linear-gradient(135deg,rgba(139,92,246,.3),rgba(0,212,255,.2));color:var(--purple-bright)">QV</div>
-              <div>
-                <h4>Jak założyć sklep w 60 sekund?</h4>
-                <span class="feed-time">Poradnik dla sprzedawców</span>
-              </div>
-            </div>
-            <p>Dowiedz się jak szybko uruchomić sklep na platformie QualitetVerse, zaimportować produkty od dostawców i ustawić marże w zaledwie kilka minut.</p>
-            <div class="feed-tags">
-              <span class="feed-tag">#poradnik</span>
-              <span class="feed-tag">#sklep</span>
-              <span class="feed-tag">#dropshipping</span>
-            </div>
-          </div>
-          <div class="feed-card">
-            <div class="feed-author">
-              <div class="feed-avatar" style="background:linear-gradient(135deg,rgba(0,212,255,.25),rgba(34,197,94,.2));color:var(--cyan)">B2B</div>
-              <div>
-                <h4>Jak importować produkty od hurtowni?</h4>
-                <span class="feed-time">Poradnik dla sprzedawców</span>
-              </div>
-            </div>
-            <p>Krok po kroku wyjaśniamy jak skorzystać z katalogu dostawców, zaimportować produkty CSV/XML i automatycznie ustawić marżę sprzedaży.</p>
-            <div class="feed-tags">
-              <span class="feed-tag">#import</span>
-              <span class="feed-tag">#hurtownia</span>
-              <span class="feed-tag">#CSV</span>
-            </div>
-          </div>
-          <div class="feed-card">
-            <div class="feed-author">
-              <div class="feed-avatar" style="background:linear-gradient(135deg,rgba(34,197,94,.3),rgba(250,204,21,.2));color:#22c55e">💰</div>
-              <div>
-                <h4>Jak zarabiać na dropshippingu w Polsce?</h4>
-                <span class="feed-time">Poradnik biznesowy</span>
-              </div>
-            </div>
-            <p>Wyjaśniamy model dropshippingu B2B/B2C na platformie QualitetVerse — od wyboru produktów po ustawianie cen i realizację zamówień.</p>
-            <div class="feed-tags">
-              <span class="feed-tag">#biznes</span>
-              <span class="feed-tag">#marża</span>
-              <span class="feed-tag">#zarobki</span>
-            </div>
-          </div>
+        <div class="mkt-community-grid" id="homepage-community-posts" aria-live="polite">
+          <!-- Skeleton loaders — replaced dynamically by homepage.js -->
+          <div class="mkt-skeleton" style="height:160px;border-radius:18px"></div>
+          <div class="mkt-skeleton" style="height:160px;border-radius:18px"></div>
+          <div class="mkt-skeleton" style="height:160px;border-radius:18px"></div>
+        </div>
+        <div style="text-align:center;margin-top:24px">
+          <a class="btn btn-secondary" href="community.html">💬 Dołącz do dyskusji</a>
         </div>
       </div>
     </section>
@@ -1579,11 +1541,14 @@
       </svg>
       <span>Hurt</span>
     </a>
-    <a href="auctions.html" rel="nofollow noreferrer" data-nav="auctions">
+    <a href="community.html" rel="nofollow noreferrer" data-nav="community">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
       </svg>
-      <span>Aukcje</span>
+      <span>Społeczność</span>
     </a>
     <a href="dashboard.html" rel="nofollow noreferrer" data-nav="dashboard">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

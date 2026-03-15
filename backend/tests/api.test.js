@@ -8383,3 +8383,59 @@ describe('mapCategorySlug (supplier-import service)', () => {
     expect(mapCategorySlug('XYZ Unknown 12345')).toBeNull();
   });
 });
+
+// ─── POST /api/social/posts – media_urls (image posting) ────────────────────
+
+describe('POST /api/social/posts – with media_urls (community image post)', () => {
+  it('creates a post with media_urls containing an image URL', async () => {
+    const imageUrl = 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800';
+    db.query.mockResolvedValueOnce({
+      rows: [{
+        id: SOCIAL_POST_ID,
+        content: 'Look at this product!',
+        post_type: 'product',
+        media_urls: [imageUrl],
+        likes_count: 0,
+        comments_count: 0,
+        shares_count: 0,
+        created_at: new Date().toISOString(),
+      }],
+    });
+    const res = await request(app)
+      .post('/api/social/posts')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ content: 'Look at this product!', post_type: 'product', media_urls: [imageUrl] });
+    expect(res.status).toBe(201);
+    expect(res.body.post.id).toBe(SOCIAL_POST_ID);
+  });
+
+  it('rejects a post with media_urls that is not an array', async () => {
+    const res = await request(app)
+      .post('/api/social/posts')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ content: 'Test', media_urls: 'not-an-array' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/media_urls musi być tablicą/i);
+  });
+
+  it('creates a general community post with text only', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{
+        id: SOCIAL_POST_ID,
+        content: 'Community update!',
+        post_type: 'general',
+        media_urls: [],
+        likes_count: 0,
+        comments_count: 0,
+        shares_count: 0,
+        created_at: new Date().toISOString(),
+      }],
+    });
+    const res = await request(app)
+      .post('/api/social/posts')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ content: 'Community update!', post_type: 'general' });
+    expect(res.status).toBe(201);
+    expect(res.body.post.post_type).toBe('general');
+  });
+});
