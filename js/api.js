@@ -792,12 +792,12 @@
     get(id)                         { return get(`/scripts/${id}`); },
     /** Create a script. POST /api/scripts */
     create(data)                    { return post('/scripts', data); },
-    /** Update a script. PUT /api/scripts/:id */
-    update(id, data)                { return put(`/scripts/${id}`, data); },
+    /** Update a script. PATCH /api/scripts/:id */
+    update(id, data)                { return patch(`/scripts/${id}`, data); },
     /** Delete a script. DELETE /api/scripts/:id */
     delete(id)                      { return del(`/scripts/${id}`); },
-    /** Toggle script active state. PATCH /api/scripts/:id/toggle */
-    toggle(id, data)                { return patch(`/scripts/${id}/toggle`, data); },
+    /** Toggle script active state. PATCH /api/scripts/:id */
+    toggle(id, data)                { return patch(`/scripts/${id}`, data); },
   };
 
   // ─── Campaigns ────────────────────────────────────────────────────────────────

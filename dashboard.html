@@ -471,10 +471,10 @@
     var tbody   = document.querySelector('[data-dash-scripts-tbody]');
     if (!tbody) return;
 
-    var api = (window.QMApi && window.QMApi.request) ? window.QMApi.request.bind(window.QMApi) : null;
+    var api = (window.QMApi && window.QMApi.Scripts) ? window.QMApi.Scripts : null;
     if (!api) { if (loading) loading.hidden = true; if (empty) { empty.hidden = false; } return; }
 
-    api('GET', '/api/scripts').then(function(scripts) {
+    api.list().then(function(scripts) {
       if (loading) loading.hidden = true;
       if (!scripts || scripts.length === 0) {
         if (empty) empty.hidden = false;

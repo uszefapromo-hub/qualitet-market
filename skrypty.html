@@ -309,16 +309,14 @@
       return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
-    function getApi() {
-      if (window.QMApi && typeof window.QMApi.request === 'function') return window.QMApi.request.bind(window.QMApi);
-      return null;
+    function hasApi() {
+      return !!(window.QMApi && window.QMApi.Scripts && window.QMApi.Stores);
     }
 
     /* ── Load scripts ── */
     function loadScripts() {
-      var api = getApi();
-      if (!api) { showError('Zaloguj się, aby zarządzać skryptami.'); return; }
-      api('GET', '/api/scripts').then(function(data) {
+      if (!hasApi()) { showError('Zaloguj się, aby zarządzać skryptami.'); return; }
+      window.QMApi.Scripts.list().then(function(data) {
         allScripts = Array.isArray(data) ? data : [];
         loadingEl.hidden = true;
         updateStats();
@@ -331,17 +329,11 @@
 
     /* ── Load stores for select ── */
     function loadStores() {
-      var api = getApi();
-      if (!api) return;
-      api('GET', '/api/my/stores').then(function(data) {
-        allStores = Array.isArray(data) ? data : (Array.isArray(data && data.stores) ? data.stores : []);
+      if (!hasApi()) return;
+      window.QMApi.Stores.list().then(function(data) {
+        allStores = Array.isArray(data) ? data : [];
         renderStoreSelect(storeSelect);
-      }).catch(function() {
-        api('GET', '/api/stores').then(function(data) {
-          allStores = Array.isArray(data) ? data : [];
-          renderStoreSelect(storeSelect);
-        }).catch(function() {});
-      });
+      }).catch(function() {});
     }
 
     function renderStoreSelect(sel) {
@@ -417,9 +409,8 @@
 
     /* ── Toggle active ── */
     function toggleScript(script) {
-      var api = getApi();
-      if (!api) return;
-      api('PATCH', '/api/scripts/'+script.id, {active: !script.active}).then(function(updated) {
+      if (!hasApi()) return;
+      window.QMApi.Scripts.toggle(script.id, {active: !script.active}).then(function(updated) {
         var idx = allScripts.findIndex(function(s){ return s.id === script.id; });
         if (idx >= 0) allScripts[idx] = Object.assign({}, allScripts[idx], updated);
         updateStats();
@@ -429,9 +420,8 @@
 
     /* ── Duplicate ── */
     function duplicateScript(script) {
-      var api = getApi();
-      if (!api) return;
-      api('POST', '/api/scripts', {
+      if (!hasApi()) return;
+      window.QMApi.Scripts.create({
         store_id:  script.store_id,
         name:      script.name + ' (kopia)',
         type:      script.type,
@@ -449,9 +439,8 @@
     /* ── Delete ── */
     function deleteScript(script) {
       if (!confirm('Usunąć skrypt "'+script.name+'"?')) return;
-      var api = getApi();
-      if (!api) return;
-      api('DELETE', '/api/scripts/'+script.id).then(function() {
+      if (!hasApi()) return;
+      window.QMApi.Scripts.delete(script.id).then(function() {
         allScripts = allScripts.filter(function(s){ return s.id !== script.id; });
         updateStats();
         renderTable();
@@ -504,8 +493,7 @@
     /* ── Form submit ── */
     form.addEventListener('submit', function(e) {
       e.preventDefault();
-      var api = getApi();
-      if (!api) return;
+      if (!hasApi()) return;
       var payload = {
         store_id:  storeSelect.value,
         name:      document.getElementById('script-name').value.trim(),
@@ -522,8 +510,8 @@
       submitBtn.textContent = 'Zapisywanie…';
 
       var prom = editingId
-        ? api('PATCH', '/api/scripts/'+editingId, payload)
-        : api('POST',  '/api/scripts', payload);
+        ? window.QMApi.Scripts.update(editingId, payload)
+        : window.QMApi.Scripts.create(payload);
 
       prom.then(function(saved) {
         if (editingId) {
