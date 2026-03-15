@@ -4157,6 +4157,46 @@ describe('POST /api/admin/scripts/:id/run', () => {
     expect(res.body.script_id).toBe('cleanup-demo-data');
     expect(res.body.result).toContain('3');
   });
+
+  it('runs cleanup-subscriptions script successfully', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1' }, { id: 'sub-2' }] }) // UPDATE subscriptions
+      .mockResolvedValueOnce({ rows: [] }); // INSERT script_runs
+
+    const res = await request(app)
+      .post('/api/admin/scripts/cleanup-subscriptions/run')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.script_id).toBe('cleanup-subscriptions');
+    expect(res.body.result).toContain('2');
+  });
+
+  it('runs send-notifications script successfully', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ pending: 5 }] }) // COUNT mail_messages
+      .mockResolvedValueOnce({ rows: [] }); // INSERT script_runs
+
+    const res = await request(app)
+      .post('/api/admin/scripts/send-notifications/run')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.script_id).toBe('send-notifications');
+    expect(res.body.result).toContain('5');
+  });
+
+  it('runs db-backup script successfully', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] }); // INSERT script_runs
+
+    const res = await request(app)
+      .post('/api/admin/scripts/db-backup/run')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.script_id).toBe('db-backup');
+  });
 });
 // ─── Referral codes ───────────────────────────────────────────────────────────
 

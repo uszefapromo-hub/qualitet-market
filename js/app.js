@@ -5589,44 +5589,79 @@
     if(document.body.dataset.page !== 'owner-panel'){
       return;
     }
+    const SCRIPT_NAMES = {
+      'warehouse-sync':        'Synchronizacja hurtowni',
+      'csv-import':            'Import produktów CSV/XML',
+      'recalculate-prices':    'Przeliczenie cen i marż',
+      'cleanup-subscriptions': 'Czyszczenie wygasłych subskrypcji',
+      'export-report':         'Generowanie raportów miesięcznych',
+      'send-notifications':    'Wysyłka powiadomień e-mail',
+      'db-backup':             'Backup bazy danych',
+      'cleanup-accounts':      'Czyszczenie nieaktywnych kont',
+      'cleanup-demo-data':     'Usuń dane demonstracyjne',
+    };
+
+    function appendScriptLog(scriptId, scriptName, duration, ok, message){
+      const logTbody = document.querySelector('[data-scripts-log-tbody]');
+      if(!logTbody) return;
+      const now = new Date().toLocaleString('pl-PL');
+      const tr = document.createElement('tr');
+      const statusHtml = ok
+        ? '<span class="pill-active">Sukces</span>'
+        : '<span class="pill-inactive">Błąd</span>';
+      tr.innerHTML = `<td class="cell-muted">${escapeHtml(now)}</td><td><strong>${escapeHtml(scriptName || scriptId)}</strong></td><td class="cell-muted">${escapeHtml(duration)}</td><td>${statusHtml}</td><td class="cell-muted">${escapeHtml(message || '')}</td>`;
+      const emptyRow = logTbody.querySelector('td[colspan]');
+      if(emptyRow) emptyRow.closest('tr').remove();
+      logTbody.insertBefore(tr, logTbody.firstChild);
+    }
+
     document.querySelectorAll('[data-run-script]').forEach(btn => {
       btn.addEventListener('click', () => {
         const scriptId = btn.dataset.runScript;
-        const now = new Date().toLocaleString('pl-PL');
+        const scriptName = SCRIPT_NAMES[scriptId] || scriptId;
         const timeEl = document.querySelector(`[data-script-run-time="${scriptId}"]`);
         const statusEl = document.querySelector(`[data-script-status="${scriptId}"]`);
-        if(timeEl) timeEl.textContent = now;
+        const startTime = Date.now();
+
         if(statusEl){
           statusEl.className = 'pill-trial';
           statusEl.textContent = 'Uruchamianie…';
         }
         btn.disabled = true;
         btn.textContent = '⏳ Działanie…';
-        setTimeout(() => {
-          btn.disabled = false;
-          btn.textContent = '▶ Uruchom';
-          if(statusEl){
-            statusEl.className = 'pill-active';
-            statusEl.textContent = 'Aktywny';
-          }
-          const logTbody = document.querySelector('[data-scripts-log-tbody]');
-          if(logTbody){
-            const scriptNames = {
-              'sync-warehouses': 'Synchronizacja hurtowni',
-              'import-products': 'Import produktów CSV/XML',
-              'recalc-prices': 'Przeliczenie cen i marż',
-              'cleanup-subscriptions': 'Czyszczenie wygasłych subskrypcji',
-              'gen-reports': 'Generowanie raportów miesięcznych',
-              'send-notifications': 'Wysyłka powiadomień e-mail',
-              'db-backup': 'Backup bazy danych'
-            };
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td class="cell-muted">${escapeHtml(now)}</td><td><strong>${escapeHtml(scriptNames[scriptId] || scriptId)}</strong></td><td class="cell-muted">~2s</td><td><span class="pill-active">Sukces</span></td><td class="cell-muted">Zakończono pomyślnie.</td>`;
-            const emptyRow = logTbody.querySelector('td[colspan]');
-            if(emptyRow) emptyRow.closest('tr').remove();
-            logTbody.insertBefore(tr, logTbody.firstChild);
-          }
-        }, 1800);
+
+        const api = window.QMApi;
+        if(api && api.Admin && api.Admin.runScript){
+          api.Admin.runScript(scriptId)
+            .then(resp => {
+              const elapsed = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+              const now = new Date().toLocaleString('pl-PL');
+              if(timeEl) timeEl.textContent = now;
+              if(statusEl){ statusEl.className = 'pill-active'; statusEl.textContent = 'Aktywny'; }
+              appendScriptLog(scriptId, scriptName, elapsed, true, resp.result || 'Zakończono pomyślnie.');
+            })
+            .catch(err => {
+              const elapsed = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+              const now = new Date().toLocaleString('pl-PL');
+              if(timeEl) timeEl.textContent = now;
+              if(statusEl){ statusEl.className = 'pill-inactive'; statusEl.textContent = 'Błąd'; }
+              appendScriptLog(scriptId, scriptName, elapsed, false, err.message || 'Nieznany błąd');
+            })
+            .finally(() => {
+              btn.disabled = false;
+              btn.textContent = '▶ Uruchom';
+            });
+        } else {
+          // Fallback: no authenticated API session – simulate for demo purposes
+          const now = new Date().toLocaleString('pl-PL');
+          setTimeout(() => {
+            btn.disabled = false;
+            btn.textContent = '▶ Uruchom';
+            if(timeEl) timeEl.textContent = now;
+            if(statusEl){ statusEl.className = 'pill-active'; statusEl.textContent = 'Aktywny'; }
+            appendScriptLog(scriptId, scriptName, '~2s', true, 'Zakończono pomyślnie (tryb demo).');
+          }, 1800);
+        }
       });
     });
 
