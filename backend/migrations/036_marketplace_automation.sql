@@ -22,6 +22,7 @@ ALTER TABLE products
   ADD COLUMN IF NOT EXISTS alternative_suppliers      JSONB;
 
 -- Backfill: compute from existing platform_price / supplier_price where available
+-- Note: 1.20 = 1 + DEFAULT_RESELLER_MARGIN_PCT/100 (20% reseller margin – must stay in sync with pricing.js)
 UPDATE products
 SET recommended_reseller_price = ROUND(platform_price * 1.20, 2),
     expected_platform_profit   = ROUND(platform_price - COALESCE(supplier_price, 0), 2),

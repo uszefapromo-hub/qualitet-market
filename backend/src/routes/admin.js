@@ -13,7 +13,8 @@ const { authenticate, requireRole, requireSuperAdmin } = require('../middleware/
 const { validate } = require('../middleware/validate');
 const { PLAN_CONFIG } = require('./subscriptions');
 const { upsertSupplierProducts, fetchSupplierProducts, importSupplierProducts } = require('../services/supplier-import');
-const { computePlatformPrice, dbTiersToArray, DEFAULT_PLATFORM_TIERS, computeQualityScore, isProductFeatured, isLowQuality } = require('../helpers/pricing');
+const { computePlatformPrice, dbTiersToArray, DEFAULT_PLATFORM_TIERS, computeQualityScore, isProductFeatured, isLowQuality, computeResellerPrice, computeExpectedPlatformProfit, computeExpectedResellerProfit, DEFAULT_RESELLER_MARGIN_PCT } = require('../helpers/pricing');
+const { selectBestSupplier, buildAlternativesSummary } = require('../services/supplier-comparison');
 const { getPromoSlots } = require('../helpers/promo');
 const { sendImportNotification } = require('../helpers/mailer');
 
@@ -715,6 +716,180 @@ router.get('/profit-report', authenticate, requireRole('owner', 'admin'), async 
     return res.status(500).json({ error: 'Błąd serwera' });
   }
 });
+
+// ─── GET /api/admin/import-center – comprehensive import control center ────────
+// Returns a single-call snapshot of everything needed for the Super Admin import
+// dashboard: connected suppliers, their sync health, recent import log entries,
+// and an aggregate profit summary.
+
+router.get('/import-center', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+  try {
+    const [suppliersResult, recentLogsResult, profitResult, productCountResult] = await Promise.all([
+      // Per-supplier sync health
+      db.query(
+        `SELECT s.id, s.name, s.status, s.active, s.last_sync_at, s.integration_type,
+                (SELECT COUNT(*) FROM products p WHERE p.supplier_id = s.id) AS product_count,
+                (SELECT il.status FROM import_logs il WHERE il.supplier_id = s.id
+                 ORDER BY il.created_at DESC LIMIT 1) AS last_import_status,
+                (SELECT il.count FROM import_logs il WHERE il.supplier_id = s.id
+                 ORDER BY il.created_at DESC LIMIT 1) AS last_import_count,
+                (SELECT il.error_message FROM import_logs il WHERE il.supplier_id = s.id
+                 ORDER BY il.created_at DESC LIMIT 1) AS last_import_error
+           FROM suppliers s
+          ORDER BY s.name ASC`
+      ),
+      // 10 most-recent import log entries
+      db.query(
+        `SELECT il.id, il.supplier_id, il.supplier_name, il.trigger, il.status,
+                il.count, il.featured, il.skipped, il.error_message,
+                il.started_at, il.finished_at, il.created_at
+           FROM import_logs il
+          ORDER BY il.created_at DESC
+          LIMIT 10`
+      ),
+      // Aggregate profit summary
+      db.query(
+        `SELECT
+           COUNT(*)                                    AS total_orders,
+           COALESCE(SUM(total), 0)                    AS total_revenue,
+           COALESCE(SUM(supplier_cost), 0)            AS total_supplier_cost,
+           COALESCE(SUM(payment_fee), 0)              AS total_payment_fees,
+           COALESCE(SUM(real_profit), 0)              AS total_real_profit
+         FROM orders
+         WHERE status NOT IN ('cancelled', 'created')`
+      ),
+      // Central catalogue product counts
+      db.query(
+        `SELECT
+           COUNT(*)                                          AS total,
+           SUM(CASE WHEN is_featured = true THEN 1 ELSE 0 END) AS featured,
+           SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END)  AS active
+         FROM products WHERE is_central = true`
+      ),
+    ]);
+
+    const profit = profitResult.rows[0];
+    const counts = productCountResult.rows[0];
+
+    return res.json({
+      suppliers:     suppliersResult.rows,
+      recent_logs:   recentLogsResult.rows,
+      profit_summary: {
+        total_orders:        parseInt(profit.total_orders, 10),
+        total_revenue:       parseFloat(parseFloat(profit.total_revenue).toFixed(2)),
+        total_supplier_cost: parseFloat(parseFloat(profit.total_supplier_cost).toFixed(2)),
+        total_payment_fees:  parseFloat(parseFloat(profit.total_payment_fees).toFixed(2)),
+        total_real_profit:   parseFloat(parseFloat(profit.total_real_profit).toFixed(2)),
+      },
+      product_counts: {
+        total:    parseInt(counts.total   || '0', 10),
+        featured: parseInt(counts.featured || '0', 10),
+        active:   parseInt(counts.active   || '0', 10),
+      },
+    });
+  } catch (err) {
+    console.error('import-center error:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// ─── POST /api/admin/suppliers/select-best-source – compare supplier offers ────
+// Accepts an array of supplier offer objects and a selection mode, then returns
+// the best source selected by selectBestSupplier() together with alternative
+// suppliers and composite scores.  Can also persist the selection to the product
+// record when a product_id is provided.
+//
+// Request body:
+//   {
+//     offers: [
+//       { supplier_id, supplier_name?, supplier_price, stock, quality_score, platform_price },
+//       ...
+//     ],
+//     mode?: 'lowest_cost' | 'best_margin' | 'best_quality' | 'balanced',
+//     product_id?: UUID   // when provided, persists the selection to the product row
+//   }
+
+router.post(
+  '/suppliers/select-best-source',
+  authenticate,
+  requireRole('owner', 'admin'),
+  [
+    body('offers').isArray({ min: 1 }).withMessage('offers must be a non-empty array'),
+    body('mode').optional().isIn(['lowest_cost', 'best_margin', 'best_quality', 'balanced']),
+    body('product_id').optional().isUUID(),
+  ],
+  validate,
+  async (req, res) => {
+    const { offers, mode = 'balanced', product_id } = req.body;
+
+    try {
+      const result = selectBestSupplier(offers, mode);
+      const alternativesSummary = buildAlternativesSummary(result.alternatives);
+
+      // Optionally persist the selected supplier + alternatives to the product row
+      if (product_id) {
+        // Recalculate profit columns based on the newly selected supplier
+        const bestPlatformPrice = parseFloat(result.best.platform_price) || 0;
+        const bestSupplierPrice = parseFloat(result.best.supplier_price) || 0;
+        const recommendedResellerPrice = computeResellerPrice(bestPlatformPrice, DEFAULT_RESELLER_MARGIN_PCT);
+        const expectedPlatformProfit   = computeExpectedPlatformProfit(bestPlatformPrice, bestSupplierPrice);
+        const expectedResellerProfit   = computeExpectedResellerProfit(recommendedResellerPrice, bestPlatformPrice);
+
+        const updateResult = await db.query(
+          `UPDATE products
+             SET supplier_id                  = $1,
+                 supplier_price               = $2,
+                 platform_price               = $3,
+                 min_selling_price            = $3,
+                 selling_price                = $3,
+                 alternative_suppliers        = $4,
+                 recommended_reseller_price   = $6,
+                 expected_platform_profit     = $7,
+                 expected_reseller_profit     = $8,
+                 updated_at                   = NOW()
+           WHERE id = $5
+           RETURNING id, name, supplier_id, platform_price, alternative_suppliers,
+                     recommended_reseller_price, expected_platform_profit, expected_reseller_profit`,
+          [
+            result.best.supplier_id,
+            bestSupplierPrice.toFixed(2),
+            bestPlatformPrice.toFixed(2),
+            JSON.stringify(alternativesSummary),
+            product_id,
+            recommendedResellerPrice.toFixed(2),
+            expectedPlatformProfit.toFixed(2),
+            expectedResellerProfit.toFixed(2),
+          ]
+        );
+
+        if (!updateResult.rows[0]) {
+          return res.status(404).json({ error: 'Produkt nie znaleziony' });
+        }
+
+        return res.json({
+          selected:     result.best,
+          alternatives: alternativesSummary,
+          mode:         result.mode,
+          scores:       result.scores,
+          product:      updateResult.rows[0],
+        });
+      }
+
+      return res.json({
+        selected:     result.best,
+        alternatives: alternativesSummary,
+        mode:         result.mode,
+        scores:       result.scores,
+      });
+    } catch (err) {
+      console.error('select-best-source error:', err.message);
+      if (err.message.includes('candidates array must not be empty')) {
+        return res.status(422).json({ error: err.message });
+      }
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
 
 // ─── PATCH /api/admin/stores/:id/status – change store status ─────────────────
 

@@ -9328,3 +9328,217 @@ describe('logImport helper (supplier-import service)', () => {
     await expect(logImport({ supplier_id: SUPPLIER_ID, status: 'failure' })).resolves.not.toThrow();
   });
 });
+
+// ─── Import center dashboard ──────────────────────────────────────────────────
+
+describe('GET /api/admin/import-center', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .get('/api/admin/import-center')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns suppliers, recent_logs, profit_summary, product_counts', async () => {
+    // Promise.all fires 4 queries in order: suppliers, recent_logs, profit summary, product counts
+    db.query
+      .mockResolvedValueOnce({
+        rows: [{ id: SUPPLIER_ID, name: 'Hurtownia ABC', status: 'active', active: true,
+                 last_sync_at: null, integration_type: 'api', product_count: '5',
+                 last_import_status: 'success', last_import_count: '5', last_import_error: null }],
+      })
+      .mockResolvedValueOnce({
+        rows: [{ id: 'log-1', supplier_name: 'Hurtownia ABC', trigger: 'manual',
+                 status: 'success', count: 5, featured: 2, skipped: 0,
+                 error_message: null, started_at: new Date(), created_at: new Date() }],
+      })
+      .mockResolvedValueOnce({
+        rows: [{ total_orders: '10', total_revenue: '1500.00',
+                 total_supplier_cost: '900.00', total_payment_fees: '45.00',
+                 total_real_profit: '555.00' }],
+      })
+      .mockResolvedValueOnce({
+        rows: [{ total: '50', featured: '12', active: '48' }],
+      });
+
+    const res = await request(app)
+      .get('/api/admin/import-center')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('suppliers');
+    expect(res.body).toHaveProperty('recent_logs');
+    expect(res.body).toHaveProperty('profit_summary');
+    expect(res.body).toHaveProperty('product_counts');
+
+    expect(Array.isArray(res.body.suppliers)).toBe(true);
+    expect(res.body.suppliers[0]).toHaveProperty('product_count');
+    expect(res.body.suppliers[0]).toHaveProperty('last_import_status');
+
+    expect(res.body.profit_summary).toHaveProperty('total_real_profit', 555);
+    expect(res.body.profit_summary).toHaveProperty('total_revenue', 1500);
+
+    expect(res.body.product_counts).toHaveProperty('total', 50);
+    expect(res.body.product_counts).toHaveProperty('featured', 12);
+    expect(res.body.product_counts).toHaveProperty('active', 48);
+  });
+});
+
+// ─── Select best source ───────────────────────────────────────────────────────
+
+describe('POST /api/admin/suppliers/select-best-source', () => {
+  const offers = [
+    { supplier_id: 's1', supplier_name: 'Supplier A', supplier_price: 100, stock: 10, quality_score: 80, platform_price: 140 },
+    { supplier_id: 's2', supplier_name: 'Supplier B', supplier_price: 90,  stock: 5,  quality_score: 60, platform_price: 126 },
+    { supplier_id: 's3', supplier_name: 'Supplier C', supplier_price: 120, stock: 20, quality_score: 90, platform_price: 168 },
+  ];
+
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ offers });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 422 when offers array is empty', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ offers: [] });
+    expect(res.status).toBe(422);
+  });
+
+  it('selects best supplier in balanced mode (default)', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ offers });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('selected');
+    expect(res.body).toHaveProperty('alternatives');
+    expect(res.body).toHaveProperty('mode', 'balanced');
+    expect(res.body).toHaveProperty('scores');
+    expect(res.body.selected).toHaveProperty('supplier_id');
+    expect(Array.isArray(res.body.alternatives)).toBe(true);
+    expect(res.body.alternatives).toHaveLength(2);
+  });
+
+  it('selects cheapest supplier in lowest_cost mode', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ offers, mode: 'lowest_cost' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.selected.supplier_id).toBe('s2'); // cheapest at 90
+    expect(res.body.mode).toBe('lowest_cost');
+  });
+
+  it('selects highest quality supplier in best_quality mode', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ offers, mode: 'best_quality' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.selected.supplier_id).toBe('s3'); // quality 90 is highest
+    expect(res.body.mode).toBe('best_quality');
+  });
+
+  it('selects best-margin supplier in best_margin mode', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ offers, mode: 'best_margin' });
+
+    // margin s1=40, s2=36, s3=48 → s3 wins
+    expect(res.status).toBe(200);
+    expect(res.body.selected.supplier_id).toBe('s3');
+    expect(res.body.mode).toBe('best_margin');
+  });
+
+  it('persists selection to product when product_id provided', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{
+        id: PRODUCT_ID, name: 'Updated Product',
+        supplier_id: 's3', platform_price: '168.00', alternative_suppliers: [],
+        recommended_reseller_price: '201.60', expected_platform_profit: '48.00', expected_reseller_profit: '33.60',
+      }],
+    });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ offers, mode: 'best_quality', product_id: PRODUCT_ID });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('product');
+    expect(res.body.product).toHaveProperty('id', PRODUCT_ID);
+    expect(res.body.product).toHaveProperty('recommended_reseller_price');
+    expect(res.body.product).toHaveProperty('expected_platform_profit');
+    expect(res.body.product).toHaveProperty('expected_reseller_profit');
+  });
+
+  it('returns 404 when product_id is given but product not found', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const NON_EXISTENT = 'a0000000-0000-4000-8000-000000000099';
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ offers, mode: 'balanced', product_id: NON_EXISTENT });
+
+    expect(res.status).toBe(404);
+  });
+});
+
+// ─── No-duplicates regression: repeated sync must not create duplicates ────────
+
+describe('upsertSupplierProducts – repeated sync does not duplicate products', () => {
+  const { upsertSupplierProducts } = require('../src/services/supplier-import');
+
+  it('updates, not re-inserts, when the same SKU is synced twice', async () => {
+    const rawProducts = [{
+      name: 'Laptop XYZ',
+      sku:  'LAP-001',
+      price_gross: 1000,
+      stock: 5,
+      description: 'A great laptop with many features.',
+      image_url: 'https://example.com/laptop.jpg',
+      category: 'Elektronika',
+    }];
+
+    // First sync: no existing product → INSERT
+    db.query
+      .mockResolvedValueOnce({ rows: [] })  // SELECT – no existing product
+      .mockResolvedValueOnce({ rows: [] }); // INSERT
+
+    const first = await upsertSupplierProducts(SUPPLIER_ID, rawProducts);
+    expect(first.count).toBe(1);
+
+    // Second sync (same SKU): existing product found → UPDATE (not INSERT)
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })  // SELECT – found
+      .mockResolvedValueOnce({ rows: [] });                    // UPDATE
+
+    const second = await upsertSupplierProducts(SUPPLIER_ID, rawProducts);
+    expect(second.count).toBe(1);
+
+    // Verify UPDATE was called (not another INSERT) by checking call sequence:
+    // mock call 0 = SELECT (found existing), mock call 1 = UPDATE
+    const calls = db.query.mock.calls;
+    const lastTwoCalls = calls.slice(-2);
+    expect(lastTwoCalls[0][0]).toMatch(/SELECT id FROM products WHERE supplier_id/i);
+    expect(lastTwoCalls[1][0]).toMatch(/UPDATE products SET/i);
+  });
+
+  it('skips low-quality products without inserting them', async () => {
+    const lowQuality = [{ name: 'Empty', sku: 'EMPTY-1', price_gross: 0, stock: 0, description: '', image_url: null }];
+    // No db.query calls expected since the product is filtered out before any DB interaction
+    const result = await upsertSupplierProducts(SUPPLIER_ID, lowQuality);
+    expect(result.count).toBe(0);
+    expect(result.skipped).toBe(1);
+  });
+});

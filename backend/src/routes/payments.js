@@ -71,6 +71,7 @@ async function recordOrderProfit(orderId, saleTotal) {
       `UPDATE orders SET supplier_cost = $1, payment_fee = $2, real_profit = $3, updated_at = NOW() WHERE id = $4`,
       [supplierCost, paymentFee, realProfit, orderId]
     );
+    console.debug(`[profit] Order ${orderId}: sale=${saleTotal}, cost=${supplierCost}, fee=${paymentFee}, profit=${realProfit}`);
   } catch (err) {
     // Non-critical – log but do not throw; profit can be recalculated later
     console.error('[profit] Failed to record order profit:', err.message);

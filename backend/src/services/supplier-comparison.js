@@ -129,7 +129,7 @@ function selectBestSupplier(candidates, mode = 'balanced') {
       const stockScore   = normalize(stock, minStock, maxStock);
 
       // Composite: favour margin + quality heavily, penalise high cost
-      const composite = WEIGHT_MARGIN  * (marginScore * MARGIN_COST_SPLIT + costScore * MARGIN_COST_SPLIT) +
+      const composite = WEIGHT_MARGIN  * ((marginScore + costScore) * MARGIN_COST_SPLIT) +
                         WEIGHT_QUALITY * qualScore +
                         WEIGHT_STOCK   * stockScore;
 
