@@ -11,6 +11,7 @@ const fetch = require('node-fetch');
 const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { sendImportNotification } = require('../helpers/mailer');
 
 const router = express.Router();
 
@@ -176,9 +177,23 @@ router.post(
 
       const imported = await upsertProducts(rawProducts, store_id, supplierId, storeMargin);
 
+      // Fire-and-forget: notify admin about completed import
+      sendImportNotification({
+        supplierName: supplier.name,
+        count: imported,
+        status: 'success',
+      });
+
       return res.json({ message: `Zaimportowano ${imported} produktów`, count: imported });
     } catch (err) {
       console.error('import supplier products error:', err.message);
+      // Fire-and-forget: notify admin about failed import
+      sendImportNotification({
+        supplierName: supplier?.name || req.params.id,
+        count: 0,
+        status: 'failure',
+        errorMessage: err.message,
+      });
       return res.status(500).json({ error: 'Błąd importu: ' + err.message });
     }
   }
@@ -225,9 +240,23 @@ router.post(
       // Update last sync timestamp
       await db.query('UPDATE suppliers SET last_sync_at = NOW() WHERE id = $1', [supplierId]);
 
+      // Fire-and-forget: notify admin about completed sync
+      sendImportNotification({
+        supplierName: supplier.name,
+        count,
+        status: 'success',
+      });
+
       return res.json({ message: `Zsynchronizowano ${count} produktów`, count });
     } catch (err) {
       console.error('sync supplier error:', err.message);
+      // Fire-and-forget: notify admin about failed sync
+      sendImportNotification({
+        supplierName: supplier?.name || req.params.id,
+        count: 0,
+        status: 'failure',
+        errorMessage: err.message,
+      });
       return res.status(500).json({ error: 'Błąd synchronizacji: ' + err.message });
     }
   }

@@ -15,6 +15,7 @@ const { PLAN_CONFIG } = require('./subscriptions');
 const { upsertSupplierProducts, fetchSupplierProducts } = require('../services/supplier-import');
 const { computePlatformPrice, dbTiersToArray, DEFAULT_PLATFORM_TIERS } = require('../helpers/pricing');
 const { getPromoSlots } = require('../helpers/promo');
+const { sendImportNotification } = require('../helpers/mailer');
 
 // Optional nodemailer for SMTP mail dispatch (e.g. Proton Mail Bridge).
 // Loaded once at startup; null when the package is not installed.
@@ -453,9 +454,23 @@ router.post(
 
       const imported = await upsertSupplierProducts(supplier_id, rawProducts);
 
+      // Fire-and-forget: notify admin about completed import
+      sendImportNotification({
+        supplierName: supplier.name,
+        count: imported,
+        status: 'success',
+      });
+
       return res.json({ message: `Zaimportowano ${imported} produktów`, count: imported });
     } catch (err) {
       console.error('admin import supplier products error:', err.message);
+      // Fire-and-forget: notify admin about failed import
+      sendImportNotification({
+        supplierName: supplier?.name || supplier_id,
+        count: 0,
+        status: 'failure',
+        errorMessage: err.message,
+      });
       return res.status(500).json({ error: 'Błąd importu: ' + err.message });
     }
   }
@@ -490,6 +505,13 @@ router.post(
         [supplier_id]
       );
 
+      // Fire-and-forget: notify admin about completed sync
+      sendImportNotification({
+        supplierName: supplier.name,
+        count,
+        status: 'success',
+      });
+
       return res.json({
         message: `Zsynchronizowano ${count} produktów`,
         count,
@@ -497,6 +519,13 @@ router.post(
       });
     } catch (err) {
       console.error('admin sync supplier error:', err.message);
+      // Fire-and-forget: notify admin about failed sync
+      sendImportNotification({
+        supplierName: supplier?.name || supplier_id,
+        count: 0,
+        status: 'failure',
+        errorMessage: err.message,
+      });
       return res.status(500).json({ error: 'Błąd synchronizacji: ' + err.message });
     }
   }
@@ -1410,9 +1439,24 @@ router.post(
       }
 
       const count = await upsertCentralProducts(rawProducts, supplierId);
+
+      // Fire-and-forget: notify admin about completed bulk import
+      sendImportNotification({
+        supplierName: supplierId ? `Katalog centralny (supplier: ${supplierId})` : 'Katalog centralny',
+        count,
+        status: 'success',
+      });
+
       return res.json({ message: `Zaimportowano ${count} produktów do katalogu centralnego`, count });
     } catch (err) {
       console.error('admin products import error:', err.message);
+      // Fire-and-forget: notify admin about failed bulk import
+      sendImportNotification({
+        supplierName: 'Katalog centralny',
+        count: 0,
+        status: 'failure',
+        errorMessage: err.message,
+      });
       return res.status(500).json({ error: 'Błąd importu: ' + err.message });
     }
   }

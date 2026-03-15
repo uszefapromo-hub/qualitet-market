@@ -8439,3 +8439,128 @@ describe('POST /api/social/posts – with media_urls (community image post)', ()
     expect(res.body.post.post_type).toBe('general');
   });
 });
+
+// ─── sendImportNotification (mailer helper) ────────────────────────────────────
+
+describe('sendImportNotification helper', () => {
+  const { sendImportNotification, resolveAdminEmail } = require('../src/helpers/mailer');
+
+  beforeEach(() => {
+    process.env.ADMIN_EMAIL = 'owner@test.pl';
+  });
+
+  afterEach(() => {
+    delete process.env.ADMIN_EMAIL;
+  });
+
+  it('resolveAdminEmail returns ADMIN_EMAIL env var when set', async () => {
+    const email = await resolveAdminEmail();
+    expect(email).toBe('owner@test.pl');
+  });
+
+  it('resolveAdminEmail queries DB when ADMIN_EMAIL is not set', async () => {
+    delete process.env.ADMIN_EMAIL;
+    db.query.mockResolvedValueOnce({ rows: [{ email: 'dbowner@test.pl' }] });
+
+    const email = await resolveAdminEmail();
+    expect(email).toBe('dbowner@test.pl');
+    expect(db.query).toHaveBeenCalledWith(
+      expect.stringContaining("WHERE role IN ('owner', 'admin')")
+    );
+  });
+
+  it('resolveAdminEmail returns null when DB has no admin users', async () => {
+    delete process.env.ADMIN_EMAIL;
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const email = await resolveAdminEmail();
+    expect(email).toBeNull();
+  });
+
+  it('queues a success mail_message with correct subject and body', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // INSERT INTO mail_messages
+
+    await sendImportNotification({
+      supplierName: 'BigBuy',
+      count: 120,
+      status: 'success',
+    });
+
+    const insertCall = db.query.mock.calls.find(
+      (c) => typeof c[0] === 'string' && c[0].includes('INSERT INTO mail_messages')
+    );
+    expect(insertCall).toBeDefined();
+
+    const [, params] = insertCall;
+    expect(params[1]).toBe('owner@test.pl');            // to_email
+    expect(params[2]).toContain('BigBuy');              // subject contains supplier name
+    expect(params[2]).toContain('120');                 // subject contains product count
+    expect(params[3]).toContain('BigBuy');              // body contains supplier name
+    expect(params[3]).toContain('120');                 // body contains product count
+    expect(params[3]).toContain('Sukces');              // body contains status label
+  });
+
+  it('queues a failure mail_message with error details in body', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // INSERT INTO mail_messages
+
+    await sendImportNotification({
+      supplierName: 'Syncee',
+      count: 0,
+      status: 'failure',
+      errorMessage: 'Connection timeout',
+    });
+
+    const insertCall = db.query.mock.calls.find(
+      (c) => typeof c[0] === 'string' && c[0].includes('INSERT INTO mail_messages')
+    );
+    expect(insertCall).toBeDefined();
+
+    const [, params] = insertCall;
+    expect(params[1]).toBe('owner@test.pl');             // to_email
+    expect(params[2]).toContain('błędem');               // failure subject marker
+    expect(params[3]).toContain('Connection timeout');   // error detail in body
+    expect(params[3]).toContain('Błąd importu');         // status label
+  });
+
+  it('queues a partial success mail_message with Częściowy sukces label', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // INSERT INTO mail_messages
+
+    await sendImportNotification({
+      supplierName: 'Spocket',
+      count: 30,
+      status: 'partial',
+    });
+
+    const insertCall = db.query.mock.calls.find(
+      (c) => typeof c[0] === 'string' && c[0].includes('INSERT INTO mail_messages')
+    );
+    expect(insertCall).toBeDefined();
+
+    const [, params] = insertCall;
+    expect(params[3]).toContain('Częściowy sukces');
+  });
+
+  it('skips mail_message insert when no admin email is resolvable', async () => {
+    delete process.env.ADMIN_EMAIL;
+    db.query.mockResolvedValueOnce({ rows: [] }); // resolveAdminEmail DB query (empty)
+
+    await sendImportNotification({
+      supplierName: 'TestSupplier',
+      count: 5,
+      status: 'success',
+    });
+
+    const insertCalls = db.query.mock.calls.filter(
+      (c) => typeof c[0] === 'string' && c[0].includes('INSERT INTO mail_messages')
+    );
+    expect(insertCalls).toHaveLength(0);
+  });
+
+  it('does not throw when db.query rejects during mail insert', async () => {
+    db.query.mockRejectedValueOnce(new Error('DB down')); // INSERT INTO mail_messages fails
+
+    await expect(
+      sendImportNotification({ supplierName: 'Test', count: 1, status: 'success' })
+    ).resolves.toBeUndefined();
+  });
+});

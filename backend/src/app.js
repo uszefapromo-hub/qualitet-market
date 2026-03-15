@@ -40,6 +40,7 @@ const aiRouter = require('./modules/ai/routes');
 const errorHandler = require('./middleware/errorHandler');
 const { importSupplierProducts } = require('./services/supplier-import');
 const { getPromoSlots } = require('./helpers/promo');
+const { sendImportNotification } = require('./helpers/mailer');
 const db = require('./config/database');
 const { getAllowedOrigins, validateRuntimeConfig } = require('./config/runtime');
 
@@ -394,14 +395,27 @@ if (process.env.NODE_ENV !== 'test') {
   const syncAllSuppliers = async () => {
     try {
       const result = await db.query(
-        `SELECT id FROM suppliers WHERE status = 'active' AND (api_url IS NOT NULL OR xml_endpoint IS NOT NULL OR csv_endpoint IS NOT NULL)`
+        `SELECT id, name FROM suppliers WHERE status = 'active' AND (api_url IS NOT NULL OR xml_endpoint IS NOT NULL OR csv_endpoint IS NOT NULL)`
       );
       for (const row of result.rows) {
         try {
           const count = await importSupplierProducts(row.id);
           console.log(`[sync] Supplier ${row.id}: ${count} products synced`);
+          // Fire-and-forget: notify admin about completed scheduled sync
+          sendImportNotification({
+            supplierName: row.name || row.id,
+            count,
+            status: 'success',
+          });
         } catch (err) {
           console.error(`[sync] Supplier ${row.id} error:`, err.message);
+          // Fire-and-forget: notify admin about failed scheduled sync
+          sendImportNotification({
+            supplierName: row.name || row.id,
+            count: 0,
+            status: 'failure',
+            errorMessage: err.message,
+          });
         }
       }
     } catch (err) {
