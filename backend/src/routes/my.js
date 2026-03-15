@@ -829,4 +829,50 @@ router.get(
   }
 );
 
+// ─── GET /api/my/opportunities – products with best seller profit potential ────
+// Returns central-catalogue products sorted by expected_reseller_profit DESC.
+// Sellers use this to discover products worth adding to their store.
+
+router.get(
+  '/opportunities',
+  authenticate,
+  requireRole('seller', 'owner', 'admin'),
+  async (req, res) => {
+    const page  = Math.max(1, parseInt(req.query.page  || '1',  10));
+    const limit = Math.min(100, parseInt(req.query.limit || '20', 10));
+    const offset = (page - 1) * limit;
+
+    try {
+      const countResult = await db.query(
+        `SELECT COUNT(*) FROM products
+         WHERE is_central = true AND status = 'active' AND stock > 0
+           AND expected_reseller_profit IS NOT NULL AND expected_reseller_profit > 0`
+      );
+      const total = parseInt(countResult.rows[0].count, 10);
+
+      const result = await db.query(
+        `SELECT p.id, p.name, p.sku, p.category, p.image_url,
+                p.supplier_price, p.platform_price, p.min_selling_price,
+                p.recommended_reseller_price, p.expected_platform_profit,
+                p.expected_reseller_profit, p.quality_score, p.is_featured,
+                p.stock, p.description,
+                s.name AS supplier_name
+           FROM products p
+           LEFT JOIN suppliers s ON p.supplier_id = s.id
+          WHERE p.is_central = true AND p.status = 'active' AND p.stock > 0
+            AND p.expected_reseller_profit IS NOT NULL AND p.expected_reseller_profit > 0
+          ORDER BY p.expected_reseller_profit DESC, p.quality_score DESC
+          LIMIT $1 OFFSET $2`,
+        [limit, offset]
+      );
+
+      return res.json({ total, page, limit, opportunities: result.rows });
+    } catch (err) {
+      console.error('my opportunities error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
 module.exports = router;
+

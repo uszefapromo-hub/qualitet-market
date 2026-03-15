@@ -142,6 +142,20 @@ app.get('/api/readiness', async (_req, res) => {
     initiate_payment: 'POST /api/payments/:orderId/initiate',
     webhook:          'POST /api/payments/webhook',
     update_status:    'PUT  /api/payments/:id/status',
+    real_profit:      'Calculated automatically on payment – stored in orders.real_profit',
+  };
+
+  // Marketplace automation system
+  checks.marketplace_automation = {
+    supplier_import:       'POST /api/admin/suppliers/import',
+    supplier_sync:         'POST /api/admin/suppliers/sync',
+    supplier_sync_all:     'POST /api/admin/suppliers/sync-all',
+    sync_status:           'GET  /api/admin/sync-status',
+    import_logs:           'GET  /api/admin/import-logs',
+    profit_report:         'GET  /api/admin/profit-report',
+    seller_opportunities:  'GET  /api/my/opportunities',
+    auto_scheduler:        'Every 12 hours (active in non-test environments)',
+    profit_fields:         ['products.expected_platform_profit', 'products.expected_reseller_profit', 'products.recommended_reseller_price', 'orders.real_profit'],
   };
 
   // Subscription system
@@ -395,16 +409,16 @@ if (process.env.NODE_ENV !== 'test') {
   const syncAllSuppliers = async () => {
     try {
       const result = await db.query(
-        `SELECT id, name FROM suppliers WHERE status = 'active' AND (api_url IS NOT NULL OR xml_endpoint IS NOT NULL OR csv_endpoint IS NOT NULL)`
+        `SELECT id, name FROM suppliers WHERE active = true AND (api_url IS NOT NULL OR xml_endpoint IS NOT NULL OR csv_endpoint IS NOT NULL)`
       );
       for (const row of result.rows) {
         try {
-          const count = await importSupplierProducts(row.id);
-          console.log(`[sync] Supplier ${row.id}: ${count} products synced`);
+          const report = await importSupplierProducts(row.id, 'scheduled');
+          console.log(`[sync] Supplier "${row.name || row.id}": ${report.count} synced, ${report.featured} featured, ${report.skipped} skipped`);
           // Fire-and-forget: notify admin about completed scheduled sync
           sendImportNotification({
             supplierName: row.name || row.id,
-            count,
+            count: report.count,
             status: 'success',
           });
         } catch (err) {

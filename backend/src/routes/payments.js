@@ -8,6 +8,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { computeRealProfit, estimatePaymentFee } = require('../helpers/pricing');
 
 const router = express.Router();
 
@@ -26,6 +27,55 @@ function getStripe() {
   // eslint-disable-next-line global-require
   _stripe = require('stripe')(key);
   return _stripe;
+}
+
+// ─── Helper: calculate and persist order profit ────────────────────────────────
+/**
+ * Compute and store profitability data for a completed order.
+ *
+ * Called fire-and-forget (not awaited) whenever an order transitions to 'paid'.
+ * Errors are logged but never thrown, so payment flows are never disrupted.
+ * Profit can be recalculated later if needed.
+ *
+ * Flow:
+ *   1. Sum order_items.quantity × product.supplier_price → supplier_cost
+ *   2. Estimate payment processor fee (Stripe default 2.9% + €0.30)
+ *   3. Compute real_profit = sale_total - supplier_cost - payment_fee
+ *   4. Persist supplier_cost, payment_fee, real_profit on the orders row.
+ *
+ * @param {string} orderId     UUID of the completed order.
+ * @param {number} saleTotal   Total amount paid by the customer (from orders.total).
+ */
+async function recordOrderProfit(orderId, saleTotal) {
+  try {
+    // Sum up supplier_cost from all items in this order
+    const itemsResult = await db.query(
+      `SELECT oi.quantity,
+              COALESCE(p.supplier_price, p.price_gross, 0) AS unit_supplier_price
+         FROM order_items oi
+         LEFT JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = $1`,
+      [orderId]
+    );
+
+    let supplierCost = 0;
+    for (const row of itemsResult.rows) {
+      supplierCost += parseFloat(row.unit_supplier_price || 0) * parseInt(row.quantity || 1, 10);
+    }
+    supplierCost = parseFloat(supplierCost.toFixed(2));
+
+    const paymentFee = estimatePaymentFee(parseFloat(saleTotal) || 0);
+    const realProfit = computeRealProfit(saleTotal, supplierCost, paymentFee);
+
+    await db.query(
+      `UPDATE orders SET supplier_cost = $1, payment_fee = $2, real_profit = $3, updated_at = NOW() WHERE id = $4`,
+      [supplierCost, paymentFee, realProfit, orderId]
+    );
+    console.debug(`[profit] Order ${orderId}: sale=${saleTotal}, cost=${supplierCost}, fee=${paymentFee}, profit=${realProfit}`);
+  } catch (err) {
+    // Non-critical – log but do not throw; profit can be recalculated later
+    console.error('[profit] Failed to record order profit:', err.message);
+  }
 }
 
 // ─── List payments ─────────────────────────────────────────────────────────────
@@ -150,12 +200,16 @@ router.put(
       );
       if (!result.rows[0]) return res.status(404).json({ error: 'Płatność nie znaleziona' });
 
-      // When payment is paid/completed, mark the order as paid
+      // When payment is paid/completed, mark the order as paid and record profit
       if (isPaid) {
-        await db.query(
-          `UPDATE orders SET status = 'paid', updated_at = NOW() WHERE id = $1 AND status IN ('pending','created')`,
+        const orderResult = await db.query(
+          `UPDATE orders SET status = 'paid', updated_at = NOW() WHERE id = $1 AND status IN ('pending','created') RETURNING id, total`,
           [result.rows[0].order_id]
         );
+        // Fire-and-forget: calculate and persist real profit for this order
+        if (orderResult.rows[0]) {
+          recordOrderProfit(orderResult.rows[0].id, orderResult.rows[0].total);
+        }
       }
 
       return res.json(result.rows[0]);
@@ -235,10 +289,13 @@ router.post(
 
       // Propagate status change to the linked order
       if (isPaid) {
-        await db.query(
-          `UPDATE orders SET status = 'paid', updated_at = NOW() WHERE id = $1 AND status IN ('pending','created')`,
+        const orderResult = await db.query(
+          `UPDATE orders SET status = 'paid', updated_at = NOW() WHERE id = $1 AND status IN ('pending','created') RETURNING id, total`,
           [payment.order_id]
         );
+        if (orderResult.rows[0]) {
+          recordOrderProfit(orderResult.rows[0].id, orderResult.rows[0].total);
+        }
       } else if (status === 'failed') {
         await db.query(
           `UPDATE orders SET status = 'payment_failed', updated_at = NOW() WHERE id = $1 AND status IN ('pending','created')`,
@@ -465,10 +522,13 @@ router.post(
           if (paymentUpdate.rowCount > 0) {
             const paymentRow = await db.query('SELECT order_id FROM payments WHERE id = $1', [paymentId]);
             if (paymentRow.rows[0]) {
-              await db.query(
-                `UPDATE orders SET status = 'paid', updated_at = NOW() WHERE id = $1 AND status IN ('pending','created')`,
+              const orderResult = await db.query(
+                `UPDATE orders SET status = 'paid', updated_at = NOW() WHERE id = $1 AND status IN ('pending','created') RETURNING id, total`,
                 [paymentRow.rows[0].order_id]
               );
+              if (orderResult.rows[0]) {
+                recordOrderProfit(orderResult.rows[0].id, orderResult.rows[0].total);
+              }
             }
           }
         }

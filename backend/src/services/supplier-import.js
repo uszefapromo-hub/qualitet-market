@@ -29,7 +29,16 @@ const { parse: csvParse } = require('csv-parse/sync');
 const xml2js = require('xml2js');
 
 const db = require('../config/database');
-const { computePlatformPrice, computeQualityScore, isProductFeatured, isLowQuality } = require('../helpers/pricing');
+const {
+  computePlatformPrice,
+  computeQualityScore,
+  isProductFeatured,
+  isLowQuality,
+  computeResellerPrice,
+  computeExpectedPlatformProfit,
+  computeExpectedResellerProfit,
+  DEFAULT_RESELLER_MARGIN_PCT,
+} = require('../helpers/pricing');
 
 const DEFAULT_TAX_RATE = 23; // Polish standard VAT rate (%)
 const FETCH_TIMEOUT_MS = 15000; // 15 seconds
@@ -187,7 +196,9 @@ async function fetchSupplierProducts(supplier) {
  *
  * Deduplication: supplier_id + sku.
  *   - Existing product → update supplier_price, platform_price, stock,
- *                        description, image_url, quality_score, is_featured.
+ *                        description, image_url, quality_score, is_featured,
+ *                        recommended_reseller_price, expected_platform_profit,
+ *                        expected_reseller_profit.
  *   - New product      → insert with status = 'active', is_central = true.
  *
  * Low-quality filtering: products with no image AND no description AND zero
@@ -196,6 +207,7 @@ async function fetchSupplierProducts(supplier) {
  * Pricing chain (Step 4):
  *   supplier_price → platform_price (tiered margin) = min_selling_price
  *   selling_price is set to platform_price; sellers apply their own margin on top.
+ *   recommended_reseller_price = platform_price × (1 + DEFAULT_RESELLER_MARGIN_PCT/100)
  *
  * @param {string}   supplierId
  * @param {object[]} rawProducts  Array of mapped product objects.
@@ -215,11 +227,14 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
       continue;
     }
 
-    const supplierPrice  = parseFloat(raw.price_gross) || 0;
-    const platformPrice  = computePlatformPrice(supplierPrice);
-    const categorySlug   = mapCategorySlug(raw.category);
-    const qualityScore   = computeQualityScore({ ...raw, price_gross: supplierPrice });
-    const productFeatured = isProductFeatured({ ...raw, price_gross: supplierPrice });
+    const supplierPrice          = parseFloat(raw.price_gross) || 0;
+    const platformPrice          = computePlatformPrice(supplierPrice);
+    const recommendedResellerPrice = computeResellerPrice(platformPrice, DEFAULT_RESELLER_MARGIN_PCT);
+    const expectedPlatformProfit = computeExpectedPlatformProfit(platformPrice, supplierPrice);
+    const expectedResellerProfit = computeExpectedResellerProfit(recommendedResellerPrice, platformPrice);
+    const categorySlug           = mapCategorySlug(raw.category);
+    const qualityScore           = computeQualityScore({ ...raw, price_gross: supplierPrice });
+    const productFeatured        = isProductFeatured({ ...raw, price_gross: supplierPrice });
 
     if (!categorySlug && raw.category) {
       console.warn(`[import] Unmapped category "${raw.category}" for product "${raw.name}" – stored as free-text`);
@@ -232,21 +247,24 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
       );
 
       if (existing.rows.length > 0) {
-        // Update mutable fields per spec (section 4) including quality columns
+        // Update mutable fields including profit/reseller columns
         await db.query(
           `UPDATE products SET
-             supplier_price    = $1,
-             platform_price    = $2,
-             price_gross       = $2,
-             selling_price     = $2,
-             min_selling_price = $2,
-             stock             = $3,
-             description       = COALESCE($4, description),
-             image_url         = COALESCE($5, image_url),
-             quality_score     = $8,
-             is_featured       = $9,
-             status            = 'active',
-             updated_at        = NOW()
+             supplier_price               = $1,
+             platform_price               = $2,
+             price_gross                  = $2,
+             selling_price                = $2,
+             min_selling_price            = $2,
+             stock                        = $3,
+             description                  = COALESCE($4, description),
+             image_url                    = COALESCE($5, image_url),
+             quality_score                = $8,
+             is_featured                  = $9,
+             recommended_reseller_price   = $10,
+             expected_platform_profit     = $11,
+             expected_reseller_profit     = $12,
+             status                       = 'active',
+             updated_at                   = NOW()
            WHERE supplier_id = $6 AND sku = $7`,
           [
             supplierPrice.toFixed(2),
@@ -258,6 +276,9 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
             raw.sku,
             qualityScore,
             productFeatured,
+            recommendedResellerPrice.toFixed(2),
+            expectedPlatformProfit.toFixed(2),
+            expectedResellerProfit.toFixed(2),
           ]
         );
         count++;
@@ -272,22 +293,28 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
          (id, store_id, supplier_id, name, sku, price_net, tax_rate,
           supplier_price, price_gross, platform_price, min_selling_price,
           selling_price, margin, stock, category, description, image_url,
-          is_central, status, quality_score, is_featured, created_at)
-       VALUES ($1, NULL, $2, $3, $4, 0, $5, $6, $7, $7, $7, $7, 0, $8, $9, $10, $11, true, 'active', $12, $13, NOW())`,
+          is_central, status, quality_score, is_featured,
+          recommended_reseller_price, expected_platform_profit, expected_reseller_profit,
+          created_at)
+       VALUES ($1, NULL, $2, $3, $4, 0, $5, $6, $7, $7, $7, $7, 0, $8, $9, $10, $11,
+               true, 'active', $12, $13, $14, $15, $16, NOW())`,
       [
         uuidv4(),
         supplierId,
         raw.name,
-        raw.sku            || null,
+        raw.sku                               || null,
         DEFAULT_TAX_RATE,
         supplierPrice.toFixed(2),
         platformPrice.toFixed(2),
         raw.stock,
-        categorySlug       || raw.category || null,
-        raw.description    || null,
-        raw.image_url      || null,
+        categorySlug                          || raw.category || null,
+        raw.description                       || null,
+        raw.image_url                         || null,
         qualityScore,
         productFeatured,
+        recommendedResellerPrice.toFixed(2),
+        expectedPlatformProfit.toFixed(2),
+        expectedResellerProfit.toFixed(2),
       ]
     );
     count++;
@@ -297,29 +324,94 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
   return { count, featured, skipped };
 }
 
+// ─── Import logging ────────────────────────────────────────────────────────────
+
+/**
+ * Persist an import run record to the import_logs table.
+ * Fire-and-forget: errors are swallowed to avoid disrupting the caller.
+ *
+ * @param {{ supplier_id, supplier_name, trigger, status, count, featured, skipped, failed, error_message, started_at }} opts
+ */
+async function logImport(opts) {
+  const {
+    supplier_id   = null,
+    supplier_name = null,
+    trigger       = 'manual',
+    status        = 'success',
+    count         = 0,
+    featured      = 0,
+    skipped       = 0,
+    failed        = 0,
+    error_message = null,
+    started_at    = new Date(),
+  } = opts;
+
+  try {
+    await db.query(
+      `INSERT INTO import_logs
+         (supplier_id, supplier_name, trigger, status, count, featured, skipped, failed, error_message, started_at, finished_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
+      [supplier_id, supplier_name, trigger, status, count, featured, skipped, failed, error_message, started_at]
+    );
+  } catch (err) {
+    // import_logs table may not exist yet during early deploys – silently skip
+    if (err.code !== '42P01') {
+      console.error('[import] Failed to persist import log:', err.message);
+    }
+  }
+}
+
 // ─── Main export ───────────────────────────────────────────────────────────────
 
 /**
  * Fetch products from a supplier's configured endpoint and save them to the
  * central catalogue.  Updates last_sync_at on the supplier record.
+ * Logs the import run to import_logs.
  *
  * @param {string} supplier_id  UUID of the supplier row.
+ * @param {string} [trigger]    'manual' | 'scheduled' | 'api'
  * @returns {Promise<{ count: number, featured: number, skipped: number }>}
  */
-async function importSupplierProducts(supplier_id) {
+async function importSupplierProducts(supplier_id, trigger = 'manual') {
   const supplierResult = await db.query('SELECT * FROM suppliers WHERE id = $1', [supplier_id]);
   const supplier = supplierResult.rows[0];
   if (!supplier) throw new Error(`Supplier not found: ${supplier_id}`);
 
-  const rawProducts = await fetchSupplierProducts(supplier);
-  const report = await upsertSupplierProducts(supplier_id, rawProducts);
+  const startedAt = new Date();
+  let report;
+  try {
+    const rawProducts = await fetchSupplierProducts(supplier);
+    report = await upsertSupplierProducts(supplier_id, rawProducts);
+  } catch (err) {
+    await logImport({
+      supplier_id,
+      supplier_name: supplier.name,
+      trigger,
+      status:        'failure',
+      error_message: err.message,
+      started_at:    startedAt,
+    });
+    throw err;
+  }
 
   await db.query(
     `UPDATE suppliers SET last_sync_at = NOW(), status = 'active' WHERE id = $1`,
     [supplier_id]
   );
 
+  // Fire-and-forget log
+  logImport({
+    supplier_id,
+    supplier_name: supplier.name,
+    trigger,
+    status:        report.skipped > 0 && report.count === 0 ? 'partial' : 'success',
+    count:         report.count,
+    featured:      report.featured,
+    skipped:       report.skipped,
+    started_at:    startedAt,
+  });
+
   return report;
 }
 
-module.exports = { importSupplierProducts, upsertSupplierProducts, fetchSupplierProducts, mapSupplierProduct, mapCategorySlug };
+module.exports = { importSupplierProducts, upsertSupplierProducts, fetchSupplierProducts, mapSupplierProduct, mapCategorySlug, logImport };
