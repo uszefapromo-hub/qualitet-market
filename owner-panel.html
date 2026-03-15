@@ -1292,7 +1292,7 @@
           <section class="panel-card dashboard-welcome">
             <span class="eyebrow">Skrypty systemowe</span>
             <h2>Zarządzanie skryptami</h2>
-            <p class="hint">Uruchamiaj i zarządzaj skryptami automatyzacji platformy. Każdy skrypt możesz uruchomić jednym kliknięciem lub zaplanować jego cykliczne wykonanie.</p>
+            <p class="hint">Uruchamiaj i zarządzaj skryptami automatyzacji platformy. Tylko Super Admin ma dostęp do tej sekcji. Przed uruchomieniem skryptów destruktywnych zawsze wykonaj <strong>Dry-Run</strong>, aby sprawdzić co zostanie zmienione.</p>
             <div class="dashboard-meta">
               <div><span>Dostępne skrypty</span><strong data-scripts-total>—</strong></div>
               <div><span>Ostatnie uruchomienie</span><strong data-scripts-last-run>—</strong></div>
@@ -1301,9 +1301,10 @@
           </section>
           <section class="panel-card">
             <div class="section-head">
-              <span class="eyebrow">Skrypty importu i synchronizacji</span>
-              <h2>Import danych</h2>
+              <span class="eyebrow">Skrypty systemowe</span>
+              <h2>Lista skryptów</h2>
             </div>
+            <div id="scripts-load-error" hidden style="color:var(--error,#e00);padding:12px">Brak dostępu lub błąd ładowania skryptów.</div>
             <div class="owner-table-wrap">
               <table class="owner-table">
                 <thead>
@@ -1315,94 +1316,23 @@
                     <th>Akcja</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <tr>
-                    <td><strong>Synchronizacja hurtowni</strong></td>
-                    <td class="cell-muted">Aktualizuje produkty ze wszystkich podłączonych hurtowni</td>
-                    <td class="cell-muted" data-script-run-time="sync-warehouses">—</td>
-                    <td><span class="pill-active" data-script-status="sync-warehouses">Aktywny</span></td>
-                    <td><button class="btn btn-secondary" type="button" data-run-script="sync-warehouses">▶ Uruchom</button></td>
-                  </tr>
-                  <tr>
-                    <td><strong>Import produktów CSV/XML</strong></td>
-                    <td class="cell-muted">Importuje produkty z pliku CSV lub XML do katalogu platformy</td>
-                    <td class="cell-muted" data-script-run-time="import-products">—</td>
-                    <td><span class="pill-active" data-script-status="import-products">Aktywny</span></td>
-                    <td><button class="btn btn-secondary" type="button" data-run-script="import-products">▶ Uruchom</button></td>
-                  </tr>
-                  <tr>
-                    <td><strong>Przeliczenie cen i marż</strong></td>
-                    <td class="cell-muted">Przelicza ceny sprzedaży na podstawie aktualnych marż platformy</td>
-                    <td class="cell-muted" data-script-run-time="recalc-prices">—</td>
-                    <td><span class="pill-active" data-script-status="recalc-prices">Aktywny</span></td>
-                    <td><button class="btn btn-secondary" type="button" data-run-script="recalc-prices">▶ Uruchom</button></td>
-                  </tr>
+                <tbody data-scripts-tbody>
+                  <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Ładowanie skryptów…</td></tr>
                 </tbody>
               </table>
             </div>
           </section>
-          <section class="panel-card">
+          <section class="panel-card" id="scripts-result-panel" hidden>
             <div class="section-head">
-              <span class="eyebrow">Skrypty zarządzania</span>
-              <h2>Operacje systemu</h2>
+              <span class="eyebrow">Wynik ostatniego uruchomienia</span>
+              <h2 id="scripts-result-title">Wynik</h2>
             </div>
-            <div class="owner-table-wrap">
-              <table class="owner-table">
-                <thead>
-                  <tr>
-                    <th>Nazwa skryptu</th>
-                    <th>Opis</th>
-                    <th>Ostatnie uruchomienie</th>
-                    <th>Status</th>
-                    <th>Akcja</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td><strong>Czyszczenie wygasłych subskrypcji</strong></td>
-                    <td class="cell-muted">Dezaktywuje subskrypcje, którym minął termin ważności</td>
-                    <td class="cell-muted" data-script-run-time="cleanup-subscriptions">—</td>
-                    <td><span class="pill-active" data-script-status="cleanup-subscriptions">Aktywny</span></td>
-                    <td><button class="btn btn-secondary" type="button" data-run-script="cleanup-subscriptions">▶ Uruchom</button></td>
-                  </tr>
-                  <tr>
-                    <td><strong>Generowanie raportów miesięcznych</strong></td>
-                    <td class="cell-muted">Tworzy zestawienia finansowe i sprzedażowe za bieżący miesiąc</td>
-                    <td class="cell-muted" data-script-run-time="gen-reports">—</td>
-                    <td><span class="pill-active" data-script-status="gen-reports">Aktywny</span></td>
-                    <td><button class="btn btn-secondary" type="button" data-run-script="gen-reports">▶ Uruchom</button></td>
-                  </tr>
-                  <tr>
-                    <td><strong>Wysyłka powiadomień e-mail</strong></td>
-                    <td class="cell-muted">Wysyła zaległe powiadomienia do użytkowników platformy</td>
-                    <td class="cell-muted" data-script-run-time="send-notifications">—</td>
-                    <td><span class="pill-active" data-script-status="send-notifications">Aktywny</span></td>
-                    <td><button class="btn btn-secondary" type="button" data-run-script="send-notifications">▶ Uruchom</button></td>
-                  </tr>
-                  <tr>
-                    <td><strong>Backup bazy danych</strong></td>
-                    <td class="cell-muted">Tworzy kopię zapasową wszystkich danych platformy</td>
-                    <td class="cell-muted" data-script-run-time="db-backup">—</td>
-                    <td><span class="pill-active" data-script-status="db-backup">Aktywny</span></td>
-                    <td><button class="btn btn-secondary" type="button" data-run-script="db-backup">▶ Uruchom</button></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <pre id="scripts-result-body" style="background:var(--surface,#f8f8f8);padding:16px;border-radius:8px;overflow:auto;font-size:13px;max-height:400px;white-space:pre-wrap"></pre>
           </section>
           <section class="panel-card">
             <div class="section-head">
               <span class="eyebrow">Historia wykonania</span>
               <h2>Logi skryptów</h2>
-            </div>
-            <div class="owner-toolbar">
-              <input class="owner-search" type="search" placeholder="Szukaj w logach…" aria-label="Szukaj w logach skryptów">
-              <select class="owner-filter" aria-label="Filtruj status">
-                <option value="">Wszystkie statusy</option>
-                <option value="success">Sukces</option>
-                <option value="error">Błąd</option>
-                <option value="running">W trakcie</option>
-              </select>
             </div>
             <div class="owner-table-wrap">
               <table class="owner-table">
@@ -1410,7 +1340,7 @@
                   <tr>
                     <th>Czas</th>
                     <th>Skrypt</th>
-                    <th>Czas trwania</th>
+                    <th>Tryb</th>
                     <th>Status</th>
                     <th>Komunikat</th>
                   </tr>
@@ -1422,8 +1352,6 @@
             </div>
           </section>
         </div>
-
-        <!-- TAB: SCRIPTS is defined above (first occurrence) -->
 
         <!-- TAB: ANNOUNCEMENTS (Komunikaty) -->
         <div class="owner-tab-panel" data-owner-tab-panel="announcements" hidden>
@@ -1711,6 +1639,152 @@
     document.querySelectorAll('[data-owner-tab]').forEach(a => {
       if (a.dataset.ownerTab === 'mail') {
         a.addEventListener('click', () => setTimeout(loadMailHistory, 100));
+      }
+    });
+  })();
+  </script>
+
+  <script>
+  // ─── Scripts tab logic (Super Admin only) ───────────────────────────────────
+  (function () {
+    function apiReq(method, path, body) {
+      const token = localStorage.getItem('token') || '';
+      const opts = { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) } };
+      if (body !== undefined) opts.body = JSON.stringify(body);
+      return fetch('/api' + path, opts).then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e)));
+    }
+
+    const runLog = [];
+
+    function statusPill(status) {
+      if (status === 'ok')    return '<span class="pill-active">✓ OK</span>';
+      if (status === 'error') return '<span class="pill-inactive">✗ Błąd</span>';
+      return '<span class="cell-muted">—</span>';
+    }
+
+    function renderScripts(scripts) {
+      const tbody = document.querySelector('[data-scripts-tbody]');
+      const totalEl = document.querySelector('[data-scripts-total]');
+      const lastRunEl = document.querySelector('[data-scripts-last-run]');
+      if (!tbody) return;
+
+      if (totalEl) totalEl.textContent = scripts.length;
+
+      const lastRun = scripts
+        .filter(s => s.last_run_at)
+        .sort((a, b) => new Date(b.last_run_at) - new Date(a.last_run_at))[0];
+      if (lastRunEl && lastRun) {
+        lastRunEl.textContent = new Date(lastRun.last_run_at).toLocaleString('pl-PL');
+      }
+
+      tbody.innerHTML = scripts.map(s => {
+        const runTime = s.last_run_at
+          ? new Date(s.last_run_at).toLocaleString('pl-PL')
+          : '—';
+        const dryBtn = s.destructive
+          ? `<button class="btn btn-secondary" type="button" style="margin-right:4px" data-dry-script="${s.id}" title="Sprawdź co zostanie zmienione bez wykonywania zmian">🔍 Dry-Run</button>`
+          : '';
+        const runLabel = s.destructive ? '⚠️ Uruchom' : '▶ Uruchom';
+        return `<tr>
+          <td><strong>${s.name}</strong>${s.destructive ? ' <span style="color:#e65c00;font-size:11px">(destruktywny)</span>' : ''}</td>
+          <td class="cell-muted">${s.description}</td>
+          <td class="cell-muted">${runTime}</td>
+          <td>${statusPill(s.status)}</td>
+          <td style="white-space:nowrap">${dryBtn}<button class="btn btn-secondary" type="button" data-run-script="${s.id}">${runLabel}</button></td>
+        </tr>`;
+      }).join('');
+
+      // Bind dry-run buttons
+      tbody.querySelectorAll('[data-dry-script]').forEach(btn => {
+        btn.addEventListener('click', () => triggerScript(btn.dataset.dryScript, true));
+      });
+
+      // Bind run buttons
+      tbody.querySelectorAll('[data-run-script]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const scriptId = btn.dataset.runScript;
+          const script = scripts.find(s => s.id === scriptId);
+          if (script && script.destructive) {
+            const confirmed = confirm(
+              `⚠️ UWAGA: Skrypt "${script.name}" jest destruktywny i wprowadzi zmiany w bazie danych.\n\n` +
+              `Zalecamy najpierw wykonać Dry-Run.\n\nCzy na pewno chcesz uruchomić ten skrypt?`
+            );
+            if (!confirmed) return;
+          }
+          triggerScript(scriptId, false);
+        });
+      });
+    }
+
+    async function triggerScript(scriptId, dryRun) {
+      const resultPanel = document.getElementById('scripts-result-panel');
+      const resultTitle = document.getElementById('scripts-result-title');
+      const resultBody  = document.getElementById('scripts-result-body');
+      const logTbody    = document.querySelector('[data-scripts-log-tbody]');
+
+      if (resultPanel) resultPanel.hidden = false;
+      if (resultTitle) resultTitle.textContent = (dryRun ? '[DRY-RUN] ' : '') + 'Uruchamianie…';
+      if (resultBody)  resultBody.textContent  = 'Proszę czekać…';
+
+      try {
+        const data = await apiReq('POST', `/admin/scripts/${scriptId}/run`, dryRun ? { dry_run: true } : {});
+
+        const mode = dryRun ? '[DRY-RUN]' : '[PRODUKCJA]';
+        if (resultTitle) resultTitle.textContent = `${mode} ${data.name}`;
+
+        let bodyText = data.result + '\n';
+        if (data.report) {
+          bodyText += '\nRaport:\n' + JSON.stringify(data.report, null, 2);
+        }
+        if (resultBody) resultBody.textContent = bodyText;
+
+        // Add to in-page log
+        runLog.unshift({
+          time:     new Date().toLocaleString('pl-PL'),
+          name:     data.name,
+          dry_run:  dryRun,
+          ok:       data.ok,
+          result:   data.result,
+        });
+        if (logTbody) {
+          logTbody.innerHTML = runLog.map(entry => `
+            <tr>
+              <td class="cell-muted">${entry.time}</td>
+              <td><strong>${entry.name}</strong></td>
+              <td>${entry.dry_run ? '<span class="pill-inactive">Dry-Run</span>' : '<span class="cell-muted">Produkcja</span>'}</td>
+              <td>${entry.ok ? '<span class="pill-active">✓ OK</span>' : '<span class="pill-inactive">✗ Błąd</span>'}</td>
+              <td class="cell-muted" style="max-width:300px;overflow:hidden;text-overflow:ellipsis">${entry.result}</td>
+            </tr>`).join('');
+        }
+
+        // Reload script list to get updated last_run_at / status
+        loadAdminScripts();
+      } catch (err) {
+        if (resultTitle) resultTitle.textContent = '✗ Błąd';
+        if (resultBody)  resultBody.textContent  = (err && (err.error || err.message)) || 'Nieznany błąd';
+      }
+    }
+
+    async function loadAdminScripts() {
+      const errEl = document.getElementById('scripts-load-error');
+      try {
+        const data = await apiReq('GET', '/admin/scripts');
+        if (errEl) errEl.hidden = true;
+        renderScripts(data.scripts || []);
+      } catch (err) {
+        const tbody = document.querySelector('[data-scripts-tbody]');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Brak dostępu – wymagane uprawnienia Super Admin.</td></tr>';
+        if (errEl) {
+          errEl.textContent = (err && err.error) || 'Brak dostępu do skryptów (wymagane uprawnienia superadmin/owner).';
+          errEl.hidden = false;
+        }
+      }
+    }
+
+    // Load when switching to scripts tab
+    document.querySelectorAll('[data-owner-tab]').forEach(a => {
+      if (a.dataset.ownerTab === 'scripts') {
+        a.addEventListener('click', () => setTimeout(loadAdminScripts, 100));
       }
     });
   })();

@@ -1591,15 +1591,16 @@ router.post(
 // ─── GET /api/admin/scripts – list system scripts with last-run info ──────────
 
 const SYSTEM_SCRIPTS = [
-  { id: 'warehouse-sync',     name: 'Synchronizacja hurtowni',        description: 'Pobiera aktualne dane produktów ze wszystkich aktywnych hurtowni' },
-  { id: 'recalculate-prices', name: 'Przeliczenie cen',               description: 'Aktualizuje ceny sprzedażowe wg aktualnych progów marży' },
-  { id: 'csv-import',         name: 'Import produktów CSV',           description: 'Importuje produkty z pliku CSV do katalogu centralnego' },
-  { id: 'cleanup-accounts',   name: 'Czyszczenie nieaktywnych kont',  description: 'Oznacza wygasłe konta trial bez aktywności (>30 dni)' },
-  { id: 'cleanup-demo-data',  name: 'Usuń dane demonstracyjne',       description: 'Usuwa wszystkie produkty demonstracyjne i zastępcze z katalogu centralnego' },
-  { id: 'export-report',      name: 'Eksport raportów finansowych',   description: 'Generuje raport przychodów i prowizji za bieżący miesiąc' },
+  { id: 'warehouse-sync',          name: 'Synchronizacja hurtowni',           description: 'Pobiera aktualne dane produktów ze wszystkich aktywnych hurtowni',             destructive: false },
+  { id: 'recalculate-prices',      name: 'Przeliczenie cen',                  description: 'Aktualizuje ceny sprzedażowe wg aktualnych progów marży',                       destructive: false },
+  { id: 'csv-import',              name: 'Import produktów CSV',              description: 'Importuje produkty z pliku CSV do katalogu centralnego',                        destructive: false },
+  { id: 'cleanup-accounts',        name: 'Czyszczenie nieaktywnych kont',     description: 'Oznacza wygasłe konta trial bez aktywności (>30 dni)',                         destructive: true  },
+  { id: 'cleanup-demo-data',       name: 'Usuń dane demonstracyjne',          description: 'Usuwa wszystkie produkty demonstracyjne i zastępcze z katalogu centralnego',   destructive: true  },
+  { id: 'cleanup-subscriptions',   name: 'Czyszczenie subskrypcji',           description: 'Archiwizuje wygasłe, zduplikowane i nieaktywne subskrypcje. Obsługuje tryb DRY-RUN.', destructive: true },
+  { id: 'export-report',           name: 'Eksport raportów finansowych',      description: 'Generuje raport przychodów i prowizji za bieżący miesiąc',                     destructive: false },
 ];
 
-router.get('/scripts', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+router.get('/scripts', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const result = await db.query(
       `SELECT script_id, status, last_run_at, last_result, run_count
@@ -1631,8 +1632,9 @@ router.get('/scripts', authenticate, requireRole('owner', 'admin'), async (req, 
 
 // ─── POST /api/admin/scripts/:id/run – trigger a system script ────────────────
 
-router.post('/scripts/:id/run', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+router.post('/scripts/:id/run', authenticate, requireSuperAdmin, async (req, res) => {
   const scriptId = req.params.id;
+  const isDryRun = req.body && (req.body.dry_run === true || req.body.dry_run === 'true');
   const script = SYSTEM_SCRIPTS.find((s) => s.id === scriptId);
   if (!script) {
     return res.status(404).json({ error: 'Skrypt nie istnieje' });
@@ -1718,6 +1720,110 @@ router.post('/scripts/:id/run', authenticate, requireRole('owner', 'admin'), asy
       const { order_count, total_revenue } = report.rows[0];
       resultMessage = `Raport za bieżący miesiąc: ${order_count} zamówień, ${parseFloat(total_revenue).toFixed(2)} zł przychodu`;
 
+    } else if (scriptId === 'cleanup-subscriptions') {
+      // ── Subscription Cleanup Script ──────────────────────────────────────────
+      // Identifies and archives:
+      //   1. Expired active subscriptions (expires_at < NOW())
+      //   2. Duplicate active subscriptions for the same shop (keep newest)
+      //   3. Legacy-plan subscriptions still marked active
+      //
+      // Stripe safety: Stripe checkout in this platform is one-time payment only
+      //   (no recurring stripe_subscription_id stored in the subscriptions table).
+      //   Archiving subscription rows does not affect Stripe billing data.
+      //
+      // Supports DRY-RUN mode: pass dry_run=true to see the report without changes.
+
+      // 1. Find expired active subscriptions
+      const expiredResult = await db.query(
+        `SELECT s.id, s.shop_id, s.plan, s.status, s.expires_at, st.name AS shop_name
+         FROM subscriptions s
+         LEFT JOIN stores st ON s.shop_id = st.id
+         WHERE s.status = 'active'
+           AND s.expires_at IS NOT NULL
+           AND s.expires_at < NOW()`
+      );
+
+      // 2. Find duplicate active subscriptions per shop (keep newest, flag older ones)
+      const dupeResult = await db.query(
+        `SELECT s.id, s.shop_id, s.plan, s.status, s.created_at, st.name AS shop_name
+         FROM subscriptions s
+         LEFT JOIN stores st ON s.shop_id = st.id
+         WHERE s.status = 'active'
+           AND s.shop_id IN (
+             SELECT shop_id FROM subscriptions
+             WHERE status = 'active'
+             GROUP BY shop_id HAVING COUNT(*) > 1
+           )
+         ORDER BY s.shop_id, s.created_at DESC`
+      );
+      // For each shop, mark all but the newest as duplicate
+      const seenShops = new Set();
+      const duplicates = [];
+      for (const row of dupeResult.rows) {
+        if (seenShops.has(row.shop_id)) {
+          duplicates.push(row);
+        } else {
+          seenShops.add(row.shop_id);
+        }
+      }
+
+      // 3. Find legacy subscriptions still incorrectly marked active
+      const legacyResult = await db.query(
+        `SELECT s.id, s.shop_id, s.plan, s.status, st.name AS shop_name
+         FROM subscriptions s
+         LEFT JOIN stores st ON s.shop_id = st.id
+         WHERE s.is_legacy = true AND s.status = 'active'`
+      );
+
+      const expiredIds   = expiredResult.rows.map((r) => r.id);
+      const duplicateIds = duplicates.map((r) => r.id);
+      const legacyIds    = legacyResult.rows.map((r) => r.id);
+
+      // Deduplicate
+      const toArchive = [...new Set([...expiredIds, ...duplicateIds, ...legacyIds])];
+
+      const report = {
+        expired:    expiredResult.rows.length,
+        duplicates: duplicates.length,
+        legacy:     legacyResult.rows.length,
+        total:      toArchive.length,
+        dry_run:    isDryRun,
+        details: {
+          expired_list:   expiredResult.rows.map((r) => ({ id: r.id, shop: r.shop_name, plan: r.plan, expires_at: r.expires_at })),
+          duplicate_list: duplicates.map((r) => ({ id: r.id, shop: r.shop_name, plan: r.plan })),
+          legacy_list:    legacyResult.rows.map((r) => ({ id: r.id, shop: r.shop_name, plan: r.plan })),
+        },
+      };
+
+      if (isDryRun) {
+        resultMessage = `[DRY-RUN] Znaleziono ${report.expired} wygasłych, ${report.duplicates} zduplikowanych, ${report.legacy} legacy subskrypcji (łącznie ${report.total} do archiwizacji – bez zmian)`;
+        return res.json({
+          script_id:   scriptId,
+          name:        script.name,
+          ok:          true,
+          dry_run:     true,
+          result:      resultMessage,
+          report,
+          started_at:  startedAt,
+          finished_at: new Date(),
+        });
+      }
+
+      // Full run: archive identified subscriptions
+      if (toArchive.length > 0) {
+        await db.query(
+          `UPDATE subscriptions
+           SET status     = 'expired',
+               is_legacy  = true,
+               updated_at = NOW()
+           WHERE id = ANY($1::uuid[])
+             AND status = 'active'`,
+          [toArchive]
+        );
+      }
+      resultMessage = `Zarchiwizowano ${toArchive.length} subskrypcji (wygasłe: ${report.expired}, duplikaty: ${report.duplicates}, legacy: ${report.legacy})`;
+      ok = true;
+
     } else {
       resultMessage = `Skrypt "${script.name}" uruchomiony`;
     }
@@ -1727,29 +1833,37 @@ router.post('/scripts/:id/run', authenticate, requireRole('owner', 'admin'), asy
     console.error(`[script] ${scriptId} error:`, err.message);
   }
 
-  // Persist run log (best-effort)
+  // Persist run log (best-effort): update summary row + append full audit log
+  const finishedAt = new Date();
   try {
     await db.query(
-      `INSERT INTO script_runs (id, script_id, status, last_run_at, last_result, run_count, created_at)
-       VALUES ($1, $2, $3, $4, $5, 1, NOW())
+      `INSERT INTO script_runs (id, script_id, status, last_run_at, last_result, run_count, run_by, created_at)
+       VALUES ($1, $2, $3, $4, $5, 1, $6, NOW())
        ON CONFLICT (script_id) DO UPDATE SET
          status      = EXCLUDED.status,
          last_run_at = EXCLUDED.last_run_at,
          last_result = EXCLUDED.last_result,
          run_count   = script_runs.run_count + 1,
+         run_by      = EXCLUDED.run_by,
          updated_at  = NOW()`,
-      [uuidv4(), scriptId, ok ? 'ok' : 'error', startedAt, resultMessage]
+      [uuidv4(), scriptId, ok ? 'ok' : 'error', startedAt, resultMessage, req.user.id]
+    );
+    await db.query(
+      `INSERT INTO script_run_logs (id, script_id, run_by, dry_run, status, result, started_at, finished_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [uuidv4(), scriptId, req.user.id, isDryRun || false, ok ? 'ok' : 'error', resultMessage, startedAt, finishedAt]
     );
   } catch (_err) {
-    // Non-critical – ignore if table doesn't exist yet
+    // Non-critical – ignore if tables don't exist yet
   }
 
   return res.json({
     script_id:   scriptId,
     name:        script.name,
     ok,
+    dry_run:     isDryRun || false,
     result:      resultMessage,
     started_at:  startedAt,
-    finished_at: new Date(),
+    finished_at: finishedAt,
   });
 });

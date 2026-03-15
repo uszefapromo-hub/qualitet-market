@@ -4157,6 +4157,58 @@ describe('POST /api/admin/scripts/:id/run', () => {
     expect(res.body.script_id).toBe('cleanup-demo-data');
     expect(res.body.result).toContain('3');
   });
+
+  it('runs cleanup-subscriptions in dry-run mode', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-exp-1', shop_id: STORE_ID, plan: 'basic', expires_at: '2023-01-01T00:00:00Z', shop_name: 'Mój Sklep' }] }) // expired
+      .mockResolvedValueOnce({ rows: [] }) // duplicates
+      .mockResolvedValueOnce({ rows: [] }); // legacy
+
+    const res = await request(app)
+      .post('/api/admin/scripts/cleanup-subscriptions/run')
+      .send({ dry_run: true })
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.dry_run).toBe(true);
+    expect(res.body.report).toHaveProperty('expired', 1);
+    expect(res.body.report).toHaveProperty('total', 1);
+    expect(res.body.result).toContain('[DRY-RUN]');
+  });
+
+  it('runs cleanup-subscriptions (full run) and archives subscriptions', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-exp-1', shop_id: STORE_ID, plan: 'basic', expires_at: '2023-01-01T00:00:00Z', shop_name: 'Mój Sklep' }] }) // expired
+      .mockResolvedValueOnce({ rows: [] }) // duplicates
+      .mockResolvedValueOnce({ rows: [] }) // legacy
+      .mockResolvedValueOnce({ rows: [] }) // UPDATE subscriptions
+      .mockResolvedValueOnce({ rows: [] }); // INSERT script_runs
+
+    const res = await request(app)
+      .post('/api/admin/scripts/cleanup-subscriptions/run')
+      .send({})
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.dry_run).toBe(false);
+    expect(res.body.script_id).toBe('cleanup-subscriptions');
+    expect(res.body.result).toContain('1');
+  });
+
+  it('cleanup-subscriptions with no stale subscriptions returns zero count', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] }) // expired
+      .mockResolvedValueOnce({ rows: [] }) // duplicates
+      .mockResolvedValueOnce({ rows: [] }) // legacy
+      .mockResolvedValueOnce({ rows: [] }); // INSERT script_runs
+
+    const res = await request(app)
+      .post('/api/admin/scripts/cleanup-subscriptions/run')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.result).toContain('0');
+  });
 });
 // ─── Referral codes ───────────────────────────────────────────────────────────
 
