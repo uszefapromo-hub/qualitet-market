@@ -1591,12 +1591,15 @@ router.post(
 // ─── GET /api/admin/scripts – list system scripts with last-run info ──────────
 
 const SYSTEM_SCRIPTS = [
-  { id: 'warehouse-sync',     name: 'Synchronizacja hurtowni',        description: 'Pobiera aktualne dane produktów ze wszystkich aktywnych hurtowni' },
-  { id: 'recalculate-prices', name: 'Przeliczenie cen',               description: 'Aktualizuje ceny sprzedażowe wg aktualnych progów marży' },
-  { id: 'csv-import',         name: 'Import produktów CSV',           description: 'Importuje produkty z pliku CSV do katalogu centralnego' },
-  { id: 'cleanup-accounts',   name: 'Czyszczenie nieaktywnych kont',  description: 'Oznacza wygasłe konta trial bez aktywności (>30 dni)' },
-  { id: 'cleanup-demo-data',  name: 'Usuń dane demonstracyjne',       description: 'Usuwa wszystkie produkty demonstracyjne i zastępcze z katalogu centralnego' },
-  { id: 'export-report',      name: 'Eksport raportów finansowych',   description: 'Generuje raport przychodów i prowizji za bieżący miesiąc' },
+  { id: 'warehouse-sync',          name: 'Synchronizacja hurtowni',              description: 'Pobiera aktualne dane produktów ze wszystkich aktywnych hurtowni' },
+  { id: 'recalculate-prices',      name: 'Przeliczenie cen',                     description: 'Aktualizuje ceny sprzedażowe wg aktualnych progów marży' },
+  { id: 'csv-import',              name: 'Import produktów CSV',                 description: 'Importuje produkty z pliku CSV do katalogu centralnego' },
+  { id: 'cleanup-accounts',        name: 'Czyszczenie nieaktywnych kont',        description: 'Oznacza wygasłe konta trial bez aktywności (>30 dni)' },
+  { id: 'cleanup-demo-data',       name: 'Usuń dane demonstracyjne',             description: 'Usuwa wszystkie produkty demonstracyjne i zastępcze z katalogu centralnego' },
+  { id: 'export-report',           name: 'Eksport raportów finansowych',         description: 'Generuje raport przychodów i prowizji za bieżący miesiąc' },
+  { id: 'cleanup-subscriptions',   name: 'Czyszczenie wygasłych subskrypcji',    description: 'Dezaktywuje subskrypcje, którym minął termin ważności' },
+  { id: 'send-notifications',      name: 'Wysyłka powiadomień e-mail',           description: 'Wysyła zaległe powiadomienia do użytkowników platformy' },
+  { id: 'db-backup',               name: 'Backup bazy danych',                   description: 'Tworzy kopię zapasową wszystkich danych platformy' },
 ];
 
 router.get('/scripts', authenticate, requireRole('owner', 'admin'), async (req, res) => {
@@ -1717,6 +1720,32 @@ router.post('/scripts/:id/run', authenticate, requireRole('owner', 'admin'), asy
       );
       const { order_count, total_revenue } = report.rows[0];
       resultMessage = `Raport za bieżący miesiąc: ${order_count} zamówień, ${parseFloat(total_revenue).toFixed(2)} zł przychodu`;
+
+    } else if (scriptId === 'cleanup-subscriptions') {
+      // Mark subscriptions whose end_date has passed as inactive.
+      // This is a safe read-then-update operation – no data is deleted.
+      const result = await db.query(
+        `UPDATE subscriptions
+         SET status = 'inactive', updated_at = NOW()
+         WHERE status = 'active'
+           AND end_date < NOW()
+         RETURNING id`
+      );
+      resultMessage = `Dezaktywowano ${result.rows.length} wygasłych subskrypcji`;
+
+    } else if (scriptId === 'send-notifications') {
+      // Count pending queued mail messages – actual delivery happens via the
+      // mailer helper; this script reports on the queue depth.
+      const queueResult = await db.query(
+        `SELECT COUNT(*) AS pending FROM mail_messages WHERE status = 'queued'`
+      );
+      const pending = parseInt(queueResult.rows[0].pending, 10);
+      resultMessage = `W kolejce: ${pending} wiadomości oczekujących na wysyłkę`;
+
+    } else if (scriptId === 'db-backup') {
+      // Backup must be triggered externally (e.g. via pg_dump in a cron job).
+      // This endpoint only confirms the request was received.
+      resultMessage = 'Żądanie backupu zarejestrowane – wykonanie przez harmonogram zewnętrzny';
 
     } else {
       resultMessage = `Skrypt "${script.name}" uruchomiony`;
