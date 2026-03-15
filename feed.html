@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Odkryj produkty na QualitetMarket – przewijaj, znajdź zyski, dodaj do sklepu jednym klikiem.">
+  <title>Odkryj Produkty – QualitetMarket</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="assets/logo.png" type="image/png">
+  <style>
+    /* ── Reset & base ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --brand:        #6c63ff;
+      --brand-dark:   #5548e0;
+      --accent:       #ff6b6b;
+      --success:      #22c55e;
+      --warning:      #f59e0b;
+      --bg:           #0f0f13;
+      --surface:      #1a1a24;
+      --surface2:     #24243a;
+      --text:         #f1f1f5;
+      --text-muted:   #9898b8;
+      --border:       #2e2e4a;
+      --radius:       14px;
+      --card-max:     480px;
+      --transition:   0.2s ease;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button { cursor: pointer; font-family: inherit; }
+    img { display: block; max-width: 100%; }
+
+    /* ── Top bar ──────────────────────────────────────────────────── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(15, 15, 19, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 16px;
+    }
+
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: var(--card-max);
+      margin: 0 auto;
+      height: 52px;
+    }
+
+    .topbar-logo {
+      font-weight: 700;
+      font-size: 1.1rem;
+      background: linear-gradient(135deg, var(--brand) 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .topbar-nav a {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-left: 14px;
+      transition: color var(--transition);
+    }
+    .topbar-nav a:hover { color: var(--text); }
+
+    /* ── Section tabs ─────────────────────────────────────────────── */
+    .tabs-wrapper {
+      position: sticky;
+      top: 52px;
+      z-index: 90;
+      background: rgba(15, 15, 19, 0.88);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    #feed-tabs {
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding: 8px 12px;
+      max-width: var(--card-max);
+      margin: 0 auto;
+    }
+    #feed-tabs::-webkit-scrollbar { display: none; }
+
+    .feed-tab {
+      flex-shrink: 0;
+      padding: 6px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      font-weight: 500;
+      transition: all var(--transition);
+      white-space: nowrap;
+    }
+    .feed-tab:hover { border-color: var(--brand); color: var(--text); }
+    .feed-tab.active {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
+
+    /* ── Feed layout ──────────────────────────────────────────────── */
+    #feed-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      padding: 20px 16px 40px;
+      max-width: var(--card-max);
+      margin: 0 auto;
+    }
+
+    .feed-empty {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 60px 20px;
+      font-size: 1rem;
+    }
+
+    /* ── Product card ─────────────────────────────────────────────── */
+    .feed-card {
+      width: 100%;
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      transition: transform var(--transition), box-shadow var(--transition);
+      animation: fadeInUp 0.35s ease both;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .feed-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 40px rgba(108, 99, 255, 0.18);
+    }
+
+    /* Card media */
+    .feed-card-media { position: relative; }
+
+    .feed-card-img {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      background: var(--surface2);
+    }
+
+    .feed-card-img-placeholder {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 4rem;
+      background: var(--surface2);
+    }
+
+    .feed-card-badges {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    /* Badges */
+    .feed-badge {
+      padding: 3px 9px;
+      border-radius: 10px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .badge-new        { background: var(--success);  color: #fff; }
+    .badge-featured   { background: var(--brand);    color: #fff; }
+    .badge-bestseller { background: var(--warning);  color: #111; }
+    .badge-margin     { background: #10b981;          color: #fff; }
+
+    /* Card body */
+    .feed-card-body { padding: 14px 16px 16px; }
+
+    .feed-card-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      line-height: 1.35;
+    }
+
+    .feed-supplier {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    .feed-card-pricing {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .feed-platform-price {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .feed-platform-price strong {
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    .feed-reseller-price {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .feed-profit {
+      font-size: 0.9rem;
+      color: #34d399;
+    }
+
+    .feed-profit strong {
+      font-size: 1.05rem;
+    }
+
+    /* Action buttons */
+    .feed-card-actions {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+
+    .feed-btn {
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: none;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .feed-btn-add {
+      background: var(--brand);
+      color: #fff;
+    }
+    .feed-btn-add:hover:not(:disabled) { background: var(--brand-dark); }
+    .feed-btn-add:disabled { opacity: 0.65; cursor: not-allowed; }
+    .feed-btn-add.added {
+      background: var(--success);
+    }
+
+    .feed-btn-view {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .feed-btn-view:hover { border-color: var(--brand); color: var(--brand); }
+
+    /* ── Loader ────────────────────────────────────────────────────── */
+    #feed-loader {
+      display: none;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      padding: 24px;
+      color: var(--text-muted);
+    }
+
+    .spinner {
+      width: 22px;
+      height: 22px;
+      border: 3px solid var(--border);
+      border-top-color: var(--brand);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── End / error messages ──────────────────────────────────────── */
+    #feed-end {
+      display: none;
+      text-align: center;
+      padding: 20px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    #feed-error {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: #fff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      z-index: 999;
+      max-width: 320px;
+      text-align: center;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    /* ── Mobile tweaks ─────────────────────────────────────────────── */
+    @media (max-width: 480px) {
+      .feed-card-actions {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ── Desktop: wider layout ─────────────────────────────────────── */
+    @media (min-width: 768px) {
+      :root { --card-max: 520px; }
+
+      #feed-container {
+        gap: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Top bar ──────────────────────────────────────────────────── -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a href="index.html" class="topbar-logo">✨ QualitetMarket</a>
+      <nav class="topbar-nav">
+        <a href="panel-sklepu.html">Sklep</a>
+        <a href="qualitetmarket.html">Katalog</a>
+        <a href="dashboard.html">Dashboard</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ── Section tabs ─────────────────────────────────────────────── -->
+  <div class="tabs-wrapper">
+    <div id="feed-tabs" role="tablist" aria-label="Sekcje feedu produktów"></div>
+  </div>
+
+  <!-- ── Main feed ────────────────────────────────────────────────── -->
+  <main>
+    <div id="feed-container" role="feed" aria-label="Feed produktów"></div>
+
+    <div id="feed-loader" aria-live="polite" aria-label="Ładowanie produktów">
+      <div class="spinner"></div>
+      <span>Ładowanie…</span>
+    </div>
+
+    <p id="feed-end">🎉 To już wszystko w tej sekcji!</p>
+
+    <!-- Intersection Observer sentinel for infinite scroll -->
+    <div id="feed-sentinel" aria-hidden="true" style="height:1px;"></div>
+  </main>
+
+  <!-- ── Error toast ───────────────────────────────────────────────── -->
+  <div id="feed-error" role="alert"></div>
+
+  <!-- ── Scripts ──────────────────────────────────────────────────── -->
+  <script src="js/api.js"></script>
+  <script src="js/feed.js"></script>
+</body>
+</html>

@@ -37,6 +37,7 @@ const reputationRouter = require('./routes/reputation');
 const auctionsRouter = require('./routes/auctions');
 const campaignsRouter = require('./routes/campaigns');
 const aiRouter = require('./modules/ai/routes');
+const feedRouter = require('./routes/feed');
 const errorHandler = require('./middleware/errorHandler');
 const { importSupplierProducts } = require('./services/supplier-import');
 const { getPromoSlots } = require('./helpers/promo');
@@ -360,6 +361,7 @@ app.use('/api/reputation', reputationRouter);
 app.use('/api/auctions', auctionsRouter);
 app.use('/api/campaigns', campaignsRouter);
 app.use('/api/ai', aiRouter);
+app.use('/api/feed', feedRouter);
 
 // ─── Public promo slots feed ───────────────────────────────────────────────────
 // Shows how many early-access slots remain at each promotional tier.

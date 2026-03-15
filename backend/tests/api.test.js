@@ -9634,3 +9634,188 @@ describe('POST /api/admin/suppliers/sync-all – execution report fields', () =>
     expect(res.body).toHaveProperty('example_product', null);
   });
 });
+
+
+// ─── GET /api/feed – Social Commerce Product Feed ────────────────────────────
+
+describe('GET /api/feed', () => {
+  const FEED_PRODUCT = {
+    id: PRODUCT_ID,
+    name: 'Produkt Testowy',
+    description: 'Opis produktu',
+    image_url: 'https://example.com/img.jpg',
+    platform_price: '100.00',
+    recommended_reseller_price: '120.00',
+    expected_reseller_profit: '20.00',
+    expected_platform_profit: '15.00',
+    quality_score: 85,
+    is_featured: true,
+    stock: 10,
+    supplier_id: null,
+    supplier_name: null,
+    created_at: new Date(Date.now() - 2 * 86400000).toISOString(), // 2 days ago
+    total_count: '1',
+  };
+
+  it('returns feed with default section and pagination', async () => {
+    db.query.mockResolvedValueOnce({ rows: [FEED_PRODUCT] });
+
+    const res = await request(app).get('/api/feed');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('section', 'recommended');
+    expect(res.body).toHaveProperty('page', 1);
+    expect(res.body).toHaveProperty('limit', 20);
+    expect(res.body).toHaveProperty('total', 1);
+    expect(res.body.products).toHaveLength(1);
+  });
+
+  it('returns correct product fields including pricing and badges', async () => {
+    db.query.mockResolvedValueOnce({ rows: [FEED_PRODUCT] });
+
+    const res = await request(app).get('/api/feed');
+
+    expect(res.status).toBe(200);
+    const p = res.body.products[0];
+    expect(p).toHaveProperty('id', PRODUCT_ID);
+    expect(p).toHaveProperty('name', 'Produkt Testowy');
+    expect(p).toHaveProperty('platform_price', 100);
+    expect(p).toHaveProperty('recommended_reseller_price', 120);
+    expect(p).toHaveProperty('expected_reseller_profit', 20);
+    expect(p).toHaveProperty('quality_score', 85);
+    expect(p).toHaveProperty('is_featured', true);
+    expect(p).toHaveProperty('badges');
+    expect(Array.isArray(p.badges)).toBe(true);
+  });
+
+  it('assigns "new" badge to products created within 7 days', async () => {
+    const freshProduct = { ...FEED_PRODUCT, created_at: new Date(Date.now() - 1 * 86400000).toISOString() };
+    db.query.mockResolvedValueOnce({ rows: [freshProduct] });
+
+    const res = await request(app).get('/api/feed');
+
+    expect(res.status).toBe(200);
+    expect(res.body.products[0].badges).toContain('new');
+  });
+
+  it('assigns "featured" badge when is_featured is true', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ ...FEED_PRODUCT, is_featured: true }] });
+
+    const res = await request(app).get('/api/feed');
+
+    expect(res.status).toBe(200);
+    expect(res.body.products[0].badges).toContain('featured');
+  });
+
+  it('assigns "high_margin" badge when profit/price >= 20%', async () => {
+    // 20/100 = 20% exactly qualifies
+    db.query.mockResolvedValueOnce({ rows: [FEED_PRODUCT] });
+
+    const res = await request(app).get('/api/feed');
+
+    expect(res.status).toBe(200);
+    expect(res.body.products[0].badges).toContain('high_margin');
+  });
+
+  it('does not assign "high_margin" badge when profit/price < 20%', async () => {
+    const lowMarginProduct = { ...FEED_PRODUCT, expected_reseller_profit: '5.00' };
+    db.query.mockResolvedValueOnce({ rows: [lowMarginProduct] });
+
+    const res = await request(app).get('/api/feed');
+
+    expect(res.status).toBe(200);
+    expect(res.body.products[0].badges).not.toContain('high_margin');
+  });
+
+  it('supports "new" section', async () => {
+    db.query.mockResolvedValueOnce({ rows: [FEED_PRODUCT] });
+
+    const res = await request(app).get('/api/feed?section=new');
+
+    expect(res.status).toBe(200);
+    expect(res.body.section).toBe('new');
+  });
+
+  it('supports "trending" section', async () => {
+    db.query.mockResolvedValueOnce({ rows: [FEED_PRODUCT] });
+
+    const res = await request(app).get('/api/feed?section=trending');
+
+    expect(res.status).toBe(200);
+    expect(res.body.section).toBe('trending');
+  });
+
+  it('supports "best_margin" section', async () => {
+    db.query.mockResolvedValueOnce({ rows: [FEED_PRODUCT] });
+
+    const res = await request(app).get('/api/feed?section=best_margin');
+
+    expect(res.status).toBe(200);
+    expect(res.body.section).toBe('best_margin');
+  });
+
+  it('supports "bestsellers" section', async () => {
+    db.query.mockResolvedValueOnce({ rows: [FEED_PRODUCT] });
+
+    const res = await request(app).get('/api/feed?section=bestsellers');
+
+    expect(res.status).toBe(200);
+    expect(res.body.section).toBe('bestsellers');
+  });
+
+  it('falls back to "recommended" for unknown section', async () => {
+    db.query.mockResolvedValueOnce({ rows: [FEED_PRODUCT] });
+
+    const res = await request(app).get('/api/feed?section=unknown_section');
+
+    expect(res.status).toBe(200);
+    expect(res.body.section).toBe('recommended');
+  });
+
+  it('respects limit and page params', async () => {
+    db.query.mockResolvedValueOnce({ rows: [FEED_PRODUCT] });
+
+    const res = await request(app).get('/api/feed?limit=5&page=2');
+
+    expect(res.status).toBe(200);
+    expect(res.body.limit).toBe(5);
+    expect(res.body.page).toBe(2);
+  });
+
+  it('caps limit at 50', async () => {
+    db.query.mockResolvedValueOnce({ rows: [FEED_PRODUCT] });
+
+    const res = await request(app).get('/api/feed?limit=999');
+
+    expect(res.status).toBe(200);
+    expect(res.body.limit).toBe(50);
+  });
+
+  it('returns empty products array when no products match', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app).get('/api/feed');
+
+    expect(res.status).toBe(200);
+    expect(res.body.products).toHaveLength(0);
+    expect(res.body.total).toBe(0);
+  });
+
+  it('is accessible without authentication (public endpoint)', async () => {
+    db.query.mockResolvedValueOnce({ rows: [FEED_PRODUCT] });
+
+    const res = await request(app).get('/api/feed');
+
+    expect(res.status).toBe(200);
+  });
+
+  it('returns supplier_name when available', async () => {
+    const productWithSupplier = { ...FEED_PRODUCT, supplier_id: 'sup-1', supplier_name: 'Dostawca ABC' };
+    db.query.mockResolvedValueOnce({ rows: [productWithSupplier] });
+
+    const res = await request(app).get('/api/feed');
+
+    expect(res.status).toBe(200);
+    expect(res.body.products[0].supplier_name).toBe('Dostawca ABC');
+  });
+});
