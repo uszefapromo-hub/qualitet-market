@@ -110,6 +110,55 @@ function isLowQuality({ image_url = null, description = null, stock = 0 } = {}) 
   return !hasImage && !hasDescription && !hasStock;
 }
 
+// ─── Supplier comparison ───────────────────────────────────────────────────────
+
+/**
+ * Select the best supplier from a list of offers for the same product.
+ *
+ * @param {Array}  offers  Array of offer objects; each must have at least:
+ *                         { supplier_price, platform_price, quality_score, stock }.
+ * @param {'lowest_cost'|'best_margin'|'best_quality'} mode
+ * @returns {object|null}  The winning offer, or null when the array is empty.
+ */
+function selectBestSupplier(offers, mode = 'lowest_cost') {
+  if (!offers || offers.length === 0) return null;
+
+  // Prefer in-stock offers; fall back to all offers when everything is out-of-stock.
+  // parseInt is intentional: stock may arrive as a string from DB rows or JSON feeds.
+  const inStock = offers.filter((o) => (parseInt(o.stock, 10) || 0) > 0);
+  const candidates = inStock.length > 0 ? inStock : offers;
+
+  switch (mode) {
+    case 'best_margin': {
+      // Highest (platform_price − supplier_price) = most platform profit per unit
+      return candidates.reduce((best, o) => {
+        const margin     = parseFloat(o.platform_price || 0) - parseFloat(o.supplier_price || 0);
+        const bestMargin = parseFloat(best.platform_price || 0) - parseFloat(best.supplier_price || 0);
+        return margin > bestMargin ? o : best;
+      });
+    }
+
+    case 'best_quality': {
+      // Highest quality_score; tie-break on lowest supplier_price
+      return candidates.reduce((best, o) => {
+        const qs     = parseFloat(o.quality_score || 0);
+        const bestQs = parseFloat(best.quality_score || 0);
+        if (qs > bestQs) return o;
+        if (qs === bestQs && parseFloat(o.supplier_price || 0) < parseFloat(best.supplier_price || 0)) return o;
+        return best;
+      });
+    }
+
+    case 'lowest_cost':
+    default: {
+      // Lowest supplier_price
+      return candidates.reduce((best, o) =>
+        parseFloat(o.supplier_price || 0) < parseFloat(best.supplier_price || 0) ? o : best
+      );
+    }
+  }
+}
+
 module.exports = {
   DEFAULT_PLATFORM_TIERS,
   computePlatformPrice,
@@ -118,4 +167,5 @@ module.exports = {
   computeQualityScore,
   isProductFeatured,
   isLowQuality,
+  selectBestSupplier,
 };

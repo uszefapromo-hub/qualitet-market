@@ -13,7 +13,7 @@ const { authenticate, requireRole, requireSuperAdmin } = require('../middleware/
 const { validate } = require('../middleware/validate');
 const { PLAN_CONFIG } = require('./subscriptions');
 const { upsertSupplierProducts, fetchSupplierProducts } = require('../services/supplier-import');
-const { computePlatformPrice, dbTiersToArray, DEFAULT_PLATFORM_TIERS, computeQualityScore, isProductFeatured, isLowQuality } = require('../helpers/pricing');
+const { computePlatformPrice, dbTiersToArray, DEFAULT_PLATFORM_TIERS, computeQualityScore, isProductFeatured, isLowQuality, selectBestSupplier } = require('../helpers/pricing');
 const { getPromoSlots } = require('../helpers/promo');
 const { sendImportNotification } = require('../helpers/mailer');
 
@@ -536,6 +536,159 @@ router.post(
         errorMessage: err.message,
       });
       return res.status(500).json({ error: 'Błąd synchronizacji: ' + err.message });
+    }
+  }
+);
+
+// ─── POST /api/admin/suppliers/sync-all – sync every active supplier ──────────
+
+router.post(
+  '/suppliers/sync-all',
+  authenticate,
+  requireRole('owner', 'admin'),
+  async (req, res) => {
+    try {
+      const suppliersResult = await db.query(
+        `SELECT * FROM suppliers
+         WHERE active = true
+           AND (api_url IS NOT NULL OR xml_endpoint IS NOT NULL OR csv_endpoint IS NOT NULL)`
+      );
+      const suppliers = suppliersResult.rows;
+
+      if (suppliers.length === 0) {
+        return res.json({ message: 'Brak aktywnych hurtowni do synchronizacji', total_count: 0, synced_at: new Date().toISOString(), results: [] });
+      }
+
+      const results = [];
+      let totalCount = 0;
+
+      for (const supplier of suppliers) {
+        try {
+          const rawProducts = await fetchSupplierProducts(supplier);
+          const report = await upsertSupplierProducts(supplier.id, rawProducts);
+
+          await db.query(
+            `UPDATE suppliers SET last_sync_at = NOW(), status = 'active' WHERE id = $1`,
+            [supplier.id]
+          );
+
+          // Fire-and-forget import log
+          db.query(
+            `INSERT INTO import_logs (supplier_id, status, count, featured, skipped, triggered_by, created_at)
+             VALUES ($1, 'success', $2, $3, $4, 'admin', NOW())`,
+            [supplier.id, report.count, report.featured, report.skipped]
+          ).catch((logErr) => console.warn('[sync-all] import_log insert failed:', logErr.message));
+
+          results.push({ supplier_id: supplier.id, name: supplier.name, status: 'success', count: report.count, featured: report.featured, skipped: report.skipped });
+          totalCount += report.count;
+        } catch (err) {
+          db.query(
+            `INSERT INTO import_logs (supplier_id, status, count, error_message, triggered_by, created_at)
+             VALUES ($1, 'failure', 0, $2, 'admin', NOW())`,
+            [supplier.id, err.message]
+          ).catch((logErr) => console.warn('[sync-all] import_log insert failed:', logErr.message));
+
+          results.push({ supplier_id: supplier.id, name: supplier.name, status: 'failure', error: err.message });
+        }
+      }
+
+      return res.json({
+        message: `Zsynchronizowano ${totalCount} produktów od ${suppliers.length} hurtowni`,
+        total_count: totalCount,
+        synced_at: new Date().toISOString(),
+        results,
+      });
+    } catch (err) {
+      console.error('sync-all error:', err.message);
+      return res.status(500).json({ error: 'Błąd synchronizacji: ' + err.message });
+    }
+  }
+);
+
+// ─── GET /api/admin/import-center – supplier import overview & log ─────────────
+
+router.get('/import-center', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+  try {
+    const suppliersResult = await db.query(
+      `SELECT s.id, s.name, s.integration_type, s.status, s.active, s.last_sync_at,
+              (SELECT COUNT(*) FROM products p WHERE p.supplier_id = s.id AND p.status = 'active') AS product_count
+       FROM suppliers s
+       ORDER BY s.name ASC`
+    );
+
+    const logsResult = await db.query(
+      `SELECT il.id, il.supplier_id, il.status, il.count, il.featured, il.skipped,
+              il.error_message, il.triggered_by, il.created_at, s.name AS supplier_name
+       FROM import_logs il
+       LEFT JOIN suppliers s ON il.supplier_id = s.id
+       ORDER BY il.created_at DESC
+       LIMIT 50`
+    );
+
+    const rows = suppliersResult.rows;
+    const stats = {
+      total_suppliers: rows.length,
+      active_suppliers: rows.filter((s) => s.active).length,
+      total_products: rows.reduce((sum, s) => sum + parseInt(s.product_count, 10), 0),
+    };
+
+    return res.json({ stats, suppliers: rows, recent_logs: logsResult.rows });
+  } catch (err) {
+    console.error('import-center error:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// ─── POST /api/admin/suppliers/select-best-source – find best supplier offer ──
+
+router.post(
+  '/suppliers/select-best-source',
+  authenticate,
+  requireRole('owner', 'admin'),
+  [
+    body('sku').optional().trim(),
+    body('name').optional().trim(),
+    body('mode').optional().isIn(['lowest_cost', 'best_margin', 'best_quality']),
+  ],
+  validate,
+  async (req, res) => {
+    const { sku, name, mode = 'lowest_cost' } = req.body;
+
+    if (!sku && !name) {
+      return res.status(422).json({ error: 'Wymagany parametr: sku lub name' });
+    }
+
+    try {
+      let result;
+      if (sku) {
+        result = await db.query(
+          `SELECT p.id, p.name, p.sku, p.supplier_price, p.platform_price,
+                  p.quality_score, p.stock,
+                  s.id AS supplier_id, s.name AS supplier_name
+           FROM products p
+           JOIN suppliers s ON p.supplier_id = s.id
+           WHERE p.sku = $1 AND p.is_central = true`,
+          [sku]
+        );
+      } else {
+        result = await db.query(
+          `SELECT p.id, p.name, p.sku, p.supplier_price, p.platform_price,
+                  p.quality_score, p.stock,
+                  s.id AS supplier_id, s.name AS supplier_name
+           FROM products p
+           JOIN suppliers s ON p.supplier_id = s.id
+           WHERE p.name ILIKE $1 AND p.is_central = true`,
+          [`%${name}%`]
+        );
+      }
+
+      const offers = result.rows;
+      const best = selectBestSupplier(offers, mode);
+
+      return res.json({ offers, best, mode });
+    } catch (err) {
+      console.error('select-best-source error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
     }
   }
 );

@@ -8937,3 +8937,234 @@ describe('PATCH /api/admin/products/:id/pinned', () => {
     expect(res.body).toHaveProperty('is_pinned', false);
   });
 });
+
+// ─── selectBestSupplier helper ────────────────────────────────────────────────
+
+describe('selectBestSupplier helper', () => {
+  const { selectBestSupplier } = require('../src/helpers/pricing');
+
+  const offers = [
+    { supplier_id: 'a', supplier_name: 'A', supplier_price: 50,  platform_price: 80,  quality_score: 60, stock: 5  },
+    { supplier_id: 'b', supplier_name: 'B', supplier_price: 40,  platform_price: 64,  quality_score: 80, stock: 3  },
+    { supplier_id: 'c', supplier_name: 'C', supplier_price: 60,  platform_price: 84,  quality_score: 90, stock: 0  },
+  ];
+
+  it('returns null for empty offers', () => {
+    expect(selectBestSupplier([])).toBeNull();
+  });
+
+  it('returns null for null input', () => {
+    expect(selectBestSupplier(null)).toBeNull();
+  });
+
+  it('lowest_cost: selects offer with lowest supplier_price (in-stock preferred)', () => {
+    const best = selectBestSupplier(offers, 'lowest_cost');
+    expect(best.supplier_id).toBe('b');
+  });
+
+  it('best_margin: selects offer with highest (platform_price - supplier_price)', () => {
+    const best = selectBestSupplier(offers, 'best_margin');
+    expect(best.supplier_id).toBe('a');
+  });
+
+  it('best_quality: selects offer with highest quality_score among in-stock', () => {
+    const best = selectBestSupplier(offers, 'best_quality');
+    expect(best.supplier_id).toBe('b');
+  });
+
+  it('falls back to out-of-stock offers when all have zero stock', () => {
+    const noStock = offers.map((o) => ({ ...o, stock: 0 }));
+    const best = selectBestSupplier(noStock, 'best_quality');
+    expect(best.supplier_id).toBe('c');
+  });
+
+  it('defaults to lowest_cost when mode is omitted', () => {
+    const best = selectBestSupplier(offers);
+    expect(best.supplier_id).toBe('b');
+  });
+});
+
+// ─── POST /api/admin/suppliers/sync-all ───────────────────────────────────────
+
+describe('POST /api/admin/suppliers/sync-all', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/sync-all')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns empty results when no suppliers are configured', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/sync-all')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.results).toHaveLength(0);
+    expect(res.body.total_count).toBe(0);
+    expect(res.body).toHaveProperty('synced_at');
+  });
+
+  it('reports failure for each supplier that cannot be fetched', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SUPPLIER_ID, name: 'Bad Supplier', integration_type: 'api',
+               api_url: 'http://invalid.local/feed', api_key: null,
+               xml_endpoint: null, csv_endpoint: null }],
+    });
+    db.query.mockResolvedValue({ rows: [] });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/sync-all')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.results[0].status).toBe('failure');
+    expect(res.body.results[0].name).toBe('Bad Supplier');
+  });
+});
+
+// ─── GET /api/admin/import-center ─────────────────────────────────────────────
+
+describe('GET /api/admin/import-center', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .get('/api/admin/import-center')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns stats, supplier list and recent logs', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [
+        { id: SUPPLIER_ID, name: 'Hurtownia A', integration_type: 'api',
+          status: 'active', active: true, last_sync_at: new Date().toISOString(),
+          product_count: '15' },
+      ],
+    });
+    db.query.mockResolvedValueOnce({
+      rows: [
+        { id: 'log-1', supplier_id: SUPPLIER_ID, status: 'success', count: 15,
+          featured: 5, skipped: 0, error_message: null, triggered_by: 'admin',
+          created_at: new Date().toISOString(), supplier_name: 'Hurtownia A' },
+      ],
+    });
+
+    const res = await request(app)
+      .get('/api/admin/import-center')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('stats');
+    expect(res.body.stats.total_suppliers).toBe(1);
+    expect(res.body.stats.active_suppliers).toBe(1);
+    expect(res.body.stats.total_products).toBe(15);
+    expect(res.body.suppliers).toHaveLength(1);
+    expect(res.body.recent_logs).toHaveLength(1);
+    expect(res.body.recent_logs[0].status).toBe('success');
+  });
+
+  it('returns empty stats when no suppliers exist', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .get('/api/admin/import-center')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.stats.total_suppliers).toBe(0);
+    expect(res.body.stats.total_products).toBe(0);
+    expect(res.body.suppliers).toHaveLength(0);
+    expect(res.body.recent_logs).toHaveLength(0);
+  });
+});
+
+// ─── POST /api/admin/suppliers/select-best-source ─────────────────────────────
+
+describe('POST /api/admin/suppliers/select-best-source', () => {
+  const OFFER_A = {
+    id: PRODUCT_ID, name: 'Widget', sku: 'WGT-001',
+    supplier_price: '50.00', platform_price: '80.00',
+    quality_score: 60, stock: 5,
+    supplier_id: SUPPLIER_ID, supplier_name: 'Hurtownia A',
+  };
+  const OFFER_B = {
+    id: 'aabbccdd-0000-4000-8000-000000000099', name: 'Widget', sku: 'WGT-001',
+    supplier_price: '40.00', platform_price: '64.00',
+    quality_score: 80, stock: 3,
+    supplier_id: 'sup-bbbb-0000-4000-8000-000000000001', supplier_name: 'Hurtownia B',
+  };
+
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ sku: 'WGT-001' });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 422 when neither sku nor name is provided', async () => {
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
+    expect(res.status).toBe(422);
+  });
+
+  it('returns offers and best by lowest_cost when querying by SKU', async () => {
+    db.query.mockResolvedValueOnce({ rows: [OFFER_A, OFFER_B] });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ sku: 'WGT-001', mode: 'lowest_cost' });
+    expect(res.status).toBe(200);
+    expect(res.body.offers).toHaveLength(2);
+    expect(res.body.mode).toBe('lowest_cost');
+    expect(res.body.best.supplier_name).toBe('Hurtownia B');
+  });
+
+  it('selects best_quality supplier', async () => {
+    db.query.mockResolvedValueOnce({ rows: [OFFER_A, OFFER_B] });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ sku: 'WGT-001', mode: 'best_quality' });
+    expect(res.status).toBe(200);
+    expect(res.body.best.supplier_name).toBe('Hurtownia B');
+  });
+
+  it('selects best_margin supplier', async () => {
+    db.query.mockResolvedValueOnce({ rows: [OFFER_A, OFFER_B] });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ sku: 'WGT-001', mode: 'best_margin' });
+    expect(res.status).toBe(200);
+    expect(res.body.best.supplier_name).toBe('Hurtownia A');
+  });
+
+  it('returns null best when no products found', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'NonExistent' });
+    expect(res.status).toBe(200);
+    expect(res.body.offers).toHaveLength(0);
+    expect(res.body.best).toBeNull();
+  });
+
+  it('searches by name when sku is not provided', async () => {
+    db.query.mockResolvedValueOnce({ rows: [OFFER_A] });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/select-best-source')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ name: 'Widget' });
+    expect(res.status).toBe(200);
+    expect(res.body.offers).toHaveLength(1);
+    expect(res.body.best).not.toBeNull();
+  });
+});
