@@ -572,6 +572,8 @@
     runScript(id)              { return post(`/admin/scripts/${id}/run`, {}); },
     /** Dry-run a system script (no changes). POST /api/admin/scripts/:id/run {dry_run:true} */
     dryRunScript(id)           { return post(`/admin/scripts/${id}/run`, { dry_run: true }); },
+    /** Enable or disable a system script. PATCH /api/admin/scripts/:id */
+    toggleScript(id, enabled)  { return patch(`/admin/scripts/${id}`, { enabled }); },
     /** List announcements. GET /api/admin/announcements */
     announcements(params)      { return get('/admin/announcements', params); },
     /** Create an announcement. POST /api/admin/announcements */

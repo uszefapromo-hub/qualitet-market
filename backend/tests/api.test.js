@@ -4086,7 +4086,7 @@ describe('GET /api/admin/scripts', () => {
     expect(res.status).toBe(403);
   });
 
-  it('blocks admin role – only owner may access scripts', async () => {
+  it('blocks admin role – only owner/superadmin may access scripts', async () => {
     const res = await request(app)
       .get('/api/admin/scripts')
       .set('Authorization', `Bearer ${adminOnlyToken}`);
@@ -4105,6 +4105,62 @@ describe('GET /api/admin/scripts', () => {
     expect(res.body.scripts[0]).toHaveProperty('id');
     expect(res.body.scripts[0]).toHaveProperty('name');
     expect(res.body.scripts[0]).toHaveProperty('status');
+    expect(res.body.scripts[0]).toHaveProperty('dangerous');
+    expect(res.body.scripts[0]).toHaveProperty('enabled');
+  });
+});
+
+// ─── PATCH /api/admin/scripts/:id ────────────────────────────────────────────
+
+describe('PATCH /api/admin/scripts/:id', () => {
+  it('blocks unauthenticated requests', async () => {
+    const res = await request(app).patch('/api/admin/scripts/export-report');
+    expect(res.status).toBe(401);
+  });
+
+  it('blocks admin role – only owner/superadmin may toggle scripts', async () => {
+    const res = await request(app)
+      .patch('/api/admin/scripts/export-report')
+      .send({ enabled: false })
+      .set('Authorization', `Bearer ${adminOnlyToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 404 for unknown script id', async () => {
+    const res = await request(app)
+      .patch('/api/admin/scripts/no-such-script')
+      .send({ enabled: false })
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 400 when enabled field is missing', async () => {
+    const res = await request(app)
+      .patch('/api/admin/scripts/export-report')
+      .send({})
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(400);
+  });
+
+  it('disables a script successfully', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // UPSERT script_runs
+    const res = await request(app)
+      .patch('/api/admin/scripts/export-report')
+      .send({ enabled: false })
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('script_id', 'export-report');
+    expect(res.body).toHaveProperty('enabled', false);
+  });
+
+  it('re-enables a script successfully', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // UPSERT script_runs
+    const res = await request(app)
+      .patch('/api/admin/scripts/export-report')
+      .send({ enabled: true })
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('enabled', true);
   });
 });
 
@@ -4134,6 +4190,7 @@ describe('POST /api/admin/scripts/:id/run', () => {
 
   it('runs cleanup-accounts script successfully', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [] })  // SELECT enabled (enabled check)
       .mockResolvedValueOnce({ rows: [] })  // UPDATE users (cleanup)
       .mockResolvedValueOnce({ rows: [] }); // INSERT script_runs
 
@@ -4148,6 +4205,7 @@ describe('POST /api/admin/scripts/:id/run', () => {
 
   it('runs export-report script successfully', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [] })  // SELECT enabled (enabled check)
       .mockResolvedValueOnce({ rows: [{ order_count: '42', total_revenue: '9999.99' }] }) // report query
       .mockResolvedValueOnce({ rows: [] }); // INSERT script_runs
 
@@ -4161,6 +4219,7 @@ describe('POST /api/admin/scripts/:id/run', () => {
 
   it('runs cleanup-demo-data script successfully', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [] })  // SELECT enabled (enabled check)
       .mockResolvedValueOnce({ rows: [{ id: 'sp-1' }, { id: 'sp-2' }] }) // DELETE shop_products
       .mockResolvedValueOnce({ rows: [{ id: 'p-1' }, { id: 'p-2' }, { id: 'p-3' }] }) // DELETE products
       .mockResolvedValueOnce({ rows: [] }); // INSERT script_runs
@@ -4176,6 +4235,7 @@ describe('POST /api/admin/scripts/:id/run', () => {
 
   it('runs cleanup-subscriptions in dry-run mode', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [] }) // SELECT enabled (enabled check)
       .mockResolvedValueOnce({ rows: [{ id: 'sub-exp-1', shop_id: STORE_ID, plan: 'basic', expires_at: '2023-01-01T00:00:00Z', shop_name: 'Mój Sklep' }] }) // expired
       .mockResolvedValueOnce({ rows: [] }) // duplicates
       .mockResolvedValueOnce({ rows: [] }); // legacy
@@ -4194,6 +4254,7 @@ describe('POST /api/admin/scripts/:id/run', () => {
 
   it('runs cleanup-subscriptions (full run) and archives subscriptions', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [] }) // SELECT enabled (enabled check)
       .mockResolvedValueOnce({ rows: [{ id: 'sub-exp-1', shop_id: STORE_ID, plan: 'basic', expires_at: '2023-01-01T00:00:00Z', shop_name: 'Mój Sklep' }] }) // expired
       .mockResolvedValueOnce({ rows: [] }) // duplicates
       .mockResolvedValueOnce({ rows: [] }) // legacy
@@ -4213,6 +4274,7 @@ describe('POST /api/admin/scripts/:id/run', () => {
 
   it('cleanup-subscriptions with no stale subscriptions returns zero count', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [] }) // SELECT enabled (enabled check)
       .mockResolvedValueOnce({ rows: [] }) // expired
       .mockResolvedValueOnce({ rows: [] }) // duplicates
       .mockResolvedValueOnce({ rows: [] }) // legacy
@@ -4224,6 +4286,15 @@ describe('POST /api/admin/scripts/:id/run', () => {
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
     expect(res.body.result).toContain('0');
+  });
+
+  it('blocks run when script is disabled', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ enabled: false }] }); // SELECT enabled → disabled
+    const res = await request(app)
+      .post('/api/admin/scripts/export-report/run')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/wyłączony/i);
   });
 });
 // ─── Referral codes ───────────────────────────────────────────────────────────

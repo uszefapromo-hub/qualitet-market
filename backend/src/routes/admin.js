@@ -1591,19 +1591,19 @@ router.post(
 // ─── GET /api/admin/scripts – list system scripts with last-run info ──────────
 
 const SYSTEM_SCRIPTS = [
-  { id: 'warehouse-sync',          name: 'Synchronizacja hurtowni',           description: 'Pobiera aktualne dane produktów ze wszystkich aktywnych hurtowni',             destructive: false },
-  { id: 'recalculate-prices',      name: 'Przeliczenie cen',                  description: 'Aktualizuje ceny sprzedażowe wg aktualnych progów marży',                       destructive: false },
-  { id: 'csv-import',              name: 'Import produktów CSV',              description: 'Importuje produkty z pliku CSV do katalogu centralnego',                        destructive: false },
-  { id: 'cleanup-accounts',        name: 'Czyszczenie nieaktywnych kont',     description: 'Oznacza wygasłe konta trial bez aktywności (>30 dni)',                         destructive: true  },
-  { id: 'cleanup-demo-data',       name: 'Usuń dane demonstracyjne',          description: 'Usuwa wszystkie produkty demonstracyjne i zastępcze z katalogu centralnego',   destructive: true  },
-  { id: 'cleanup-subscriptions',   name: 'Czyszczenie subskrypcji',           description: 'Archiwizuje wygasłe, zduplikowane i nieaktywne subskrypcje. Obsługuje tryb DRY-RUN.', destructive: true },
-  { id: 'export-report',           name: 'Eksport raportów finansowych',      description: 'Generuje raport przychodów i prowizji za bieżący miesiąc',                     destructive: false },
+  { id: 'warehouse-sync',          name: 'Synchronizacja hurtowni',           description: 'Pobiera aktualne dane produktów ze wszystkich aktywnych hurtowni',             dangerous: false, enabled: true },
+  { id: 'recalculate-prices',      name: 'Przeliczenie cen',                  description: 'Aktualizuje ceny sprzedażowe wg aktualnych progów marży',                       dangerous: false, enabled: true },
+  { id: 'csv-import',              name: 'Import produktów CSV',              description: 'Importuje produkty z pliku CSV do katalogu centralnego',                        dangerous: false, enabled: true },
+  { id: 'cleanup-accounts',        name: 'Czyszczenie nieaktywnych kont',     description: 'Oznacza wygasłe konta trial bez aktywności (>30 dni)',                         dangerous: true,  enabled: true },
+  { id: 'cleanup-demo-data',       name: 'Usuń dane demonstracyjne',          description: 'Usuwa wszystkie produkty demonstracyjne i zastępcze z katalogu centralnego',   dangerous: true,  enabled: true },
+  { id: 'cleanup-subscriptions',   name: 'Czyszczenie subskrypcji',           description: 'Archiwizuje wygasłe, zduplikowane i nieaktywne subskrypcje. Obsługuje tryb DRY-RUN.', dangerous: true, enabled: true },
+  { id: 'export-report',           name: 'Eksport raportów finansowych',      description: 'Generuje raport przychodów i prowizji za bieżący miesiąc',                     dangerous: false, enabled: true },
 ];
 
-router.get('/scripts', authenticate, requireRole('owner'), async (req, res) => {
+router.get('/scripts', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT script_id, status, last_run_at, last_result, run_count
+      `SELECT script_id, status, last_run_at, last_result, run_count, enabled
        FROM script_runs
        ORDER BY last_run_at DESC`
     );
@@ -1618,6 +1618,7 @@ router.get('/scripts', authenticate, requireRole('owner'), async (req, res) => {
       last_run_at: byId[s.id]?.last_run_at || null,
       last_result: byId[s.id]?.last_result || null,
       run_count:   byId[s.id]?.run_count   || 0,
+      enabled:     byId[s.id]?.enabled     !== undefined ? byId[s.id].enabled : true,
     }));
 
     return res.json({ scripts });
@@ -1630,14 +1631,57 @@ router.get('/scripts', authenticate, requireRole('owner'), async (req, res) => {
   }
 });
 
+// ─── PATCH /api/admin/scripts/:id – enable or disable a system script ────────
+
+router.patch('/scripts/:id', authenticate, requireSuperAdmin, async (req, res) => {
+  const scriptId = req.params.id;
+  const script = SYSTEM_SCRIPTS.find((s) => s.id === scriptId);
+  if (!script) {
+    return res.status(404).json({ error: 'Skrypt nie istnieje' });
+  }
+
+  const enabled = req.body && req.body.enabled !== undefined ? Boolean(req.body.enabled) : null;
+  if (enabled === null) {
+    return res.status(400).json({ error: 'Pole "enabled" jest wymagane' });
+  }
+
+  try {
+    await db.query(
+      `INSERT INTO script_runs (id, script_id, status, run_count, enabled, created_at)
+       VALUES ($1, $2, 'idle', 0, $3, NOW())
+       ON CONFLICT (script_id) DO UPDATE SET
+         enabled    = EXCLUDED.enabled,
+         updated_at = NOW()`,
+      [uuidv4(), scriptId, enabled]
+    );
+  } catch (_err) {
+    // Non-critical if table doesn't exist yet
+  }
+
+  return res.json({ script_id: scriptId, enabled });
+});
+
 // ─── POST /api/admin/scripts/:id/run – trigger a system script ────────────────
 
-router.post('/scripts/:id/run', authenticate, requireRole('owner'), async (req, res) => {
+router.post('/scripts/:id/run', authenticate, requireSuperAdmin, async (req, res) => {
   const scriptId = req.params.id;
   const isDryRun = req.body && (req.body.dry_run === true || req.body.dry_run === 'true');
   const script = SYSTEM_SCRIPTS.find((s) => s.id === scriptId);
   if (!script) {
     return res.status(404).json({ error: 'Skrypt nie istnieje' });
+  }
+
+  // Check if script is disabled in DB (best-effort)
+  try {
+    const enabledResult = await db.query(
+      `SELECT enabled FROM script_runs WHERE script_id = $1`,
+      [scriptId]
+    );
+    if (enabledResult.rows.length > 0 && enabledResult.rows[0].enabled === false) {
+      return res.status(403).json({ error: 'Skrypt jest wyłączony' });
+    }
+  } catch (_err) {
+    // Ignore – table may not exist yet
   }
 
   const startedAt = new Date();

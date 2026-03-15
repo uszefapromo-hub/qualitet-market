@@ -1313,11 +1313,12 @@
                     <th>Opis</th>
                     <th>Ostatnie uruchomienie</th>
                     <th>Status</th>
+                    <th>Włączony</th>
                     <th>Akcja</th>
                   </tr>
                 </thead>
                 <tbody data-scripts-tbody>
-                  <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Ładowanie skryptów…</td></tr>
+                  <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Ładowanie skryptów…</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1681,16 +1682,22 @@
         const runTime = s.last_run_at
           ? new Date(s.last_run_at).toLocaleString('pl-PL')
           : '—';
-        const dryBtn = s.destructive
-          ? `<button class="btn btn-secondary" type="button" style="margin-right:4px" data-dry-script="${s.id}" title="Sprawdź co zostanie zmienione bez wykonywania zmian">🔍 Dry-Run</button>`
+        const isEnabled = s.enabled !== false;
+        const dryBtn = s.dangerous
+          ? `<button class="btn btn-secondary" type="button" style="margin-right:4px" data-dry-script="${s.id}" title="Sprawdź co zostanie zmienione bez wykonywania zmian"${isEnabled ? '' : ' disabled'}>🔍 Dry-Run</button>`
           : '';
-        const runLabel = s.destructive ? '⚠️ Uruchom' : '▶ Uruchom';
-        return `<tr>
-          <td><strong>${s.name}</strong>${s.destructive ? ' <span style="color:#e65c00;font-size:11px">(destruktywny)</span>' : ''}</td>
+        const runLabel = s.dangerous ? '⚠️ Uruchom' : '▶ Uruchom';
+        const toggleLabel = isEnabled ? '🔒 Wyłącz' : '✅ Włącz';
+        return `<tr${isEnabled ? '' : ' style="opacity:0.55"'}>
+          <td><strong>${s.name}</strong>${s.dangerous ? ' <span style="color:#e65c00;font-size:11px">(niebezpieczny)</span>' : ''}</td>
           <td class="cell-muted">${s.description}</td>
           <td class="cell-muted">${runTime}</td>
           <td>${statusPill(s.status)}</td>
-          <td style="white-space:nowrap">${dryBtn}<button class="btn btn-secondary" type="button" data-run-script="${s.id}">${runLabel}</button></td>
+          <td style="text-align:center">${isEnabled ? '<span class="pill-active">Tak</span>' : '<span class="pill-inactive">Nie</span>'}</td>
+          <td style="white-space:nowrap">
+            ${dryBtn}<button class="btn btn-secondary" type="button" data-run-script="${s.id}"${isEnabled ? '' : ' disabled'}>${runLabel}</button>
+            <button class="btn btn-secondary" type="button" data-toggle-script="${s.id}" data-toggle-enabled="${isEnabled ? 'false' : 'true'}" style="margin-left:4px">${toggleLabel}</button>
+          </td>
         </tr>`;
       }).join('');
 
@@ -1704,14 +1711,28 @@
         btn.addEventListener('click', () => {
           const scriptId = btn.dataset.runScript;
           const script = scripts.find(s => s.id === scriptId);
-          if (script && script.destructive) {
+          if (script && script.dangerous) {
             const confirmed = confirm(
-              `⚠️ UWAGA: Skrypt "${script.name}" jest destruktywny i wprowadzi zmiany w bazie danych.\n\n` +
+              `⚠️ UWAGA: Skrypt "${script.name}" jest niebezpieczny i wprowadzi zmiany w bazie danych.\n\n` +
               `Zalecamy najpierw wykonać Dry-Run.\n\nCzy na pewno chcesz uruchomić ten skrypt?`
             );
             if (!confirmed) return;
           }
           triggerScript(scriptId, false);
+        });
+      });
+
+      // Bind enable/disable toggle buttons
+      tbody.querySelectorAll('[data-toggle-script]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const scriptId = btn.dataset.toggleScript;
+          const newEnabled = btn.dataset.toggleEnabled === 'true';
+          try {
+            await apiReq('PATCH', `/admin/scripts/${scriptId}`, { enabled: newEnabled });
+            loadAdminScripts();
+          } catch (err) {
+            alert((err && err.error) || 'Błąd podczas zmiany stanu skryptu');
+          }
         });
       });
     }
@@ -1773,7 +1794,7 @@
         renderScripts(data.scripts || []);
       } catch (err) {
         const tbody = document.querySelector('[data-scripts-tbody]');
-        if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Brak dostępu – wymagane uprawnienia Super Admin.</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">Brak dostępu – wymagane uprawnienia Super Admin.</td></tr>';
         if (errEl) {
           errEl.textContent = (err && err.error) || 'Brak dostępu do skryptów (wymagane uprawnienia superadmin/owner).';
           errEl.hidden = false;
