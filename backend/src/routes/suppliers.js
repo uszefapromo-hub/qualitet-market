@@ -12,6 +12,7 @@ const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { sendImportNotification } = require('../helpers/mailer');
+const { computeQualityScore, isProductFeatured, isLowQuality } = require('../helpers/pricing');
 
 const router = express.Router();
 
@@ -175,16 +176,22 @@ router.post(
         return res.status(422).json({ error: 'Brak pliku lub URL API dostawcy' });
       }
 
-      const imported = await upsertProducts(rawProducts, store_id, supplierId, storeMargin);
+      const report = await upsertProducts(rawProducts, store_id, supplierId, storeMargin);
 
       // Fire-and-forget: notify admin about completed import
       sendImportNotification({
         supplierName: supplier.name,
-        count: imported,
+        count: report.count,
         status: 'success',
       });
 
-      return res.json({ message: `Zaimportowano ${imported} produktów`, count: imported });
+      return res.json({
+        message: `Zaimportowano ${report.count} produktów`,
+        count: report.count,
+        featured: report.featured,
+        skipped: report.skipped,
+        suppliers: [supplier.name],
+      });
     } catch (err) {
       console.error('import supplier products error:', err.message);
       // Fire-and-forget: notify admin about failed import
@@ -235,7 +242,7 @@ router.post(
       }
 
       const rawProducts = await fetchApiProducts(supplier);
-      const count = await upsertProducts(rawProducts, store_id, supplierId, storeMargin);
+      const report = await upsertProducts(rawProducts, store_id, supplierId, storeMargin);
 
       // Update last sync timestamp
       await db.query('UPDATE suppliers SET last_sync_at = NOW() WHERE id = $1', [supplierId]);
@@ -243,11 +250,17 @@ router.post(
       // Fire-and-forget: notify admin about completed sync
       sendImportNotification({
         supplierName: supplier.name,
-        count,
+        count: report.count,
         status: 'success',
       });
 
-      return res.json({ message: `Zsynchronizowano ${count} produktów`, count });
+      return res.json({
+        message: `Zsynchronizowano ${report.count} produktów`,
+        count: report.count,
+        featured: report.featured,
+        skipped: report.skipped,
+        suppliers: [supplier.name],
+      });
     } catch (err) {
       console.error('sync supplier error:', err.message);
       // Fire-and-forget: notify admin about failed sync
@@ -343,13 +356,24 @@ async function fetchApiProducts(supplier) {
 }
 
 async function upsertProducts(rawProducts, storeId, supplierId, storeMargin) {
-  let count = 0;
+  let count    = 0;
+  let featured = 0;
+  let skipped  = 0;
   const isCentral = !storeId;
 
   for (const raw of rawProducts) {
     if (!raw.name) continue;
-    const priceGross = raw.price_net * (1 + raw.tax_rate / 100);
-    const sellingPrice = priceGross * (1 + storeMargin / 100);
+
+    // Skip completely empty / low-quality listings
+    if (isLowQuality(raw)) {
+      skipped++;
+      continue;
+    }
+
+    const priceGross     = raw.price_net * (1 + raw.tax_rate / 100);
+    const sellingPrice   = priceGross * (1 + storeMargin / 100);
+    const qualityScore   = computeQualityScore({ ...raw, price_gross: priceGross });
+    const productFeatured = isProductFeatured({ ...raw, price_gross: priceGross });
 
     // Upsert by SKU when available
     if (raw.sku) {
@@ -361,20 +385,21 @@ async function upsertProducts(rawProducts, storeId, supplierId, storeMargin) {
 
       const existing = await db.query(lookupSql, lookupParams);
       if (existing.rows.length > 0) {
-        // Common update fields ($1–$10), then dynamic WHERE params
+        // Common update fields ($1–$10), quality fields ($11,$12), then dynamic WHERE params
         const updateCommon = [
           raw.name, raw.price_net, raw.tax_rate,
           priceGross.toFixed(2), sellingPrice.toFixed(2),
           storeMargin, raw.stock,
           raw.category, raw.description, raw.image_url,
+          qualityScore, productFeatured,
         ];
         const updateParams = isCentral
           ? [...updateCommon, raw.sku]
           : [...updateCommon, storeId, raw.sku];
 
         const whereClause = isCentral
-          ? 'WHERE is_central = true AND sku = $11'
-          : 'WHERE store_id = $11 AND sku = $12';
+          ? 'WHERE is_central = true AND sku = $13'
+          : 'WHERE store_id = $13 AND sku = $14';
 
         await db.query(
           `UPDATE products SET
@@ -388,11 +413,14 @@ async function upsertProducts(rawProducts, storeId, supplierId, storeMargin) {
              category      = COALESCE($8, category),
              description   = COALESCE($9, description),
              image_url     = COALESCE($10, image_url),
+             quality_score = $11,
+             is_featured   = $12,
              updated_at    = NOW()
            ${whereClause}`,
           updateParams
         );
         count++;
+        if (productFeatured) featured++;
         continue;
       }
     }
@@ -400,15 +428,17 @@ async function upsertProducts(rawProducts, storeId, supplierId, storeMargin) {
     await db.query(
       `INSERT INTO products
          (id, store_id, supplier_id, name, sku, price_net, tax_rate, price_gross, selling_price,
-          margin, stock, category, description, image_url, is_central, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NOW())`,
+          margin, stock, category, description, image_url, is_central, quality_score, is_featured, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,NOW())`,
       [uuidv4(), storeId, supplierId, raw.name, raw.sku || null,
        raw.price_net, raw.tax_rate, priceGross.toFixed(2), sellingPrice.toFixed(2),
-       storeMargin, raw.stock, raw.category, raw.description, raw.image_url, isCentral]
+       storeMargin, raw.stock, raw.category, raw.description, raw.image_url, isCentral,
+       qualityScore, productFeatured]
     );
     count++;
+    if (productFeatured) featured++;
   }
-  return count;
+  return { count, featured, skipped };
 }
 
 module.exports = router;

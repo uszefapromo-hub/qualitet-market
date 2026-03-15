@@ -44,6 +44,8 @@ router.get('/', async (req, res) => {
     : null;
   const status = req.query.status || null;
   const sort = req.query.sort || null;
+  const isFeatured = req.query.featured != null ? req.query.featured === 'true' : null;
+  const isPinned   = req.query.pinned   != null ? req.query.pinned   === 'true' : null;
 
   // Determine ORDER BY clause
   const ORDER_BY_MAP = {
@@ -51,6 +53,7 @@ router.get('/', async (req, res) => {
     bestsellers: 'stock DESC, created_at DESC',
     price_asc: 'selling_price ASC',
     price_desc: 'selling_price DESC',
+    featured: 'is_pinned DESC, quality_score DESC, created_at DESC',
   };
   const orderBy = ORDER_BY_MAP[sort] || 'created_at DESC';
 
@@ -64,6 +67,8 @@ router.get('/', async (req, res) => {
     if (category) { conditions.push(`category = $${nextParamIndex++}`); params.push(category); }
     if (isCentral !== null) { conditions.push(`is_central = $${nextParamIndex++}`); params.push(isCentral); }
     if (status) { conditions.push(`status = $${nextParamIndex++}`); params.push(status); }
+    if (isFeatured !== null) { conditions.push(`is_featured = $${nextParamIndex++}`); params.push(isFeatured); }
+    if (isPinned !== null) { conditions.push(`is_pinned = $${nextParamIndex++}`); params.push(isPinned); }
     if (search) {
       conditions.push(`(name ILIKE $${nextParamIndex} OR description ILIKE $${nextParamIndex})`);
       params.push(`%${search}%`);

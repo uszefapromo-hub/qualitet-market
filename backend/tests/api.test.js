@@ -8564,3 +8564,237 @@ describe('sendImportNotification helper', () => {
     ).resolves.toBeUndefined();
   });
 });
+
+// ─── Quality scoring & featured products ──────────────────────────────────────
+
+describe('computeQualityScore and isProductFeatured helpers', () => {
+  const { computeQualityScore, isProductFeatured, isLowQuality, FEATURED_THRESHOLD } = require('../src/helpers/pricing');
+
+  it('scores 0 for completely empty product', () => {
+    expect(computeQualityScore({})).toBe(0);
+  });
+
+  it('adds 30 points for a non-empty image_url', () => {
+    expect(computeQualityScore({ image_url: 'https://example.com/img.jpg' })).toBe(30);
+  });
+
+  it('adds 25 points for description >= 10 chars', () => {
+    expect(computeQualityScore({ description: 'This is good' })).toBe(25);
+  });
+
+  it('ignores description shorter than 10 chars', () => {
+    expect(computeQualityScore({ description: 'Short' })).toBe(0);
+  });
+
+  it('adds 20 points for stock > 0', () => {
+    expect(computeQualityScore({ stock: 1 })).toBe(20);
+  });
+
+  it('adds 35 points for stock > 5', () => {
+    expect(computeQualityScore({ stock: 10 })).toBe(35);
+  });
+
+  it('adds 10 points for positive price', () => {
+    expect(computeQualityScore({ price_gross: 50 })).toBe(10);
+  });
+
+  it('returns max 100', () => {
+    const score = computeQualityScore({
+      image_url: 'https://example.com/img.jpg',
+      description: 'A very good product description',
+      stock: 20,
+      price_gross: 99,
+    });
+    expect(score).toBeLessThanOrEqual(100);
+    expect(score).toBeGreaterThanOrEqual(FEATURED_THRESHOLD);
+  });
+
+  it('marks product as featured when score >= threshold', () => {
+    expect(isProductFeatured({
+      image_url: 'https://example.com/img.jpg',
+      description: 'A full description here',
+      stock: 10,
+      price_gross: 50,
+    })).toBe(true);
+  });
+
+  it('does not mark product as featured when score < threshold', () => {
+    expect(isProductFeatured({ image_url: null, description: null, stock: 0 })).toBe(false);
+  });
+
+  it('isLowQuality: true when no image, no description, zero stock', () => {
+    expect(isLowQuality({ image_url: null, description: '', stock: 0 })).toBe(true);
+  });
+
+  it('isLowQuality: false when stock > 0', () => {
+    expect(isLowQuality({ image_url: null, description: '', stock: 5 })).toBe(false);
+  });
+
+  it('isLowQuality: false when image present', () => {
+    expect(isLowQuality({ image_url: 'https://example.com/x.jpg', description: '', stock: 0 })).toBe(false);
+  });
+
+  it('isLowQuality: false when description >= 10 chars', () => {
+    expect(isLowQuality({ image_url: null, description: 'Long enough description', stock: 0 })).toBe(false);
+  });
+});
+
+describe('POST /api/admin/suppliers/import – quality scoring', () => {
+  it('returns featured and skipped counts in import report', async () => {
+    // Products:
+    //  1 – has image + description + stock → featured
+    //  2 – no image, no description, zero stock → skipped (low quality)
+    const csv = [
+      'sku,name,price_net,stock,description,image_url',
+      'FEAT-1,Good Product,100,10,"A great product description",https://img.example.com/1.jpg',
+      'SKIP-1,Empty Product,0,0,,',
+    ].join('\n');
+
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SUPPLIER_ID, name: 'Test Supplier', integration_type: 'csv' }] })
+      .mockResolvedValueOnce({ rows: [] })  // check existing sku FEAT-1
+      .mockResolvedValueOnce({ rows: [] }); // insert FEAT-1
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/import')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .field('supplier_id', SUPPLIER_ID)
+      .attach('file', Buffer.from(csv), { filename: 'products.csv', contentType: 'text/csv' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('count', 1);
+    expect(res.body).toHaveProperty('featured', 1);
+    expect(res.body).toHaveProperty('skipped', 1);
+    expect(res.body).toHaveProperty('suppliers');
+    expect(res.body.suppliers).toContain('Test Supplier');
+  });
+});
+
+describe('GET /api/admin/featured-products', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .get('/api/admin/featured-products')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns paginated featured products list', async () => {
+    const FEATURED_PRODUCT_ID = 'b1000000-0000-4000-8000-000000000001';
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({ rows: [{ id: FEATURED_PRODUCT_ID, name: 'Featured Product', is_featured: true, is_pinned: false, quality_score: 80, supplier_name: 'Supplier A' }] });
+
+    const res = await request(app)
+      .get('/api/admin/featured-products')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('total', 1);
+    expect(res.body).toHaveProperty('products');
+    expect(Array.isArray(res.body.products)).toBe(true);
+    expect(res.body.products[0]).toHaveProperty('is_featured', true);
+  });
+});
+
+describe('PATCH /api/admin/products/:id/featured', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .patch(`/api/admin/products/${PRODUCT_ID}/featured`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ featured: true });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 422 for invalid UUID', async () => {
+    const res = await request(app)
+      .patch('/api/admin/products/not-a-uuid/featured')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ featured: true });
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 404 when product not found', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .patch(`/api/admin/products/${PRODUCT_ID}/featured`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ featured: false });
+    expect(res.status).toBe(404);
+  });
+
+  it('sets is_featured = true on a product', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: PRODUCT_ID, name: 'Test Product', is_featured: true, is_pinned: false, quality_score: 75 }],
+    });
+    const res = await request(app)
+      .patch(`/api/admin/products/${PRODUCT_ID}/featured`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ featured: true });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('is_featured', true);
+  });
+
+  it('sets is_featured = false on a product', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: PRODUCT_ID, name: 'Test Product', is_featured: false, is_pinned: false, quality_score: 20 }],
+    });
+    const res = await request(app)
+      .patch(`/api/admin/products/${PRODUCT_ID}/featured`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ featured: false });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('is_featured', false);
+  });
+});
+
+describe('PATCH /api/admin/products/:id/pinned', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .patch(`/api/admin/products/${PRODUCT_ID}/pinned`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ pinned: true });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 422 for invalid UUID', async () => {
+    const res = await request(app)
+      .patch('/api/admin/products/not-a-uuid/pinned')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ pinned: true });
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 404 when product not found', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .patch(`/api/admin/products/${PRODUCT_ID}/pinned`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ pinned: true });
+    expect(res.status).toBe(404);
+  });
+
+  it('pins a product to homepage', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: PRODUCT_ID, name: 'Pinned Product', is_featured: true, is_pinned: true, pinned_at: new Date().toISOString(), quality_score: 90 }],
+    });
+    const res = await request(app)
+      .patch(`/api/admin/products/${PRODUCT_ID}/pinned`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ pinned: true });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('is_pinned', true);
+    expect(res.body).toHaveProperty('pinned_at');
+  });
+
+  it('unpins a product', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: PRODUCT_ID, name: 'Unpinned Product', is_featured: true, is_pinned: false, pinned_at: null, quality_score: 90 }],
+    });
+    const res = await request(app)
+      .patch(`/api/admin/products/${PRODUCT_ID}/pinned`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ pinned: false });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('is_pinned', false);
+  });
+});

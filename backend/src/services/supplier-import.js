@@ -29,7 +29,7 @@ const { parse: csvParse } = require('csv-parse/sync');
 const xml2js = require('xml2js');
 
 const db = require('../config/database');
-const { computePlatformPrice } = require('../helpers/pricing');
+const { computePlatformPrice, computeQualityScore, isProductFeatured, isLowQuality } = require('../helpers/pricing');
 
 const DEFAULT_TAX_RATE = 23; // Polish standard VAT rate (%)
 const FETCH_TIMEOUT_MS = 15000; // 15 seconds
@@ -187,8 +187,11 @@ async function fetchSupplierProducts(supplier) {
  *
  * Deduplication: supplier_id + sku.
  *   - Existing product → update supplier_price, platform_price, stock,
- *                        description, image_url.
+ *                        description, image_url, quality_score, is_featured.
  *   - New product      → insert with status = 'active', is_central = true.
+ *
+ * Low-quality filtering: products with no image AND no description AND zero
+ * stock are silently skipped (counted in skipped).
  *
  * Pricing chain (Step 4):
  *   supplier_price → platform_price (tiered margin) = min_selling_price
@@ -196,17 +199,27 @@ async function fetchSupplierProducts(supplier) {
  *
  * @param {string}   supplierId
  * @param {object[]} rawProducts  Array of mapped product objects.
- * @returns {Promise<number>} Count of products inserted or updated.
+ * @returns {Promise<{ count: number, featured: number, skipped: number }>}
  */
 async function upsertSupplierProducts(supplierId, rawProducts) {
-  let count = 0;
+  let count    = 0;
+  let featured = 0;
+  let skipped  = 0;
 
   for (const raw of rawProducts) {
     if (!raw.name) continue;
 
-    const supplierPrice = parseFloat(raw.price_gross) || 0;
-    const platformPrice = computePlatformPrice(supplierPrice);
-    const categorySlug  = mapCategorySlug(raw.category);
+    // Skip completely empty / low-quality listings
+    if (isLowQuality(raw)) {
+      skipped++;
+      continue;
+    }
+
+    const supplierPrice  = parseFloat(raw.price_gross) || 0;
+    const platformPrice  = computePlatformPrice(supplierPrice);
+    const categorySlug   = mapCategorySlug(raw.category);
+    const qualityScore   = computeQualityScore({ ...raw, price_gross: supplierPrice });
+    const productFeatured = isProductFeatured({ ...raw, price_gross: supplierPrice });
 
     if (!categorySlug && raw.category) {
       console.warn(`[import] Unmapped category "${raw.category}" for product "${raw.name}" – stored as free-text`);
@@ -219,19 +232,21 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
       );
 
       if (existing.rows.length > 0) {
-        // Update mutable fields per spec (section 4)
+        // Update mutable fields per spec (section 4) including quality columns
         await db.query(
           `UPDATE products SET
-             supplier_price  = $1,
-             platform_price  = $2,
-             price_gross     = $2,
-             selling_price   = $2,
+             supplier_price    = $1,
+             platform_price    = $2,
+             price_gross       = $2,
+             selling_price     = $2,
              min_selling_price = $2,
-             stock           = $3,
-             description     = COALESCE($4, description),
-             image_url       = COALESCE($5, image_url),
-             status          = 'active',
-             updated_at      = NOW()
+             stock             = $3,
+             description       = COALESCE($4, description),
+             image_url         = COALESCE($5, image_url),
+             quality_score     = $8,
+             is_featured       = $9,
+             status            = 'active',
+             updated_at        = NOW()
            WHERE supplier_id = $6 AND sku = $7`,
           [
             supplierPrice.toFixed(2),
@@ -241,9 +256,12 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
             raw.image_url   || null,
             supplierId,
             raw.sku,
+            qualityScore,
+            productFeatured,
           ]
         );
         count++;
+        if (productFeatured) featured++;
         continue;
       }
     }
@@ -254,8 +272,8 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
          (id, store_id, supplier_id, name, sku, price_net, tax_rate,
           supplier_price, price_gross, platform_price, min_selling_price,
           selling_price, margin, stock, category, description, image_url,
-          is_central, status, created_at)
-       VALUES ($1, NULL, $2, $3, $4, 0, $5, $6, $7, $7, $7, $7, 0, $8, $9, $10, $11, true, 'active', NOW())`,
+          is_central, status, quality_score, is_featured, created_at)
+       VALUES ($1, NULL, $2, $3, $4, 0, $5, $6, $7, $7, $7, $7, 0, $8, $9, $10, $11, true, 'active', $12, $13, NOW())`,
       [
         uuidv4(),
         supplierId,
@@ -268,12 +286,15 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
         categorySlug       || raw.category || null,
         raw.description    || null,
         raw.image_url      || null,
+        qualityScore,
+        productFeatured,
       ]
     );
     count++;
+    if (productFeatured) featured++;
   }
 
-  return count;
+  return { count, featured, skipped };
 }
 
 // ─── Main export ───────────────────────────────────────────────────────────────
@@ -283,7 +304,7 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
  * central catalogue.  Updates last_sync_at on the supplier record.
  *
  * @param {string} supplier_id  UUID of the supplier row.
- * @returns {Promise<number>} Number of products imported or updated.
+ * @returns {Promise<{ count: number, featured: number, skipped: number }>}
  */
 async function importSupplierProducts(supplier_id) {
   const supplierResult = await db.query('SELECT * FROM suppliers WHERE id = $1', [supplier_id]);
@@ -291,14 +312,14 @@ async function importSupplierProducts(supplier_id) {
   if (!supplier) throw new Error(`Supplier not found: ${supplier_id}`);
 
   const rawProducts = await fetchSupplierProducts(supplier);
-  const count = await upsertSupplierProducts(supplier_id, rawProducts);
+  const report = await upsertSupplierProducts(supplier_id, rawProducts);
 
   await db.query(
     `UPDATE suppliers SET last_sync_at = NOW(), status = 'active' WHERE id = $1`,
     [supplier_id]
   );
 
-  return count;
+  return report;
 }
 
 module.exports = { importSupplierProducts, upsertSupplierProducts, fetchSupplierProducts, mapSupplierProduct, mapCategorySlug };

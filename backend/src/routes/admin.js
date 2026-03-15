@@ -13,7 +13,7 @@ const { authenticate, requireRole, requireSuperAdmin } = require('../middleware/
 const { validate } = require('../middleware/validate');
 const { PLAN_CONFIG } = require('./subscriptions');
 const { upsertSupplierProducts, fetchSupplierProducts } = require('../services/supplier-import');
-const { computePlatformPrice, dbTiersToArray, DEFAULT_PLATFORM_TIERS } = require('../helpers/pricing');
+const { computePlatformPrice, dbTiersToArray, DEFAULT_PLATFORM_TIERS, computeQualityScore, isProductFeatured, isLowQuality } = require('../helpers/pricing');
 const { getPromoSlots } = require('../helpers/promo');
 const { sendImportNotification } = require('../helpers/mailer');
 
@@ -452,16 +452,22 @@ router.post(
         rawProducts = await fetchSupplierProducts(supplier);
       }
 
-      const imported = await upsertSupplierProducts(supplier_id, rawProducts);
+      const report = await upsertSupplierProducts(supplier_id, rawProducts);
 
       // Fire-and-forget: notify admin about completed import
       sendImportNotification({
         supplierName: supplier.name,
-        count: imported,
+        count: report.count,
         status: 'success',
       });
 
-      return res.json({ message: `Zaimportowano ${imported} produktów`, count: imported });
+      return res.json({
+        message: `Zaimportowano ${report.count} produktów`,
+        count: report.count,
+        featured: report.featured,
+        skipped: report.skipped,
+        suppliers: [supplier.name],
+      });
     } catch (err) {
       console.error('admin import supplier products error:', err.message);
       // Fire-and-forget: notify admin about failed import
@@ -498,7 +504,7 @@ router.post(
       }
 
       const rawProducts = await adminFetchApiProducts(supplier);
-      const count = await upsertCentralProducts(rawProducts, supplier_id);
+      const report = await upsertCentralProducts(rawProducts, supplier_id);
 
       await db.query(
         `UPDATE suppliers SET last_sync_at = NOW(), status = 'active' WHERE id = $1`,
@@ -508,13 +514,16 @@ router.post(
       // Fire-and-forget: notify admin about completed sync
       sendImportNotification({
         supplierName: supplier.name,
-        count,
+        count: report.count,
         status: 'success',
       });
 
       return res.json({
-        message: `Zsynchronizowano ${count} produktów`,
-        count,
+        message: `Zsynchronizowano ${report.count} produktów`,
+        count: report.count,
+        featured: report.featured,
+        skipped: report.skipped,
+        suppliers: [supplier.name],
         synced_at: new Date().toISOString(),
       });
     } catch (err) {
@@ -1048,7 +1057,9 @@ async function adminFetchApiProducts(supplier) {
 }
 
 async function upsertCentralProducts(rawProducts, supplierId) {
-  let count = 0;
+  let count    = 0;
+  let featured = 0;
+  let skipped  = 0;
 
   // Load current global platform margin tiers for pricing
   let tiers = DEFAULT_PLATFORM_TIERS;
@@ -1071,6 +1082,12 @@ async function upsertCentralProducts(rawProducts, supplierId) {
   for (const raw of rawProducts) {
     if (!raw.name) continue;
 
+    // Skip completely empty / low-quality listings
+    if (isLowQuality(raw)) {
+      skipped++;
+      continue;
+    }
+
     const priceNet = raw.price_net || 0;
     // Use supplier-provided gross price when available; otherwise apply default VAT
     const priceGross = raw.price_gross > 0
@@ -1079,6 +1096,9 @@ async function upsertCentralProducts(rawProducts, supplierId) {
     const formattedPriceGross = parseFloat(priceGross).toFixed(2);
     const supplierPrice = parseFloat(formattedPriceGross);
     const platformPrice = computePlatformPrice(supplierPrice, tiers);
+
+    const qualityScore    = computeQualityScore({ ...raw, price_gross: supplierPrice });
+    const productFeatured = isProductFeatured({ ...raw, price_gross: supplierPrice });
 
     if (raw.sku) {
       const existing = await db.query(
@@ -1102,13 +1122,17 @@ async function upsertCentralProducts(rawProducts, supplierId) {
              description       = COALESCE($7, description),
              image_url         = COALESCE($8, image_url),
              supplier_id       = $9,
+             quality_score     = $11,
+             is_featured       = $12,
              status            = 'active',
              updated_at        = NOW()
            WHERE is_central = true AND sku = $10`,
           [raw.name, priceNet, formattedPriceGross, platformPrice, raw.stock,
-           raw.category, raw.description, raw.image_url, supplierId, raw.sku]
+           raw.category, raw.description, raw.image_url, supplierId, raw.sku,
+           qualityScore, productFeatured]
         );
         count++;
+        if (productFeatured) featured++;
         continue;
       }
     }
@@ -1118,19 +1142,21 @@ async function upsertCentralProducts(rawProducts, supplierId) {
          (id, store_id, supplier_id, name, sku, price_net, tax_rate, price_gross,
           supplier_price, platform_price, min_selling_price,
           selling_price, margin, stock, category, description, image_url,
-          is_central, status, created_at)
+          is_central, status, quality_score, is_featured, created_at)
        VALUES ($1, NULL, $2, $3, $4, $5, $6, $7,
                $7, $8, $8,
-               $8, 0, $9, $10, $11, $12, true, 'active', NOW())`,
+               $8, 0, $9, $10, $11, $12, true, 'active', $13, $14, NOW())`,
       [uuidv4(), supplierId, raw.name, raw.sku || null,
        priceNet, DEFAULT_TAX_RATE, formattedPriceGross,
        platformPrice,
-       raw.stock, raw.category, raw.description, raw.image_url]
+       raw.stock, raw.category, raw.description, raw.image_url,
+       qualityScore, productFeatured]
     );
     count++;
+    if (productFeatured) featured++;
   }
 
-  return count;
+  return { count, featured, skipped };
 }
 
 // ─── GET /api/admin/settings – read platform settings ────────────────────────
@@ -1408,6 +1434,101 @@ router.get('/mail', authenticate, requireRole('owner', 'admin'), async (req, res
   }
 });
 
+// ─── GET /api/admin/featured-products – list best products from all suppliers ──
+
+router.get('/featured-products', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+  const page       = Math.max(1, parseInt(req.query.page  || '1',  10));
+  const limit      = Math.min(100, parseInt(req.query.limit || '20', 10));
+  const offset     = (page - 1) * limit;
+  const supplierId = req.query.supplier_id || null;
+  const pinned     = req.query.pinned === 'true' ? true : null;
+
+  try {
+    const conditions = ['(is_featured = true OR is_pinned = true)'];
+    const params     = [];
+    let   idx        = 1;
+
+    if (supplierId) { conditions.push(`supplier_id = $${idx++}`); params.push(supplierId); }
+    if (pinned !== null) { conditions.push(`is_pinned = $${idx++}`); params.push(pinned); }
+
+    const where = `WHERE ${conditions.join(' AND ')}`;
+
+    const countResult = await db.query(`SELECT COUNT(*) FROM products ${where}`, params);
+    const total = parseInt(countResult.rows[0].count, 10);
+
+    const result = await db.query(
+      `SELECT p.*, s.name AS supplier_name
+         FROM products p
+         LEFT JOIN suppliers s ON s.id = p.supplier_id
+         ${where}
+         ORDER BY p.is_pinned DESC, p.quality_score DESC, p.created_at DESC
+         LIMIT $${idx} OFFSET $${idx + 1}`,
+      [...params, limit, offset]
+    );
+
+    return res.json({ total, page, limit, products: result.rows });
+  } catch (err) {
+    console.error('admin featured products error:', err.message);
+    return res.status(500).json({ error: 'Błąd serwera' });
+  }
+});
+
+// ─── PATCH /api/admin/products/:id/featured – approve / remove featured flag ──
+
+router.patch(
+  '/products/:id/featured',
+  authenticate,
+  requireRole('owner', 'admin'),
+  [param('id').isUUID(), body('featured').isBoolean()],
+  validate,
+  async (req, res) => {
+    const isFeatured = req.body.featured === true || req.body.featured === 'true';
+    try {
+      const result = await db.query(
+        `UPDATE products
+           SET is_featured = $1, updated_at = NOW()
+           WHERE id = $2
+           RETURNING id, name, is_featured, is_pinned, quality_score`,
+        [isFeatured, req.params.id]
+      );
+      if (!result.rows[0]) return res.status(404).json({ error: 'Produkt nie znaleziony' });
+      return res.json(result.rows[0]);
+    } catch (err) {
+      console.error('admin set featured error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── PATCH /api/admin/products/:id/pinned – pin / unpin product to homepage ────
+
+router.patch(
+  '/products/:id/pinned',
+  authenticate,
+  requireRole('owner', 'admin'),
+  [param('id').isUUID(), body('pinned').isBoolean()],
+  validate,
+  async (req, res) => {
+    const isPinned = req.body.pinned === true || req.body.pinned === 'true';
+    try {
+      const result = await db.query(
+        `UPDATE products
+           SET is_pinned = $1,
+               pinned_at = $2,
+               updated_at = NOW()
+           WHERE id = $3
+           RETURNING id, name, is_featured, is_pinned, pinned_at, quality_score`,
+        [isPinned, isPinned ? new Date().toISOString() : null, req.params.id]
+      );
+      if (!result.rows[0]) return res.status(404).json({ error: 'Produkt nie znaleziony' });
+      return res.json(result.rows[0]);
+    } catch (err) {
+      console.error('admin set pinned error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
 module.exports = router;
 
 // ─── POST /api/admin/products/import – bulk import into central catalogue ──────
@@ -1438,16 +1559,21 @@ router.post(
         rawProducts = adminParseCsvProducts(content);
       }
 
-      const count = await upsertCentralProducts(rawProducts, supplierId);
+      const report = await upsertCentralProducts(rawProducts, supplierId);
 
       // Fire-and-forget: notify admin about completed bulk import
       sendImportNotification({
         supplierName: supplierId ? `Katalog centralny (supplier: ${supplierId})` : 'Katalog centralny',
-        count,
+        count: report.count,
         status: 'success',
       });
 
-      return res.json({ message: `Zaimportowano ${count} produktów do katalogu centralnego`, count });
+      return res.json({
+        message: `Zaimportowano ${report.count} produktów do katalogu centralnego`,
+        count: report.count,
+        featured: report.featured,
+        skipped: report.skipped,
+      });
     } catch (err) {
       console.error('admin products import error:', err.message);
       // Fire-and-forget: notify admin about failed bulk import
