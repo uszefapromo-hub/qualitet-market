@@ -9517,6 +9517,8 @@ describe('upsertSupplierProducts – repeated sync does not duplicate products',
 
     const first = await upsertSupplierProducts(SUPPLIER_ID, rawProducts);
     expect(first.count).toBe(1);
+    expect(first.created).toBe(1);
+    expect(first.updated).toBe(0);
 
     // Second sync (same SKU): existing product found → UPDATE (not INSERT)
     db.query
@@ -9525,6 +9527,8 @@ describe('upsertSupplierProducts – repeated sync does not duplicate products',
 
     const second = await upsertSupplierProducts(SUPPLIER_ID, rawProducts);
     expect(second.count).toBe(1);
+    expect(second.created).toBe(0);
+    expect(second.updated).toBe(1);
 
     // Verify UPDATE was called (not another INSERT) by checking call sequence:
     // mock call 0 = SELECT (found existing), mock call 1 = UPDATE
@@ -9540,5 +9544,93 @@ describe('upsertSupplierProducts – repeated sync does not duplicate products',
     const result = await upsertSupplierProducts(SUPPLIER_ID, lowQuality);
     expect(result.count).toBe(0);
     expect(result.skipped).toBe(1);
+  });
+
+  it('populates example_product on first insert', async () => {
+    const rawProducts = [{
+      name: 'Featured Widget',
+      sku: 'FW-001',
+      price_gross: 200,
+      stock: 50,
+      description: 'A high-quality widget with excellent features.',
+      image_url: 'https://example.com/widget.jpg',
+      category: 'Elektronika',
+    }];
+
+    db.query
+      .mockResolvedValueOnce({ rows: [] })  // SELECT – no existing product
+      .mockResolvedValueOnce({ rows: [] }); // INSERT
+
+    const result = await upsertSupplierProducts(SUPPLIER_ID, rawProducts);
+    expect(result.example_product).not.toBeNull();
+    expect(result.example_product).toHaveProperty('name', 'Featured Widget');
+    expect(result.example_product).toHaveProperty('sku', 'FW-001');
+    expect(result.example_product).toHaveProperty('supplier_price');
+    expect(result.example_product).toHaveProperty('platform_price');
+    expect(result.example_product).toHaveProperty('recommended_reseller_price');
+    expect(result.example_product).toHaveProperty('expected_platform_profit');
+    expect(result.example_product).toHaveProperty('expected_reseller_profit');
+    expect(result.example_product).toHaveProperty('quality_score');
+    // internal _featured flag must be stripped
+    expect(result.example_product).not.toHaveProperty('_featured');
+  });
+
+  it('example_product is null when all products are skipped', async () => {
+    const allSkipped = [{ name: 'Bad', sku: 'BAD-1', price_gross: 0, stock: 0, description: '', image_url: null }];
+    const result = await upsertSupplierProducts(SUPPLIER_ID, allSkipped);
+    expect(result.example_product).toBeNull();
+  });
+});
+
+// ─── Sync-all execution report fields ─────────────────────────────────────────
+
+describe('POST /api/admin/suppliers/sync-all – execution report fields', () => {
+  it('response includes total_imported, total_updated and example_product', async () => {
+    // Mock: one active supplier with endpoint
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SUPPLIER_ID, name: 'Hurtownia ABC' }],
+    });
+
+    // importSupplierProducts → SELECT * FROM suppliers WHERE id = $1
+    db.query
+      .mockResolvedValueOnce({
+        rows: [{
+          id: SUPPLIER_ID, name: 'Hurtownia ABC', active: true,
+          api_url: null, xml_endpoint: null, csv_endpoint: null, api_key: null,
+        }],
+      });
+
+    // importSupplierProducts will call fetchSupplierProducts which does a real HTTP
+    // fetch and will fail.  The route catches the per-supplier error and adds
+    // status:'error' to results – verify the top-level shape is still correct
+    // with zeroed-out totals and null example_product.
+    const res = await request(app)
+      .post('/api/admin/suppliers/sync-all')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('synced', 1);
+    expect(res.body).toHaveProperty('total_count', 0);
+    expect(res.body).toHaveProperty('total_imported', 0);
+    expect(res.body).toHaveProperty('total_updated', 0);
+    expect(res.body).toHaveProperty('total_skipped', 0);
+    expect(res.body).toHaveProperty('example_product', null);
+    expect(res.body).toHaveProperty('synced_at');
+    expect(res.body).toHaveProperty('results');
+    expect(res.body.results[0]).toHaveProperty('status', 'error');
+  });
+
+  it('returns total_imported=0, total_updated=0, example_product=null when no suppliers', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .post('/api/admin/suppliers/sync-all')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('synced', 0);
+    expect(res.body).toHaveProperty('total_imported', 0);
+    expect(res.body).toHaveProperty('total_updated', 0);
+    expect(res.body).toHaveProperty('example_product', null);
   });
 });

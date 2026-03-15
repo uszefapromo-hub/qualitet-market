@@ -562,23 +562,34 @@ router.post(
           message: 'Brak aktywnych hurtowni z skonfigurowanym endpointem',
           synced: 0,
           total_count: 0,
+          total_imported: 0,
+          total_updated: 0,
           total_featured: 0,
           total_skipped: 0,
+          example_product: null,
           results: [],
         });
       }
 
       const results = [];
       let totalCount    = 0;
+      let totalImported = 0;
+      let totalUpdated  = 0;
       let totalFeatured = 0;
       let totalSkipped  = 0;
+      let exampleProduct = null;
 
       for (const sup of suppliers) {
         try {
           const report = await importSupplierProducts(sup.id, trigger);
           totalCount    += report.count;
+          totalImported += report.created;
+          totalUpdated  += report.updated;
           totalFeatured += report.featured;
           totalSkipped  += report.skipped;
+          if (!exampleProduct && report.example_product) {
+            exampleProduct = { supplier_name: sup.name, ...report.example_product };
+          }
           results.push({ supplier_id: sup.id, supplier_name: sup.name, status: 'ok', ...report });
 
           sendImportNotification({
@@ -602,9 +613,12 @@ router.post(
         message:        `Zsynchronizowano ${totalCount} produktów z ${suppliers.length} hurtowni`,
         synced:         suppliers.length,
         total_count:    totalCount,
+        total_imported: totalImported,
+        total_updated:  totalUpdated,
         total_featured: totalFeatured,
         total_skipped:  totalSkipped,
         synced_at:      new Date().toISOString(),
+        example_product: exampleProduct,
         results,
       });
     } catch (err) {

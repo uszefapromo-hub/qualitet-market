@@ -192,6 +192,47 @@ async function fetchSupplierProducts(supplier) {
 // ─── Upsert ────────────────────────────────────────────────────────────────────
 
 /**
+ * Build (or upgrade) the running example-product snapshot.
+ * A featured product always beats a non-featured one; within the same tier
+ * the first-encountered product wins.
+ *
+ * @param {object|null} current          Existing snapshot (may be null).
+ * @param {object}      raw              Raw product from the supplier feed.
+ * @param {boolean}     productFeatured  Whether this product is featured.
+ * @param {number}      supplierPrice
+ * @param {number}      platformPrice
+ * @param {number}      recommendedResellerPrice
+ * @param {number}      expectedPlatformProfit
+ * @param {number}      expectedResellerProfit
+ * @param {number}      qualityScore
+ * @returns {object}  Updated snapshot.
+ */
+function pickExampleProduct(
+  current,
+  raw,
+  productFeatured,
+  supplierPrice,
+  platformPrice,
+  recommendedResellerPrice,
+  expectedPlatformProfit,
+  expectedResellerProfit,
+  qualityScore
+) {
+  if (current && !(productFeatured && !current._featured)) return current;
+  return {
+    _featured: productFeatured,
+    name: raw.name,
+    sku: raw.sku || null,
+    supplier_price: parseFloat(supplierPrice.toFixed(2)),
+    platform_price: parseFloat(platformPrice.toFixed(2)),
+    recommended_reseller_price: parseFloat(recommendedResellerPrice.toFixed(2)),
+    expected_platform_profit: parseFloat(expectedPlatformProfit.toFixed(2)),
+    expected_reseller_profit: parseFloat(expectedResellerProfit.toFixed(2)),
+    quality_score: qualityScore,
+  };
+}
+
+/**
  * Upsert products into the central catalogue for the given supplier.
  *
  * Deduplication: supplier_id + sku.
@@ -211,12 +252,15 @@ async function fetchSupplierProducts(supplier) {
  *
  * @param {string}   supplierId
  * @param {object[]} rawProducts  Array of mapped product objects.
- * @returns {Promise<{ count: number, featured: number, skipped: number }>}
+ * @returns {Promise<{ count: number, created: number, updated: number, featured: number, skipped: number, example_product: object|null }>}
  */
 async function upsertSupplierProducts(supplierId, rawProducts) {
   let count    = 0;
+  let created  = 0;
+  let updated  = 0;
   let featured = 0;
   let skipped  = 0;
+  let exampleProduct = null;
 
   for (const raw of rawProducts) {
     if (!raw.name) continue;
@@ -282,7 +326,15 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
           ]
         );
         count++;
+        updated++;
         if (productFeatured) featured++;
+
+        // Keep the first featured (or first overall) product as example
+        exampleProduct = pickExampleProduct(
+          exampleProduct, raw, productFeatured,
+          supplierPrice, platformPrice, recommendedResellerPrice,
+          expectedPlatformProfit, expectedResellerProfit, qualityScore
+        );
         continue;
       }
     }
@@ -318,10 +370,21 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
       ]
     );
     count++;
+    created++;
     if (productFeatured) featured++;
+
+    // Keep the first featured (or first overall) product as example
+    exampleProduct = pickExampleProduct(
+      exampleProduct, raw, productFeatured,
+      supplierPrice, platformPrice, recommendedResellerPrice,
+      expectedPlatformProfit, expectedResellerProfit, qualityScore
+    );
   }
 
-  return { count, featured, skipped };
+  // Strip the internal _featured flag before returning
+  if (exampleProduct) delete exampleProduct._featured;
+
+  return { count, created, updated, featured, skipped, example_product: exampleProduct };
 }
 
 // ─── Import logging ────────────────────────────────────────────────────────────
@@ -330,7 +393,7 @@ async function upsertSupplierProducts(supplierId, rawProducts) {
  * Persist an import run record to the import_logs table.
  * Fire-and-forget: errors are swallowed to avoid disrupting the caller.
  *
- * @param {{ supplier_id, supplier_name, trigger, status, count, featured, skipped, failed, error_message, started_at }} opts
+ * @param {{ supplier_id, supplier_name, trigger, status, count, created, updated, featured, skipped, failed, error_message, started_at }} opts
  */
 async function logImport(opts) {
   const {
@@ -339,6 +402,8 @@ async function logImport(opts) {
     trigger       = 'manual',
     status        = 'success',
     count         = 0,
+    created       = 0,
+    updated       = 0,
     featured      = 0,
     skipped       = 0,
     failed        = 0,
@@ -349,9 +414,9 @@ async function logImport(opts) {
   try {
     await db.query(
       `INSERT INTO import_logs
-         (supplier_id, supplier_name, trigger, status, count, featured, skipped, failed, error_message, started_at, finished_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())`,
-      [supplier_id, supplier_name, trigger, status, count, featured, skipped, failed, error_message, started_at]
+         (supplier_id, supplier_name, trigger, status, count, updated, featured, skipped, failed, error_message, started_at, finished_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())`,
+      [supplier_id, supplier_name, trigger, status, count, updated, featured, skipped, failed, error_message, started_at]
     );
   } catch (err) {
     // import_logs table may not exist yet during early deploys – silently skip
@@ -370,7 +435,7 @@ async function logImport(opts) {
  *
  * @param {string} supplier_id  UUID of the supplier row.
  * @param {string} [trigger]    'manual' | 'scheduled' | 'api'
- * @returns {Promise<{ count: number, featured: number, skipped: number }>}
+ * @returns {Promise<{ count: number, created: number, updated: number, featured: number, skipped: number, example_product: object|null }>}
  */
 async function importSupplierProducts(supplier_id, trigger = 'manual') {
   const supplierResult = await db.query('SELECT * FROM suppliers WHERE id = $1', [supplier_id]);
@@ -406,6 +471,8 @@ async function importSupplierProducts(supplier_id, trigger = 'manual') {
     trigger,
     status:        report.skipped > 0 && report.count === 0 ? 'partial' : 'success',
     count:         report.count,
+    created:       report.created,
+    updated:       report.updated,
     featured:      report.featured,
     skipped:       report.skipped,
     started_at:    startedAt,
