@@ -1816,7 +1816,7 @@
         updateScriptRow(scriptId, result.ok ? 'ok' : 'error', result.started_at || startedAt);
         appendLog(scriptId, result.name, result.ok, result.result, !!result.dry_run, startedAt);
         if (dryRun && result.dry_run) {
-          var msg = result.result + '\n\nCzy chcesz uruchomić skrypt na żywo?';
+          var msg = 'Podgląd dry-run:\n' + result.result + '\n\nCzy chcesz uruchomić skrypt na żywo?';
           if (confirm(msg)) {
             if (btn) { btn.disabled = false; btn.textContent = '🔍 Dry-run'; }
             runScript(scriptId, false);

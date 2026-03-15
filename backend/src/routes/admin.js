@@ -1635,11 +1635,11 @@ router.get('/scripts', authenticate, requireRole('owner'), async (req, res) => {
 
 // ─── POST /api/admin/scripts/:id/run – trigger a system script ────────────────
 // Access: owner (Super Admin) only.
-// Query param: ?dry_run=true  – simulate the run without making DB changes.
+// Body: { dry_run?: boolean }  – pass dry_run: true to simulate without committing changes.
 
 router.post('/scripts/:id/run', authenticate, requireRole('owner'), async (req, res) => {
   const scriptId = req.params.id;
-  const dryRun   = req.query.dry_run === 'true' || req.body.dry_run === true;
+  const dryRun   = req.body.dry_run === true;
   const script = SYSTEM_SCRIPTS.find((s) => s.id === scriptId);
   if (!script) {
     return res.status(404).json({ error: 'Skrypt nie istnieje' });

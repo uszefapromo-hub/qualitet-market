@@ -5,7 +5,7 @@
 
 CREATE TABLE IF NOT EXISTS script_runs (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  script_id   VARCHAR(80) NOT NULL UNIQUE,
+  script_id   VARCHAR(60) NOT NULL UNIQUE,
   status      VARCHAR(20) NOT NULL DEFAULT 'idle',   -- idle | ok | error
   last_run_at TIMESTAMPTZ,
   last_result TEXT,
