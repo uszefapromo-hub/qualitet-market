@@ -4277,6 +4277,23 @@ describe('GET /api/admin/github/status', () => {
       if (orig !== undefined) process.env.GITHUB_TOKEN = orig;
     }
   });
+
+  it('returns configured=false when GITHUB_REPO is not set', async () => {
+    const origToken = process.env.GITHUB_TOKEN;
+    const origRepo  = process.env.GITHUB_REPO;
+    try {
+      process.env.GITHUB_TOKEN = 'ghp_test_token';
+      delete process.env.GITHUB_REPO;
+      const res = await request(app)
+        .get('/api/admin/github/status')
+        .set('Authorization', `Bearer ${adminToken}`);
+      expect(res.status).toBe(200);
+      expect(res.body.configured).toBe(false);
+    } finally {
+      if (origToken !== undefined) process.env.GITHUB_TOKEN = origToken; else delete process.env.GITHUB_TOKEN;
+      if (origRepo  !== undefined) process.env.GITHUB_REPO  = origRepo;  else delete process.env.GITHUB_REPO;
+    }
+  });
 });
 
 // ─── GET /api/admin/github/pulls/:number ──────────────────────────────────────
@@ -4294,6 +4311,185 @@ describe('GET /api/admin/github/pulls/:number', () => {
       .get('/api/admin/github/pulls/abc')
       .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(400);
+  });
+
+  it('returns 400 for zero PR number', async () => {
+    const res = await request(app)
+      .get('/api/admin/github/pulls/0')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(400);
+  });
+
+  it('requires authentication (no token)', async () => {
+    const res = await request(app).get('/api/admin/github/pulls/1');
+    expect(res.status).toBe(401);
+  });
+});
+
+// ─── POST /api/admin/github/pulls/:number/approve ─────────────────────────────
+
+describe('POST /api/admin/github/pulls/:number/approve', () => {
+  it('requires admin role (seller blocked)', async () => {
+    const res = await request(app)
+      .post('/api/admin/github/pulls/1/approve')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({});
+    expect(res.status).toBe(403);
+  });
+
+  it('requires authentication (no token)', async () => {
+    const res = await request(app).post('/api/admin/github/pulls/1/approve').send({});
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 400 for non-numeric PR number', async () => {
+    const res = await request(app)
+      .post('/api/admin/github/pulls/abc/approve')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
+    expect(res.status).toBe(400);
+  });
+});
+
+// ─── POST /api/admin/github/pulls/:number/close ───────────────────────────────
+
+describe('POST /api/admin/github/pulls/:number/close', () => {
+  it('requires admin role (seller blocked)', async () => {
+    const res = await request(app)
+      .post('/api/admin/github/pulls/1/close')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({});
+    expect(res.status).toBe(403);
+  });
+
+  it('requires authentication (no token)', async () => {
+    const res = await request(app).post('/api/admin/github/pulls/1/close').send({});
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 400 for non-numeric PR number', async () => {
+    const res = await request(app)
+      .post('/api/admin/github/pulls/abc/close')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
+    expect(res.status).toBe(400);
+  });
+});
+
+// ─── POST /api/admin/github/pulls/:number/merge ───────────────────────────────
+
+describe('POST /api/admin/github/pulls/:number/merge', () => {
+  it('requires owner role (seller blocked)', async () => {
+    const res = await request(app)
+      .post('/api/admin/github/pulls/1/merge')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({});
+    expect(res.status).toBe(403);
+  });
+
+  it('requires authentication (no token)', async () => {
+    const res = await request(app).post('/api/admin/github/pulls/1/merge').send({});
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 400 for non-numeric PR number', async () => {
+    const res = await request(app)
+      .post('/api/admin/github/pulls/abc/merge')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({});
+    expect(res.status).toBe(400);
+  });
+});
+
+// ─── Dry-run tests for additional scripts ─────────────────────────────────────
+
+describe('POST /api/admin/scripts/:id/run – additional dry-run coverage', () => {
+  it('warehouse-sync dry-run returns supplier count without syncing', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sup-1' }, { id: 'sup-2' }] }); // suppliers query
+
+    const res = await request(app)
+      .post('/api/admin/scripts/warehouse-sync/run?dryRun=true')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.dry_run).toBe(true);
+    expect(res.body.result).toContain('[DRY-RUN]');
+    expect(res.body.result).toContain('2');
+  });
+
+  it('export-report dry-run returns report without side effects', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ order_count: '15', total_revenue: '5000.00' }] });
+
+    const res = await request(app)
+      .post('/api/admin/scripts/export-report/run?dryRun=true')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.dry_run).toBe(true);
+    expect(res.body.result).toContain('[DRY-RUN]');
+    expect(res.body.result).toContain('15');
+  });
+
+  it('cleanup-demo-data dry-run returns count without deleting', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '8' }] }); // COUNT only
+
+    const res = await request(app)
+      .post('/api/admin/scripts/cleanup-demo-data/run?dryRun=true')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.dry_run).toBe(true);
+    expect(res.body.result).toContain('[DRY-RUN]');
+    expect(res.body.result).toContain('8');
+  });
+
+  it('dry-run does not persist to script_runs table', async () => {
+    const queryCalls = [];
+    db.query.mockImplementation((sql, ...args) => {
+      queryCalls.push(sql);
+      if (sql.includes('COUNT')) return Promise.resolve({ rows: [{ count: '3' }] });
+      return Promise.resolve({ rows: [] });
+    });
+
+    await request(app)
+      .post('/api/admin/scripts/cleanup-accounts/run?dryRun=true')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    // dry-run should NOT insert into script_runs
+    const hasInsert = queryCalls.some(q => q.includes('INSERT INTO script_runs'));
+    expect(hasInsert).toBe(false);
+
+    db.query.mockReset();
+  });
+
+  it('real run persists to script_runs table', async () => {
+    const queryCalls = [];
+    db.query.mockImplementation((sql) => {
+      queryCalls.push(sql);
+      if (sql.includes('COUNT')) return Promise.resolve({ rows: [{ count: '2' }] });
+      if (sql.includes('UPDATE users')) return Promise.resolve({ rows: [{ id: 'u1' }, { id: 'u2' }] });
+      return Promise.resolve({ rows: [] });
+    });
+
+    await request(app)
+      .post('/api/admin/scripts/cleanup-accounts/run')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    const hasInsert = queryCalls.some(q => q.includes('INSERT INTO script_runs'));
+    expect(hasInsert).toBe(true);
+
+    db.query.mockReset();
+  });
+
+  it('enables a previously disabled script', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .patch('/api/admin/scripts/recalculate-prices')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ enabled: true });
+    expect(res.status).toBe(200);
+    expect(res.body.enabled).toBe(true);
+    expect(res.body.script_id).toBe('recalculate-prices');
   });
 });
 

@@ -1859,11 +1859,19 @@ router.post('/scripts/:id/run', authenticate, requireRole('owner', 'admin'), asy
 
 // ─── GitHub integration helpers ───────────────────────────────────────────────
 
+/** Validate GITHUB_REPO matches owner/repo-name format to prevent SSRF. */
+function isValidGithubRepo(repo) {
+  return typeof repo === 'string' && /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(repo);
+}
+
 async function githubRequest(path, options = {}) {
   const token = process.env.GITHUB_TOKEN;
   const repo  = process.env.GITHUB_REPO;
   if (!token || !repo) {
     throw new Error('GitHub integration not configured (missing GITHUB_TOKEN or GITHUB_REPO)');
+  }
+  if (!isValidGithubRepo(repo)) {
+    throw new Error('GITHUB_REPO must be in owner/repo-name format');
   }
   const url = `https://api.github.com/repos/${repo}${path}`;
   const response = await fetch(url, {
@@ -2038,12 +2046,14 @@ router.post('/github/pulls/:number/approve', authenticate, requireRole('owner', 
   if (!num || num < 1) return res.status(400).json({ error: 'Nieprawidłowy numer PR' });
 
   const { body: reviewBody = '' } = req.body;
+  const adminEmail = req.user?.email || 'unknown';
+  const defaultBody = `Approved via QualitetVerse Super Admin by ${adminEmail} on ${new Date().toISOString()}`;
 
   try {
     const result = await githubRequest(`/pulls/${num}/reviews`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event: 'APPROVE', body: reviewBody }),
+      body: JSON.stringify({ event: 'APPROVE', body: reviewBody || defaultBody }),
     });
     return res.json({ approved: true, review_id: result?.id });
   } catch (err) {
