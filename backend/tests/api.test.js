@@ -4240,6 +4240,7 @@ describe('POST /api/admin/scripts/:id/run', () => {
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
     expect(res.body.script_id).toBe('cleanup-demo-data');
+    // Result message includes count of deleted products (3 rows from DELETE products mock)
     expect(res.body.result).toContain('3');
   });
 

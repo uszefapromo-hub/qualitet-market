@@ -1718,6 +1718,7 @@
   // ─── Superadmin-only elements (scripts) ──────────────────────────────────────
   // Scripts UI is only for superadmin/owner. Hide it if the logged-in user has
   // only the regular 'admin' role (they also cannot reach the API).
+  // Runs synchronously before js/app.js (defer) to prevent any flash of content.
   (function () {
     var role = '';
     try {
@@ -1731,9 +1732,13 @@
       document.querySelectorAll('[data-superadmin-scripts-link]').forEach(function (el) {
         el.hidden = true;
       });
-      // Also hide the scripts tab panel content
+      // Keep the scripts tab panel hidden and mark it so tab navigation
+      // in app.js will not activate it for non-superadmin users.
       var panel = document.querySelector('[data-owner-tab-panel="scripts"]');
-      if (panel) panel.hidden = true;
+      if (panel) {
+        panel.hidden = true;
+        panel.setAttribute('data-scripts-access-denied', '1');
+      }
     }
   })();
   </script>

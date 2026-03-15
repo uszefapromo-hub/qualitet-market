@@ -3871,6 +3871,10 @@
       let targetPanel = null;
       tabPanels.forEach(panel => {
         const isActive = panel.dataset.ownerTabPanel === tabId;
+        // Never reveal a panel that has been access-denied (e.g. scripts for non-superadmin)
+        if(isActive && panel.dataset.scriptsAccessDenied){
+          return;
+        }
         panel.hidden = !isActive;
         if(isActive) targetPanel = panel;
       });
