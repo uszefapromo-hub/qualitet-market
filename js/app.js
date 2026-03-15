@@ -5652,7 +5652,108 @@
     const scriptCount = document.querySelectorAll('[data-run-script]').length;
     const totalEl = document.querySelector('[data-scripts-total]');
     if(totalEl) totalEl.textContent = scriptCount;
+
+    // ── Store scripts management (admin/owner only) ───────────────────────────
+    initStoreScriptsAdmin();
   }
+
+  function initStoreScriptsAdmin(){
+    const loadingEl  = document.querySelector('[data-store-scripts-loading]');
+    const emptyEl    = document.querySelector('[data-store-scripts-empty]');
+    const wrapEl     = document.querySelector('[data-store-scripts-table-wrap]');
+    const tbody      = document.querySelector('[data-store-scripts-tbody]');
+    const addForm    = document.querySelector('[data-store-scripts-add-form]');
+    const addToggle  = document.querySelector('[data-store-scripts-add-toggle]');
+    const cancelBtn  = document.querySelector('[data-store-scripts-cancel]');
+    const saveBtn    = document.querySelector('[data-store-scripts-save]');
+    const refreshBtn = document.querySelector('[data-store-scripts-refresh]');
+    const msgEl      = document.querySelector('[data-store-scripts-msg]');
+    if(!loadingEl || !window.QMApi) return;
+
+    function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+    function loadStoreScripts(){
+      loadingEl.hidden = false;
+      emptyEl.hidden = true;
+      wrapEl.hidden = true;
+      window.QMApi.Scripts.list()
+        .then(function(rows){
+          loadingEl.hidden = true;
+          if(!rows || rows.length === 0){ emptyEl.hidden = false; return; }
+          wrapEl.hidden = false;
+          tbody.innerHTML = rows.map(function(s){
+            return '<tr>' +
+              '<td class="cell-muted">' + esc(s.store_name || s.store_id) + '</td>' +
+              '<td><strong>' + esc(s.name) + '</strong></td>' +
+              '<td>' + esc(s.type) + '</td>' +
+              '<td>' + esc(s.placement) + '</td>' +
+              '<td>' + (s.active ? '<span class="pill-active">Aktywny</span>' : '<span class="pill-trial">Nieaktywny</span>') + '</td>' +
+              '<td style="white-space:nowrap">' +
+                '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;margin-right:4px" data-toggle-store-script="' + esc(s.id) + '" data-script-active="' + (s.active ? '1' : '0') + '">' + (s.active ? '⏸ Wyłącz' : '▶ Włącz') + '</button>' +
+                '<button class="btn btn-secondary" style="padding:4px 8px;font-size:12px;color:var(--error,#e53)" data-delete-store-script="' + esc(s.id) + '">🗑 Usuń</button>' +
+              '</td>' +
+            '</tr>';
+          }).join('');
+        })
+        .catch(function(){ loadingEl.hidden = true; emptyEl.hidden = false; });
+    }
+
+    loadStoreScripts();
+
+    if(refreshBtn) refreshBtn.addEventListener('click', loadStoreScripts);
+
+    if(addToggle && addForm){
+      addToggle.addEventListener('click', function(){
+        addForm.style.display = addForm.style.display === 'none' ? 'block' : 'none';
+      });
+    }
+    if(cancelBtn && addForm){
+      cancelBtn.addEventListener('click', function(){ addForm.style.display = 'none'; });
+    }
+
+    if(saveBtn){
+      saveBtn.addEventListener('click', function(){
+        var storeId  = (document.querySelector('[data-new-script-store-id]') || {}).value || '';
+        var name     = (document.querySelector('[data-new-script-name]') || {}).value || '';
+        var type     = (document.querySelector('[data-new-script-type]') || {}).value || 'custom';
+        var placement= (document.querySelector('[data-new-script-placement]') || {}).value || 'head';
+        var content  = (document.querySelector('[data-new-script-content]') || {}).value || '';
+        if(!storeId || !name || !content){
+          if(msgEl){ msgEl.textContent = 'Uzupełnij UUID sklepu, nazwę i kod skryptu.'; msgEl.hidden = false; }
+          return;
+        }
+        saveBtn.disabled = true;
+        window.QMApi.Scripts.create({ store_id: storeId.trim(), name: name.trim(), type, placement, content: content.trim(), active: true })
+          .then(function(){
+            if(msgEl){ msgEl.textContent = '✅ Skrypt zapisany.'; msgEl.hidden = false; }
+            if(addForm) addForm.style.display = 'none';
+            loadStoreScripts();
+          })
+          .catch(function(err){
+            if(msgEl){ msgEl.textContent = '❌ ' + (err && err.error ? err.error : 'Błąd zapisu.'); msgEl.hidden = false; }
+          })
+          .finally(function(){ saveBtn.disabled = false; });
+      });
+    }
+
+    document.addEventListener('click', function(e){
+      var toggleBtn = e.target.closest('[data-toggle-store-script]');
+      if(toggleBtn && window.QMApi){
+        var id = toggleBtn.dataset.toggleStoreScript;
+        var isActive = toggleBtn.dataset.scriptActive === '1';
+        window.QMApi.Scripts.update(id, { active: !isActive })
+          .then(loadStoreScripts)
+          .catch(function(){});
+        return;
+      }
+      var delBtn = e.target.closest('[data-delete-store-script]');
+      if(delBtn && window.QMApi){
+        if(!confirm('Usunąć skrypt?')) return;
+        window.QMApi.Scripts.delete(delBtn.dataset.deleteStoreScript)
+          .then(loadStoreScripts)
+          .catch(function(){});
+      }
+    });
 
   function initSuppliersModule(){
     if(document.body.dataset.page !== 'hurtownie'){

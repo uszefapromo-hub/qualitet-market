@@ -13,26 +13,16 @@ const router = express.Router();
 const VALID_TYPES      = ['analytics', 'tracking', 'chat', 'pixel', 'custom'];
 const VALID_PLACEMENTS = ['head', 'body_start', 'body_end'];
 
-// ─── GET /api/scripts – list scripts for the current seller's stores ──────────
+// ─── GET /api/scripts – list all store scripts (admin/owner only) ─────────────
 
-router.get('/', authenticate, async (req, res) => {
-  const isAdmin = ['owner', 'admin'].includes(req.user.role);
+router.get('/', authenticate, requireRole('owner', 'admin'), async (req, res) => {
   try {
-    const result = isAdmin
-      ? await db.query(
-          `SELECT sc.*, st.name AS store_name, st.slug AS store_slug
-           FROM scripts sc
-           JOIN stores st ON sc.store_id = st.id
-           ORDER BY st.name, sc.name`
-        )
-      : await db.query(
-          `SELECT sc.*, st.name AS store_name, st.slug AS store_slug
-           FROM scripts sc
-           JOIN stores st ON sc.store_id = st.id
-           WHERE st.owner_id = $1
-           ORDER BY st.name, sc.name`,
-          [req.user.id]
-        );
+    const result = await db.query(
+      `SELECT sc.*, st.name AS store_name, st.slug AS store_slug
+       FROM scripts sc
+       JOIN stores st ON sc.store_id = st.id
+       ORDER BY st.name, sc.name`
+    );
     return res.json(result.rows);
   } catch (err) {
     console.error('list scripts error:', err.message);
@@ -64,11 +54,12 @@ router.get(
   }
 );
 
-// ─── GET /api/scripts/:id – get single script ─────────────────────────────────
+// ─── GET /api/scripts/:id – get single script (admin/owner only) ─────────────
 
 router.get(
   '/:id',
   authenticate,
+  requireRole('owner', 'admin'),
   [param('id').isUUID()],
   validate,
   async (req, res) => {
@@ -82,11 +73,6 @@ router.get(
       );
       const script = result.rows[0];
       if (!script) return res.status(404).json({ error: 'Skrypt nie znaleziony' });
-
-      const isAdmin = ['owner', 'admin'].includes(req.user.role);
-      if (!isAdmin && script.owner_id !== req.user.id) {
-        return res.status(403).json({ error: 'Brak uprawnień' });
-      }
       return res.json(script);
     } catch (err) {
       console.error('get script error:', err.message);
@@ -95,11 +81,12 @@ router.get(
   }
 );
 
-// ─── POST /api/scripts – create a script ─────────────────────────────────────
+// ─── POST /api/scripts – create a script (admin/owner only) ──────────────────
 
 router.post(
   '/',
   authenticate,
+  requireRole('owner', 'admin'),
   [
     body('store_id').isUUID(),
     body('name').trim().notEmpty().isLength({ max: 255 }),
@@ -120,11 +107,6 @@ router.post(
       const store = storeResult.rows[0];
       if (!store) return res.status(404).json({ error: 'Sklep nie znaleziony' });
 
-      const isAdmin = ['owner', 'admin'].includes(req.user.role);
-      if (!isAdmin && store.owner_id !== req.user.id) {
-        return res.status(403).json({ error: 'Brak uprawnień do tego sklepu' });
-      }
-
       const id = uuidv4();
       const result = await db.query(
         `INSERT INTO scripts (id, store_id, name, type, placement, content, active, created_at)
@@ -140,11 +122,12 @@ router.post(
   }
 );
 
-// ─── PATCH /api/scripts/:id – update a script ────────────────────────────────
+// ─── PATCH /api/scripts/:id – update a script (admin/owner only) ─────────────
 
 router.patch(
   '/:id',
   authenticate,
+  requireRole('owner', 'admin'),
   [
     param('id').isUUID(),
     body('name').optional().trim().notEmpty().isLength({ max: 255 }),
@@ -159,18 +142,10 @@ router.patch(
 
     try {
       const existing = await db.query(
-        `SELECT sc.id, st.owner_id
-         FROM scripts sc
-         JOIN stores st ON sc.store_id = st.id
-         WHERE sc.id = $1`,
+        `SELECT sc.id FROM scripts sc WHERE sc.id = $1`,
         [req.params.id]
       );
       if (!existing.rows[0]) return res.status(404).json({ error: 'Skrypt nie znaleziony' });
-
-      const isAdmin = ['owner', 'admin'].includes(req.user.role);
-      if (!isAdmin && existing.rows[0].owner_id !== req.user.id) {
-        return res.status(403).json({ error: 'Brak uprawnień' });
-      }
 
       const result = await db.query(
         `UPDATE scripts SET
@@ -199,28 +174,21 @@ router.patch(
   }
 );
 
-// ─── DELETE /api/scripts/:id – delete a script ───────────────────────────────
+// ─── DELETE /api/scripts/:id – delete a script (admin/owner only) ────────────
 
 router.delete(
   '/:id',
   authenticate,
+  requireRole('owner', 'admin'),
   [param('id').isUUID()],
   validate,
   async (req, res) => {
     try {
       const existing = await db.query(
-        `SELECT sc.id, st.owner_id
-         FROM scripts sc
-         JOIN stores st ON sc.store_id = st.id
-         WHERE sc.id = $1`,
+        'SELECT id FROM scripts WHERE id = $1',
         [req.params.id]
       );
       if (!existing.rows[0]) return res.status(404).json({ error: 'Skrypt nie znaleziony' });
-
-      const isAdmin = ['owner', 'admin'].includes(req.user.role);
-      if (!isAdmin && existing.rows[0].owner_id !== req.user.id) {
-        return res.status(403).json({ error: 'Brak uprawnień' });
-      }
 
       await db.query('DELETE FROM scripts WHERE id = $1', [req.params.id]);
       return res.status(204).end();

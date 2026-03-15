@@ -4365,14 +4365,22 @@ describe('POST /api/scripts', () => {
     expect(res.status).toBe(401);
   });
 
-  it('creates a script for own store', async () => {
+  it('returns 403 for seller (admin/owner only)', async () => {
+    const res = await request(app)
+      .post('/api/scripts')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, name: 'GA4', type: 'analytics', placement: 'head', content: '<script></script>' });
+    expect(res.status).toBe(403);
+  });
+
+  it('creates a script (admin/owner)', async () => {
     db.query
-      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] }) // store ownership
+      .mockResolvedValueOnce({ rows: [{ owner_id: ADMIN_ID }] }) // store ownership
       .mockResolvedValueOnce({ rows: [{ id: SCRIPT_ID, store_id: STORE_ID, name: 'GA4', type: 'analytics', placement: 'head', content: '<script></script>' }] });
 
     const res = await request(app)
       .post('/api/scripts')
-      .set('Authorization', `Bearer ${sellerToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ store_id: STORE_ID, name: 'GA4', type: 'analytics', placement: 'head', content: '<script></script>' });
 
     expect(res.status).toBe(201);
@@ -4381,10 +4389,9 @@ describe('POST /api/scripts', () => {
   });
 
   it('validates type field', async () => {
-    db.query.mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] });
     const res = await request(app)
       .post('/api/scripts')
-      .set('Authorization', `Bearer ${sellerToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ store_id: STORE_ID, name: 'Bad', type: 'unknown', placement: 'head', content: 'x' });
     expect(res.status).toBe(422);
   });
@@ -4392,18 +4399,9 @@ describe('POST /api/scripts', () => {
   it('validates placement field', async () => {
     const res = await request(app)
       .post('/api/scripts')
-      .set('Authorization', `Bearer ${sellerToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ store_id: STORE_ID, name: 'Bad', type: 'custom', placement: 'footer', content: 'x' });
     expect(res.status).toBe(422);
-  });
-
-  it('returns 403 when seller tries to create script for another store', async () => {
-    db.query.mockResolvedValueOnce({ rows: [{ owner_id: ADMIN_ID }] }); // store owned by ADMIN
-    const res = await request(app)
-      .post('/api/scripts')
-      .set('Authorization', `Bearer ${sellerToken}`)
-      .send({ store_id: STORE_ID, name: 'X', type: 'custom', placement: 'head', content: 'x' });
-    expect(res.status).toBe(403);
   });
 });
 
@@ -4413,47 +4411,62 @@ describe('PATCH /api/scripts/:id', () => {
     expect(res.status).toBe(401);
   });
 
-  it('updates a script', async () => {
+  it('returns 403 for seller (admin/owner only)', async () => {
+    const res = await request(app)
+      .patch(`/api/scripts/${SCRIPT_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ active: false });
+    expect(res.status).toBe(403);
+  });
+
+  it('updates a script (admin/owner)', async () => {
     db.query
-      .mockResolvedValueOnce({ rows: [{ id: SCRIPT_ID, owner_id: SELLER_ID }] }) // ownership
+      .mockResolvedValueOnce({ rows: [{ id: SCRIPT_ID }] }) // existence check
       .mockResolvedValueOnce({ rows: [{ id: SCRIPT_ID, active: false }] }); // update
 
     const res = await request(app)
       .patch(`/api/scripts/${SCRIPT_ID}`)
-      .set('Authorization', `Bearer ${sellerToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ active: false });
 
     expect(res.status).toBe(200);
   });
 
-  it('returns 404 for unknown script', async () => {
+  it('returns 404 for unknown script (admin/owner)', async () => {
     db.query.mockResolvedValueOnce({ rows: [] });
     const res = await request(app)
       .patch(`/api/scripts/${SCRIPT_ID}`)
-      .set('Authorization', `Bearer ${sellerToken}`)
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ active: false });
     expect(res.status).toBe(404);
   });
 });
 
 describe('DELETE /api/scripts/:id', () => {
-  it('deletes own script (204)', async () => {
+  it('returns 403 for seller (admin/owner only)', async () => {
+    const res = await request(app)
+      .delete(`/api/scripts/${SCRIPT_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('deletes a script (admin/owner, 204)', async () => {
     db.query
-      .mockResolvedValueOnce({ rows: [{ id: SCRIPT_ID, owner_id: SELLER_ID }] }) // ownership
+      .mockResolvedValueOnce({ rows: [{ id: SCRIPT_ID }] }) // existence check
       .mockResolvedValueOnce({ rows: [] }); // DELETE
 
     const res = await request(app)
       .delete(`/api/scripts/${SCRIPT_ID}`)
-      .set('Authorization', `Bearer ${sellerToken}`);
+      .set('Authorization', `Bearer ${adminToken}`);
 
     expect(res.status).toBe(204);
   });
 
-  it('returns 404 for unknown script', async () => {
+  it('returns 404 for unknown script (admin/owner)', async () => {
     db.query.mockResolvedValueOnce({ rows: [] });
     const res = await request(app)
       .delete(`/api/scripts/${SCRIPT_ID}`)
-      .set('Authorization', `Bearer ${sellerToken}`);
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(404);
   });
 });
@@ -4464,11 +4477,18 @@ describe('GET /api/scripts', () => {
     expect(res.status).toBe(401);
   });
 
-  it('returns seller scripts', async () => {
-    db.query.mockResolvedValueOnce({ rows: [{ id: SCRIPT_ID, name: 'GA4', store_name: 'Mój Sklep' }] });
+  it('returns 403 for seller (admin/owner only)', async () => {
     const res = await request(app)
       .get('/api/scripts')
       .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns all store scripts for admin/owner', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: SCRIPT_ID, name: 'GA4', store_name: 'Mój Sklep' }] });
+    const res = await request(app)
+      .get('/api/scripts')
+      .set('Authorization', `Bearer ${adminToken}`);
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
   });

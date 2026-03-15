@@ -782,22 +782,20 @@
     addArtwork(data)                            { return post('/auctions/artworks', data); },
   };
 
-  // ─── Scripts (seller tracking integrations: FB Pixel, GA4, custom) ──────────
+  // ─── Scripts (store tracking integrations – admin/owner only) ───────────────
   const Scripts = {
-    /** List scripts for the current seller's stores. GET /api/scripts */
+    /** List all store scripts (admin/owner only). GET /api/scripts */
     list()                          { return get('/scripts'); },
     /** Get scripts for a specific store (public). GET /api/scripts/store/:storeId */
     listForStore(storeId)           { return get(`/scripts/store/${storeId}`); },
-    /** Get single script. GET /api/scripts/:id */
+    /** Get single script (admin/owner only). GET /api/scripts/:id */
     get(id)                         { return get(`/scripts/${id}`); },
-    /** Create a script. POST /api/scripts */
+    /** Create a script (admin/owner only). POST /api/scripts */
     create(data)                    { return post('/scripts', data); },
-    /** Update a script. PUT /api/scripts/:id */
-    update(id, data)                { return put(`/scripts/${id}`, data); },
-    /** Delete a script. DELETE /api/scripts/:id */
+    /** Update a script (admin/owner only). PATCH /api/scripts/:id */
+    update(id, data)                { return patch(`/scripts/${id}`, data); },
+    /** Delete a script (admin/owner only). DELETE /api/scripts/:id */
     delete(id)                      { return del(`/scripts/${id}`); },
-    /** Toggle script active state. PATCH /api/scripts/:id/toggle */
-    toggle(id, data)                { return patch(`/scripts/${id}/toggle`, data); },
   };
 
   // ─── Campaigns ────────────────────────────────────────────────────────────────

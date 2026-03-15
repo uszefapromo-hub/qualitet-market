@@ -1421,6 +1421,75 @@
               </table>
             </div>
           </section>
+          <section class="panel-card">
+            <div class="section-head">
+              <span class="eyebrow">Skrypty śledzenia sklepów</span>
+              <h2>Zarządzanie skryptami sklepów</h2>
+            </div>
+            <p class="hint" style="margin-bottom:16px">Kody śledzenia (Facebook Pixel, Google Analytics, własne) przypisane do sklepów sprzedawców. Tylko superadmin może dodawać, edytować i usuwać skrypty sklepów.</p>
+            <div class="owner-toolbar" style="margin-bottom:12px">
+              <button class="btn btn-primary" type="button" data-store-scripts-refresh>🔄 Odśwież listę</button>
+              <button class="btn btn-secondary" type="button" data-store-scripts-add-toggle>＋ Dodaj skrypt sklepu</button>
+            </div>
+            <!-- Add script form (hidden by default) -->
+            <div data-store-scripts-add-form style="display:none;margin-bottom:16px;padding:16px;border:1px solid var(--stroke);border-radius:10px;background:var(--surface)">
+              <h3 style="margin-bottom:12px">Nowy skrypt sklepu</h3>
+              <div class="owner-toolbar" style="flex-wrap:wrap;gap:10px">
+                <div class="form-field" style="flex:1;min-width:200px">
+                  <label>Sklep (UUID)</label>
+                  <input class="owner-input" type="text" placeholder="UUID sklepu" data-new-script-store-id>
+                </div>
+                <div class="form-field" style="flex:1;min-width:200px">
+                  <label>Nazwa skryptu</label>
+                  <input class="owner-input" type="text" placeholder="np. Facebook Pixel" data-new-script-name>
+                </div>
+                <div class="form-field">
+                  <label>Typ</label>
+                  <select class="owner-filter" data-new-script-type>
+                    <option value="pixel">Pixel</option>
+                    <option value="analytics">Analytics</option>
+                    <option value="tracking">Tracking</option>
+                    <option value="chat">Chat</option>
+                    <option value="custom">Własny</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label>Umieszczenie</label>
+                  <select class="owner-filter" data-new-script-placement>
+                    <option value="head">head</option>
+                    <option value="body_start">body (start)</option>
+                    <option value="body_end">body (koniec)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-field" style="margin-top:10px">
+                <label>Kod skryptu</label>
+                <textarea class="owner-input" rows="5" placeholder="&lt;script&gt;…&lt;/script&gt;" data-new-script-content style="font-family:monospace;font-size:13px;width:100%;resize:vertical"></textarea>
+              </div>
+              <div class="cta-row" style="margin-top:10px">
+                <button class="btn btn-primary" type="button" data-store-scripts-save>Zapisz skrypt</button>
+                <button class="btn btn-secondary" type="button" data-store-scripts-cancel>Anuluj</button>
+              </div>
+              <p data-store-scripts-msg class="hint" hidden style="margin-top:8px"></p>
+            </div>
+            <p data-store-scripts-loading class="hint">Ładowanie skryptów sklepów…</p>
+            <p data-store-scripts-empty class="hint" hidden>Brak skryptów sklepów.</p>
+            <div class="owner-table-wrap" data-store-scripts-table-wrap hidden>
+              <table class="owner-table" aria-label="Skrypty sklepów">
+                <thead>
+                  <tr>
+                    <th>Sklep</th>
+                    <th>Nazwa</th>
+                    <th>Typ</th>
+                    <th>Umieszczenie</th>
+                    <th>Status</th>
+                    <th>Akcje</th>
+                  </tr>
+                </thead>
+                <tbody data-store-scripts-tbody></tbody>
+              </table>
+            </div>
+          </section>
         </div>
 
         <!-- TAB: SCRIPTS is defined above (first occurrence) -->
