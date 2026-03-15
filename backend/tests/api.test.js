@@ -402,12 +402,14 @@ function setupDbMock() {
 let app;
 let sellerToken;
 let adminToken;
+let regularAdminToken;
 const SELLER_ID    = 'a0000000-0000-4000-8000-000000000001';
 const ADMIN_ID     = 'a0000000-0000-4000-8000-000000000002';
 const STORE_ID     = 'a0000000-0000-4000-8000-000000000003';
 const PRODUCT_ID   = 'a0000000-0000-4000-8000-000000000004';
 const ORDER_ID     = 'a0000000-0000-4000-8000-000000000005';
 const SHOP_PROD_ID = 'a0000000-0000-4000-8000-000000000006';
+const REGULAR_ADMIN_ID = 'a0000000-0000-4000-8000-000000000007';
 
 beforeAll(async () => {
   process.env.JWT_SECRET = 'test_secret';
@@ -418,13 +420,15 @@ beforeAll(async () => {
   app = require('../src/app');
 
   const { signToken } = require('../src/middleware/auth');
-  sellerToken = signToken({ id: SELLER_ID, email: 'seller@test.pl', role: 'seller' });
-  adminToken  = signToken({ id: ADMIN_ID,  email: 'admin@test.pl',  role: 'owner'  });
+  sellerToken      = signToken({ id: SELLER_ID,       email: 'seller@test.pl',        role: 'seller' });
+  adminToken       = signToken({ id: ADMIN_ID,        email: 'admin@test.pl',         role: 'owner'  });
+  regularAdminToken = signToken({ id: REGULAR_ADMIN_ID, email: 'reg-admin@test.pl',   role: 'admin'  });
 
   // Pre-seed users
   const hash = await bcrypt.hash('Password123!', 12);
-  mockDb.users.push({ id: SELLER_ID, email: 'seller@test.pl', password_hash: hash, name: 'Seller', role: 'seller', plan: 'basic' });
-  mockDb.users.push({ id: ADMIN_ID,  email: 'admin@test.pl',  password_hash: hash, name: 'Admin',  role: 'owner',  plan: 'elite' });
+  mockDb.users.push({ id: SELLER_ID,       email: 'seller@test.pl',      password_hash: hash, name: 'Seller',        role: 'seller', plan: 'basic' });
+  mockDb.users.push({ id: ADMIN_ID,        email: 'admin@test.pl',       password_hash: hash, name: 'Admin',         role: 'owner',  plan: 'elite' });
+  mockDb.users.push({ id: REGULAR_ADMIN_ID, email: 'reg-admin@test.pl',  password_hash: hash, name: 'Regular Admin', role: 'admin',  plan: 'elite' });
 
   // Pre-seed a store
   mockDb.stores.push({ id: STORE_ID, owner_id: SELLER_ID, name: 'Mój Sklep', slug: 'moj-sklep', margin: 15, plan: 'basic', status: 'active' });
@@ -4077,14 +4081,21 @@ describe('POST /api/auth/register – promo tier', () => {
 // ─── GET /api/admin/scripts ───────────────────────────────────────────────────
 
 describe('GET /api/admin/scripts', () => {
-  it('requires admin role', async () => {
+  it('requires superadmin role – seller is blocked', async () => {
     const res = await request(app)
       .get('/api/admin/scripts')
       .set('Authorization', `Bearer ${sellerToken}`);
     expect(res.status).toBe(403);
   });
 
-  it('returns list of system scripts', async () => {
+  it('requires superadmin role – regular admin is blocked', async () => {
+    const res = await request(app)
+      .get('/api/admin/scripts')
+      .set('Authorization', `Bearer ${regularAdminToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns list of system scripts for owner/superadmin', async () => {
     db.query.mockResolvedValueOnce({ rows: [] }); // no existing run logs
     const res = await request(app)
       .get('/api/admin/scripts')
@@ -4096,20 +4107,90 @@ describe('GET /api/admin/scripts', () => {
     expect(res.body.scripts[0]).toHaveProperty('id');
     expect(res.body.scripts[0]).toHaveProperty('name');
     expect(res.body.scripts[0]).toHaveProperty('status');
+    expect(res.body.scripts[0]).toHaveProperty('dangerous');
+  });
+
+  it('includes cleanup-subscriptions in the script list', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+    const res = await request(app)
+      .get('/api/admin/scripts')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    const ids = res.body.scripts.map((s) => s.id);
+    expect(ids).toContain('cleanup-subscriptions');
+    const cleanupSub = res.body.scripts.find((s) => s.id === 'cleanup-subscriptions');
+    expect(cleanupSub.dangerous).toBe(true);
+  });
+});
+
+// ─── PATCH /api/admin/scripts/:id – toggle enabled ───────────────────────────
+
+describe('PATCH /api/admin/scripts/:id', () => {
+  it('requires superadmin – regular admin is blocked', async () => {
+    const res = await request(app)
+      .patch('/api/admin/scripts/export-report')
+      .set('Authorization', `Bearer ${regularAdminToken}`)
+      .send({ enabled: false });
+    expect(res.status).toBe(403);
+  });
+
+  it('disables a script for owner/superadmin', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // upsert
+    const res = await request(app)
+      .patch('/api/admin/scripts/export-report')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ enabled: false });
+    expect(res.status).toBe(200);
+    expect(res.body.enabled).toBe(false);
+    expect(res.body.script_id).toBe('export-report');
+  });
+
+  it('enables a script for owner/superadmin', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // upsert
+    const res = await request(app)
+      .patch('/api/admin/scripts/export-report')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ enabled: true });
+    expect(res.status).toBe(200);
+    expect(res.body.enabled).toBe(true);
+  });
+
+  it('returns 400 if enabled field is missing or not boolean', async () => {
+    const res = await request(app)
+      .patch('/api/admin/scripts/export-report')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ enabled: 'yes' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 404 for unknown script id', async () => {
+    const res = await request(app)
+      .patch('/api/admin/scripts/no-such-script')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ enabled: false });
+    expect(res.status).toBe(404);
   });
 });
 
 // ─── POST /api/admin/scripts/:id/run ─────────────────────────────────────────
 
 describe('POST /api/admin/scripts/:id/run', () => {
-  it('requires admin role', async () => {
+  it('requires superadmin – seller is blocked', async () => {
     const res = await request(app)
       .post('/api/admin/scripts/warehouse-sync/run')
       .set('Authorization', `Bearer ${sellerToken}`);
     expect(res.status).toBe(403);
   });
 
+  it('requires superadmin – regular admin is blocked', async () => {
+    const res = await request(app)
+      .post('/api/admin/scripts/warehouse-sync/run')
+      .set('Authorization', `Bearer ${regularAdminToken}`);
+    expect(res.status).toBe(403);
+  });
+
   it('returns 404 for unknown script id', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // SELECT enabled check
     const res = await request(app)
       .post('/api/admin/scripts/unknown-script/run')
       .set('Authorization', `Bearer ${adminToken}`);
@@ -4118,6 +4199,7 @@ describe('POST /api/admin/scripts/:id/run', () => {
 
   it('runs cleanup-accounts script successfully', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [] })  // SELECT enabled check
       .mockResolvedValueOnce({ rows: [] })  // UPDATE users (cleanup)
       .mockResolvedValueOnce({ rows: [] }); // INSERT script_runs
 
@@ -4128,10 +4210,12 @@ describe('POST /api/admin/scripts/:id/run', () => {
     expect(res.body).toHaveProperty('ok');
     expect(res.body).toHaveProperty('result');
     expect(res.body.script_id).toBe('cleanup-accounts');
+    expect(res.body.dry_run).toBe(false);
   });
 
   it('runs export-report script successfully', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [] }) // SELECT enabled check
       .mockResolvedValueOnce({ rows: [{ order_count: '42', total_revenue: '9999.99' }] }) // report query
       .mockResolvedValueOnce({ rows: [] }); // INSERT script_runs
 
@@ -4145,6 +4229,7 @@ describe('POST /api/admin/scripts/:id/run', () => {
 
   it('runs cleanup-demo-data script successfully', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [] }) // SELECT enabled check
       .mockResolvedValueOnce({ rows: [{ id: 'sp-1' }, { id: 'sp-2' }] }) // DELETE shop_products
       .mockResolvedValueOnce({ rows: [{ id: 'p-1' }, { id: 'p-2' }, { id: 'p-3' }] }) // DELETE products
       .mockResolvedValueOnce({ rows: [] }); // INSERT script_runs
@@ -4155,6 +4240,50 @@ describe('POST /api/admin/scripts/:id/run', () => {
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
     expect(res.body.script_id).toBe('cleanup-demo-data');
+    expect(res.body.result).toContain('3');
+  });
+
+  it('runs cleanup-subscriptions script successfully', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })  // SELECT enabled check
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1' }, { id: 'sub-2' }] }) // UPDATE subscriptions
+      .mockResolvedValueOnce({ rows: [] }); // INSERT script_runs
+
+    const res = await request(app)
+      .post('/api/admin/scripts/cleanup-subscriptions/run')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.script_id).toBe('cleanup-subscriptions');
+    expect(res.body.result).toContain('2');
+  });
+
+  it('dry-run returns preview without persisting run log', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })                           // SELECT enabled check
+      .mockResolvedValueOnce({ rows: [{ cnt: '5' }] });              // SELECT COUNT (dry-run preview)
+    // No INSERT script_runs mock needed – dry-run skips persistence
+
+    const res = await request(app)
+      .post('/api/admin/scripts/cleanup-accounts/run?dryRun=true')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.dry_run).toBe(true);
+    expect(res.body.result).toContain('[Dry-run]');
+    expect(res.body.result).toContain('5');
+  });
+
+  it('dry-run for cleanup-subscriptions returns preview without changes', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })              // SELECT enabled check
+      .mockResolvedValueOnce({ rows: [{ cnt: '3' }] }); // SELECT COUNT
+
+    const res = await request(app)
+      .post('/api/admin/scripts/cleanup-subscriptions/run?dryRun=true')
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.dry_run).toBe(true);
+    expect(res.body.result).toContain('[Dry-run]');
     expect(res.body.result).toContain('3');
   });
 });

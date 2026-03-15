@@ -1589,20 +1589,23 @@ router.post(
 );
 
 // ─── GET /api/admin/scripts – list system scripts with last-run info ──────────
+// NOTE: All system-script routes are restricted to superadmin (owner/superadmin
+// role) only. Regular admin users do NOT have access.
 
 const SYSTEM_SCRIPTS = [
-  { id: 'warehouse-sync',     name: 'Synchronizacja hurtowni',        description: 'Pobiera aktualne dane produktów ze wszystkich aktywnych hurtowni' },
-  { id: 'recalculate-prices', name: 'Przeliczenie cen',               description: 'Aktualizuje ceny sprzedażowe wg aktualnych progów marży' },
-  { id: 'csv-import',         name: 'Import produktów CSV',           description: 'Importuje produkty z pliku CSV do katalogu centralnego' },
-  { id: 'cleanup-accounts',   name: 'Czyszczenie nieaktywnych kont',  description: 'Oznacza wygasłe konta trial bez aktywności (>30 dni)' },
-  { id: 'cleanup-demo-data',  name: 'Usuń dane demonstracyjne',       description: 'Usuwa wszystkie produkty demonstracyjne i zastępcze z katalogu centralnego' },
-  { id: 'export-report',      name: 'Eksport raportów finansowych',   description: 'Generuje raport przychodów i prowizji za bieżący miesiąc' },
+  { id: 'warehouse-sync',           name: 'Synchronizacja hurtowni',            description: 'Pobiera aktualne dane produktów ze wszystkich aktywnych hurtowni',      dangerous: false },
+  { id: 'recalculate-prices',       name: 'Przeliczenie cen',                   description: 'Aktualizuje ceny sprzedażowe wg aktualnych progów marży',               dangerous: false },
+  { id: 'csv-import',               name: 'Import produktów CSV',               description: 'Importuje produkty z pliku CSV do katalogu centralnego',                dangerous: false },
+  { id: 'cleanup-accounts',         name: 'Czyszczenie nieaktywnych kont',       description: 'Oznacza wygasłe konta trial bez aktywności (>30 dni)',                  dangerous: true  },
+  { id: 'cleanup-subscriptions',    name: 'Czyszczenie wygasłych subskrypcji',   description: 'Dezaktywuje subskrypcje, którym minął termin ważności',                 dangerous: true  },
+  { id: 'cleanup-demo-data',        name: 'Usuń dane demonstracyjne',           description: 'Usuwa wszystkie produkty demonstracyjne i zastępcze z katalogu centralnego', dangerous: true  },
+  { id: 'export-report',            name: 'Eksport raportów finansowych',        description: 'Generuje raport przychodów i prowizji za bieżący miesiąc',              dangerous: false },
 ];
 
-router.get('/scripts', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+router.get('/scripts', authenticate, requireSuperAdmin, async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT script_id, status, last_run_at, last_result, run_count
+      `SELECT script_id, status, last_run_at, last_result, run_count, enabled
        FROM script_runs
        ORDER BY last_run_at DESC`
     );
@@ -1617,27 +1620,67 @@ router.get('/scripts', authenticate, requireRole('owner', 'admin'), async (req, 
       last_run_at: byId[s.id]?.last_run_at || null,
       last_result: byId[s.id]?.last_result || null,
       run_count:   byId[s.id]?.run_count   || 0,
+      enabled:     byId[s.id]?.enabled     !== false,
     }));
 
     return res.json({ scripts });
   } catch (_err) {
     // Gracefully degrade when script_runs table does not yet exist
     const scripts = SYSTEM_SCRIPTS.map((s) => ({
-      ...s, status: 'idle', last_run_at: null, last_result: null, run_count: 0,
+      ...s, status: 'idle', last_run_at: null, last_result: null, run_count: 0, enabled: true,
     }));
     return res.json({ scripts });
   }
 });
 
-// ─── POST /api/admin/scripts/:id/run – trigger a system script ────────────────
+// ─── PATCH /api/admin/scripts/:id – enable or disable a system script ─────────
 
-router.post('/scripts/:id/run', authenticate, requireRole('owner', 'admin'), async (req, res) => {
+router.patch('/scripts/:id', authenticate, requireSuperAdmin, async (req, res) => {
   const scriptId = req.params.id;
   const script = SYSTEM_SCRIPTS.find((s) => s.id === scriptId);
   if (!script) {
     return res.status(404).json({ error: 'Skrypt nie istnieje' });
   }
 
+  const { enabled } = req.body;
+  if (typeof enabled !== 'boolean') {
+    return res.status(400).json({ error: 'Pole enabled musi być wartością logiczną' });
+  }
+
+  try {
+    await db.query(
+      `INSERT INTO script_runs (id, script_id, status, run_count, enabled, created_at)
+       VALUES ($1, $2, 'idle', 0, $3, NOW())
+       ON CONFLICT (script_id) DO UPDATE SET enabled = EXCLUDED.enabled, updated_at = NOW()`,
+      [uuidv4(), scriptId, enabled]
+    );
+  } catch (_err) {
+    // Non-critical – ignore if table doesn't exist yet
+  }
+
+  return res.json({ script_id: scriptId, enabled });
+});
+
+// ─── POST /api/admin/scripts/:id/run – trigger a system script ────────────────
+
+router.post('/scripts/:id/run', authenticate, requireSuperAdmin, async (req, res) => {
+  const scriptId = req.params.id;
+  const script = SYSTEM_SCRIPTS.find((s) => s.id === scriptId);
+  if (!script) {
+    return res.status(404).json({ error: 'Skrypt nie istnieje' });
+  }
+
+  // Check if the script is disabled (best-effort – ignore DB errors)
+  try {
+    const runRow = await db.query('SELECT enabled FROM script_runs WHERE script_id = $1', [scriptId]);
+    if (runRow.rows.length > 0 && runRow.rows[0].enabled === false) {
+      return res.status(400).json({ error: 'Skrypt jest wyłączony. Włącz go przed uruchomieniem.' });
+    }
+  } catch (_err) {
+    // table may not exist yet – proceed anyway
+  }
+
+  const dryRun = req.query.dryRun === 'true' || req.query.dryRun === '1';
   const startedAt = new Date();
   let resultMessage = '';
   let ok = true;
@@ -1645,67 +1688,111 @@ router.post('/scripts/:id/run', authenticate, requireRole('owner', 'admin'), asy
   try {
     // ── Execute the corresponding system action ───────────────────────────
     if (scriptId === 'warehouse-sync') {
-      const { importSupplierProducts } = require('../services/supplier-import');
       const supplierRows = await db.query(
         `SELECT id FROM suppliers WHERE status = 'active' AND (api_url IS NOT NULL OR xml_endpoint IS NOT NULL OR csv_endpoint IS NOT NULL)`
       );
-      let totalSynced = 0;
-      for (const row of supplierRows.rows) {
-        try {
-          const count = await importSupplierProducts(row.id);
-          totalSynced += count;
-        } catch (err) {
-          console.error(`[script] warehouse-sync supplier ${row.id}:`, err.message);
+      if (dryRun) {
+        resultMessage = `[Dry-run] Znaleziono ${supplierRows.rows.length} aktywnych hurtowni do synchronizacji`;
+      } else {
+        const { importSupplierProducts } = require('../services/supplier-import');
+        let totalSynced = 0;
+        for (const row of supplierRows.rows) {
+          try {
+            const count = await importSupplierProducts(row.id);
+            totalSynced += count;
+          } catch (err) {
+            console.error(`[script] warehouse-sync supplier ${row.id}:`, err.message);
+          }
         }
+        resultMessage = `Zsynchronizowano ${totalSynced} produktów z ${supplierRows.rows.length} hurtowni`;
       }
-      resultMessage = `Zsynchronizowano ${totalSynced} produktów z ${supplierRows.rows.length} hurtowni`;
 
     } else if (scriptId === 'recalculate-prices') {
-      // Re-apply platform margin tiers to all products
-      const tiersResult = await db.query('SELECT * FROM platform_margin_config ORDER BY min_price ASC');
-      const tiers = tiersResult.rows.length > 0 ? dbTiersToArray(tiersResult.rows) : DEFAULT_PLATFORM_TIERS;
       const products = await db.query('SELECT id, price_net, tax_rate FROM products WHERE active = true');
-      let updated = 0;
-      for (const p of products.rows) {
-        const newPrice = computePlatformPrice(p.price_net, p.tax_rate || 23, tiers);
-        await db.query('UPDATE products SET platform_price = $1, updated_at = NOW() WHERE id = $2', [newPrice, p.id]);
-        updated++;
+      if (dryRun) {
+        resultMessage = `[Dry-run] ${products.rows.length} aktywnych produktów czeka na przeliczenie cen`;
+      } else {
+        // Re-apply platform margin tiers to all products
+        const tiersResult = await db.query('SELECT * FROM platform_margin_config ORDER BY min_price ASC');
+        const tiers = tiersResult.rows.length > 0 ? dbTiersToArray(tiersResult.rows) : DEFAULT_PLATFORM_TIERS;
+        let updated = 0;
+        for (const p of products.rows) {
+          const newPrice = computePlatformPrice(p.price_net, p.tax_rate || 23, tiers);
+          await db.query('UPDATE products SET platform_price = $1, updated_at = NOW() WHERE id = $2', [newPrice, p.id]);
+          updated++;
+        }
+        resultMessage = `Przeliczono ceny ${updated} produktów`;
       }
-      resultMessage = `Przeliczono ceny ${updated} produktów`;
 
     } else if (scriptId === 'cleanup-accounts') {
-      const result = await db.query(
-        `UPDATE users SET plan = 'expired'
-         WHERE plan = 'trial'
-           AND trial_ends_at < NOW() - INTERVAL '30 days'
-           AND id NOT IN (SELECT DISTINCT buyer_id FROM orders WHERE buyer_id IS NOT NULL)
-         RETURNING id`
-      );
-      resultMessage = `Oznaczono ${result.rows.length} nieaktywnych kont`;
+      if (dryRun) {
+        const preview = await db.query(
+          `SELECT COUNT(*) AS cnt FROM users
+           WHERE plan = 'trial'
+             AND trial_ends_at < NOW() - INTERVAL '30 days'
+             AND id NOT IN (SELECT DISTINCT buyer_id FROM orders WHERE buyer_id IS NOT NULL)`
+        );
+        resultMessage = `[Dry-run] ${preview.rows[0].cnt} kont zostałoby oznaczonych jako wygasłe`;
+      } else {
+        const result = await db.query(
+          `UPDATE users SET plan = 'expired'
+           WHERE plan = 'trial'
+             AND trial_ends_at < NOW() - INTERVAL '30 days'
+             AND id NOT IN (SELECT DISTINCT buyer_id FROM orders WHERE buyer_id IS NOT NULL)
+           RETURNING id`
+        );
+        resultMessage = `Oznaczono ${result.rows.length} nieaktywnych kont`;
+      }
+
+    } else if (scriptId === 'cleanup-subscriptions') {
+      if (dryRun) {
+        const preview = await db.query(
+          `SELECT COUNT(*) AS cnt FROM subscriptions
+           WHERE status = 'active' AND ends_at < NOW()`
+        );
+        resultMessage = `[Dry-run] ${preview.rows[0].cnt} subskrypcji zostałoby dezaktywowanych`;
+      } else {
+        const result = await db.query(
+          `UPDATE subscriptions SET status = 'expired', updated_at = NOW()
+           WHERE status = 'active' AND ends_at < NOW()
+           RETURNING id`
+        );
+        resultMessage = `Dezaktywowano ${result.rows.length} wygasłych subskrypcji`;
+      }
 
     } else if (scriptId === 'cleanup-demo-data') {
-      // Remove demo / placeholder products from the central catalogue.
-      // Demo products are identified by picsum.photos images or seed SKU prefixes.
-      const spResult = await db.query(
-        `DELETE FROM shop_products
-         WHERE product_id IN (
-           SELECT id FROM products
+      if (dryRun) {
+        const preview = await db.query(
+          `SELECT COUNT(*) AS cnt FROM products
+           WHERE is_central = true
+             AND (image_url LIKE '%picsum.photos%'
+                  OR sku ~ '^(EL|AT|DG|FT|GD|DS)-'
+                  OR supplier_id IS NULL)`
+        );
+        resultMessage = `[Dry-run] ${preview.rows[0].cnt} produktów demonstracyjnych zostałoby usuniętych`;
+      } else {
+        // Remove demo / placeholder products from the central catalogue.
+        const spResult = await db.query(
+          `DELETE FROM shop_products
+           WHERE product_id IN (
+             SELECT id FROM products
+             WHERE is_central = true
+               AND (image_url LIKE '%picsum.photos%'
+                    OR sku ~ '^(EL|AT|DG|FT|GD|DS)-'
+                    OR supplier_id IS NULL)
+           )
+           RETURNING id`
+        );
+        const pResult = await db.query(
+          `DELETE FROM products
            WHERE is_central = true
              AND (image_url LIKE '%picsum.photos%'
                   OR sku ~ '^(EL|AT|DG|FT|GD|DS)-'
                   OR supplier_id IS NULL)
-         )
-         RETURNING id`
-      );
-      const pResult = await db.query(
-        `DELETE FROM products
-         WHERE is_central = true
-           AND (image_url LIKE '%picsum.photos%'
-                OR sku ~ '^(EL|AT|DG|FT|GD|DS)-'
-                OR supplier_id IS NULL)
-         RETURNING id`
-      );
-      resultMessage = `Usunięto ${pResult.rows.length} produktów demonstracyjnych (${spResult.rows.length} wpisów ze sklepów)`;
+           RETURNING id`
+        );
+        resultMessage = `Usunięto ${pResult.rows.length} produktów demonstracyjnych (${spResult.rows.length} wpisów ze sklepów)`;
+      }
 
     } else if (scriptId === 'export-report') {
       const report = await db.query(
@@ -1716,10 +1803,10 @@ router.post('/scripts/:id/run', authenticate, requireRole('owner', 'admin'), asy
            AND created_at >= date_trunc('month', NOW())`
       );
       const { order_count, total_revenue } = report.rows[0];
-      resultMessage = `Raport za bieżący miesiąc: ${order_count} zamówień, ${parseFloat(total_revenue).toFixed(2)} zł przychodu`;
+      resultMessage = `${dryRun ? '[Dry-run] ' : ''}Raport za bieżący miesiąc: ${order_count} zamówień, ${parseFloat(total_revenue).toFixed(2)} zł przychodu`;
 
     } else {
-      resultMessage = `Skrypt "${script.name}" uruchomiony`;
+      resultMessage = `${dryRun ? '[Dry-run] ' : ''}Skrypt "${script.name}" uruchomiony`;
     }
   } catch (err) {
     ok = false;
@@ -1727,26 +1814,29 @@ router.post('/scripts/:id/run', authenticate, requireRole('owner', 'admin'), asy
     console.error(`[script] ${scriptId} error:`, err.message);
   }
 
-  // Persist run log (best-effort)
-  try {
-    await db.query(
-      `INSERT INTO script_runs (id, script_id, status, last_run_at, last_result, run_count, created_at)
-       VALUES ($1, $2, $3, $4, $5, 1, NOW())
-       ON CONFLICT (script_id) DO UPDATE SET
-         status      = EXCLUDED.status,
-         last_run_at = EXCLUDED.last_run_at,
-         last_result = EXCLUDED.last_result,
-         run_count   = script_runs.run_count + 1,
-         updated_at  = NOW()`,
-      [uuidv4(), scriptId, ok ? 'ok' : 'error', startedAt, resultMessage]
-    );
-  } catch (_err) {
-    // Non-critical – ignore if table doesn't exist yet
+  // Persist run log (best-effort) – skip for dry-runs
+  if (!dryRun) {
+    try {
+      await db.query(
+        `INSERT INTO script_runs (id, script_id, status, last_run_at, last_result, run_count, created_at)
+         VALUES ($1, $2, $3, $4, $5, 1, NOW())
+         ON CONFLICT (script_id) DO UPDATE SET
+           status      = EXCLUDED.status,
+           last_run_at = EXCLUDED.last_run_at,
+           last_result = EXCLUDED.last_result,
+           run_count   = script_runs.run_count + 1,
+           updated_at  = NOW()`,
+        [uuidv4(), scriptId, ok ? 'ok' : 'error', startedAt, resultMessage]
+      );
+    } catch (_err) {
+      // Non-critical – ignore if table doesn't exist yet
+    }
   }
 
   return res.json({
     script_id:   scriptId,
     name:        script.name,
+    dry_run:     dryRun,
     ok,
     result:      resultMessage,
     started_at:  startedAt,

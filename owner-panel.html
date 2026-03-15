@@ -59,7 +59,7 @@
         <a href="#" data-owner-tab="supplier-apps">📋 Zgłoszenia dostawców</a>
         <a href="#" data-owner-tab="orders">🛒 Zamówienia</a>
         <a href="#" data-owner-tab="subscriptions">💳 Subskrypcje i płatności</a>
-        <a href="#" data-owner-tab="scripts">📜 Skrypty</a>
+        <a href="#" data-owner-tab="scripts" data-superadmin-scripts-link>📜 Skrypty</a>
         <a href="#" data-owner-tab="finances">💰 Marże i Prowizje</a>
         <a href="#" data-owner-tab="referrals">🔗 Polecenia</a>
         <a href="#" data-owner-tab="ranking">🏆 Ranking</a>
@@ -153,7 +153,7 @@
               <button class="owner-tile" data-owner-tab-trigger="subscriptions">
                 <span class="tile-icon">💳</span><span class="tile-label">Subskrypcje i płatności</span>
               </button>
-              <button class="owner-tile" data-owner-tab-trigger="scripts">
+              <button class="owner-tile" data-owner-tab-trigger="scripts" data-superadmin-scripts-link>
                 <span class="tile-icon">📜</span><span class="tile-label">Skrypty</span>
               </button>
               <button class="owner-tile" data-owner-tab-trigger="settings">
@@ -1713,6 +1713,28 @@
         a.addEventListener('click', () => setTimeout(loadMailHistory, 100));
       }
     });
+  })();
+
+  // ─── Superadmin-only elements (scripts) ──────────────────────────────────────
+  // Scripts UI is only for superadmin/owner. Hide it if the logged-in user has
+  // only the regular 'admin' role (they also cannot reach the API).
+  (function () {
+    var role = '';
+    try {
+      var raw = localStorage.getItem('userProfile') || localStorage.getItem('user_profile') || '';
+      if (!raw) raw = localStorage.getItem('profile') || '';
+      if (raw) role = (JSON.parse(raw).role || '').toLowerCase();
+    } catch (_) {}
+    if (!role) role = (localStorage.getItem('role') || '').toLowerCase();
+    var isSuperAdmin = role === 'owner' || role === 'superadmin';
+    if (!isSuperAdmin) {
+      document.querySelectorAll('[data-superadmin-scripts-link]').forEach(function (el) {
+        el.hidden = true;
+      });
+      // Also hide the scripts tab panel content
+      var panel = document.querySelector('[data-owner-tab-panel="scripts"]');
+      if (panel) panel.hidden = true;
+    }
   })();
   </script>
 

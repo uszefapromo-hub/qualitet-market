@@ -570,6 +570,10 @@
     scripts()                  { return get('/admin/scripts'); },
     /** Run a system script. POST /api/admin/scripts/:id/run */
     runScript(id)              { return post(`/admin/scripts/${id}/run`, {}); },
+    /** Dry-run a system script (no changes applied). POST /api/admin/scripts/:id/run?dryRun=true */
+    runScriptDryRun(id)        { return post(`/admin/scripts/${id}/run?dryRun=true`, {}); },
+    /** Enable or disable a system script. PATCH /api/admin/scripts/:id */
+    toggleScript(id, enabled)  { return patch(`/admin/scripts/${id}`, { enabled }); },
     /** List announcements. GET /api/admin/announcements */
     announcements(params)      { return get('/admin/announcements', params); },
     /** Create an announcement. POST /api/admin/announcements */
