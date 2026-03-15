@@ -23,6 +23,8 @@
   const SURVEY_SUCCESS_TIMEOUT = 1500;
   const SPLASH_STORAGE_KEY = 'app_splash_seen';
   const INSTALL_BANNER_DISMISSED_KEY = 'app_install_banner_dismissed';
+  const INSTALL_BANNER_DISMISSED_UNTIL_KEY = 'app_install_banner_until';
+  const INSTALL_BANNER_REAPPEAR_DAYS = 3;
   const APP_INSTALL_BAR_DISMISSED_KEY = 'pwa_banner_closed';
   const APP_PROMO_LAST_SHOWN_KEY = 'app_promo_last_shown';
   const APP_PROMO_INDEX_KEY = 'app_promo_index';
@@ -172,7 +174,8 @@
     }
     let dismissed = false;
     try{
-      dismissed = sessionStorage.getItem(INSTALL_BANNER_DISMISSED_KEY) === 'true';
+      const until = parseInt(localStorage.getItem(INSTALL_BANNER_DISMISSED_UNTIL_KEY) || '0', 10);
+      dismissed = until > Date.now();
     } catch (_error){
       dismissed = false;
     }
@@ -184,12 +187,18 @@
 
     const hideBanner = (persistDismissal = false) => {
       if(banner){
-        banner.remove();
-        banner = null;
+        banner.classList.add('install-banner--hiding');
+        window.setTimeout(() => {
+          if(banner){
+            banner.remove();
+            banner = null;
+          }
+        }, 300);
       }
       if(persistDismissal){
         try{
-          sessionStorage.setItem(INSTALL_BANNER_DISMISSED_KEY, 'true');
+          const until = Date.now() + INSTALL_BANNER_REAPPEAR_DAYS * MS_PER_DAY;
+          localStorage.setItem(INSTALL_BANNER_DISMISSED_UNTIL_KEY, String(until));
         } catch (_error){
         }
       }
@@ -203,6 +212,12 @@
       banner.className = 'install-banner';
       banner.setAttribute('role', 'dialog');
       banner.setAttribute('aria-live', 'polite');
+
+      const closeButton = document.createElement('button');
+      closeButton.type = 'button';
+      closeButton.className = 'install-banner__close';
+      closeButton.setAttribute('aria-label', 'Zamknij');
+      closeButton.textContent = '×';
 
       const content = document.createElement('div');
       content.className = 'install-banner__content';
@@ -220,11 +235,11 @@
       installButton.type = 'button';
       installButton.className = 'btn btn-primary install-banner__install';
       installButton.textContent = 'Zainstaluj';
-      const dismissButton = document.createElement('button');
-      dismissButton.type = 'button';
-      dismissButton.className = 'btn btn-secondary install-banner__dismiss';
-      dismissButton.textContent = 'Później';
-      actions.append(installButton, dismissButton);
+      actions.append(installButton);
+
+      closeButton.addEventListener('click', () => {
+        hideBanner(true);
+      });
 
       installButton.addEventListener('click', async () => {
         if(!deferredPrompt){
@@ -242,11 +257,7 @@
         }
       });
 
-      dismissButton.addEventListener('click', () => {
-        hideBanner(true);
-      });
-
-      banner.append(content, actions);
+      banner.append(closeButton, content, actions);
       document.body.appendChild(banner);
     };
 
