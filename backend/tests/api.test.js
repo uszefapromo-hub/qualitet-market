@@ -9152,6 +9152,40 @@ describe('GET /api/admin/import-logs', () => {
     expect(res.body).toHaveProperty('page', 2);
     expect(res.body).toHaveProperty('limit', 10);
   });
+
+  it('returns created and updated fields per log entry', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: 'log-3',
+            supplier_id: SUPPLIER_ID,
+            supplier_name: 'Hurtownia C',
+            supplier_name_live: 'Hurtownia C Live',
+            status: 'success',
+            count: 15,
+            created: 10,
+            updated: 5,
+            skipped: 0,
+            featured: 2,
+            created_at: new Date(),
+          },
+        ],
+      });
+
+    const res = await request(app)
+      .get('/api/admin/import-logs')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.logs).toHaveLength(1);
+    const log = res.body.logs[0];
+    expect(log).toHaveProperty('created', 10);
+    expect(log).toHaveProperty('updated', 5);
+    expect(log).toHaveProperty('count', 15);
+    expect(log).toHaveProperty('status', 'success');
+  });
 });
 
 // ─── Admin sync-status ────────────────────────────────────────────────────────

@@ -558,6 +558,13 @@
      * @param {string} supplierId
      */
     syncSupplier(supplierId)   { return post('/admin/suppliers/sync', { supplier_id: supplierId }); },
+    /** Sync all active suppliers at once. POST /api/admin/suppliers/sync-all
+     *  Response: { synced, total_count, total_imported, total_updated, total_featured,
+     *              total_skipped, example_product, results[] } */
+    syncAll()                  { return post('/admin/suppliers/sync-all', {}); },
+    /** List recent supplier import logs. GET /api/admin/import-logs
+     *  Params: { page, limit } – response: { total, page, limit, logs[] } */
+    importLogs(params)         { return get('/admin/import-logs', params); },
     subscriptions(params)      { return get('/admin/subscriptions', params); },
     auditLogs(params)          { return get('/admin/audit-logs', params); },
     /** Get platform margin tiers. GET /api/admin/platform-margins */

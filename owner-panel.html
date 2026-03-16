@@ -603,6 +603,70 @@
                 </div>
               </div>
             </div>
+
+            <!-- Sync-all suppliers -->
+            <div class="panel-card" style="margin-top:16px">
+              <h3>Synchronizacja wszystkich hurtowni</h3>
+              <p class="hint">Pobierz i zaktualizuj produkty ze wszystkich aktywnych hurtowni naraz. Raport pokaże nowe i zaktualizowane SKU oraz przykładowy produkt.</p>
+              <div class="cta-row" style="margin-top:12px">
+                <button class="btn btn-primary" type="button" id="syncAllBtn">🔄 Synchronizuj wszystkie hurtownie</button>
+                <span class="hint" id="syncAllMsg" hidden></span>
+              </div>
+              <div id="syncAllReport" hidden style="margin-top:16px">
+                <div class="roles-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">
+                  <div class="role-card" style="text-align:center">
+                    <strong id="syncAllImported">—</strong>
+                    <span>Nowe produkty</span>
+                  </div>
+                  <div class="role-card" style="text-align:center">
+                    <strong id="syncAllUpdated">—</strong>
+                    <span>Zaktualizowane</span>
+                  </div>
+                  <div class="role-card" style="text-align:center">
+                    <strong id="syncAllTotal">—</strong>
+                    <span>Łącznie</span>
+                  </div>
+                  <div class="role-card" style="text-align:center">
+                    <strong id="syncAllSkipped">—</strong>
+                    <span>Pominięte</span>
+                  </div>
+                </div>
+                <div id="syncAllExample" hidden style="margin-top:12px" class="panel-card">
+                  <span class="eyebrow">Przykładowy produkt</span>
+                  <p id="syncAllExampleName" style="font-weight:600;margin:4px 0 2px"></p>
+                  <p id="syncAllExampleDetails" class="hint"></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Import logs -->
+            <div class="panel-card" style="margin-top:16px">
+              <div class="section-head">
+                <span class="eyebrow">Historia importów</span>
+                <h3>Logi synchronizacji hurtowni</h3>
+              </div>
+              <div class="owner-table-wrap">
+                <table class="owner-table">
+                  <thead>
+                    <tr>
+                      <th>Hurtownia</th>
+                      <th>Status</th>
+                      <th>Łącznie</th>
+                      <th>Nowe</th>
+                      <th>Zaktualizowane</th>
+                      <th>Pominięte</th>
+                      <th>Data</th>
+                    </tr>
+                  </thead>
+                  <tbody id="importLogsTbody">
+                    <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">Ładowanie…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="cta-row" style="margin-top:8px;justify-content:flex-end">
+                <button class="btn btn-secondary" type="button" id="importLogsRefreshBtn">🔄 Odśwież logi</button>
+              </div>
+            </div>
           </section>
         </div>
 
@@ -1806,6 +1870,149 @@
     document.querySelectorAll('[data-owner-tab]').forEach(a => {
       if (a.dataset.ownerTab === 'scripts') {
         a.addEventListener('click', () => setTimeout(loadAdminScripts, 100));
+      }
+    });
+  })();
+  </script>
+
+  <script>
+  // ─── Sync-All + Import Logs (import-products tab) ───────────────────────────
+  (function () {
+    'use strict';
+
+    function apiReq(method, path, body) {
+      var token = localStorage.getItem('token') || '';
+      var opts = {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? 'Bearer ' + token : '',
+        },
+      };
+      if (body) opts.body = JSON.stringify(body);
+      var base = (window.QM_API_BASE || '/api').replace(/\/api$/, '');
+      return fetch(base + '/api' + path, opts).then(function (r) { return r.json(); });
+    }
+
+    function escHtml(s) {
+      if (!s) return '';
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function fmtDate(d) {
+      if (!d) return '—';
+      try { return new Date(d).toLocaleString('pl-PL'); } catch (e) { return d; }
+    }
+
+    // ── Sync-All ────────────────────────────────────────────────────────────────
+
+    var syncAllBtn    = document.getElementById('syncAllBtn');
+    var syncAllMsg    = document.getElementById('syncAllMsg');
+    var syncAllReport = document.getElementById('syncAllReport');
+    var syncAllExample = document.getElementById('syncAllExample');
+
+    function showSyncAllReport(data) {
+      var imported = data.total_imported != null ? data.total_imported : '—';
+      var updated  = data.total_updated  != null ? data.total_updated  : '—';
+      var total    = data.total_count    != null ? data.total_count    : '—';
+      var skipped  = data.total_skipped  != null ? data.total_skipped  : '—';
+
+      document.getElementById('syncAllImported').textContent = imported;
+      document.getElementById('syncAllUpdated').textContent  = updated;
+      document.getElementById('syncAllTotal').textContent    = total;
+      document.getElementById('syncAllSkipped').textContent  = skipped;
+
+      var ep = data.example_product;
+      if (ep) {
+        var profit = ep.expected_reseller_profit != null
+          ? ' | zysk: ' + parseFloat(ep.expected_reseller_profit).toFixed(2) + ' PLN' : '';
+        var price  = ep.platform_price != null
+          ? 'Cena hurtowa: ' + parseFloat(ep.platform_price).toFixed(2) + ' PLN' : '';
+        var sku    = ep.sku ? ' (SKU: ' + escHtml(ep.sku) + ')' : '';
+        document.getElementById('syncAllExampleName').textContent    = ep.name + sku;
+        document.getElementById('syncAllExampleDetails').textContent = price + profit;
+        syncAllExample.hidden = false;
+      } else {
+        syncAllExample.hidden = true;
+      }
+
+      syncAllReport.hidden = false;
+    }
+
+    if (syncAllBtn) {
+      syncAllBtn.addEventListener('click', function () {
+        if (syncAllBtn.disabled) return;
+        syncAllBtn.disabled   = true;
+        syncAllReport.hidden  = true;
+        if (syncAllMsg) { syncAllMsg.textContent = '⏳ Synchronizacja w toku…'; syncAllMsg.hidden = false; }
+
+        apiReq('POST', '/admin/suppliers/sync-all')
+          .then(function (data) {
+            if (syncAllMsg) {
+              syncAllMsg.textContent = data.message || ('✅ Zsynchronizowano ' + (data.total_count || 0) + ' produktów');
+            }
+            showSyncAllReport(data);
+            loadImportLogs();
+          })
+          .catch(function (err) {
+            if (syncAllMsg) {
+              syncAllMsg.textContent = '❌ Błąd: ' + ((err && (err.error || err.message)) || 'Nieznany błąd');
+            }
+          })
+          .finally(function () {
+            syncAllBtn.disabled = false;
+          });
+      });
+    }
+
+    // ── Import logs ─────────────────────────────────────────────────────────────
+
+    var importLogsTbody     = document.getElementById('importLogsTbody');
+    var importLogsRefreshBtn = document.getElementById('importLogsRefreshBtn');
+
+    function renderImportLogs(logs) {
+      if (!importLogsTbody) return;
+      if (!logs || logs.length === 0) {
+        importLogsTbody.innerHTML =
+          '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">' +
+          'Brak logów. Uruchom synchronizację, aby zobaczyć historię.</td></tr>';
+        return;
+      }
+      importLogsTbody.innerHTML = logs.map(function (l) {
+        var statusCls = l.status === 'success' ? 'pill-active' : 'pill-inactive';
+        var supplierName = escHtml(l.supplier_name_live || l.supplier_name || l.supplier_id || '—');
+        return '<tr>' +
+          '<td>' + supplierName + '</td>' +
+          '<td><span class="' + statusCls + '">' + escHtml(l.status || '—') + '</span></td>' +
+          '<td>' + (l.count  != null ? l.count  : '—') + '</td>' +
+          '<td>' + (l.created != null ? l.created : '—') + '</td>' +
+          '<td>' + (l.updated != null ? l.updated : '—') + '</td>' +
+          '<td>' + (l.skipped != null ? l.skipped : '—') + '</td>' +
+          '<td class="cell-muted">' + fmtDate(l.created_at) + '</td>' +
+          '</tr>';
+      }).join('');
+    }
+
+    function loadImportLogs() {
+      apiReq('GET', '/admin/import-logs?limit=20')
+        .then(function (data) { renderImportLogs(data.logs || []); })
+        .catch(function () {
+          if (importLogsTbody) {
+            importLogsTbody.innerHTML =
+              '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px">' +
+              'Brak dostępu – wymagane uprawnienia admina.</td></tr>';
+          }
+        });
+    }
+
+    if (importLogsRefreshBtn) {
+      importLogsRefreshBtn.addEventListener('click', loadImportLogs);
+    }
+
+    // Auto-load logs when the import-products tab becomes visible
+    document.querySelectorAll('[data-owner-tab]').forEach(function (a) {
+      if (a.dataset.ownerTab === 'import-products') {
+        a.addEventListener('click', function () { setTimeout(loadImportLogs, 150); });
       }
     });
   })();
