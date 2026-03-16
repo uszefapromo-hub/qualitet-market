@@ -1,5 +1,5 @@
 /**
- * homepage.js — Dynamic marketplace sections for QualitetVerse homepage
+ * homepage.js — Dynamic marketplace sections for QualitetMarket homepage
  *
  * Fetches data from the backend API and renders:
  *  - Trending Products
@@ -541,7 +541,7 @@
   var defaultCommunityPosts = [
     {
       author_name: 'Marek K.',
-      content: 'Właśnie uruchomiłem swój sklep na QualitetVerse! Pierwsze produkty z katalogu BigBuy już online. Zapraszam do przeglądania 🎉',
+      content: 'Właśnie uruchomiłem swój sklep na QualitetMarket! Pierwsze produkty z katalogu BigBuy już online. Zapraszam do przeglądania 🎉',
       likes_count: 14,
       comments_count: 3,
     },

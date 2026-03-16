@@ -477,6 +477,9 @@
       fetch(`${apiBase}/shops/${encodeURIComponent(slug)}/products`).then(r => r.ok ? r.json() : null).catch(() => null)
     ]).then(([shopData, productsData]) => {
       if(!shopData || !shopData.shop){
+        // API returned no shop – show the empty state so user knows
+        if(content){ content.hidden = true; }
+        if(emptyState){ emptyState.hidden = false; }
         return;
       }
       const s = shopData.shop;
@@ -532,13 +535,42 @@
       const card = document.createElement('div');
       card.className = 'product-card';
       const price = p.selling_price || p.platform_price || p.supplier_price || 0;
-      card.innerHTML = `
-        <div class="product-img">${p.image_url ? `<img src="${p.image_url}" alt="${p.name || ''}" loading="lazy">` : '📦'}</div>
-        <div class="product-info">
-          <h3 class="product-name">${p.name || 'Produkt'}</h3>
-          <div class="product-price">${Number(price).toFixed(2)} zł</div>
-          <button class="btn btn-primary btn-sm" onclick="window.QMCart && window.QMCart.addItem('${p.id}','${(p.name||'').replace(/'/g,'\\'')}',${price})">Dodaj do koszyka</button>
-        </div>`;
+
+      const imgWrap = document.createElement('div');
+      imgWrap.className = 'product-img';
+      if(p.image_url){
+        const img = document.createElement('img');
+        img.src = p.image_url;
+        img.alt = p.name || '';
+        img.loading = 'lazy';
+        imgWrap.appendChild(img);
+      } else {
+        imgWrap.textContent = '📦';
+      }
+
+      const info = document.createElement('div');
+      info.className = 'product-info';
+
+      const nameEl = document.createElement('h3');
+      nameEl.className = 'product-name';
+      nameEl.textContent = p.name || 'Produkt';
+
+      const priceEl = document.createElement('div');
+      priceEl.className = 'product-price';
+      priceEl.textContent = `${Number(price).toFixed(2)} zł`;
+
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-primary btn-sm';
+      btn.textContent = 'Dodaj do koszyka';
+      btn.addEventListener('click', () => {
+        if(window.QMCart){ window.QMCart.addItem(p.id, p.name || 'Produkt', price); }
+      });
+
+      info.appendChild(nameEl);
+      info.appendChild(priceEl);
+      info.appendChild(btn);
+      card.appendChild(imgWrap);
+      card.appendChild(info);
       grid.appendChild(card);
     });
   }
