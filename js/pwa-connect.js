@@ -7,7 +7,7 @@
  *
  * Pages handled:
  *   login.html   – email/password login + account registration via QMApi.Auth
- *   sklep.html   – product listing via QMApi.Products with mock fallback
+ *   sklep.html   – real store + products via QMApi.MyStore / QMApi.Shops with mock fallback
  *   koszyk.html  – order submission via QMApi.Orders for logged-in users
  *   dashboard.html – real user profile & order history via QMApi.Auth + QMApi.Orders
  */
@@ -184,13 +184,76 @@
     loginPanel.hidden = true;
   }
 
-  // ─── Products page ───────────────────────────────────────────────────────────
+  // ─── Sklep (storefront) page ─────────────────────────────────────────────────
 
-  function initProductsPage() {
+  /**
+   * Populate store UI fields (name, contact, logo) from an API store object.
+   * Runs after a successful api.MyStore.get() call so real data overwrites
+   * whatever the localStorage-based shop.js already rendered.
+   */
+  function populateSklepStoreFields(store) {
+    var shop = document.querySelector('[data-store-shop]');
+    if (!shop) return;
+
+    var nameEl = shop.querySelector('[data-store-name]');
+    if (nameEl && store.name) nameEl.textContent = store.name;
+
+    var descEl = shop.querySelector('[data-store-description]');
+    if (descEl) descEl.textContent = store.description || '';
+
+    var slugEl = shop.querySelector('[data-store-slug]');
+    if (slugEl && store.slug) slugEl.textContent = '@' + store.slug;
+
+    var planEl = shop.querySelector('[data-store-plan]');
+    if (planEl && store.plan) planEl.textContent = 'Plan: ' + getPlanDisplayName(store.plan);
+
+    var emailEl = shop.querySelector('[data-store-email]');
+    if (emailEl) emailEl.textContent = store.email || 'Brak danych';
+
+    var phoneEl = shop.querySelector('[data-store-phone]');
+    if (phoneEl) phoneEl.textContent = store.phone || 'Brak danych';
+
+    var deliveryEl = shop.querySelector('[data-store-delivery]');
+    if (deliveryEl) deliveryEl.textContent = store.delivery || 'Wysyłka w 24h';
+
+    var logoContainer = shop.querySelector('[data-logo-preview]');
+    if (logoContainer) {
+      var logoImg = logoContainer.querySelector('img');
+      var logoSpan = logoContainer.querySelector('span');
+      if (store.logo && logoImg) {
+        logoImg.src = store.logo;
+        logoImg.alt = store.name || 'Logo sklepu';
+        logoContainer.classList.add('has-image');
+      } else if (logoImg) {
+        logoImg.removeAttribute('src');
+        logoContainer.classList.remove('has-image');
+      }
+      if (logoSpan && store.name) {
+        logoSpan.textContent = store.name.charAt(0).toUpperCase();
+      }
+    }
+
+    var contentEl = shop.querySelector('[data-store-content]');
+    var emptyEl = shop.querySelector('[data-store-empty]');
+    if (contentEl) contentEl.hidden = false;
+    if (emptyEl) emptyEl.hidden = true;
+  }
+
+  /**
+   * Load products for the storefront.  When a shop slug is available we fetch
+   * store-specific products; otherwise fall back to the general catalogue so
+   * the grid is never empty when the API is reachable.
+   */
+  function loadSklepProducts(slug) {
     var api = window.QMApi;
     if (!api) return;
 
-    api.Products.list({ status: 'active', limit: 48 })
+    var limit = 48;
+    var promise = slug
+      ? api.Shops.products(slug, { status: 'active', limit: limit })
+      : api.Products.list({ status: 'active', limit: limit });
+
+    promise
       .then(function (data) {
         var products = Array.isArray(data) ? data : (data.products || []);
         if (!products.length) return;
@@ -199,6 +262,28 @@
       .catch(function () {
         // API unavailable – let app.js mock data render (no action needed)
       });
+  }
+
+  function initSklepPage() {
+    var api = window.QMApi;
+    if (!api) return;
+
+    if (api.Auth.isLoggedIn()) {
+      api.MyStore.get()
+        .then(function (store) {
+          if (store && store.id) {
+            populateSklepStoreFields(store);
+            loadSklepProducts(store.slug || null);
+          } else {
+            loadSklepProducts(null);
+          }
+        })
+        .catch(function () {
+          loadSklepProducts(null);
+        });
+    } else {
+      loadSklepProducts(null);
+    }
   }
 
   function renderApiProducts(products) {
@@ -756,7 +841,7 @@
 
   if (page === 'sklep') {
     document.addEventListener('DOMContentLoaded', function () {
-      initProductsPage();
+      initSklepPage();
     });
   }
 

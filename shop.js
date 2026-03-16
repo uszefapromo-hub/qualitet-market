@@ -506,7 +506,6 @@
       'store-description': resolvedStore.description || DEFAULTS.description,
       'store-plan': `Plan: ${formatPlan(resolvedStore.plan)}`,
       'store-margin': `Marża: ${displayMargin}%`,
-      'store-theme': `Styl: ${resolvedStore.theme}`,
       'store-slug': `@${resolvedStore.slug}`
     };
 
