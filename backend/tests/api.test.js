@@ -5248,27 +5248,24 @@ describe('Stripe webhook handler functions – unit tests', () => {
       db.query
         .mockResolvedValueOnce({ rowCount: 1 })                               // UPDATE payments
         .mockResolvedValueOnce({ rows: [{ order_id: ORDER_ID }] })            // SELECT order_id
-        .mockResolvedValueOnce({ rows: [{ id: ORDER_ID, total: 100 }] })      // UPDATE orders RETURNING
-        .mockResolvedValueOnce({ rows: [] })                                   // recordOrderProfit: SELECT items
-        .mockResolvedValueOnce({ rowCount: 1 });                               // recordOrderProfit: UPDATE orders profit
+        .mockResolvedValueOnce({ rows: [{ id: ORDER_ID, total: 100 }] });     // UPDATE orders RETURNING
 
-      await handleCheckoutPaymentCompleted({
-        id: SESSION_ID,
-        metadata: { payment_id: PAYMENT_ID },
-      });
+      const noopProfit = jest.fn(); // suppress fire-and-forget DB calls in test
+      await handleCheckoutPaymentCompleted(
+        { id: SESSION_ID, metadata: { payment_id: PAYMENT_ID } },
+        noopProfit
+      );
 
-      // Allow the fire-and-forget recordOrderProfit to settle
-      await new Promise((r) => setTimeout(r, 20));
-
-      const calls = db.query.mock.calls;
-      expect(calls.length).toBeGreaterThanOrEqual(3);
+      expect(db.query).toHaveBeenCalledTimes(3);
       // First call updates payments
-      expect(calls[0][0]).toMatch(/UPDATE payments/);
-      expect(calls[0][1]).toContain(PAYMENT_ID);
+      expect(db.query.mock.calls[0][0]).toMatch(/UPDATE payments/);
+      expect(db.query.mock.calls[0][1]).toContain(PAYMENT_ID);
       // Second call selects order_id
-      expect(calls[1][0]).toMatch(/SELECT order_id FROM payments/);
+      expect(db.query.mock.calls[1][0]).toMatch(/SELECT order_id FROM payments/);
       // Third call updates orders
-      expect(calls[2][0]).toMatch(/UPDATE orders/);
+      expect(db.query.mock.calls[2][0]).toMatch(/UPDATE orders/);
+      // Profit recorder was called with the right order id
+      expect(noopProfit).toHaveBeenCalledWith(ORDER_ID, 100);
     });
 
     it('does not update orders when payment was already processed (rowCount=0)', async () => {

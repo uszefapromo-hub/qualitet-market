@@ -81,6 +81,13 @@ function getStripe() {
  * Sync a Stripe subscription into the users table.
  * Retrieves live status from Stripe and persists it to the DB.
  *
+ * Note: subscription_plan uses COALESCE($3, subscription_plan), which means
+ * it is only updated when Stripe subscription metadata contains a `plan` key.
+ * If Stripe metadata does not carry a plan value the existing DB value is kept.
+ * This is intentional – the plan may have been set by an earlier checkout.session
+ * event or by an admin.  If you need to explicitly clear the plan, call a direct
+ * UPDATE instead of this helper.
+ *
  * @param {object} stripeSub – Stripe Subscription object
  * @param {string} userId    – internal user UUID
  * @returns {{ subscription_status, subscription_plan, current_period_end }}

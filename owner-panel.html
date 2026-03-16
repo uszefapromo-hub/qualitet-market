@@ -2100,11 +2100,11 @@
       return resp.json();
     }
 
+    const _dateFormatter = new Intl.DateTimeFormat('pl-PL', { year: 'numeric', month: 'long', day: 'numeric' });
     function formatDate(dateStr) {
       if (!dateStr) return '—';
-      try {
-        return new Intl.DateTimeFormat('pl-PL', { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(dateStr));
-      } catch (_) { return dateStr; }
+      try { return _dateFormatter.format(new Date(dateStr)); }
+      catch (_) { return dateStr; }
     }
 
     function statusLabel(status) {

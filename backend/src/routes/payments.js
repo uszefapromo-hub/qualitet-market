@@ -488,8 +488,11 @@ async function buildProviderPayload(method, payment, returnUrl) {
  * checkout.session.completed – payment mode
  * Marks the payment row as paid and, if changed, marks the linked order as paid
  * and asynchronously records profit.
+ *
+ * @param {object}   session          – Stripe Checkout Session object
+ * @param {Function} [profitRecorder] – optional override for recordOrderProfit (used in tests)
  */
-async function handleCheckoutPaymentCompleted(session) {
+async function handleCheckoutPaymentCompleted(session, profitRecorder) {
   const paymentId = session.metadata && session.metadata.payment_id;
   if (!paymentId) return;
 
@@ -517,7 +520,8 @@ async function handleCheckoutPaymentCompleted(session) {
   );
 
   if (orderResult.rows[0]) {
-    recordOrderProfit(orderResult.rows[0].id, orderResult.rows[0].total);
+    const recorder = profitRecorder || recordOrderProfit;
+    recorder(orderResult.rows[0].id, orderResult.rows[0].total);
   }
 }
 

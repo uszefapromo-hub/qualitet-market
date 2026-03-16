@@ -717,6 +717,7 @@
   // ─── Automatic Stripe subscription sync ──────────────────────────────────────
   // On dashboard and owner panel loads, silently sync the user's Stripe
   // subscription status so plan features are unlocked automatically.
+  // Throttled to at most once every 5 minutes to avoid unnecessary Stripe API calls.
   // Runs fire-and-forget – failures are silently ignored.
   (function tryStripeSync() {
     var syncPages = ['dashboard', 'owner-panel'];
@@ -729,6 +730,15 @@
     var token = '';
     try { token = localStorage.getItem('qm_token') || localStorage.getItem('auth_token') || ''; } catch (_) {}
     if (!token) return;
+
+    // Throttle: skip if synced within the last 5 minutes
+    var SYNC_THROTTLE_MS = 5 * 60 * 1000;
+    var SYNC_KEY = 'qm_stripe_sync_at';
+    try {
+      var lastSync = parseInt(localStorage.getItem(SYNC_KEY) || '0', 10);
+      if (Date.now() - lastSync < SYNC_THROTTLE_MS) return;
+      localStorage.setItem(SYNC_KEY, String(Date.now()));
+    } catch (_) {}
 
     fetch('/api/subscriptions/stripe-sync', {
       method: 'POST',

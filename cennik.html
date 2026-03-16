@@ -569,9 +569,15 @@
             headers: { Authorization: 'Bearer ' + token },
           }).then(function (r) { return r.ok ? r.json() : []; })
           .then(function (subs) {
-            // Find an active subscription for this plan, or use the first active sub
-            var sub = subs.find(function (s) { return s.plan === plan && s.status === 'active'; })
-                   || subs.find(function (s) { return s.status === 'active'; });
+            // Single-pass: prefer exact plan match, fall back to any active sub
+            var sub = null;
+            for (var i = 0; i < subs.length; i++) {
+              var s = subs[i];
+              if (s.status === 'active') {
+                if (s.plan === plan) { sub = s; break; }
+                if (!sub) sub = s; // keep first active as fallback
+              }
+            }
             if (!sub) {
               // No existing sub – fall back to Payment Link
               window.location.href = btn.href || '#plany';
