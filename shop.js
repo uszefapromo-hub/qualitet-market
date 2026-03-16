@@ -467,11 +467,127 @@
     });
   }
 
+  function loadShopFromApi(slug, shop){
+    const apiBase = window.QM_API_BASE || 'https://api.uszefaqualitet.pl/api';
+    const content = shop.querySelector('[data-store-content]');
+    const emptyState = shop.querySelector('[data-store-empty]');
+
+    Promise.all([
+      fetch(`${apiBase}/shops/${encodeURIComponent(slug)}`).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(`${apiBase}/shops/${encodeURIComponent(slug)}/products`).then(r => r.ok ? r.json() : null).catch(() => null)
+    ]).then(([shopData, productsData]) => {
+      if(!shopData || !shopData.shop){
+        // API returned no shop – show the empty state so user knows
+        if(content){ content.hidden = true; }
+        if(emptyState){ emptyState.hidden = false; }
+        return;
+      }
+      const s = shopData.shop;
+      if(content){ content.hidden = false; }
+      if(emptyState){ emptyState.hidden = true; }
+
+      const nameEl = shop.querySelector('[data-store-name]');
+      if(nameEl){ nameEl.textContent = s.name || 'Sklep'; }
+
+      const descEl = shop.querySelector('[data-store-description]');
+      if(descEl){ descEl.textContent = s.description || ''; }
+
+      const slugEl = shop.querySelector('[data-store-slug]');
+      if(slugEl){ slugEl.textContent = s.slug ? `@${s.slug}` : ''; }
+
+      const planEl = shop.querySelector('[data-store-plan]');
+      if(planEl){ planEl.textContent = s.plan ? `Plan: ${formatPlan(s.plan)}` : ''; }
+
+      const emailEl = shop.querySelector('[data-store-email]');
+      if(emailEl){ emailEl.textContent = s.email || 'Brak danych'; }
+
+      const phoneEl = shop.querySelector('[data-store-phone]');
+      if(phoneEl){ phoneEl.textContent = s.phone || 'Brak danych'; }
+
+      const deliveryEl = shop.querySelector('[data-store-delivery]');
+      if(deliveryEl){ deliveryEl.textContent = s.delivery || DEFAULTS.delivery; }
+
+      const themeEl = shop.querySelector('[data-store-theme]');
+      if(themeEl){ themeEl.textContent = ''; }
+
+      document.title = `${s.name || 'Sklep'} | QualitetMarket`;
+
+      const logoContainer = shop.querySelector('[data-logo-preview]');
+      renderLogo(logoContainer, s);
+
+      if(productsData && productsData.products && productsData.products.length){
+        renderApiProducts(shop, productsData.products);
+      }
+    });
+  }
+
+  function renderApiProducts(shop, products){
+    const grid = shop.querySelector('[data-store-products-grid]');
+    const emptyMsg = shop.querySelector('[data-store-products-empty]');
+    if(!grid){ return; }
+    grid.innerHTML = '';
+    if(!products.length){
+      if(emptyMsg){ emptyMsg.hidden = false; }
+      return;
+    }
+    if(emptyMsg){ emptyMsg.hidden = true; }
+    products.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'product-card';
+      const price = p.selling_price || p.platform_price || p.supplier_price || 0;
+
+      const imgWrap = document.createElement('div');
+      imgWrap.className = 'product-img';
+      if(p.image_url){
+        const img = document.createElement('img');
+        img.src = p.image_url;
+        img.alt = p.name || '';
+        img.loading = 'lazy';
+        imgWrap.appendChild(img);
+      } else {
+        imgWrap.textContent = '📦';
+      }
+
+      const info = document.createElement('div');
+      info.className = 'product-info';
+
+      const nameEl = document.createElement('h3');
+      nameEl.className = 'product-name';
+      nameEl.textContent = p.name || 'Produkt';
+
+      const priceEl = document.createElement('div');
+      priceEl.className = 'product-price';
+      priceEl.textContent = `${Number(price).toFixed(2)} zł`;
+
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-primary btn-sm';
+      btn.textContent = 'Dodaj do koszyka';
+      btn.addEventListener('click', () => {
+        if(window.QMCart){ window.QMCart.addItem(p.id, p.name || 'Produkt', price); }
+      });
+
+      info.appendChild(nameEl);
+      info.appendChild(priceEl);
+      info.appendChild(btn);
+      card.appendChild(imgWrap);
+      card.appendChild(info);
+      grid.appendChild(card);
+    });
+  }
+
   function initStoreShop(){
     const shop = document.querySelector('[data-store-shop]');
     if(!shop){
       return;
     }
+
+    // Try to load from API if a slug is provided in the URL (?slug=...)
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlSlug = urlParams.get('slug') || urlParams.get('shop');
+    if(urlSlug){
+      loadShopFromApi(urlSlug, shop);
+    }
+
     const store = manager.getActiveStore();
     const storeSettings = ensureStoreSettings();
     const fallbackStore = !store && storeSettings ? buildStoreFromSettings(storeSettings) : null;
@@ -506,7 +622,7 @@
       'store-description': resolvedStore.description || DEFAULTS.description,
       'store-plan': `Plan: ${formatPlan(resolvedStore.plan)}`,
       'store-margin': `Marża: ${displayMargin}%`,
-      'store-theme': `Styl: ${resolvedStore.theme}`,
+      'store-theme': '',
       'store-slug': `@${resolvedStore.slug}`
     };
 

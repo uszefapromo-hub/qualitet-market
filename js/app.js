@@ -227,7 +227,7 @@
       title.textContent = 'Zainstaluj aplikację';
       banner.setAttribute('aria-labelledby', title.id);
       const description = document.createElement('span');
-      description.textContent = 'Dodaj QualitetVerse na ekran główny i korzystaj szybciej.';
+      description.textContent = 'Dodaj QualitetMarket na ekran główny i korzystaj szybciej.';
       content.append(title, description);
 
       const actions = document.createElement('div');
@@ -335,7 +335,7 @@
         points: ['Otwórz platformę na telefonie', 'Dodaj do ekranu głównego', 'Uruchamiaj jak aplikację'],
         tag: 'App Install',
         image: 'https://github.com/user-attachments/assets/085d1513-747e-4d49-8334-5813ae0855a7',
-        imageAlt: 'QualitetVerse Mobile App'
+        imageAlt: 'QualitetMarket Mobile App'
       },
       {
         eyebrow: 'Mobile',

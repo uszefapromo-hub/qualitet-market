@@ -1,7 +1,7 @@
 {
-  "name": "QualitetVerse",
-  "short_name": "QVerse",
-  "description": "QualitetVerse — AI-powered marketplace platform for creators, sellers and buyers.",
+  "name": "QualitetMarket",
+  "short_name": "QMarket",
+  "description": "QualitetMarket — marketplace B2B/B2C łączący hurtowników, sprzedawców, marki i kupujących.",
   "start_url": "index.html",
   "scope": "./",
   "display": "standalone",
