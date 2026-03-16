@@ -1531,7 +1531,7 @@ describe('GET /api/shops/:slug/products', () => {
     db.query
       .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] })          // store by slug
       .mockResolvedValueOnce({ rows: [{ count: '0' }] })            // count (0 → triggers auto-assign)
-      .mockResolvedValueOnce({ rows: [] })                          // central catalog (empty)
+      .mockResolvedValueOnce({ rows: [] })                          // bulk INSERT from central catalog
       .mockResolvedValueOnce({ rows: [] });                         // products (after auto-assign)
 
     const res = await request(app).get('/api/shops/moj-sklep/products');
