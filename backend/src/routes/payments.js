@@ -649,6 +649,23 @@ async function handleInvoicePaymentFailed(invoice) {
   );
 }
 
+/**
+ * checkout.session.expired
+ * Marks the associated payment record as failed so the order is not left in
+ * a permanent 'pending' state when the customer abandons the checkout session.
+ */
+async function handleCheckoutExpired(session) {
+  const paymentId = session.metadata && session.metadata.payment_id;
+  if (!paymentId) return;
+
+  await db.query(
+    `UPDATE payments
+        SET status = 'failed', updated_at = NOW()
+      WHERE id = $1 AND status = 'pending'`,
+    [paymentId]
+  );
+}
+
 // ── Route handler ──────────────────────────────────────────────────────────────
 
 router.post(
@@ -688,19 +705,9 @@ router.post(
           break;
         }
 
-        case 'checkout.session.expired': {
-          const session = event.data.object;
-          const paymentId = session.metadata && session.metadata.payment_id;
-          if (paymentId) {
-            await db.query(
-              `UPDATE payments
-                  SET status = 'failed', updated_at = NOW()
-                WHERE id = $1 AND status = 'pending'`,
-              [paymentId]
-            );
-          }
+        case 'checkout.session.expired':
+          await handleCheckoutExpired(event.data.object);
           break;
-        }
 
         case 'customer.subscription.created':
         case 'customer.subscription.updated':
@@ -739,6 +746,7 @@ module.exports = router;
 module.exports._handlers = {
   handleCheckoutPaymentCompleted,
   handleCheckoutSubscriptionCompleted,
+  handleCheckoutExpired,
   handleSubscriptionUpserted,
   handleSubscriptionDeleted,
   handleInvoicePaid,

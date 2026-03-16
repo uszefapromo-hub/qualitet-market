@@ -5223,6 +5223,7 @@ describe('Stripe webhook handler functions – unit tests', () => {
   const {
     handleCheckoutPaymentCompleted,
     handleCheckoutSubscriptionCompleted,
+    handleCheckoutExpired,
     handleSubscriptionUpserted,
     handleSubscriptionDeleted,
     handleInvoicePaid,
@@ -5275,6 +5276,39 @@ describe('Stripe webhook handler functions – unit tests', () => {
         id: SESSION_ID,
         metadata: { payment_id: PAYMENT_ID },
       });
+
+      expect(db.query).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ── handleCheckoutExpired ────────────────────────────────────────────────────
+
+  describe('handleCheckoutExpired', () => {
+    it('does nothing when session has no payment_id in metadata', async () => {
+      await handleCheckoutExpired({ metadata: {} });
+      expect(db.query).not.toHaveBeenCalled();
+    });
+
+    it('marks payment as failed when payment_id is present', async () => {
+      db.query.mockResolvedValueOnce({ rowCount: 1 });
+
+      await handleCheckoutExpired({ metadata: { payment_id: PAYMENT_ID } });
+
+      expect(db.query).toHaveBeenCalledTimes(1);
+      const sql    = db.query.mock.calls[0][0];
+      const params = db.query.mock.calls[0][1];
+      expect(sql).toMatch(/UPDATE payments/);
+      expect(sql).toMatch(/status = 'failed'/);
+      expect(params[0]).toBe(PAYMENT_ID);
+    });
+
+    it('does not update already-failed payments (guard: WHERE status = pending)', async () => {
+      // Row count 0 means the payment was not pending – handler should not error
+      db.query.mockResolvedValueOnce({ rowCount: 0 });
+
+      await expect(
+        handleCheckoutExpired({ metadata: { payment_id: PAYMENT_ID } })
+      ).resolves.toBeUndefined();
 
       expect(db.query).toHaveBeenCalledTimes(1);
     });
