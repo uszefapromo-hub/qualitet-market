@@ -327,7 +327,11 @@ router.post(
         return res.status(403).json({ error: 'Brak uprawnień do tego sklepu' });
       }
 
-      // Check product limit from subscription (set by requireActiveSubscription middleware)
+      // ── Product-limit gate (capped plan: N products, unlimited plan: null) ──────
+      // req.subscription is set by requireActiveSubscription middleware above.
+      // • null → no subscription record → open access (new seller, no cap applied)
+      // • product_limit null → paid plan → no cap applied
+      // • product_limit N → capped plan (e.g., free plan) → enforce the limit
       const sub = req.subscription;
       if (sub && sub.product_limit !== null && sub.product_limit !== undefined) {
         const countResult = await db.query(
@@ -413,7 +417,11 @@ router.post(
         return res.status(403).json({ error: 'Brak uprawnień do tego sklepu' });
       }
 
-      // Check product limit from subscription (set by requireActiveSubscription middleware)
+      // ── Product-limit gate (capped plan: N products, unlimited plan: null) ──────
+      // req.subscription is set by requireActiveSubscription middleware above.
+      // • null → no subscription record → open access (new seller, no cap applied)
+      // • product_limit null → paid plan → no cap applied
+      // • product_limit N → capped plan (e.g., free plan) → enforce the limit (bulk-aware)
       const sub = req.subscription;
       if (sub && sub.product_limit !== null && sub.product_limit !== undefined) {
         const countResult = await db.query(

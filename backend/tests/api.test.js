@@ -1615,6 +1615,7 @@ describe('POST /api/my/store/products', () => {
 
   it('adds product to my store', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [] })                         // requireActiveSubscription: no active sub
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })       // product exists
       .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] }); // insert
@@ -1629,6 +1630,7 @@ describe('POST /api/my/store/products', () => {
 
   it('supports custom_title and custom_description', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [] })                         // requireActiveSubscription: no active sub
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })       // product exists
       .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true, custom_title: 'Mój Fotel', custom_description: 'Super jakość' }] }); // insert
@@ -2403,8 +2405,9 @@ describe('POST /api/shops/quick-setup', () => {
 
 
 describe('POST /api/my/store/products – subscription checks', () => {
-  it('adds product regardless of subscription status (subscription system removed)', async () => {
+  it('adds product when no active subscription exists (open access for new sellers)', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [] })                         // requireActiveSubscription: no subscription
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })       // product exists
       .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] }); // insert
@@ -2416,8 +2419,9 @@ describe('POST /api/my/store/products – subscription checks', () => {
     expect(res.status).toBe(201);
   });
 
-  it('adds product without product limit enforcement (subscription system removed)', async () => {
+  it('adds product when subscription has no product limit (paid plan – unlimited)', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-pro', plan: 'pro', status: 'active', product_limit: null, commission_rate: 0.02 }] }) // requireActiveSubscription: pro plan
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })       // product exists
       .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] }); // insert
@@ -2429,10 +2433,12 @@ describe('POST /api/my/store/products – subscription checks', () => {
     expect(res.status).toBe(201);
   });
 
-  it('allows adding product when limit is not reached', async () => {
+  it('allows adding product when subscription limit is not yet reached', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-free', plan: 'free', status: 'active', product_limit: 10, commission_rate: 0.05 }] }) // requireActiveSubscription: free plan, limit 10
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
-      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })        // product exists
+      .mockResolvedValueOnce({ rows: [{ count: '5' }] })           // current product count (5 < 10)
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })       // product exists
       .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] }); // insert
 
     const res = await request(app)
@@ -2442,17 +2448,18 @@ describe('POST /api/my/store/products – subscription checks', () => {
     expect(res.status).toBe(201);
   });
 
-  it('allows adding product (no subscription required)', async () => {
+  it('blocks product add when subscription product limit is reached', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-free', plan: 'free', status: 'active', product_limit: 10, commission_rate: 0.05 }] }) // requireActiveSubscription: free plan, limit 10
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
-      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })        // product exists
-      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] }); // insert
+      .mockResolvedValueOnce({ rows: [{ count: '10' }] });          // current product count (10 >= 10 → limit reached)
 
     const res = await request(app)
       .post('/api/my/store/products')
       .set('Authorization', `Bearer ${sellerToken}`)
       .send({ store_id: STORE_ID, product_id: PRODUCT_ID });
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('product_limit_reached');
   });
 });
 
@@ -2488,9 +2495,9 @@ describe('POST /api/my/store/products/bulk', () => {
     expect(res.status).toBe(422);
   });
 
-  it('blocks when subscription is expired', async () => {
-    // Subscription system removed — route should proceed to owner check now
+  it('returns 404 when store is not found (no active subscription)', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [] })  // requireActiveSubscription: no active subscription
       .mockResolvedValueOnce({ rows: [] }); // store not found → 404
 
     const res = await request(app)
@@ -2500,9 +2507,9 @@ describe('POST /api/my/store/products/bulk', () => {
     expect(res.status).toBe(404);
   });
 
-  it('blocks when product_limit would be exceeded by bulk add', async () => {
-    // Subscription system removed — no product limit enforcement
+  it('no active subscription – bulk add succeeds (open access for new sellers)', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [] })                           // requireActiveSubscription: no subscription
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })   // store ownership
       .mockResolvedValueOnce({ rows: [] }) // batch products fetch – none found
     ;
@@ -2520,6 +2527,7 @@ describe('POST /api/my/store/products/bulk', () => {
     mockDb.products.push({ id: PRODUCT_ID_2, store_id: null, name: 'Produkt 2', selling_price: 200, stock: 5 });
 
     db.query
+      .mockResolvedValueOnce({ rows: [] })                           // requireActiveSubscription: no subscription
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })   // store ownership
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, selling_price: 141.45 }, { id: PRODUCT_ID_2, selling_price: 200 }] }) // batch products fetch
       .mockResolvedValueOnce({ rows: [{ id: 'sp-bulk-1', store_id: STORE_ID, product_id: PRODUCT_ID, margin_override: 20, active: true }] }) // insert 1
@@ -2539,6 +2547,7 @@ describe('POST /api/my/store/products/bulk', () => {
     const MISSING_ID = 'a0000000-0000-4000-8000-000000000099';
 
     db.query
+      .mockResolvedValueOnce({ rows: [] })                           // requireActiveSubscription: no subscription
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })   // store ownership
       .mockResolvedValueOnce({ rows: [] }); // batch products fetch – none found → skipped
 
@@ -2553,6 +2562,7 @@ describe('POST /api/my/store/products/bulk', () => {
 
   it('uses 20% default margin for added products', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [] })                           // requireActiveSubscription: no subscription
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, selling_price: 100 }] }) // batch products fetch
       .mockResolvedValueOnce({ rows: [{ id: 'sp-new', store_id: STORE_ID, product_id: PRODUCT_ID, margin_type: 'percent', margin_override: 20, active: true }] });
@@ -2563,6 +2573,78 @@ describe('POST /api/my/store/products/bulk', () => {
       .send({ store_id: STORE_ID, product_ids: [PRODUCT_ID] });
     expect(res.status).toBe(201);
     expect(res.body.results[0].margin_override).toBe(20);
+  });
+});
+
+// ─── POST /api/my/store/products/bulk – subscription checks ───────────────────
+// Mirrors the single-product "subscription checks" block; verifies all 4 gating
+// scenarios are correctly enforced for the bulk endpoint.
+
+describe('POST /api/my/store/products/bulk – subscription checks', () => {
+  const PRODUCT_ID_BULK = 'b0000000-0000-4000-8000-000000000020';
+  const PRODUCT_ID_BULK2 = 'b0000000-0000-4000-8000-000000000021';
+
+  it('adds products when no active subscription exists (open access for new sellers)', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] })                           // requireActiveSubscription: no subscription
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })   // store ownership
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID_BULK, selling_price: 100 }] }) // products found
+      .mockResolvedValueOnce({ rows: [{ id: 'sp-b1', store_id: STORE_ID, product_id: PRODUCT_ID_BULK, margin_override: 20, active: true }] }); // insert
+
+    const res = await request(app)
+      .post('/api/my/store/products/bulk')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_ids: [PRODUCT_ID_BULK] });
+    expect(res.status).toBe(201);
+    expect(res.body.added).toBe(1);
+    expect(res.body.skipped).toBe(0);
+  });
+
+  it('adds products when subscription has no product limit (paid plan – unlimited)', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-pro', plan: 'pro', status: 'active', product_limit: null, commission_rate: 0.02 }] }) // requireActiveSubscription: pro plan
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })   // store ownership
+      // no count query because product_limit is null
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID_BULK, selling_price: 100 }] }) // products found
+      .mockResolvedValueOnce({ rows: [{ id: 'sp-b2', store_id: STORE_ID, product_id: PRODUCT_ID_BULK, margin_override: 20, active: true }] }); // insert
+
+    const res = await request(app)
+      .post('/api/my/store/products/bulk')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_ids: [PRODUCT_ID_BULK] });
+    expect(res.status).toBe(201);
+    expect(res.body.added).toBe(1);
+  });
+
+  it('adds products when subscription limit is not yet reached', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-free', plan: 'free', status: 'active', product_limit: 10, commission_rate: 0.05 }] }) // requireActiveSubscription: free plan, limit 10
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })   // store ownership
+      .mockResolvedValueOnce({ rows: [{ count: '5' }] })             // current product count (5 + 2 = 7 < 10 → ok)
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID_BULK, selling_price: 100 }, { id: PRODUCT_ID_BULK2, selling_price: 200 }] }) // products found
+      .mockResolvedValueOnce({ rows: [{ id: 'sp-b3', store_id: STORE_ID, product_id: PRODUCT_ID_BULK, margin_override: 20, active: true }] }) // insert 1
+      .mockResolvedValueOnce({ rows: [{ id: 'sp-b4', store_id: STORE_ID, product_id: PRODUCT_ID_BULK2, margin_override: 20, active: true }] }); // insert 2
+
+    const res = await request(app)
+      .post('/api/my/store/products/bulk')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_ids: [PRODUCT_ID_BULK, PRODUCT_ID_BULK2] });
+    expect(res.status).toBe(201);
+    expect(res.body.added).toBe(2);
+  });
+
+  it('blocks bulk add when subscription product limit would be exceeded', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-free', plan: 'free', status: 'active', product_limit: 10, commission_rate: 0.05 }] }) // requireActiveSubscription: free plan, limit 10
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })   // store ownership
+      .mockResolvedValueOnce({ rows: [{ count: '9' }] });            // current count = 9; adding 2 → 11 > 10 → blocked
+
+    const res = await request(app)
+      .post('/api/my/store/products/bulk')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_ids: [PRODUCT_ID_BULK, PRODUCT_ID_BULK2] });
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('product_limit_reached');
   });
 });
 
@@ -3216,6 +3298,7 @@ describe('PUT /api/shop-products/:id – seller_margin enforcement', () => {
 describe('POST /api/my/store/products – platform minimum price enforcement', () => {
   it('rejects price_override below platform_price', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [] })                         // requireActiveSubscription: no subscription
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, platform_price: 100, min_selling_price: 100, selling_price: 100 }] }); // product
 
@@ -3229,6 +3312,7 @@ describe('POST /api/my/store/products – platform minimum price enforcement', (
 
   it('accepts price_override equal to platform_price', async () => {
     db.query
+      .mockResolvedValueOnce({ rows: [] })                         // requireActiveSubscription: no subscription
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, platform_price: 100, min_selling_price: 100, selling_price: 100 }] }) // product
       .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, price_override: 100, active: true }] }); // insert
@@ -3657,9 +3741,57 @@ describe('requireActiveSubscription middleware', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
-  it('attaches a null subscription for valid store_id values', async () => {
+  it('attaches a null subscription for valid store_id when no active subscription exists', async () => {
     const { requireActiveSubscription } = require('../src/middleware/auth');
     const req = { body: { store_id: STORE_ID }, params: {}, query: {} };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+    const next = jest.fn();
+
+    db.query.mockResolvedValueOnce({ rows: [] }); // subscription query returns no rows
+
+    await requireActiveSubscription(req, res, next);
+
+    expect(req.subscription).toBeNull();
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it('attaches subscription config when store has an active subscription', async () => {
+    const { requireActiveSubscription } = require('../src/middleware/auth');
+    const req = { body: { store_id: STORE_ID }, params: {}, query: {} };
+    const res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+    const next = jest.fn();
+
+    db.query.mockResolvedValueOnce({
+      rows: [{
+        id: 'sub-uuid-active',
+        plan: 'basic',
+        status: 'active',
+        product_limit: 50,
+        commission_rate: 0.03,
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      }],
+    });
+
+    await requireActiveSubscription(req, res, next);
+
+    expect(req.subscription).not.toBeNull();
+    expect(req.subscription).toHaveProperty('product_limit', 50);
+    expect(req.subscription).toHaveProperty('plan', 'basic');
+    expect(req.subscription).toHaveProperty('commission_rate', 0.03);
+    expect(next).toHaveBeenCalledTimes(1);
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it('attaches null subscription when request has no store_id (no DB query)', async () => {
+    const { requireActiveSubscription } = require('../src/middleware/auth');
+    const req = { body: {}, params: {}, query: {} };
     const res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
@@ -3670,7 +3802,7 @@ describe('requireActiveSubscription middleware', () => {
 
     expect(req.subscription).toBeNull();
     expect(next).toHaveBeenCalledTimes(1);
-    expect(res.status).not.toHaveBeenCalled();
+    expect(db.query).not.toHaveBeenCalled();
   });
 });
 
@@ -5207,6 +5339,40 @@ describe('POST /api/subscriptions/:id/checkout', () => {
       .post(`/api/subscriptions/${SUB_ID}/checkout`)
       .set('Authorization', `Bearer ${sellerToken}`);
     expect(res.status).toBe(400);
+  });
+
+  it('creates Stripe checkout session with mode=subscription when STRIPE_PRICE_ID is configured', async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_mock_checkout';
+    process.env.STRIPE_PRICE_ID_BASIC = 'price_basic_test_001';
+
+    db.query
+      .mockResolvedValueOnce({
+        rows: [{ id: SUB_ID, shop_id: STORE_ID, owner_id: SELLER_ID, plan: 'basic', status: 'active' }],
+      }) // subscription lookup
+      .mockResolvedValueOnce({
+        rows: [{ stripe_customer_id: null, email: 'seller@test.pl', name: 'Seller' }],
+      }) // user lookup
+      .mockResolvedValueOnce({ rowCount: 1 }); // UPDATE users stripe_customer_id
+
+    stripeMock.customers = { create: jest.fn().mockResolvedValueOnce({ id: 'cus_checkout_001' }) };
+    stripeMock.checkout.sessions.create.mockResolvedValueOnce({
+      id: 'cs_sub_test_001',
+      url: 'https://checkout.stripe.com/pay/cs_sub_test_001',
+      mode: 'subscription',
+    });
+
+    const res = await request(app)
+      .post(`/api/subscriptions/${SUB_ID}/checkout`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('mode', 'subscription');
+    expect(res.body).toHaveProperty('session_id', 'cs_sub_test_001');
+    expect(stripeMock.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: 'subscription' })
+    );
+
+    delete process.env.STRIPE_PRICE_ID_BASIC;
   });
 });
 
@@ -10529,5 +10695,298 @@ describe('POST /api/subscriptions/stripe-sync', () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('synced', false);
     expect(res.body.reason).toBe('no_subscription');
+  });
+});
+
+// ─── Subscription monetization E2E flow ───────────────────────────────────────
+// End-to-end verification of the Stripe subscription billing cycle.
+// Each test exercises one leg of the flow: checkout → webhook → sync → owner panel.
+
+describe('Subscription monetization E2E flow', () => {
+  const STRIPE_CUS  = 'cus_e2e_flow_001';
+  const STRIPE_SUB  = 'sub_e2e_flow_001';
+  const DB_SUB_ID   = 'e2e00000-0000-4000-8000-000000000001';
+  const PERIOD_END  = Math.floor(Date.now() / 1000) + 30 * 86400; // 30 days from now
+
+  beforeEach(() => {
+    process.env.STRIPE_WEBHOOK_SECRET = 'whsec_e2e_test';
+    process.env.STRIPE_SECRET_KEY     = 'sk_test_e2e_mock';
+  });
+
+  // Helper: POST to Stripe webhook with a mocked event
+  function postWebhook(event) {
+    stripeMock.webhooks.constructEvent.mockReturnValueOnce(event);
+    return request(app)
+      .post('/api/payments/stripe/webhook')
+      .set('Content-Type', 'application/json')
+      .set('stripe-signature', 't=1,v1=e2e_placeholder')
+      .send('{}');
+  }
+
+  // ── Check 2: checkout uses mode=subscription ───────────────────────────────
+
+  it('checkout.session.completed (subscription mode) sets all 4 users columns', async () => {
+    const { _handlers } = require('../src/routes/payments');
+
+    db.query
+      .mockResolvedValueOnce({ rowCount: 1 }) // UPDATE subscriptions (subId in meta)
+      .mockResolvedValueOnce({ rowCount: 1 }); // UPDATE users
+
+    await _handlers.handleCheckoutSubscriptionCompleted({
+      customer:             STRIPE_CUS,
+      subscription:         STRIPE_SUB,
+      client_reference_id:  SELLER_ID,
+      metadata: { subscription_id: DB_SUB_ID, plan: 'basic' },
+    });
+
+    // Expect 2 DB calls: one UPDATE subscriptions, one UPDATE users
+    expect(db.query).toHaveBeenCalledTimes(2);
+
+    // Verify users UPDATE sets all four required columns
+    const usersCall = db.query.mock.calls.find(
+      ([sql]) => /UPDATE users/i.test(sql)
+    );
+    expect(usersCall).toBeDefined();
+    const [sql, params] = usersCall;
+    expect(sql).toMatch(/stripe_customer_id/);
+    expect(sql).toMatch(/stripe_subscription_id/);
+    expect(sql).toMatch(/subscription_status\s*=\s*'active'/);
+    expect(sql).toMatch(/subscription_plan/);
+    expect(params).toContain(STRIPE_CUS);
+    expect(params).toContain(STRIPE_SUB);
+    expect(params).toContain('basic');
+    expect(params).toContain(SELLER_ID);
+  });
+
+  // ── Check 3: customer.subscription.created sets current_period_end ─────────
+
+  it('customer.subscription.created sets current_period_end in users table', async () => {
+    const { _handlers } = require('../src/routes/payments');
+    db.query.mockResolvedValueOnce({ rowCount: 1 });
+
+    await _handlers.handleSubscriptionUpserted({
+      id:                 STRIPE_SUB,
+      status:             'active',
+      customer:           STRIPE_CUS,
+      current_period_end: PERIOD_END,
+      metadata:           { plan: 'basic' },
+    });
+
+    expect(db.query).toHaveBeenCalledTimes(1);
+    const [sql, params] = db.query.mock.calls[0];
+    expect(sql).toMatch(/UPDATE users/);
+    expect(sql).toMatch(/current_period_end/);
+    expect(sql).toMatch(/stripe_subscription_id/);
+    expect(sql).toMatch(/subscription_status/);
+    expect(sql).toMatch(/subscription_plan/);
+    // current_period_end should be a Date derived from the Unix timestamp
+    const periodEndDate = params.find((p) => p instanceof Date);
+    expect(periodEndDate).toBeDefined();
+    expect(periodEndDate.getTime()).toBeCloseTo(PERIOD_END * 1000, -3);
+    expect(params).toContain(STRIPE_CUS);
+  });
+
+  // ── Check 3 (route-level): full webhook dispatch for customer.subscription.created ──
+
+  it('customer.subscription.updated webhook updates stripe_subscription_id, status, plan, and current_period_end', async () => {
+    db.query.mockResolvedValueOnce({ rowCount: 1 });
+
+    const res = await postWebhook({
+      type: 'customer.subscription.updated',
+      data: {
+        object: {
+          id:                 STRIPE_SUB,
+          status:             'active',
+          customer:           STRIPE_CUS,
+          current_period_end: PERIOD_END,
+          metadata:           { plan: 'pro' },
+        },
+      },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ received: true });
+
+    const [sql, params] = db.query.mock.calls[0];
+    expect(sql).toMatch(/UPDATE users/);
+    expect(sql).toMatch(/stripe_subscription_id\s*=\s*\$1/);
+    expect(sql).toMatch(/subscription_status\s*=\s*\$2/);
+    expect(sql).toMatch(/subscription_plan/);
+    expect(sql).toMatch(/current_period_end/);
+    expect(params[0]).toBe(STRIPE_SUB);
+    expect(params[1]).toBe('active');
+    expect(params[4]).toBe(STRIPE_CUS);
+  });
+
+  // ── Check 4: owner panel shows active plan ─────────────────────────────────
+
+  it('GET /api/subscriptions/my-billing returns active plan and period end after stripe-sync', async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_e2e_mock';
+
+    db.query.mockResolvedValueOnce({
+      rows: [{
+        stripe_customer_id:     STRIPE_CUS,
+        stripe_subscription_id: STRIPE_SUB,
+        subscription_status:    'active',
+        subscription_plan:      'pro',
+        current_period_end:     new Date(PERIOD_END * 1000).toISOString(),
+        local_plan:             'pro',
+      }],
+    }); // users SELECT
+    db.query.mockResolvedValueOnce({ rowCount: 1 }); // UPDATE users after stripe sync
+
+    stripeMock.subscriptions.retrieve.mockResolvedValueOnce({
+      id:                 STRIPE_SUB,
+      status:             'active',
+      customer:           STRIPE_CUS,
+      current_period_end: PERIOD_END,
+      metadata:           { plan: 'pro' },
+    });
+    stripeMock.billingPortal.sessions.create.mockResolvedValueOnce({
+      url: 'https://billing.stripe.com/p/session/e2e_portal',
+    });
+
+    const res = await request(app)
+      .get('/api/subscriptions/my-billing')
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('subscription_status', 'active');
+    expect(res.body).toHaveProperty('subscription_plan', 'pro');
+    expect(res.body).toHaveProperty('stripe_customer_id', STRIPE_CUS);
+    expect(res.body).toHaveProperty('stripe_subscription_id', STRIPE_SUB);
+    expect(res.body).toHaveProperty('customer_portal_url');
+    expect(res.body.customer_portal_url).toMatch(/billing\.stripe\.com/);
+  });
+
+  // ── Check 5: premium features gated by subscription state ─────────────────
+
+  it('product add is blocked when subscription product limit is reached', async () => {
+    db.query
+      .mockResolvedValueOnce({
+        rows: [{ id: 'sub-basic', plan: 'free', status: 'active', product_limit: 10, commission_rate: 0.05 }],
+      }) // requireActiveSubscription: free plan, limit 10
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] }) // store ownership
+      .mockResolvedValueOnce({ rows: [{ count: '10' }] });         // current count = 10 (at limit)
+
+    const res = await request(app)
+      .post('/api/my/store/products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('product_limit_reached');
+  });
+
+  it('product add succeeds when subscription has no product limit (paid plan)', async () => {
+    db.query
+      .mockResolvedValueOnce({
+        rows: [{ id: 'sub-pro', plan: 'pro', status: 'active', product_limit: null, commission_rate: 0.02 }],
+      }) // requireActiveSubscription: pro plan – unlimited
+      .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] }) // store ownership
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID }] })       // product exists
+      .mockResolvedValueOnce({ rows: [{ id: SHOP_PROD_ID, store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] }); // insert
+
+    const res = await request(app)
+      .post('/api/my/store/products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ store_id: STORE_ID, product_id: PRODUCT_ID });
+
+    expect(res.status).toBe(201);
+  });
+
+  // ── Check 6: cancel flow ──────────────────────────────────────────────────
+
+  it('customer.subscription.deleted webhook sets subscription_status=canceled and clears subscription ID', async () => {
+    db.query.mockResolvedValueOnce({ rowCount: 1 });
+
+    const res = await postWebhook({
+      type: 'customer.subscription.deleted',
+      data: {
+        object: {
+          id:                 STRIPE_SUB,
+          customer:           STRIPE_CUS,
+          current_period_end: PERIOD_END,
+        },
+      },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ received: true });
+
+    const [sql, params] = db.query.mock.calls[0];
+    expect(sql).toMatch(/UPDATE users/);
+    expect(sql).toMatch(/stripe_subscription_id\s*=\s*NULL/);
+    expect(sql).toMatch(/subscription_status\s*=\s*'canceled'/);
+    expect(params).toContain(STRIPE_CUS);
+  });
+
+  // ── Check 6: payment_failed flow ─────────────────────────────────────────
+
+  it('invoice.payment_failed webhook sets subscription_status=past_due', async () => {
+    db.query.mockResolvedValueOnce({ rowCount: 1 });
+
+    const res = await postWebhook({
+      type: 'invoice.payment_failed',
+      data: { object: { customer: STRIPE_CUS } },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ received: true });
+
+    const [sql, params] = db.query.mock.calls[0];
+    expect(sql).toMatch(/UPDATE users/);
+    expect(sql).toMatch(/subscription_status = 'past_due'/);
+    expect(params[0]).toBe(STRIPE_CUS);
+  });
+
+  it('invoice.paid webhook restores subscription_status=active for past_due subscriptions', async () => {
+    db.query.mockResolvedValueOnce({ rowCount: 1 });
+
+    const res = await postWebhook({
+      type: 'invoice.paid',
+      data: {
+        object: {
+          customer: STRIPE_CUS,
+          lines: { data: [{ period: { end: PERIOD_END } }] },
+        },
+      },
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ received: true });
+
+    const [sql, params] = db.query.mock.calls[0];
+    expect(sql).toMatch(/subscription_status = 'active'/);
+    expect(sql).toMatch(/subscription_status IN \('past_due','incomplete','unpaid'\)/);
+    expect(params[1]).toBe(STRIPE_CUS);
+  });
+
+  // ── Check 7: POST /api/subscriptions/stripe-sync syncs status on login ────
+
+  it('stripe-sync on login updates subscription_status and returns synced plan', async () => {
+    db.query
+      .mockResolvedValueOnce({
+        rows: [{ stripe_customer_id: STRIPE_CUS, stripe_subscription_id: STRIPE_SUB }],
+      }) // user SELECT
+      .mockResolvedValueOnce({ rowCount: 1 }); // UPDATE users after sync
+
+    stripeMock.subscriptions.retrieve.mockResolvedValueOnce({
+      id:                 STRIPE_SUB,
+      status:             'active',
+      customer:           STRIPE_CUS,
+      current_period_end: PERIOD_END,
+      metadata:           { plan: 'pro' },
+    });
+
+    const res = await request(app)
+      .post('/api/subscriptions/stripe-sync')
+      .set('Authorization', `Bearer ${sellerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('synced', true);
+    expect(res.body).toHaveProperty('subscription_status', 'active');
+    expect(res.body).toHaveProperty('subscription_plan', 'pro');
+    expect(stripeMock.subscriptions.retrieve).toHaveBeenCalledWith(STRIPE_SUB);
   });
 });

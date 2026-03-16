@@ -79,9 +79,20 @@ function signToken(user) {
 }
 
 /**
- * Middleware: verify the shop referenced in the request has an active, non-expired subscription.
+ * Middleware: look up the active subscription for the shop referenced in the request.
  * Resolves shop_id from req.body.store_id, req.params.store_id or req.query.store_id.
- * On success, attaches the subscription record to req.subscription.
+ *
+ * Product gating policy (enforced in route handlers):
+ *   • req.subscription === null  – no active subscription record found for the store.
+ *     The route handler treats this as open access: products can be added without any
+ *     cap.  This covers new sellers who have not yet created a subscription.
+ *   • req.subscription.product_limit === null  – unlimited plan (basic / pro / elite).
+ *     No product cap is applied.
+ *   • req.subscription.product_limit = N  – capped plan (e.g., free plan with 10-product
+ *     limit, or a custom admin-set cap).  The route handler enforces the cap and returns
+ *     403 { error: 'product_limit_reached' } when the store already has N or more products.
+ *
+ * This middleware never blocks the request itself; it only attaches data for downstream checks.
  */
 async function requireActiveSubscription(req, res, next) {
   const storeId = resolveStoreId(req);
@@ -91,6 +102,26 @@ async function requireActiveSubscription(req, res, next) {
   }
 
   req.subscription = null;
+
+  if (storeId) {
+    try {
+      const result = await getDb().query(
+        `SELECT id, plan, status, product_limit, commission_rate, expires_at
+           FROM subscriptions
+          WHERE shop_id = $1
+            AND status = 'active'
+            AND (expires_at IS NULL OR expires_at > NOW())
+          ORDER BY created_at DESC
+          LIMIT 1`,
+        [storeId]
+      );
+      req.subscription = result.rows[0] || null;
+    } catch (err) {
+      console.error('requireActiveSubscription query error:', err.message);
+      // Non-critical: allow request through if subscription lookup fails
+    }
+  }
+
   return next();
 }
 
