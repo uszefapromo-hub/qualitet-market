@@ -417,6 +417,12 @@ function setupDbMock() {
 
 // ─── Test setup ────────────────────────────────────────────────────────────────
 
+// Capture the initial state of Stripe env vars before any test runs.
+// The global afterEach restores both to these baseline values unconditionally,
+// so individual tests never need their own save/restore boilerplate.
+const _initStripeKey     = process.env.STRIPE_SECRET_KEY;
+const _initWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
 let app;
 let sellerToken;
 let adminToken;
@@ -469,6 +475,12 @@ afterEach(() => {
   // which checks "Stripe not configured" behaviour is order-independent.
   require('../src/routes/payments')._resetStripeForTest();
   require('../src/routes/subscriptions')._resetStripeForTest();
+  // Restore Stripe env vars to the baseline state captured at module load time.
+  // This ensures every test starts with the same env regardless of execution order.
+  if (_initStripeKey)     process.env.STRIPE_SECRET_KEY     = _initStripeKey;
+  else                    delete process.env.STRIPE_SECRET_KEY;
+  if (_initWebhookSecret) process.env.STRIPE_WEBHOOK_SECRET = _initWebhookSecret;
+  else                    delete process.env.STRIPE_WEBHOOK_SECRET;
 });
 
 // ─── Health check ──────────────────────────────────────────────────────────────
@@ -5178,7 +5190,6 @@ describe('POST /api/subscriptions/:id/checkout', () => {
     db.query.mockResolvedValueOnce({
       rows: [{ id: SUB_ID, shop_id: STORE_ID, owner_id: SELLER_ID, plan: 'basic', status: 'active' }],
     });
-    const savedKey = process.env.STRIPE_SECRET_KEY;
     delete process.env.STRIPE_SECRET_KEY;
 
     const res = await request(app)
@@ -5186,8 +5197,6 @@ describe('POST /api/subscriptions/:id/checkout', () => {
       .set('Authorization', `Bearer ${sellerToken}`);
     expect(res.status).toBe(503);
     expect(res.body).toHaveProperty('sandbox_mode', true);
-
-    if (savedKey) process.env.STRIPE_SECRET_KEY = savedKey;
   });
 
   it('returns 400 for trial plan (free – no checkout needed)', async () => {
@@ -5205,8 +5214,6 @@ describe('POST /api/subscriptions/:id/checkout', () => {
 
 describe('POST /api/payments/stripe/webhook', () => {
   it('returns 503 when STRIPE_WEBHOOK_SECRET is not set', async () => {
-    const savedSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    const savedKey    = process.env.STRIPE_SECRET_KEY;
     delete process.env.STRIPE_WEBHOOK_SECRET;
     delete process.env.STRIPE_SECRET_KEY;
 
@@ -5215,16 +5222,9 @@ describe('POST /api/payments/stripe/webhook', () => {
       .set('Content-Type', 'application/json')
       .send('{}');
     expect(res.status).toBe(503);
-
-    if (savedSecret) process.env.STRIPE_WEBHOOK_SECRET = savedSecret;
-    else delete process.env.STRIPE_WEBHOOK_SECRET;
-    if (savedKey) process.env.STRIPE_SECRET_KEY = savedKey;
-    else delete process.env.STRIPE_SECRET_KEY;
   });
 
   it('returns 503 when STRIPE_SECRET_KEY is not set', async () => {
-    const savedSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    const savedKey    = process.env.STRIPE_SECRET_KEY;
     process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test';
     delete process.env.STRIPE_SECRET_KEY;
 
@@ -5234,11 +5234,6 @@ describe('POST /api/payments/stripe/webhook', () => {
       .set('stripe-signature', 't=1,v1=abc')
       .send('{}');
     expect(res.status).toBe(503);
-
-    if (savedSecret) process.env.STRIPE_WEBHOOK_SECRET = savedSecret;
-    else delete process.env.STRIPE_WEBHOOK_SECRET;
-    if (savedKey) process.env.STRIPE_SECRET_KEY = savedKey;
-    else delete process.env.STRIPE_SECRET_KEY;
   });
 });
 
@@ -5539,11 +5534,6 @@ describe('POST /api/payments/stripe/webhook – event dispatch (mocked Stripe)',
     process.env.STRIPE_SECRET_KEY     = 'sk_test_mock_dispatch';
   });
 
-  afterEach(() => {
-    delete process.env.STRIPE_WEBHOOK_SECRET;
-    delete process.env.STRIPE_SECRET_KEY;
-  });
-
   // Helper: POST raw body to the webhook endpoint
   function webhookPost(body = '{}') {
     return request(app)
@@ -5684,10 +5674,6 @@ describe('POST /api/subscriptions/stripe-sync – live subscription sync (mocked
     process.env.STRIPE_SECRET_KEY = 'sk_test_mock_sync';
   });
 
-  afterEach(() => {
-    delete process.env.STRIPE_SECRET_KEY;
-  });
-
   it('syncs live subscription data when user has a stripe_subscription_id', async () => {
     const periodEnd = Math.floor(Date.now() / 1000) + 2592000; // 30 days
     db.query
@@ -5720,10 +5706,6 @@ describe('POST /api/subscriptions/stripe-sync – live subscription sync (mocked
 describe('GET /api/subscriptions/my-billing – Stripe configured (mocked)', () => {
   beforeEach(() => {
     process.env.STRIPE_SECRET_KEY = 'sk_test_mock_billing';
-  });
-
-  afterEach(() => {
-    delete process.env.STRIPE_SECRET_KEY;
   });
 
   it('returns live billing data synced from Stripe and includes portal URL', async () => {
@@ -10467,7 +10449,6 @@ describe('GET /api/subscriptions/my-billing', () => {
   });
 
   it('returns billing status for authenticated user (no Stripe configured)', async () => {
-    const savedKey = process.env.STRIPE_SECRET_KEY;
     delete process.env.STRIPE_SECRET_KEY;
 
     db.query.mockResolvedValueOnce({
@@ -10489,9 +10470,6 @@ describe('GET /api/subscriptions/my-billing', () => {
     expect(res.body).toHaveProperty('stripe_configured', false);
     expect(res.body).toHaveProperty('stripe_customer_id', null);
     expect(res.body).toHaveProperty('subscription_plan', 'basic');
-
-    if (savedKey) process.env.STRIPE_SECRET_KEY = savedKey;
-    else delete process.env.STRIPE_SECRET_KEY;
   });
 
   it('returns 404 if user not found', async () => {
@@ -10512,7 +10490,6 @@ describe('POST /api/subscriptions/stripe-sync', () => {
   });
 
   it('returns synced:false when Stripe is not configured', async () => {
-    const savedKey = process.env.STRIPE_SECRET_KEY;
     delete process.env.STRIPE_SECRET_KEY;
 
     db.query.mockResolvedValueOnce({
@@ -10526,9 +10503,6 @@ describe('POST /api/subscriptions/stripe-sync', () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('synced', false);
     expect(res.body.reason).toBe('stripe_not_configured');
-
-    if (savedKey) process.env.STRIPE_SECRET_KEY = savedKey;
-    else delete process.env.STRIPE_SECRET_KEY;
   });
 
   it('returns 404 if user not found', async () => {
@@ -10540,7 +10514,6 @@ describe('POST /api/subscriptions/stripe-sync', () => {
   });
 
   it('returns synced:false with no_subscription reason when no Stripe ID', async () => {
-    const savedKey = process.env.STRIPE_SECRET_KEY;
     process.env.STRIPE_SECRET_KEY = 'sk_test_mock';
 
     db.query.mockResolvedValueOnce({
@@ -10556,8 +10529,5 @@ describe('POST /api/subscriptions/stripe-sync', () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('synced', false);
     expect(res.body.reason).toBe('no_subscription');
-
-    if (savedKey) process.env.STRIPE_SECRET_KEY = savedKey;
-    else delete process.env.STRIPE_SECRET_KEY;
   });
 });
