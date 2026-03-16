@@ -91,7 +91,7 @@ router.post(
 router.get('/:slug', async (req, res) => {
   try {
     const result = await db.query(
-      `SELECT id, name, slug, description, logo_url, created_at
+      `SELECT id, name, slug, description, logo_url, plan, margin, created_at
        FROM stores
        WHERE slug = $1 AND status IN ('active', 'pending')`,
       [req.params.slug]
@@ -117,7 +117,7 @@ router.get('/:slug/products', async (req, res) => {
   try {
     // Resolve store by slug
     const storeResult = await db.query(
-      `SELECT id FROM stores WHERE slug = $1 AND status IN ('active', 'pending')`,
+      `SELECT id, margin FROM stores WHERE slug = $1 AND status IN ('active', 'pending')`,
       [req.params.slug]
     );
     const store = storeResult.rows[0];
@@ -140,7 +140,22 @@ router.get('/:slug/products', async (req, res) => {
       `SELECT COUNT(*) FROM shop_products sp JOIN products p ON sp.product_id = p.id ${where}`,
       params
     );
-    const total = parseInt(countResult.rows[0].count, 10);
+    let total = parseInt(countResult.rows[0].count, 10);
+
+    // If the shop has no assigned products, auto-assign up to 20 from the central catalogue
+    // using a single bulk INSERT…SELECT to avoid N+1 queries.
+    if (total === 0 && !search && !category) {
+      await db.query(
+        `INSERT INTO shop_products (id, store_id, product_id, active, margin_override, sort_order, created_at)
+         SELECT gen_random_uuid(), $1, p.id, true, $2, 0, NOW()
+         FROM products p
+         WHERE p.is_central = true AND p.stock > 0 AND p.status = 'active'
+         ORDER BY p.created_at DESC
+         LIMIT 20
+         ON CONFLICT (store_id, product_id) DO NOTHING`,
+        [store.id, store.margin]
+      );
+    }
 
     const result = await db.query(
       `SELECT sp.id, sp.store_id, sp.product_id, sp.active, sp.sort_order, sp.created_at,
@@ -156,6 +171,11 @@ router.get('/:slug/products', async (req, res) => {
        LIMIT $${idx} OFFSET $${idx + 1}`,
       [...params, limit, offset]
     );
+
+    // After auto-assign, use the number of returned rows as the total (all fit on first page)
+    if (total === 0) {
+      total = result.rows.length;
+    }
 
     return res.json({ total, page, limit, products: result.rows });
   } catch (err) {

@@ -1530,8 +1530,9 @@ describe('GET /api/shops/:slug/products', () => {
   it('returns product listing for store', async () => {
     db.query
       .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] })          // store by slug
-      .mockResolvedValueOnce({ rows: [{ count: '0' }] })            // count
-      .mockResolvedValueOnce({ rows: [] });                          // products
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] })            // count (0 → triggers auto-assign)
+      .mockResolvedValueOnce({ rows: [] })                          // bulk INSERT from central catalog
+      .mockResolvedValueOnce({ rows: [] });                         // products (after auto-assign)
 
     const res = await request(app).get('/api/shops/moj-sklep/products');
     expect(res.status).toBe(200);

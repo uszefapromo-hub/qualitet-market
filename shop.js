@@ -476,13 +476,14 @@
       fetch(`${apiBase}/shops/${encodeURIComponent(slug)}`).then(r => r.ok ? r.json() : null).catch(() => null),
       fetch(`${apiBase}/shops/${encodeURIComponent(slug)}/products`).then(r => r.ok ? r.json() : null).catch(() => null)
     ]).then(([shopData, productsData]) => {
-      if(!shopData || !shopData.shop){
+      // API returns the store object directly (not wrapped in {shop: ...})
+      if(!shopData || !shopData.id){
         // API returned no shop – show the empty state so user knows
         if(content){ content.hidden = true; }
         if(emptyState){ emptyState.hidden = false; }
         return;
       }
-      const s = shopData.shop;
+      const s = shopData;
       if(content){ content.hidden = false; }
       if(emptyState){ emptyState.hidden = true; }
 
@@ -499,10 +500,10 @@
       if(planEl){ planEl.textContent = s.plan ? `Plan: ${formatPlan(s.plan)}` : ''; }
 
       const emailEl = shop.querySelector('[data-store-email]');
-      if(emailEl){ emailEl.textContent = s.email || 'Brak danych'; }
+      if(emailEl){ emailEl.textContent = s.email || ''; }
 
       const phoneEl = shop.querySelector('[data-store-phone]');
-      if(phoneEl){ phoneEl.textContent = s.phone || 'Brak danych'; }
+      if(phoneEl){ phoneEl.textContent = s.phone || ''; }
 
       const deliveryEl = shop.querySelector('[data-store-delivery]');
       if(deliveryEl){ deliveryEl.textContent = s.delivery || DEFAULTS.delivery; }
@@ -513,10 +514,22 @@
       document.title = `${s.name || 'Sklep'} | QualitetMarket`;
 
       const logoContainer = shop.querySelector('[data-logo-preview]');
-      renderLogo(logoContainer, s);
+      renderLogo(logoContainer, {name: s.name, logo: s.logo_url || ''});
 
-      if(productsData && productsData.products && productsData.products.length){
-        renderApiProducts(shop, productsData.products);
+      const products = productsData && productsData.products;
+      if(products && products.length){
+        renderApiProducts(shop, products);
+      } else {
+        // No shop-specific products – fall back to central catalog feed
+        fetch(`${apiBase}/feed?section=recommended&limit=20`)
+          .then(r => r.ok ? r.json() : null)
+          .catch(() => null)
+          .then(feedData => {
+            const feedProducts = feedData && feedData.products;
+            if(feedProducts && feedProducts.length){
+              renderApiProducts(shop, feedProducts);
+            }
+          });
       }
     });
   }
@@ -534,7 +547,7 @@
     products.forEach(p => {
       const card = document.createElement('div');
       card.className = 'product-card';
-      const price = p.selling_price || p.platform_price || p.supplier_price || 0;
+      const price = p.price || p.selling_price || p.platform_price || p.recommended_reseller_price || p.supplier_price || 0;
 
       const imgWrap = document.createElement('div');
       imgWrap.className = 'product-img';
@@ -581,11 +594,13 @@
       return;
     }
 
-    // Try to load from API if a slug is provided in the URL (?slug=...)
+    // When a slug is in the URL, load the shop from the API and stop here.
+    // The async loadShopFromApi will control visibility of content/emptyState.
     const urlParams = new URLSearchParams(window.location.search);
     const urlSlug = urlParams.get('slug') || urlParams.get('shop');
     if(urlSlug){
       loadShopFromApi(urlSlug, shop);
+      return;
     }
 
     const store = manager.getActiveStore();
