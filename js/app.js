@@ -3735,6 +3735,15 @@
     renderDashboardSalesLinksSummary();
   }
 
+  function guardSkrypty(){
+    if(document.body.dataset.page !== 'skrypty'){
+      return;
+    }
+    if(!isAppLoggedIn()){
+      window.location.replace('login.html');
+    }
+  }
+
   function renderDashboardSalesLinksSummary(){
     const email = localStorage.getItem(STORAGE_KEYS.email) || '';
     const links = loadSalesLinks().filter(link => link.email === email);
@@ -7280,6 +7289,7 @@
     initStoreGenerator();
     initLoginForm();
     guardDashboard();
+    guardSkrypty();
     initSuperadminLink();
     initSmsOwnerLogin();
     initSupplierApplicationForm();
