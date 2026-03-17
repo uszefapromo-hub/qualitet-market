@@ -5400,6 +5400,120 @@ describe('PUT /api/stores/:id – social media links', () => {
   });
 });
 
+// ─── POST /api/subscriptions/plan-checkout – direct plan checkout ─────────────
+
+describe('POST /api/subscriptions/plan-checkout', () => {
+  it('requires authentication', async () => {
+    const res = await request(app)
+      .post('/api/subscriptions/plan-checkout')
+      .send({ plan: 'basic' });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 422 for invalid plan', async () => {
+    const res = await request(app)
+      .post('/api/subscriptions/plan-checkout')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ plan: 'invalid_plan' });
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 400 for free plan', async () => {
+    const res = await request(app)
+      .post('/api/subscriptions/plan-checkout')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ plan: 'free' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/bezpłatny/);
+  });
+
+  it('returns 503 sandbox mode when Stripe is not configured', async () => {
+    delete process.env.STRIPE_SECRET_KEY;
+    const res = await request(app)
+      .post('/api/subscriptions/plan-checkout')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ plan: 'basic' });
+    expect(res.status).toBe(503);
+    expect(res.body).toHaveProperty('sandbox_mode', true);
+  });
+
+  it('returns 404 when user has no store', async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_mock_plan_checkout';
+    db.query.mockResolvedValueOnce({ rows: [] }); // no store found
+    const res = await request(app)
+      .post('/api/subscriptions/plan-checkout')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ plan: 'basic' });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/sklep/i);
+  });
+
+  it('creates a checkout session (one-time payment) when no STRIPE_PRICE_ID is set', async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_mock_plan_checkout';
+    delete process.env.STRIPE_PRICE_ID_BASIC;
+
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] }) // store lookup
+      .mockResolvedValueOnce({ rows: [{ stripe_customer_id: null, email: 'seller@test.pl', name: 'Seller' }] }) // user lookup
+      .mockResolvedValueOnce({ rowCount: 1 }) // UPDATE users stripe_customer_id
+      .mockResolvedValueOnce({ rowCount: 1 }) // supersede existing subscriptions
+      .mockResolvedValueOnce({ rowCount: 1 }); // INSERT pending subscription
+
+    stripeMock.customers = { create: jest.fn().mockResolvedValueOnce({ id: 'cus_plan_001' }) };
+    stripeMock.checkout.sessions.create.mockResolvedValueOnce({
+      id: 'cs_plan_test_001',
+      url: 'https://checkout.stripe.com/pay/cs_plan_test_001',
+      mode: 'payment',
+    });
+
+    const res = await request(app)
+      .post('/api/subscriptions/plan-checkout')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ plan: 'basic' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('redirect_url', 'https://checkout.stripe.com/pay/cs_plan_test_001');
+    expect(res.body).toHaveProperty('plan', 'basic');
+    expect(res.body).toHaveProperty('price_pln', 79);
+    expect(res.body).toHaveProperty('session_id', 'cs_plan_test_001');
+    expect(stripeMock.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: 'payment' })
+    );
+  });
+
+  it('creates a subscription-mode checkout when STRIPE_PRICE_ID is configured', async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_mock_plan_checkout';
+    process.env.STRIPE_PRICE_ID_PRO = 'price_pro_test_001';
+
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] }) // store lookup
+      .mockResolvedValueOnce({ rows: [{ stripe_customer_id: 'cus_existing', email: 'seller@test.pl', name: 'Seller' }] }) // user lookup (has customer)
+      .mockResolvedValueOnce({ rowCount: 1 }) // supersede existing subscriptions
+      .mockResolvedValueOnce({ rowCount: 1 }); // INSERT pending subscription
+
+    stripeMock.checkout.sessions.create.mockResolvedValueOnce({
+      id: 'cs_sub_plan_001',
+      url: 'https://checkout.stripe.com/pay/cs_sub_plan_001',
+      mode: 'subscription',
+    });
+
+    const res = await request(app)
+      .post('/api/subscriptions/plan-checkout')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ plan: 'pro' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('mode', 'subscription');
+    expect(res.body).toHaveProperty('plan', 'pro');
+    expect(res.body).toHaveProperty('price_pln', 249);
+    expect(stripeMock.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: 'subscription' })
+    );
+
+    delete process.env.STRIPE_PRICE_ID_PRO;
+  });
+});
+
 // ─── POST /api/subscriptions/:id/checkout – Stripe subscription checkout ───────
 
 describe('POST /api/subscriptions/:id/checkout', () => {
