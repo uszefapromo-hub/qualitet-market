@@ -2,6 +2,7 @@
   const STORAGE_KEYS = {
     email: 'app_user_email',
     logged: 'app_user_logged',
+    user: 'qm_user',
     usersCount: 'app_users_count',
     usersList: 'app_users_list',
     trialDays: 'app_user_trial_days',
@@ -94,8 +95,6 @@
   };
   const OWNER_EMAIL = 'uszefaqualitetpromo@gmail.com';
   const OWNER_EMAIL_NORMALIZED = OWNER_EMAIL.trim().toLowerCase();
-  const OWNER_PHONE = '+48882914429';
-  const OWNER_PHONE_NORMALIZED = OWNER_PHONE.replace(/\s+/g, '');
   const PRICE_LINKS = {
     basic: 'https://buy.stripe.com/28E4gz3qP0er3AL2P0ak000',
     pro: 'https://buy.stripe.com/aFa5kD9PdgdpgnxdtEak001',
@@ -6720,8 +6719,8 @@
     }
   }
 
-  // ── SMS Login for owner ──
-  function initSmsOwnerLogin(){
+  // ── Demo login (local development — no backend needed) ──
+  function initDemoLogin(){
     if(document.body.dataset.page !== 'login'){
       return;
     }
@@ -6742,101 +6741,19 @@
       });
     });
 
-    const phoneForm = document.querySelector('[data-sms-phone-form]');
-    const codeForm = document.querySelector('[data-sms-code-form]');
-    const stepPhone = document.querySelector('[data-sms-step="phone"]');
-    const stepCode = document.querySelector('[data-sms-step="code"]');
-    const backBtn = document.querySelector('[data-sms-back]');
-    const phoneError = document.querySelector('[data-sms-phone-error]');
-    const codeError = document.querySelector('[data-sms-code-error]');
-    const codeHint = document.querySelector('[data-sms-code-hint]');
-
-    if(!phoneForm || !codeForm){
+    const demoBtn = document.querySelector('[data-demo-login-btn]');
+    if(!demoBtn){
       return;
     }
 
-    let pendingCode = '';
-
-    function normalizePhone(p){
-      return (p || '').replace(/\s+/g, '').replace(/[^\d+]/g, '');
-    }
-
-    phoneForm.addEventListener('submit', event => {
-      event.preventDefault();
-      const phoneInput = phoneForm.querySelector('input[name="phone"]');
-      const phone = normalizePhone(phoneInput ? phoneInput.value : '');
-      const ownerNorm = normalizePhone(OWNER_PHONE_NORMALIZED);
-      if(phone !== ownerNorm){
-        if(phoneError){
-          phoneError.textContent = 'Numer telefonu nie jest powiązany z kontem właściciela.';
-          phoneError.hidden = false;
-        }
-        return;
-      }
-      if(phoneError){
-        phoneError.hidden = true;
-      }
-      // Generate a secure 6-digit demo code
-      const randomArray = new Uint32Array(1);
-      crypto.getRandomValues(randomArray);
-      pendingCode = String(100000 + (randomArray[0] % 900000));
-      if(stepPhone){
-        stepPhone.hidden = true;
-      }
-      if(stepCode){
-        stepCode.hidden = false;
-      }
-      if(codeHint){
-        codeHint.textContent = `Twój kod SMS: ${pendingCode}`;
-      }
-    });
-
-    if(backBtn){
-      backBtn.addEventListener('click', () => {
-        if(stepCode){
-          stepCode.hidden = true;
-        }
-        if(stepPhone){
-          stepPhone.hidden = false;
-        }
-        if(codeError){
-          codeError.hidden = true;
-        }
-        pendingCode = '';
-      });
-    }
-
-    codeForm.addEventListener('submit', event => {
-      event.preventDefault();
-      const codeInput = codeForm.querySelector('input[name="code"]');
-      const code = codeInput ? codeInput.value.trim() : '';
-      if(code !== pendingCode){
-        if(codeError){
-          codeError.textContent = 'Nieprawidłowy kod SMS. Sprawdź i spróbuj ponownie.';
-          codeError.hidden = false;
-        }
-        return;
-      }
-      if(codeError){
-        codeError.hidden = true;
-      }
-      // Grant superadmin access
-      localStorage.setItem(STORAGE_KEYS.email, OWNER_EMAIL);
-      localStorage.setItem(STORAGE_KEYS.role, 'superadmin');
+    demoBtn.addEventListener('click', () => {
+      localStorage.setItem(STORAGE_KEYS.user, JSON.stringify({
+        id: 'user1',
+        role: 'seller'
+      }));
       localStorage.setItem(STORAGE_KEYS.logged, 'true');
-      // Log the login
-      const logs = getStoredList(OWNER_STORAGE_KEYS.adminLogs);
-      logs.unshift({
-        id: `log_sms_${Date.now()}`,
-        time: new Date().toISOString(),
-        user: 'Superadmin',
-        role: 'superadmin',
-        action: 'Logowanie SMS',
-        object: 'owner-panel',
-        details: 'Pomyślne logowanie przez numer telefonu i kod SMS'
-      });
-      saveStoredList(OWNER_STORAGE_KEYS.adminLogs, logs);
-      window.location.href = 'owner-panel.html';
+      localStorage.setItem(STORAGE_KEYS.role, 'seller');
+      window.location.href = 'dashboard.html';
     });
   }
 
@@ -7291,7 +7208,7 @@
     guardDashboard();
     guardSkrypty();
     initSuperadminLink();
-    initSmsOwnerLogin();
+    initDemoLogin();
     initSupplierApplicationForm();
     initMotionPolish();
     initTasksModule();

@@ -50,7 +50,7 @@
       <h1>Logowanie</h1>
       <div class="auth-tabs" role="tablist">
         <button class="auth-tab-btn active" role="tab" aria-selected="true" data-auth-tab="email" aria-controls="auth-panel-email">Email</button>
-        <button class="auth-tab-btn" role="tab" aria-selected="false" data-auth-tab="sms" aria-controls="auth-panel-sms" aria-label="Panel właściciela — logowanie SMS"><span aria-hidden="true">🔐</span> Panel właściciela (SMS)</button>
+        <button class="auth-tab-btn" role="tab" aria-selected="false" data-auth-tab="demo" aria-controls="auth-panel-demo"><span aria-hidden="true">🔥</span> Demo (lokalnie)</button>
       </div>
 
       <!-- Standard email login -->
@@ -71,35 +71,19 @@
         </form>
       </div>
 
-      <!-- SMS login for owner/superadmin -->
-      <div id="auth-panel-sms" class="auth-tab-panel" role="tabpanel" hidden>
-        <p class="hint" style="margin-bottom:16px">Logowanie tylko dla właściciela platformy. Podaj numer telefonu, a wyślemy kod SMS.</p>
-        <div class="sms-step" data-sms-step="phone">
-          <form class="form-card" data-sms-phone-form>
-            <label>
-              Numer telefonu właściciela
-              <input type="tel" name="phone" placeholder="+48 XXX XXX XXX" autocomplete="tel" required>
-            </label>
-            <p class="sms-demo-hint">Tryb demo: kod zostanie wyświetlony na ekranie po kliknięciu "Wyślij kod".</p>
-            <div class="cta-row">
-              <button class="btn btn-primary" type="submit">Wyślij kod SMS</button>
-            </div>
-            <p class="hint" data-sms-phone-error hidden style="color:#ff7272"></p>
-          </form>
-        </div>
-        <div class="sms-step" data-sms-step="code" hidden>
-          <form class="form-card" data-sms-code-form>
-            <label>
-              Kod SMS (6 cyfr)
-              <input type="text" name="code" placeholder="000000" maxlength="6" autocomplete="one-time-code" inputmode="numeric" required>
-            </label>
-            <p class="sms-demo-hint" data-sms-code-hint></p>
-            <div class="cta-row">
-              <button class="btn btn-primary" type="submit">Zaloguj do Panelu właściciela</button>
-              <button class="btn btn-secondary" type="button" data-sms-back>Wróć</button>
-            </div>
-            <p class="hint" data-sms-code-error hidden style="color:#ff7272"></p>
-          </form>
+      <!-- Demo login (local development — no backend needed) -->
+      <div id="auth-panel-demo" class="auth-tab-panel" role="tabpanel" hidden>
+        <p class="hint" style="margin-bottom:16px">Logowanie demo — tylko do testów lokalnych. Nie wymaga backendu.</p>
+        <div class="form-card">
+          <p style="margin-bottom:12px">Zaloguj się jako sprzedawca demo (<code>role: seller</code>) i przejdź do panelu.</p>
+          <div class="cta-row">
+            <button class="btn btn-primary" type="button" data-demo-login-btn>Wejdź jako sprzedawca (demo)</button>
+          </div>
+          <p class="hint" style="margin-top:16px">
+            🔗 Platforma lokalnie:
+            <a href="sklep.html">sklep.html</a> ·
+            <a href="index.html">index.html</a>
+          </p>
         </div>
       </div>
     </section>
