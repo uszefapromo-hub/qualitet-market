@@ -889,7 +889,10 @@ body.store-shop .shop-contact h2{
 
   body.store-shop .category-grid,
   body.store-shop .product-grid-large,
-  body.store-shop .supplier-grid-large,
+  body.store-shop .supplier-grid-large{
+    grid-template-columns:repeat(2,1fr);
+  }
+
   body.store-shop .plan-cta-grid{
     grid-template-columns:1fr;
   }

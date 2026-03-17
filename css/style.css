@@ -230,8 +230,8 @@ body.auth-page .auth-layout{flex-direction:column;gap:20px}
 .hero-entry::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 10% 20%, rgba(53,217,255,.18), transparent 55%),radial-gradient(circle at 90% 10%, rgba(84,255,176,.16), transparent 45%)}
 .hero-entry .wrap{position:relative}
 .hero-copy{max-width:560px}
-.hero-main{display:grid;gap:22px;grid-area:hero-main}
-.hero-side{display:flex;flex-direction:column;gap:16px}
+.hero-main{display:grid;gap:22px;grid-area:hero-main;min-width:0}
+.hero-side{display:flex;flex-direction:column;gap:16px;min-width:0}
 .hero-side-left{grid-area:hero-left}
 .hero-side-right{grid-area:hero-right}
 .hero-side-card{
