@@ -5453,6 +5453,39 @@ describe('POST /api/subscriptions/:id/checkout', () => {
 
     delete process.env.STRIPE_PRICE_ID_BASIC;
   });
+
+  it('uses plan override from request body instead of subscription plan', async () => {
+    process.env.STRIPE_SECRET_KEY = 'sk_test_mock_checkout_override';
+    process.env.STRIPE_PRICE_ID_PRO = 'price_pro_test_001';
+
+    db.query
+      .mockResolvedValueOnce({
+        rows: [{ id: SUB_ID, shop_id: STORE_ID, owner_id: SELLER_ID, plan: 'basic', status: 'active' }],
+      }) // subscription lookup (current plan: basic)
+      .mockResolvedValueOnce({
+        rows: [{ stripe_customer_id: 'cus_existing_001', email: 'seller@test.pl', name: 'Seller' }],
+      }); // user lookup
+
+    stripeMock.checkout.sessions.create.mockResolvedValueOnce({
+      id: 'cs_pro_override_001',
+      url: 'https://checkout.stripe.com/pay/cs_pro_override_001',
+      mode: 'subscription',
+    });
+
+    const res = await request(app)
+      .post(`/api/subscriptions/${SUB_ID}/checkout`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ plan: 'pro' }); // request upgrade to pro
+
+    expect(res.status).toBe(200);
+    expect(res.body.plan).toBe('pro');
+    expect(res.body.session_id).toBe('cs_pro_override_001');
+    expect(stripeMock.checkout.sessions.create).toHaveBeenCalledWith(
+      expect.objectContaining({ mode: 'subscription' })
+    );
+
+    delete process.env.STRIPE_PRICE_ID_PRO;
+  });
 });
 
 // ─── POST /api/payments/stripe/webhook – Stripe signed webhook ────────────────

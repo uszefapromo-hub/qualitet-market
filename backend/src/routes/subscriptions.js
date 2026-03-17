@@ -305,7 +305,10 @@ router.put(
 router.post(
   '/:id/checkout',
   authenticate,
-  [param('id').isUUID()],
+  [
+    param('id').isUUID(),
+    body('plan').optional().isIn(VALID_PLANS),
+  ],
   validate,
   async (req, res) => {
     try {
@@ -324,7 +327,9 @@ router.post(
         return res.status(403).json({ error: 'Brak uprawnień' });
       }
 
-      const plan = sub.plan;
+      // Allow callers to request a different target plan (plan change / upgrade).
+      // Falls back to the subscription's current plan when not provided.
+      const plan = (req.body && req.body.plan) || sub.plan;
       const config = PLAN_CONFIG[plan];
       if (!config) return res.status(400).json({ error: 'Nieznany plan subskrypcji' });
 

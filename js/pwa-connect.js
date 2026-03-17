@@ -489,6 +489,7 @@
       });
 
     loadDashboardOrders();
+    initPasswordChangeForm(api);
   }
 
   function updateDashboardUser(user) {
@@ -509,6 +510,50 @@
         el.textContent = daysLeft;
       });
     }
+  }
+
+  function initPasswordChangeForm(api) {
+    var form = document.querySelector('[data-password-form]');
+    if (!form) return;
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      var curInput = form.querySelector('[data-profile-cur-password]');
+      var newInput = form.querySelector('[data-profile-new-password]');
+      var msgEl = document.querySelector('[data-password-msg]');
+      var btn = form.querySelector('[data-password-save]');
+
+      var currentPassword = curInput ? curInput.value : '';
+      var newPassword = newInput ? newInput.value : '';
+
+      function showMsg(text, success) {
+        if (!msgEl) return;
+        msgEl.textContent = text;
+        msgEl.style.color = success ? '' : 'var(--danger, #f87171)';
+        msgEl.hidden = false;
+      }
+
+      if (!currentPassword) { showMsg('Podaj aktualne has\u0142o.', false); return; }
+      if (!newPassword || newPassword.length < 8) { showMsg('Nowe has\u0142o musi mie\u0107 co najmniej 8 znak\u00f3w.', false); return; }
+
+      var origText = btn ? btn.textContent : '';
+      setButtonLoading(btn, 'Zapisywanie\u2026');
+      if (msgEl) msgEl.hidden = true;
+
+      api.Auth.changePassword(currentPassword, newPassword)
+        .then(function () {
+          restoreButton(btn, origText);
+          if (curInput) curInput.value = '';
+          if (newInput) newInput.value = '';
+          showMsg('Has\u0142o zosta\u0142o zmienione.', true);
+        })
+        .catch(function (err) {
+          restoreButton(btn, origText);
+          var msg = (err && err.body && err.body.error) || 'B\u0142\u0105d zmiany has\u0142a. Sprawd\u017a aktualne has\u0142o.';
+          showMsg(msg, false);
+        });
+    });
   }
 
   function loadDashboardOrders() {
