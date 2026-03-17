@@ -90,6 +90,13 @@
     .nav-dropdown-menu a:hover{background:rgba(255,255,255,.08);color:#fff}
     /* ── Topbar: minimal login button ── */
     .topbar-login-btn{font-size:13px;padding:8px 16px;margin-left:auto}
+    /* ── Topbar: plan purchase CTAs ── */
+    .topbar-plan-btn{font-size:12px;padding:6px 14px;min-height:36px;border-radius:12px}
+    .topbar-plan-btn-pro{background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.35);color:#fbbf24}
+    .topbar-plan-btn-pro:hover{background:rgba(251,191,36,.22);border-color:rgba(251,191,36,.6)}
+    .topbar-plan-btn-premium{background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(158,119,255,.18));border:1px solid rgba(124,58,237,.45);color:#c4b5fd}
+    .topbar-plan-btn-premium:hover{background:linear-gradient(135deg,rgba(124,58,237,.4),rgba(158,119,255,.3));border-color:rgba(124,58,237,.7)}
+    @media(max-width:767px){.topbar-plan-btn{display:none}}
     /* ── 4 Hero Feature Blocks ── */
     .hero-features-4{padding:0 0 48px}
     .hero-features-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
@@ -190,7 +197,9 @@
           <span>Marketplace B2B/B2C</span>
         </div>
       </a>
-      <a href="login.html" class="btn btn-secondary topbar-login-btn">Zaloguj się</a>
+      <a href="login.html" class="btn btn-secondary topbar-login-btn" data-topbar-login-btn>Zaloguj się</a>
+      <a class="btn topbar-plan-btn topbar-plan-btn-pro" href="cennik.html#basic" data-topbar-plan-cta hidden>⭐ Kup PRO</a>
+      <a class="btn topbar-plan-btn topbar-plan-btn-premium" href="cennik.html#pro" data-topbar-plan-cta hidden>💎 Kup PREMIUM</a>
       <a class="btn btn-primary topbar-cta" href="generator-sklepu.html">🚀 Otwórz Sklep</a>
       <a class="btn btn-primary topbar-cta" href="owner-panel.html" data-superadmin-link hidden style="background:rgba(255,79,216,.2);border-color:rgba(255,79,216,.5);color:#ffd6f3">🔐 Panel właściciela</a>
       <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>

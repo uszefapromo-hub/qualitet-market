@@ -6729,6 +6729,19 @@
     }
   }
 
+  // ── Topbar plan CTAs: show Kup PRO / Kup PREMIUM only for unauthenticated visitors ──
+  function initTopbarPlanCtaBtns(){
+    const planBtns = document.querySelectorAll('[data-topbar-plan-cta]');
+    if(!planBtns.length){
+      return;
+    }
+    if(!isAppLoggedIn()){
+      planBtns.forEach(btn => {
+        btn.hidden = false;
+      });
+    }
+  }
+
   // ── Demo login (local development — no backend needed) ──
   function initDemoLogin(){
     if(document.body.dataset.page !== 'login'){
@@ -7218,6 +7231,7 @@
     guardDashboard();
     guardSkrypty();
     initSuperadminLink();
+    initTopbarPlanCtaBtns();
     initDemoLogin();
     initSupplierApplicationForm();
     initMotionPolish();
