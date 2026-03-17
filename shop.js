@@ -519,77 +519,141 @@
       const products = productsData && productsData.products;
       if(products && products.length){
         renderApiProducts(shop, products);
+        // Still load new-section and sidebar from feed
+        const newGrid = shop.querySelector('[data-feed-new-grid]');
+        const newEmpty = shop.querySelector('[data-feed-new-empty]');
+        if(newGrid){ loadFeedSection(newGrid, newEmpty, 'new', 8); }
+        const topList = shop.querySelector('[data-feed-top-list]');
+        if(topList){
+          fetch(`${apiBase}/feed?section=recommended&limit=5`)
+            .then(r => r.ok ? r.json() : null).catch(() => null)
+            .then(d => { if(d && d.products && d.products.length){ renderFeedTopList(topList, d.products); } });
+        }
       } else {
-        // No shop-specific products – fall back to central catalog feed
-        fetch(`${apiBase}/feed?section=recommended&limit=20`)
-          .then(r => r.ok ? r.json() : null)
-          .catch(() => null)
-          .then(feedData => {
-            const feedProducts = feedData && feedData.products;
-            if(feedProducts && feedProducts.length){
-              renderApiProducts(shop, feedProducts);
-            }
-          });
+        // No shop-specific products – load all grids from central catalog feed
+        loadStoreFeedProducts(shop);
       }
     });
+  }
+
+  function extractProductPrice(p){
+    return p.price || p.selling_price || p.platform_price || p.recommended_reseller_price || p.supplier_price || 0;
+  }
+
+  function clearElement(el){
+    while(el.firstChild){ el.removeChild(el.firstChild); }
+  }
+
+  function buildProductTile(p){
+    const price = extractProductPrice(p);
+
+    const tile = document.createElement('article');
+    tile.className = 'product-api-tile';
+
+    if(p.image_url){
+      const img = document.createElement('img');
+      img.className = 'product-api-img';
+      img.src = p.image_url;
+      img.alt = p.name || '';
+      img.loading = 'lazy';
+      tile.appendChild(img);
+    } else {
+      const placeholder = document.createElement('div');
+      placeholder.className = 'product-api-img-placeholder';
+      placeholder.setAttribute('aria-hidden', 'true');
+      placeholder.textContent = '📦';
+      tile.appendChild(placeholder);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'product-api-body';
+
+    const nameEl = document.createElement('h3');
+    nameEl.className = 'product-api-name';
+    nameEl.textContent = p.name || 'Produkt';
+
+    const priceEl = document.createElement('div');
+    priceEl.className = 'product-api-price';
+    priceEl.textContent = `${Number(price).toFixed(2)} zł`;
+
+    const btn = document.createElement('button');
+    btn.className = 'product-api-btn';
+    btn.type = 'button';
+    btn.textContent = 'Dodaj do koszyka';
+    btn.addEventListener('click', () => {
+      if(window.QMCart){ window.QMCart.addItem(p.id, p.name || 'Produkt', price); }
+    });
+
+    body.appendChild(nameEl);
+    body.appendChild(priceEl);
+    body.appendChild(btn);
+    tile.appendChild(body);
+    return tile;
+  }
+
+  function renderProductsIntoGrid(gridEl, emptyEl, products){
+    if(!gridEl){ return; }
+    clearElement(gridEl);
+    if(!products || !products.length){
+      if(emptyEl){ emptyEl.hidden = false; }
+      return;
+    }
+    if(emptyEl){ emptyEl.hidden = true; }
+    products.forEach(p => gridEl.appendChild(buildProductTile(p)));
   }
 
   function renderApiProducts(shop, products){
     const grid = shop.querySelector('[data-store-products-grid]');
     const emptyMsg = shop.querySelector('[data-store-products-empty]');
-    if(!grid){ return; }
-    grid.innerHTML = '';
-    if(!products.length){
-      if(emptyMsg){ emptyMsg.hidden = false; }
-      return;
-    }
-    if(emptyMsg){ emptyMsg.hidden = true; }
-    products.forEach(p => {
-      const price = p.price || p.selling_price || p.platform_price || p.recommended_reseller_price || p.supplier_price || 0;
+    renderProductsIntoGrid(grid, emptyMsg, products);
+  }
 
-      const tile = document.createElement('article');
-      tile.className = 'product-api-tile';
-
+  function renderFeedTopList(listEl, products){
+    if(!listEl){ return; }
+    clearElement(listEl);
+    const slice = products.slice(0, 5);
+    slice.forEach(p => {
+      const price = extractProductPrice(p);
+      const item = document.createElement('div');
+      item.className = 'hero-product-item';
+      const info = document.createElement('div');
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = p.name || 'Produkt';
+      const priceStrong = document.createElement('strong');
+      priceStrong.textContent = `${Number(price).toFixed(2)} zł`;
       if(p.image_url){
         const img = document.createElement('img');
-        img.className = 'product-api-img';
         img.src = p.image_url;
         img.alt = p.name || '';
+        img.width = 32;
+        img.height = 32;
         img.loading = 'lazy';
-        tile.appendChild(img);
+        img.className = 'hero-product-thumb';
+        item.appendChild(img);
       } else {
-        const placeholder = document.createElement('div');
-        placeholder.className = 'product-api-img-placeholder';
-        placeholder.setAttribute('aria-hidden', 'true');
-        placeholder.textContent = '📦';
-        tile.appendChild(placeholder);
+        const icon = document.createElement('div');
+        icon.className = 'product-api-img-placeholder hero-product-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = '📦';
+        item.appendChild(icon);
       }
-
-      const body = document.createElement('div');
-      body.className = 'product-api-body';
-
-      const nameEl = document.createElement('h3');
-      nameEl.className = 'product-api-name';
-      nameEl.textContent = p.name || 'Produkt';
-
-      const priceEl = document.createElement('div');
-      priceEl.className = 'product-api-price';
-      priceEl.textContent = `${Number(price).toFixed(2)} zł`;
-
-      const btn = document.createElement('button');
-      btn.className = 'product-api-btn';
-      btn.type = 'button';
-      btn.textContent = 'Dodaj do koszyka';
-      btn.addEventListener('click', () => {
-        if(window.QMCart){ window.QMCart.addItem(p.id, p.name || 'Produkt', price); }
-      });
-
-      body.appendChild(nameEl);
-      body.appendChild(priceEl);
-      body.appendChild(btn);
-      tile.appendChild(body);
-      grid.appendChild(tile);
+      info.appendChild(nameSpan);
+      info.appendChild(priceStrong);
+      item.appendChild(info);
+      listEl.appendChild(item);
     });
+  }
+
+  function loadFeedSection(gridEl, emptyEl, section, limit){
+    const apiBase = window.QM_API_BASE || 'https://api.uszefaqualitet.pl/api';
+    const safeLimit = Math.max(1, Math.min(100, parseInt(limit) || 20));
+    fetch(`${apiBase}/feed?section=${encodeURIComponent(section)}&limit=${safeLimit}`)
+      .then(r => r.ok ? r.json() : null)
+      .catch(() => null)
+      .then(data => {
+        const products = data && data.products;
+        renderProductsIntoGrid(gridEl, emptyEl, products || []);
+      });
   }
 
   function initStoreShop(){
@@ -621,54 +685,85 @@
       if(emptyState){
         emptyState.hidden = false;
       }
-      return;
-    }
-
-    if(content){
-      content.hidden = false;
-    }
-    if(emptyState){
-      emptyState.hidden = true;
-    }
-
-    document.documentElement.style.setProperty('--store-primary', resolvedStore.primaryColor || DEFAULTS.primaryColor);
-    document.documentElement.style.setProperty('--store-accent', resolvedStore.accentColor || DEFAULTS.accentColor);
-    document.documentElement.style.setProperty('--store-background', resolvedStore.backgroundColor || DEFAULTS.backgroundColor);
-
-    const displayMargin = resolveStoreMargin(resolvedStore, storeSettings);
-    const map = {
-      'store-name': resolvedStore.name,
-      'store-description': resolvedStore.description || DEFAULTS.description,
-      'store-plan': `Plan: ${formatPlan(resolvedStore.plan)}`,
-      'store-margin': `Marża: ${displayMargin}%`,
-      'store-theme': '',
-      'store-slug': `@${resolvedStore.slug}`
-    };
-
-    Object.entries(map).forEach(([key, value]) => {
-      const target = shop.querySelector(`[data-${key}]`);
-      if(target){
-        target.textContent = value;
+    } else {
+      if(content){
+        content.hidden = false;
       }
-    });
-
-    const contactMap = {
-      'store-email': resolvedStore.email,
-      'store-phone': resolvedStore.phone,
-      'store-delivery': resolvedStore.delivery || DEFAULTS.delivery
-    };
-
-    Object.entries(contactMap).forEach(([key, value]) => {
-      const target = shop.querySelector(`[data-${key}]`);
-      if(!target){
-        return;
+      if(emptyState){
+        emptyState.hidden = true;
       }
-      const fallback = key === 'store-delivery' ? DEFAULTS.delivery : 'Brak danych';
-      applyText(target, value, fallback);
-    });
 
-    const logoContainer = shop.querySelector('[data-logo-preview]');
-    renderLogo(logoContainer, resolvedStore);
+      document.documentElement.style.setProperty('--store-primary', resolvedStore.primaryColor || DEFAULTS.primaryColor);
+      document.documentElement.style.setProperty('--store-accent', resolvedStore.accentColor || DEFAULTS.accentColor);
+      document.documentElement.style.setProperty('--store-background', resolvedStore.backgroundColor || DEFAULTS.backgroundColor);
+
+      const displayMargin = resolveStoreMargin(resolvedStore, storeSettings);
+      const map = {
+        'store-name': resolvedStore.name,
+        'store-description': resolvedStore.description || DEFAULTS.description,
+        'store-plan': `Plan: ${formatPlan(resolvedStore.plan)}`,
+        'store-margin': `Marża: ${displayMargin}%`,
+        'store-theme': '',
+        'store-slug': `@${resolvedStore.slug}`
+      };
+
+      Object.entries(map).forEach(([key, value]) => {
+        const target = shop.querySelector(`[data-${key}]`);
+        if(target){
+          target.textContent = value;
+        }
+      });
+
+      const contactMap = {
+        'store-email': resolvedStore.email,
+        'store-phone': resolvedStore.phone,
+        'store-delivery': resolvedStore.delivery || DEFAULTS.delivery
+      };
+
+      Object.entries(contactMap).forEach(([key, value]) => {
+        const target = shop.querySelector(`[data-${key}]`);
+        if(!target){
+          return;
+        }
+        const fallback = key === 'store-delivery' ? DEFAULTS.delivery : 'Brak danych';
+        applyText(target, value, fallback);
+      });
+
+      const logoContainer = shop.querySelector('[data-logo-preview]');
+      renderLogo(logoContainer, resolvedStore);
+    }
+
+    // Always load real products from catalog feed into all product grids
+    loadStoreFeedProducts(shop);
+  }
+
+  function loadStoreFeedProducts(shop){
+    const apiBase = window.QM_API_BASE || 'https://api.uszefaqualitet.pl/api';
+
+    // Recommended products → #polecane grid
+    const recGrid = shop.querySelector('[data-store-products-grid]');
+    const recEmpty = shop.querySelector('[data-store-products-empty]');
+    if(recGrid){
+      fetch(`${apiBase}/feed?section=recommended&limit=20`)
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null)
+        .then(data => {
+          const products = data && data.products;
+          renderProductsIntoGrid(recGrid, recEmpty, products || []);
+          // Populate sidebar top list from the same data
+          const topList = shop.querySelector('[data-feed-top-list]');
+          if(topList && products && products.length){
+            renderFeedTopList(topList, products);
+          }
+        });
+    }
+
+    // New products → #nowosci grid
+    const newGrid = shop.querySelector('[data-feed-new-grid]');
+    const newEmpty = shop.querySelector('[data-feed-new-empty]');
+    if(newGrid){
+      loadFeedSection(newGrid, newEmpty, 'new', 8);
+    }
   }
 
   document.addEventListener('DOMContentLoaded', () => {
