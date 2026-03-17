@@ -3907,6 +3907,17 @@ describe('PLAN_CONFIG export', () => {
     expect(PLAN_CONFIG.artist_basic.price_pln).toBe(0);
     expect(PLAN_CONFIG.artist_pro.price_pln).toBe(49);
   });
+
+  it('includes premium plan as a paid alias for elite (499 PLN, no product limit, 1% commission)', () => {
+    const { PLAN_CONFIG, VALID_PLANS, PLAN_DISPLAY_NAMES } = require('../src/routes/subscriptions');
+    expect(PLAN_CONFIG.premium).toBeDefined();
+    expect(PLAN_CONFIG.premium.price_pln).toBe(499);
+    expect(PLAN_CONFIG.premium.product_limit).toBeNull();
+    expect(PLAN_CONFIG.premium.commission_rate).toBe(0.01);
+    expect(PLAN_CONFIG.premium.duration_days).toBe(30);
+    expect(VALID_PLANS).toContain('premium');
+    expect(PLAN_DISPLAY_NAMES.premium).toBeDefined();
+  });
 });
 
 // ─── GET /api/admin/audit-logs ────────────────────────────────────────────────
@@ -5329,6 +5340,17 @@ describe('GET /api/subscriptions/plans', () => {
     expect(basic.duration_days).toBe(30);
     expect(basic.display_name).toBe('Seller PRO');
   });
+
+  it('includes premium plan with correct price and display name', async () => {
+    const res = await request(app).get('/api/subscriptions/plans');
+    expect(res.status).toBe(200);
+    const premium = res.body.plans.find((p) => p.name === 'premium');
+    expect(premium).toBeDefined();
+    expect(premium.price_pln).toBe(499);
+    expect(premium.duration_days).toBe(30);
+    expect(premium.display_name).toBe('Elite Premium');
+    expect(premium.product_limit).toBeNull();
+  });
 });
 
 // ─── PUT /api/stores/:id – social media fields ─────────────────────────────────
@@ -5615,6 +5637,27 @@ describe('Stripe webhook handler functions – unit tests', () => {
       expect(db.query.mock.calls[1][1]).toContain(STRIPE_SUB);
     });
 
+    it('also updates users.plan column when plan is present in metadata', async () => {
+      db.query
+        .mockResolvedValueOnce({ rowCount: 1 }) // UPDATE subscriptions
+        .mockResolvedValueOnce({ rowCount: 1 }); // UPDATE users
+
+      await handleCheckoutSubscriptionCompleted({
+        customer: STRIPE_CUS,
+        subscription: STRIPE_SUB,
+        client_reference_id: USER_ID_STR,
+        metadata: { subscription_id: DB_SUB_ID, plan: 'premium' },
+      });
+
+      const usersCall = db.query.mock.calls.find(([sql]) => /UPDATE users/i.test(sql));
+      expect(usersCall).toBeDefined();
+      const [sql, params] = usersCall;
+      // Both subscription_plan and plan columns must be updated
+      expect(sql).toMatch(/subscription_plan/);
+      expect(sql).toMatch(/\bplan\b/);
+      expect(params).toContain('premium');
+    });
+
     it('warns when client_reference_id does not match any user', async () => {
       const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -5656,6 +5699,27 @@ describe('Stripe webhook handler functions – unit tests', () => {
       expect(params[1]).toBe('active');
       expect(params[2]).toBe('pro');
       expect(params[4]).toBe(STRIPE_CUS);
+    });
+
+    it('also updates users.plan column when plan is present in metadata', async () => {
+      db.query.mockResolvedValueOnce({ rowCount: 1 });
+
+      const now = Math.floor(Date.now() / 1000) + 3600;
+      await handleSubscriptionUpserted({
+        id: STRIPE_SUB,
+        status: 'active',
+        customer: STRIPE_CUS,
+        current_period_end: now,
+        metadata: { plan: 'premium' },
+      });
+
+      expect(db.query).toHaveBeenCalledTimes(1);
+      const [sql, params] = db.query.mock.calls[0];
+      expect(sql).toMatch(/UPDATE users/);
+      // Both subscription_plan and plan columns must be updated
+      expect(sql).toMatch(/subscription_plan/);
+      expect(sql).toMatch(/\bplan\b/);
+      expect(params).toContain('premium');
     });
 
     it('handles null current_period_end gracefully', async () => {

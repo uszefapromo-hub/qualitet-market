@@ -12,7 +12,7 @@ const router = express.Router();
 
 const VALID_PLANS = [
   'free', 'trial',                          // seller free (trial is legacy alias)
-  'basic', 'pro', 'elite',                  // seller paid plans
+  'basic', 'pro', 'elite', 'premium',       // seller paid plans (premium is alias for elite)
   'supplier_basic', 'supplier_pro',         // supplier plans
   'brand',                                  // company / brand plan
   'artist_basic', 'artist_pro',             // artist plans
@@ -39,6 +39,7 @@ const PLAN_CONFIG = {
   basic:          { product_limit: null, maxProducts: null, commission_rate: 0.03, platformMarginPct: 3,  duration_days: 30,   durationDays: 30,   price_pln: 79 },   // Seller PRO
   pro:            { product_limit: null, maxProducts: null, commission_rate: 0.02, platformMarginPct: 2,  duration_days: 30,   durationDays: 30,   price_pln: 249 },  // Seller Business
   elite:          { product_limit: null, maxProducts: null, commission_rate: 0.01, platformMarginPct: 1,  duration_days: 30,   durationDays: 30,   price_pln: 499 },  // Elite
+  premium:        { product_limit: null, maxProducts: null, commission_rate: 0.01, platformMarginPct: 1,  duration_days: 30,   durationDays: 30,   price_pln: 499 },  // Premium (alias for elite)
 
   // ── Supplier plans ───────────────────────────────────────────────────────────
   supplier_basic: { product_limit: null, maxProducts: null, commission_rate: 0.00, platformMarginPct: 0,  duration_days: 30,   durationDays: 30,   price_pln: 149 },  // Supplier Basic
@@ -59,6 +60,7 @@ const PLAN_DISPLAY_NAMES = {
   basic:          'Seller PRO',
   pro:            'Seller Business',
   elite:          'Elite',
+  premium:        'Elite Premium',      // alias for elite
   supplier_basic: 'Supplier Basic',
   supplier_pro:   'Supplier Pro',
   brand:          'Brand Plan',

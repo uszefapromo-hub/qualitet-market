@@ -556,6 +556,7 @@ async function handleCheckoutSubscriptionCompleted(session) {
               stripe_subscription_id = $2,
               subscription_status    = 'active',
               subscription_plan      = COALESCE($3, subscription_plan),
+              plan                   = COALESCE($3, plan),
               updated_at             = NOW()
         WHERE id = $4`,
       [customerId, stripeSubId, plan || null, userId]
@@ -581,6 +582,7 @@ async function handleSubscriptionUpserted(sub) {
         SET stripe_subscription_id = $1,
             subscription_status    = $2,
             subscription_plan      = COALESCE($3, subscription_plan),
+            plan                   = COALESCE($3, plan),
             current_period_end     = $4,
             updated_at             = NOW()
       WHERE stripe_customer_id = $5`,
