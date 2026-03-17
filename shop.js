@@ -545,46 +545,50 @@
     }
     if(emptyMsg){ emptyMsg.hidden = true; }
     products.forEach(p => {
-      const card = document.createElement('div');
-      card.className = 'product-card';
       const price = p.price || p.selling_price || p.platform_price || p.recommended_reseller_price || p.supplier_price || 0;
 
-      const imgWrap = document.createElement('div');
-      imgWrap.className = 'product-img';
+      const tile = document.createElement('article');
+      tile.className = 'product-api-tile';
+
       if(p.image_url){
         const img = document.createElement('img');
+        img.className = 'product-api-img';
         img.src = p.image_url;
         img.alt = p.name || '';
         img.loading = 'lazy';
-        imgWrap.appendChild(img);
+        tile.appendChild(img);
       } else {
-        imgWrap.textContent = '📦';
+        const placeholder = document.createElement('div');
+        placeholder.className = 'product-api-img-placeholder';
+        placeholder.setAttribute('aria-hidden', 'true');
+        placeholder.textContent = '📦';
+        tile.appendChild(placeholder);
       }
 
-      const info = document.createElement('div');
-      info.className = 'product-info';
+      const body = document.createElement('div');
+      body.className = 'product-api-body';
 
       const nameEl = document.createElement('h3');
-      nameEl.className = 'product-name';
+      nameEl.className = 'product-api-name';
       nameEl.textContent = p.name || 'Produkt';
 
       const priceEl = document.createElement('div');
-      priceEl.className = 'product-price';
+      priceEl.className = 'product-api-price';
       priceEl.textContent = `${Number(price).toFixed(2)} zł`;
 
       const btn = document.createElement('button');
-      btn.className = 'btn btn-primary btn-sm';
+      btn.className = 'product-api-btn';
+      btn.type = 'button';
       btn.textContent = 'Dodaj do koszyka';
       btn.addEventListener('click', () => {
         if(window.QMCart){ window.QMCart.addItem(p.id, p.name || 'Produkt', price); }
       });
 
-      info.appendChild(nameEl);
-      info.appendChild(priceEl);
-      info.appendChild(btn);
-      card.appendChild(imgWrap);
-      card.appendChild(info);
-      grid.appendChild(card);
+      body.appendChild(nameEl);
+      body.appendChild(priceEl);
+      body.appendChild(btn);
+      tile.appendChild(body);
+      grid.appendChild(tile);
     });
   }
 
