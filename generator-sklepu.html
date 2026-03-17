@@ -135,6 +135,29 @@
       </div>
     </section>
 
+    <!-- Auto-store operator module -->
+    <section class="panel-card" style="max-width:860px;margin:0 auto 24px" id="qm-auto-store-section">
+      <div class="section-head">
+        <span class="eyebrow">Automatyczny sklep</span>
+        <h2>🤖 Auto-sklep z hurtowni</h2>
+        <p class="hint">Opisz swój sklep, a system automatycznie pobierze najnowsze produkty z hurtowni i ustawi ceny z marżą. Synchronizacja odbywa się co 30 sekund.</p>
+      </div>
+      <div style="margin-bottom:12px">
+        <label class="form-field" style="display:block">
+          Opis sklepu
+          <textarea id="qm-store-description" class="qm-auto-store-desc" placeholder="np. Sklep z elektroniką dla domu i biura, najnowsze produkty w atrakcyjnych cenach"></textarea>
+        </label>
+      </div>
+      <div class="cta-row" style="gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" type="button" id="qm-open-store-btn" style="background:linear-gradient(135deg,#7c3aed,#0ea5e9)">🚀 Otwórz sklep i importuj produkty</button>
+        <button class="btn btn-secondary" type="button" id="qm-sync-btn">🔄 Synchronizuj nowości</button>
+      </div>
+      <div id="qm-store-status" style="margin-top:14px;padding:12px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;font-size:14px;line-height:1.7">
+        Sklep jeszcze nie został utworzony.
+      </div>
+      <div id="qm-products-grid" class="products-grid" style="margin-top:20px"></div>
+    </section>
+
     <section class="app-cta-section">
       <div class="app-cta-box app-cta-grid">
         <div class="app-cta-content">
@@ -346,6 +369,7 @@
   <script src="js/app.js" defer></script>
   <script src="stores.js" defer></script>
   <script src="shop.js" defer></script>
+  <script src="js/auto-store.js" defer></script>
   <script>
   (function () {
     let lastGenerated = null;
