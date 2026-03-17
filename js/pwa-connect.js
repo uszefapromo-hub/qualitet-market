@@ -262,6 +262,30 @@
   var MANUAL_PAYMENT_METHODS = ['transfer', 'blik'];
 
   /**
+   * Safe redirect wrapper – delegates to window.QMSafeRedirect (security-guard.js).
+   * Falls back to an inline implementation when the guard is not yet loaded.
+   */
+  function safeRedirect(url) {
+    if (!url) return;
+    if (typeof window.QMSafeRedirect === 'function') {
+      window.QMSafeRedirect(url);
+    } else {
+      // Minimal inline fallback: block obvious external hosts
+      try {
+        var parsed = new URL(url, window.location.origin);
+        if (parsed.origin === window.location.origin) { window.location.href = url; return; }
+        var safe = ['checkout.stripe.com', 'hooks.stripe.com', 'przelewy24.pl', 'secure.przelewy24.pl'];
+        for (var i = 0; i < safe.length; i++) {
+          if (parsed.hostname === safe[i] || parsed.hostname.endsWith('.' + safe[i])) {
+            window.location.href = url; return;
+          }
+        }
+        if (typeof console !== 'undefined') console.warn('[QualitetMarket] Blocked external redirect to:', url);
+      } catch (e) { /* invalid URL – ignore */ }
+    }
+  }
+
+  /**
    * If the user is logged in, intercept the checkout form during capture phase
    * and submit the order via the API.  The existing inline handler (localStorage)
    * is bypassed only when we can actually reach the API.
@@ -341,7 +365,7 @@
 
               // For gateway redirects (Stripe, P24, card) – navigate away
               if (payData && payData.redirect_url && MANUAL_PAYMENT_METHODS.indexOf(paymentMethod) === -1) {
-                window.location.href = payData.redirect_url;
+                safeRedirect(payData.redirect_url);
                 return;
               }
 
