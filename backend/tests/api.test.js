@@ -1323,11 +1323,9 @@ describe('POST /api/orders', () => {
       .mockResolvedValueOnce({ rows: [{ id: STORE_ID, owner_id: SELLER_ID, margin: 15 }] })
       .mockResolvedValueOnce({ rows: [{ value: '0.08' }] }) // platform_settings commission_rate
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', selling_price: 141.45, stock: 10, margin: 15 }] })
-      .mockResolvedValueOnce({ rows: [] }) // INSERT INTO orders
-      .mockResolvedValueOnce({ rows: [] }) // INSERT INTO order_items
-      .mockResolvedValueOnce({ rows: [] }) // UPDATE products stock
-      .mockResolvedValueOnce({ rows: [{ id: NEW_ORDER_ID, store_id: STORE_ID, order_total: 141.45, total: 141.45, platform_commission: 11.32, seller_revenue: 130.13, status: 'created' }] })
-      .mockResolvedValueOnce({ rows: [] }); // order_items
+      .mockResolvedValueOnce({ rows: [{ id: NEW_ORDER_ID, store_id: STORE_ID, order_total: 141.45, total: 141.45, platform_commission: 11.32, seller_revenue: 130.13, status: 'created' }] }) // INSERT INTO orders RETURNING *
+      .mockResolvedValueOnce({ rows: [] }) // batch INSERT INTO order_items RETURNING *
+      .mockResolvedValueOnce({ rows: [] }); // batch UPDATE products stock
 
     const res = await request(app)
       .post('/api/orders')
@@ -2747,11 +2745,9 @@ describe('POST /api/orders – commission calculation', () => {
       .mockResolvedValueOnce({ rows: [{ id: STORE_ID, owner_id: SELLER_ID, margin: 15 }] })
       .mockResolvedValueOnce({ rows: [{ value: '0.07' }] }) // platform_settings commission_rate
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', selling_price: 100.00, stock: 10, margin: 15 }] })
-      .mockResolvedValueOnce({ rows: [] }) // INSERT orders
-      .mockResolvedValueOnce({ rows: [] }) // INSERT order_items
-      .mockResolvedValueOnce({ rows: [] }) // UPDATE products stock
-      .mockResolvedValueOnce({ rows: [{ id: NEW_ORDER_ID, store_id: STORE_ID, total: 100.00, order_total: 100.00, platform_commission: 7.00, seller_revenue: 93.00, status: 'created' }] })
-      .mockResolvedValueOnce({ rows: [] }); // order_items
+      .mockResolvedValueOnce({ rows: [{ id: NEW_ORDER_ID, store_id: STORE_ID, total: 100.00, order_total: 100.00, platform_commission: 7.00, seller_revenue: 93.00, status: 'created' }] }) // INSERT INTO orders RETURNING *
+      .mockResolvedValueOnce({ rows: [] }) // batch INSERT INTO order_items RETURNING *
+      .mockResolvedValueOnce({ rows: [] }); // batch UPDATE products stock
 
     const res = await request(app)
       .post('/api/orders')
@@ -2773,11 +2769,9 @@ describe('POST /api/orders – commission calculation', () => {
       .mockResolvedValueOnce({ rows: [{ id: STORE_ID, owner_id: SELLER_ID, margin: 15 }] })
       .mockResolvedValueOnce({ rows: [] }) // no platform_settings row
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', selling_price: 100.00, stock: 10, margin: 15 }] })
-      .mockResolvedValueOnce({ rows: [] }) // INSERT orders
-      .mockResolvedValueOnce({ rows: [] }) // INSERT order_items
-      .mockResolvedValueOnce({ rows: [] }) // UPDATE products stock
-      .mockResolvedValueOnce({ rows: [{ id: NEW_ORDER_ID, store_id: STORE_ID, total: 100.00, order_total: 100.00, platform_commission: 8.00, seller_revenue: 92.00, status: 'created' }] })
-      .mockResolvedValueOnce({ rows: [] }); // order_items
+      .mockResolvedValueOnce({ rows: [{ id: NEW_ORDER_ID, store_id: STORE_ID, total: 100.00, order_total: 100.00, platform_commission: 8.00, seller_revenue: 92.00, status: 'created' }] }) // INSERT INTO orders RETURNING *
+      .mockResolvedValueOnce({ rows: [] }) // batch INSERT INTO order_items RETURNING *
+      .mockResolvedValueOnce({ rows: [] }); // batch UPDATE products stock
 
     const res = await request(app)
       .post('/api/orders')
@@ -3784,11 +3778,9 @@ describe('POST /api/orders – central catalog products (store_id IS NULL)', () 
       .mockResolvedValueOnce({ rows: [{ value: '0.08' }] }) // platform_settings
       // central product returned via JOIN shop_products (central catalog model)
       .mockResolvedValueOnce({ rows: [{ id: CENTRAL_PRODUCT_ID, name: 'Centralny produkt', selling_price: 100.00, stock: 20, margin: 15 }] })
-      .mockResolvedValueOnce({ rows: [] }) // INSERT INTO orders
-      .mockResolvedValueOnce({ rows: [] }) // INSERT INTO order_items
-      .mockResolvedValueOnce({ rows: [] }) // UPDATE products stock
-      .mockResolvedValueOnce({ rows: [{ id: NEW_ORDER_ID, store_id: STORE_ID, order_total: 100.00, total: 100.00, platform_commission: 8.00, seller_revenue: 92.00, status: 'created' }] })
-      .mockResolvedValueOnce({ rows: [] }); // order_items
+      .mockResolvedValueOnce({ rows: [{ id: NEW_ORDER_ID, store_id: STORE_ID, order_total: 100.00, total: 100.00, platform_commission: 8.00, seller_revenue: 92.00, status: 'created' }] }) // INSERT INTO orders RETURNING *
+      .mockResolvedValueOnce({ rows: [] }) // batch INSERT INTO order_items RETURNING *
+      .mockResolvedValueOnce({ rows: [] }); // batch UPDATE products stock
 
     const res = await request(app)
       .post('/api/orders')
@@ -4066,11 +4058,9 @@ describe('E2E – full user flow', () => {
       .mockResolvedValueOnce({ rows: [{ id: newStoreId, owner_id: e2eUser.id, margin: 15 }] })   // store
       .mockResolvedValueOnce({ rows: [{ value: '0.08' }] })                                       // commission_rate
       .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', selling_price: E2E_PRODUCT_PRICE, stock: 10, margin: 15 }] }) // products
-      .mockResolvedValueOnce({ rows: [] })  // INSERT INTO orders
-      .mockResolvedValueOnce({ rows: [] })  // INSERT INTO order_items
-      .mockResolvedValueOnce({ rows: [] })  // UPDATE products stock
-      .mockResolvedValueOnce({ rows: [{ id: E2E_ORDER_ID, store_id: newStoreId, order_total: E2E_PRODUCT_PRICE, total: E2E_PRODUCT_PRICE, platform_commission: 11.32, seller_revenue: 130.13, status: 'created' }] }) // SELECT order
-      .mockResolvedValueOnce({ rows: [] }); // SELECT order_items
+      .mockResolvedValueOnce({ rows: [{ id: E2E_ORDER_ID, store_id: newStoreId, order_total: E2E_PRODUCT_PRICE, total: E2E_PRODUCT_PRICE, platform_commission: 11.32, seller_revenue: 130.13, status: 'created' }] }) // INSERT INTO orders RETURNING *
+      .mockResolvedValueOnce({ rows: [] })  // batch INSERT INTO order_items RETURNING *
+      .mockResolvedValueOnce({ rows: [] }); // batch UPDATE products stock
 
     const orderRes = await request(app)
       .post('/api/orders')

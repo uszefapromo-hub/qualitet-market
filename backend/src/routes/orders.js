@@ -23,22 +23,21 @@ router.get('/', authenticate, async (req, res) => {
   const isAdmin = ['owner', 'admin'].includes(req.user.role);
 
   try {
-    const countResult = isAdmin
-      ? await db.query('SELECT COUNT(*) FROM orders')
-      : await db.query('SELECT COUNT(*) FROM orders WHERE buyer_id = $1 OR store_owner_id = $2', [req.user.id, req.user.id]);
-
-    const total = parseInt(countResult.rows[0].count, 10);
-
     const result = isAdmin
-      ? await db.query('SELECT * FROM orders ORDER BY created_at DESC LIMIT $1 OFFSET $2', [limit, offset])
+      ? await db.query(
+          `SELECT *, COUNT(*) OVER() AS total_count FROM orders ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+          [limit, offset]
+        )
       : await db.query(
-          `SELECT * FROM orders
+          `SELECT *, COUNT(*) OVER() AS total_count FROM orders
            WHERE buyer_id = $1 OR store_owner_id = $2
            ORDER BY created_at DESC LIMIT $3 OFFSET $4`,
           [req.user.id, req.user.id, limit, offset]
         );
 
-    return res.json({ total, page, limit, orders: result.rows });
+    const total = result.rows.length > 0 ? parseInt(result.rows[0].total_count, 10) : 0;
+    const orders = result.rows.map(({ total_count, ...rest }) => rest);
+    return res.json({ total, page, limit, orders });
   } catch (err) {
     console.error('list orders error:', err.message);
     return res.status(500).json({ error: 'Błąd serwera' });
@@ -131,7 +130,7 @@ router.post(
         }
       }
 
-      const createdOrderId = await db.transaction(async (client) => {
+      const { createdOrder, createdItems } = await db.transaction(async (client) => {
         const orderId = uuidv4();
         let subtotal = 0;
         const orderItems = [];
@@ -160,44 +159,57 @@ router.post(
         const platform_commission = parseFloat((orderTotal * commissionRate).toFixed(2));
         const seller_revenue = parseFloat((orderTotal - platform_commission).toFixed(2));
 
-        await client.query(
+        const orderResult = await client.query(
           `INSERT INTO orders
              (id, store_id, store_owner_id, buyer_id, status, subtotal, platform_fee,
               order_total, platform_commission, seller_revenue, total,
               shipping_address, notes, created_at)
-           VALUES ($1,$2,$3,$4,'created',$5,$6,$7,$8,$9,$10,$11,$12,NOW())`,
+           VALUES ($1,$2,$3,$4,'created',$5,$6,$7,$8,$9,$10,$11,$12,NOW())
+           RETURNING *`,
           [orderId, store_id, store.owner_id, req.user.id, subtotal.toFixed(2), platformFee,
            orderTotal, platform_commission, seller_revenue, orderTotal, safeAddress, safeNotes]
         );
 
-        for (const oi of orderItems) {
-          await client.query(
-            `INSERT INTO order_items (id, order_id, product_id, name, quantity, unit_price, line_total, margin)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-            [oi.id, orderId, oi.product_id, oi.name, oi.quantity, oi.unit_price, oi.line_total, oi.margin]
+        // Batch INSERT all order_items in a single query
+        const ORDER_ITEM_COLUMN_COUNT = 8; // id, order_id, product_id, name, quantity, unit_price, line_total, margin
+        const itemPlaceholders = [];
+        const itemValues = [];
+        orderItems.forEach((oi, i) => {
+          const base = i * ORDER_ITEM_COLUMN_COUNT;
+          itemPlaceholders.push(
+            `($${base + 1},$${base + 2},$${base + 3},$${base + 4},$${base + 5},$${base + 6},$${base + 7},$${base + 8})`
           );
+          itemValues.push(oi.id, orderId, oi.product_id, oi.name, oi.quantity, oi.unit_price, oi.line_total, oi.margin);
+        });
+        const itemsResult = await client.query(
+          `INSERT INTO order_items (id, order_id, product_id, name, quantity, unit_price, line_total, margin)
+           VALUES ${itemPlaceholders.join(', ')}
+           RETURNING *`,
+          itemValues
+        );
 
-          // Decrement stock
-          await client.query(
-            'UPDATE products SET stock = stock - $1 WHERE id = $2',
-            [oi.quantity, oi.product_id]
-          );
-        }
+        // Batch UPDATE product stock in a single query using unnest
+        const productIds = orderItems.map((oi) => oi.product_id);
+        const quantities = orderItems.map((oi) => oi.quantity);
+        await client.query(
+          `UPDATE products SET stock = stock - updates.qty
+           FROM unnest($1::uuid[], $2::int[]) AS updates(pid, qty)
+           WHERE products.id = updates.pid`,
+          [productIds, quantities]
+        );
 
-        return orderId;
+        return { createdOrder: orderResult.rows[0], createdItems: itemsResult.rows };
       });
 
-      const newOrder = await db.query('SELECT * FROM orders WHERE id = $1', [createdOrderId]);
-      const newItems = await db.query('SELECT * FROM order_items WHERE order_id = $1', [createdOrderId]);
       auditLog({
         actorUserId: req.user.id,
         action: 'order.created',
         resource: 'order',
-        resourceId: createdOrderId,
-        payload: { store_id, total: newOrder.rows[0].total },
+        resourceId: createdOrder.id,
+        payload: { store_id, total: createdOrder.total },
         ipAddress: req.ip,
       });
-      return res.status(201).json({ ...newOrder.rows[0], items: newItems.rows });
+      return res.status(201).json({ ...createdOrder, items: createdItems });
     } catch (err) {
       console.error('create order error:', err.message);
       return res.status(500).json({ error: 'Błąd serwera' });

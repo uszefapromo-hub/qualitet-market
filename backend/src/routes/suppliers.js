@@ -25,9 +25,17 @@ const upload = multer({
 // ─── List suppliers ────────────────────────────────────────────────────────────
 
 router.get('/', authenticate, async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page || '1', 10));
+  const limit = Math.min(100, parseInt(req.query.limit || '20', 10));
+  const offset = (page - 1) * limit;
   try {
-    const result = await db.query('SELECT * FROM suppliers ORDER BY name ASC');
-    return res.json(result.rows);
+    const result = await db.query(
+      `SELECT *, COUNT(*) OVER() AS total_count FROM suppliers ORDER BY name ASC LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    const total = result.rows.length > 0 ? parseInt(result.rows[0].total_count, 10) : 0;
+    const suppliers = result.rows.map(({ total_count, ...rest }) => rest);
+    return res.json({ total, page, limit, suppliers });
   } catch (err) {
     console.error('list suppliers error:', err.message);
     return res.status(500).json({ error: 'Błąd serwera' });

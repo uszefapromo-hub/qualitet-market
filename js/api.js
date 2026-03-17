@@ -418,8 +418,16 @@
 
   // ─── Suppliers ────────────────────────────────────────────────────────────────
 
+  /** Normalise supplier list response: accepts both the paginated object format
+   *  `{ suppliers: [...], total, page, limit }` and a legacy plain array. */
+  function normaliseSuppliersResponse(resp) {
+    if (resp && Array.isArray(resp.suppliers)) return resp.suppliers;
+    if (Array.isArray(resp)) return resp;
+    return [];
+  }
+
   const Suppliers = {
-    list()                     { return get('/suppliers'); },
+    list(params)               { return get('/suppliers', params).then(normaliseSuppliersResponse); },
     get(id)                    { return get(`/suppliers/${id}`); },
     create(data)               { return post('/suppliers', data); },
     update(id, data)           { return put(`/suppliers/${id}`, data); },

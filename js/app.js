@@ -598,6 +598,16 @@
     return `${new Intl.NumberFormat(locale, {maximumFractionDigits: 2}).format(safeValue)} zł`;
   }
 
+  function debounce(fn, delay){
+    var timer;
+    return function(){
+      var args = arguments;
+      var ctx = this;
+      clearTimeout(timer);
+      timer = setTimeout(function(){ fn.apply(ctx, args); }, delay);
+    };
+  }
+
   function formatDate(value){
     if(!value){
       return '—';
@@ -2604,7 +2614,7 @@
 
     [costInput, marginInput, unitsInput].forEach(input => {
       if(input){
-        input.addEventListener('input', updateResults);
+        input.addEventListener('input', debounce(updateResults, 300));
       }
     });
     updateResults();
@@ -2665,7 +2675,7 @@
 
     [nicheInput, budgetInput, marginInput, goalInput].forEach(input => {
       if(input){
-        input.addEventListener('input', update);
+        input.addEventListener('input', debounce(update, 300));
       }
     });
     update();
@@ -2708,7 +2718,7 @@
 
     [visitsInput, conversionInput, orderInput].forEach(input => {
       if(input){
-        input.addEventListener('input', update);
+        input.addEventListener('input', debounce(update, 300));
       }
     });
     update();

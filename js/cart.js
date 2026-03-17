@@ -31,9 +31,21 @@
     return (cart || getCart()).reduce(function(sum, item){ return sum + ((Number(item.price) || 0) * (Number(item.qty) || 1)); }, 0);
   }
 
+  // Cache of [data-cart-badge] elements – queried once on first use to avoid
+  // repeated DOM traversals on every cart update.
+  // Note: badges must exist in static HTML before the first cart interaction;
+  // dynamically-added badges after that point will not be picked up.
+  var _cartBadges = null;
+  function getCartBadges(){
+    if(!_cartBadges){
+      _cartBadges = Array.from(document.querySelectorAll('[data-cart-badge]'));
+    }
+    return _cartBadges;
+  }
+
   function updateCartBadge(){
     var count = getCartCount();
-    document.querySelectorAll('[data-cart-badge]').forEach(function(badgeElement){
+    getCartBadges().forEach(function(badgeElement){
       badgeElement.textContent = count;
       badgeElement.hidden = count === 0;
     });
