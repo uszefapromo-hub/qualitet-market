@@ -88,10 +88,28 @@
     .nav-dropdown:hover .nav-dropdown-menu,.nav-dropdown:focus-within .nav-dropdown-menu{display:flex}
     .nav-dropdown-menu a{padding:10px 14px;border-radius:10px;color:var(--muted);font-size:14px;white-space:nowrap;display:block}
     .nav-dropdown-menu a:hover{background:rgba(255,255,255,.08);color:#fff}
+    /* ── Topbar: minimal login button ── */
+    .topbar-login-btn{font-size:13px;padding:8px 16px;margin-left:auto}
+    /* ── 4 Hero Feature Blocks ── */
+    .hero-features-4{padding:0 0 48px}
+    .hero-features-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+    .hero-feature-block{display:flex;flex-direction:column;gap:12px;padding:28px 22px;background:var(--card);border:1px solid var(--stroke);border-radius:22px;text-decoration:none;color:var(--text);transition:transform .15s,box-shadow .15s,border-color .15s;position:relative;overflow:hidden}
+    .hero-feature-block::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 0% 0%,rgba(124,58,237,.12),transparent 65%);pointer-events:none;opacity:0;transition:opacity .2s}
+    .hero-feature-block:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,.5);border-color:var(--purple)}
+    .hero-feature-block:hover::before{opacity:1}
+    .hfb-icon{font-size:40px;line-height:1}
+    .hero-feature-block h3{margin:0;font-size:18px;font-weight:700;line-height:1.25}
+    .hero-feature-block p{margin:0;font-size:13px;color:var(--muted);line-height:1.65;flex:1}
+    .hfb-cta{font-size:13px;font-weight:700;color:var(--cyan);margin-top:auto}
+    .hero-feature-block.hfb-accent{background:linear-gradient(135deg,rgba(124,58,237,.22),rgba(158,119,255,.12));border-color:rgba(124,58,237,.45)}
+    .hero-feature-block.hfb-accent::before{background:radial-gradient(ellipse at 0% 0%,rgba(124,58,237,.25),transparent 65%)}
+    .hero-feature-block.hfb-accent:hover{border-color:var(--purple-bright);box-shadow:0 16px 40px rgba(124,58,237,.32)}
+    .hero-feature-block.hfb-accent .hfb-cta{color:var(--purple-bright)}
     @media(max-width:1024px){
       .mkt-products-grid,.mkt-stores-grid{grid-template-columns:repeat(3,1fr)}
       .mkt-hub-grid{grid-template-columns:repeat(3,1fr)}
       .sellers-grid{grid-template-columns:repeat(3,1fr)}
+      .hero-features-grid{grid-template-columns:repeat(2,1fr)}
     }
     @media(max-width:768px){
       .mkt-products-grid,.mkt-stores-grid{grid-template-columns:repeat(2,1fr)}
@@ -109,6 +127,7 @@
       .mkt-hub-grid{grid-template-columns:repeat(2,1fr)}
       .mkt-section{padding:32px 0}
       .live-banner{padding:16px}
+      .hero-features-grid{grid-template-columns:1fr}
     }
     /* ── Social media icons ── */
     .social-icons-row{display:flex;flex-wrap:wrap;gap:16px;justify-content:center}
@@ -169,51 +188,8 @@
           <span>Marketplace B2B/B2C</span>
         </div>
       </a>
-      <nav class="nav" aria-label="Główna nawigacja">
-        <a href="index.html" class="active">Start</a>
-        <div class="nav-dropdown">
-          <a href="listing.html">Marketplace ▾</a>
-          <div class="nav-dropdown-menu">
-            <a href="listing.html">🛍️ Sklep / Katalog</a>
-            <a href="feed.html">📱 Feed produktów</a>
-            <a href="auctions.html">🎨 Aukcje</a>
-          </div>
-        </div>
-        <a href="hurtownie.html">Hurtownie</a>
-        <div class="nav-dropdown">
-          <a href="feed.html">Feed ▾</a>
-          <div class="nav-dropdown-menu">
-            <a href="feed.html">📱 Social Commerce</a>
-            <a href="live.html">🔴 Live Sales</a>
-            <a href="community.html">🤝 Społeczność</a>
-          </div>
-        </div>
-        <div class="nav-dropdown">
-          <a href="generator-sklepu.html">Sprzedawaj ▾</a>
-          <div class="nav-dropdown-menu">
-            <a href="generator-sklepu.html">🚀 Otwórz sklep</a>
-            <a href="panel-sklepu.html">🏪 Panel sprzedawcy</a>
-            <a href="cennik.html">💎 Plany / Cennik</a>
-          </div>
-        </div>
-        <div class="nav-dropdown">
-          <a href="zarabiaj.html">Twórcy ▾</a>
-          <div class="nav-dropdown-menu">
-            <a href="zarabiaj.html">🎯 Affiliate / Creator</a>
-            <a href="brand.html">🏷️ Marki</a>
-            <a href="referral-program.html">🎁 Program poleceń</a>
-          </div>
-        </div>
-        <div class="nav-dropdown">
-          <a href="zostan-dostawca.html">Dostawcy ▾</a>
-          <div class="nav-dropdown-menu">
-            <a href="zostan-dostawca.html">📦 Zostań dostawcą</a>
-            <a href="panel-dostawcy.html">⚙️ Panel dostawcy</a>
-          </div>
-        </div>
-        <a href="cennik.html">Cennik</a>
-      </nav>
-      <a class="btn topbar-cta" href="generator-sklepu.html">Otwórz Sklep</a>
+      <a href="login.html" class="btn btn-secondary topbar-login-btn">Zaloguj się</a>
+      <a class="btn btn-primary topbar-cta" href="generator-sklepu.html">🚀 Otwórz Sklep</a>
       <a class="btn btn-primary topbar-cta" href="owner-panel.html" data-superadmin-link hidden style="background:rgba(255,79,216,.2);border-color:rgba(255,79,216,.5);color:#ffd6f3">🔐 Panel właściciela</a>
       <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
     </div>
@@ -340,6 +316,38 @@
           </div>
         </div>
 
+      </div>
+    </section>
+
+    <!-- ══════════════ 4 KEY FEATURE BLOCKS ══════════════ -->
+    <section class="hero-features-4" id="hero-features" aria-label="Najważniejsze funkcje platformy">
+      <div class="wrap">
+        <div class="hero-features-grid">
+          <a class="hero-feature-block" href="listing.html">
+            <div class="hfb-icon" aria-hidden="true">🛍️</div>
+            <h3>Przeglądaj Marketplace</h3>
+            <p>Tysiące produktów od sprawdzonych dostawców — elektronika, moda, dom i więcej</p>
+            <span class="hfb-cta">Katalog produktów →</span>
+          </a>
+          <a class="hero-feature-block hfb-accent" href="generator-sklepu.html">
+            <div class="hfb-icon" aria-hidden="true">🚀</div>
+            <h3>Otwórz Własny Sklep</h3>
+            <p>Sprzedawaj bez ryzyka, bez magazynu — sklep gotowy w 5 minut, dropshipping od zera</p>
+            <span class="hfb-cta">Zacznij sprzedawać →</span>
+          </a>
+          <a class="hero-feature-block" href="hurtownie.html">
+            <div class="hfb-icon" aria-hidden="true">🏢</div>
+            <h3>Import z Hurtowni</h3>
+            <p>Tysiące dostawców, produkty gotowe do sprzedaży, automatyczny import CSV/XML</p>
+            <span class="hfb-cta">Przeglądaj hurtownie →</span>
+          </a>
+          <a class="hero-feature-block" href="zarabiaj.html">
+            <div class="hfb-icon" aria-hidden="true">🎯</div>
+            <h3>Zarabiaj jako Twórca</h3>
+            <p>Program Creator, Affiliate i polecania znajomych — zarabiaj na każdej sprzedaży</p>
+            <span class="hfb-cta">Dołącz do programu →</span>
+          </a>
+        </div>
       </div>
     </section>
 
