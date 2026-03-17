@@ -302,6 +302,150 @@ router.put(
   }
 );
 
+// ─── POST /api/subscriptions/plan-checkout – start checkout for a plan ────────
+// Creates a pending subscription and Stripe checkout session in one step.
+// This allows logged-in users to purchase a plan without a pre-existing
+// subscription record – the frontend calls this instead of fetching all subs
+// and then calling /:id/checkout separately.
+//
+// Body:  { plan: 'basic' }
+// Auth:  required
+// Returns: { redirect_url, session_id, plan, subscription_id }
+
+router.post(
+  '/plan-checkout',
+  authenticate,
+  [body('plan').isIn(VALID_PLANS)],
+  validate,
+  async (req, res) => {
+    const { plan } = req.body;
+    const config = PLAN_CONFIG[plan];
+
+    const pricePln = config.price_pln || 0;
+    if (pricePln === 0) {
+      return res.status(400).json({ error: 'Ten plan jest bezpłatny – nie wymaga płatności' });
+    }
+
+    const stripe = getStripe();
+    if (!stripe) {
+      return res.status(503).json({
+        error: 'Bramka Stripe nie jest skonfigurowana.',
+        warning: 'Ustaw STRIPE_SECRET_KEY w .env.',
+        sandbox_mode: true,
+      });
+    }
+
+    try {
+      // Find user's primary store
+      const storeResult = await db.query(
+        'SELECT id FROM stores WHERE owner_id = $1 ORDER BY created_at ASC LIMIT 1',
+        [req.user.id]
+      );
+      const storeRow = storeResult.rows[0];
+      if (!storeRow) {
+        return res.status(404).json({ error: 'Nie znaleziono sklepu. Utwórz sklep przed zakupem planu.' });
+      }
+      const shopId = storeRow.id;
+
+      // Get or create Stripe customer for this user
+      const userResult = await db.query(
+        'SELECT stripe_customer_id, email, name FROM users WHERE id = $1',
+        [req.user.id]
+      );
+      const userRow = userResult.rows[0] || {};
+      let customerId = userRow.stripe_customer_id;
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: userRow.email || undefined,
+          name: userRow.name || undefined,
+          metadata: { user_id: req.user.id },
+        });
+        customerId = customer.id;
+        try {
+          await db.query(
+            'UPDATE users SET stripe_customer_id = $1, updated_at = NOW() WHERE id = $2',
+            [customerId, req.user.id]
+          );
+        } catch (dbErr) {
+          console.error(`Failed to save stripe_customer_id ${customerId} for user ${req.user.id}:`, dbErr.message);
+        }
+      }
+
+      // Supersede any existing active subscription and create a new pending one
+      await db.query(
+        `UPDATE subscriptions SET status = 'superseded', updated_at = NOW()
+         WHERE shop_id = $1 AND status = 'active'`,
+        [shopId]
+      );
+      const subId = uuidv4();
+      const days = config.duration_days || null;
+      const expiresAt = days ? new Date(Date.now() + days * 24 * 60 * 60 * 1000) : null;
+      await db.query(
+        `INSERT INTO subscriptions
+           (id, shop_id, plan, status, product_limit, commission_rate, started_at, expires_at, created_at)
+         VALUES ($1, $2, $3, 'pending', $4, $5, NOW(), $6, NOW())`,
+        [subId, shopId, plan, config.product_limit, config.commission_rate, expiresAt]
+      );
+
+      const base = process.env.APP_URL || 'https://uszefaqualitet.pl';
+      const envKey = `STRIPE_PRICE_ID_${plan.toUpperCase()}`;
+      const stripePriceId = process.env[envKey];
+
+      let session;
+      if (stripePriceId) {
+        session = await stripe.checkout.sessions.create({
+          customer: customerId,
+          client_reference_id: req.user.id,
+          payment_method_types: ['card'],
+          line_items: [{ price: stripePriceId, quantity: 1 }],
+          mode: 'subscription',
+          success_url: `${base}/cennik.html?subscription=success&subscription_id=${subId}&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${base}/cennik.html?subscription=cancel`,
+          metadata: { subscription_id: subId, plan },
+          subscription_data: { metadata: { subscription_id: subId, plan, user_id: req.user.id } },
+        });
+      } else {
+        session = await stripe.checkout.sessions.create({
+          customer: customerId,
+          client_reference_id: req.user.id,
+          payment_method_types: ['card'],
+          line_items: [
+            {
+              price_data: {
+                currency: 'pln',
+                product_data: {
+                  name: `Subskrypcja Qualitet – ${PLAN_DISPLAY_NAMES[plan] || plan}`,
+                  description: config.duration_days
+                    ? `${config.duration_days} dni dostępu, ${config.product_limit == null ? 'nieograniczona' : `do ${config.product_limit}`} liczba produktów`
+                    : 'Dostęp bez okresu ważności',
+                },
+                unit_amount: pricePln * 100,
+              },
+              quantity: 1,
+            },
+          ],
+          mode: 'payment',
+          success_url: `${base}/cennik.html?subscription=success&subscription_id=${subId}&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${base}/cennik.html?subscription=cancel`,
+          metadata: { subscription_id: subId, plan },
+        });
+      }
+
+      return res.json({
+        subscription_id: subId,
+        plan,
+        price_pln: pricePln,
+        redirect_url: session.url,
+        session_id: session.id,
+        mode: session.mode,
+      });
+    } catch (err) {
+      console.error('plan-checkout error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
 // ─── POST /api/subscriptions/:id/checkout – create Stripe checkout for plan ───
 
 router.post(

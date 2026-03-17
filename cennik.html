@@ -571,44 +571,42 @@
           if (!plan) return;
 
           e.preventDefault();
+          var originalText = btn.textContent;
           btn.textContent = 'Tworzenie sesji…';
           btn.style.pointerEvents = 'none';
 
-          // Step 1: get the user's active store or create a checkout directly
-          fetch('/api/subscriptions', {
-            headers: { Authorization: 'Bearer ' + token },
-          }).then(function (r) { return r.ok ? r.json() : []; })
-          .then(function (subs) {
-            // Single-pass: prefer exact plan match, fall back to any active sub
-            var sub = null;
-            for (var i = 0; i < subs.length; i++) {
-              var s = subs[i];
-              if (s.status === 'active') {
-                if (s.plan === plan) { sub = s; break; }
-                if (!sub) sub = s; // keep first active as fallback
-              }
-            }
-            if (!sub) {
-              // No existing sub – fall back to Payment Link
-              window.location.href = btn.href || '#plany';
+          // Call the plan-checkout endpoint directly – no need to look up an
+          // existing subscription first.  The backend creates a pending
+          // subscription and Stripe session in one step.
+          fetch('/api/subscriptions/plan-checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+            body: JSON.stringify({ plan: plan }),
+          }).then(function (r) {
+            if (r.status === 503) {
+              // Stripe not configured – fall back to Payment Link
+              window.location.href = btn.dataset.href || btn.getAttribute('href') || '#plany';
               return null;
             }
-            return fetch('/api/subscriptions/' + sub.id + '/checkout', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-            });
-          }).then(function (r) {
-            if (!r) return null;
+            if (r.status === 404) {
+              // User has no store yet
+              btn.textContent = originalText;
+              btn.style.pointerEvents = '';
+              alert('Najpierw utwórz sklep, aby wybrać plan. Przejdź do dashboardu.');
+              return null;
+            }
             return r.ok ? r.json() : null;
           }).then(function (data) {
-            if (data && data.redirect_url) {
-              safeCheckoutRedirect(data.redirect_url, btn.href || '#plany');
+            if (!data) return;
+            if (data.redirect_url) {
+              safeCheckoutRedirect(data.redirect_url, btn.dataset.href || btn.getAttribute('href') || '#plany');
             } else {
-              // Fall back to Payment Link
-              window.location.href = btn.href || '#plany';
+              window.location.href = btn.dataset.href || btn.getAttribute('href') || '#plany';
             }
           }).catch(function () {
-            window.location.href = btn.href || '#plany';
+            btn.textContent = originalText;
+            btn.style.pointerEvents = '';
+            window.location.href = btn.dataset.href || btn.getAttribute('href') || '#plany';
           });
         });
       });
