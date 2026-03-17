@@ -536,8 +536,16 @@
     });
   }
 
+  function extractProductPrice(p){
+    return p.price || p.selling_price || p.platform_price || p.recommended_reseller_price || p.supplier_price || 0;
+  }
+
+  function clearElement(el){
+    while(el.firstChild){ el.removeChild(el.firstChild); }
+  }
+
   function buildProductTile(p){
-    const price = p.price || p.selling_price || p.platform_price || p.recommended_reseller_price || p.supplier_price || 0;
+    const price = extractProductPrice(p);
 
     const tile = document.createElement('article');
     tile.className = 'product-api-tile';
@@ -585,7 +593,7 @@
 
   function renderProductsIntoGrid(gridEl, emptyEl, products){
     if(!gridEl){ return; }
-    gridEl.innerHTML = '';
+    clearElement(gridEl);
     if(!products || !products.length){
       if(emptyEl){ emptyEl.hidden = false; }
       return;
@@ -602,17 +610,12 @@
 
   function renderFeedTopList(listEl, products){
     if(!listEl){ return; }
-    listEl.innerHTML = '';
+    clearElement(listEl);
     const slice = products.slice(0, 5);
     slice.forEach(p => {
-      const price = p.price || p.selling_price || p.platform_price || p.recommended_reseller_price || p.supplier_price || 0;
+      const price = extractProductPrice(p);
       const item = document.createElement('div');
       item.className = 'hero-product-item';
-      const icon = document.createElement('div');
-      icon.className = 'product-api-img-placeholder';
-      icon.setAttribute('aria-hidden', 'true');
-      icon.style.cssText = 'width:32px;height:32px;font-size:18px;border-radius:6px;flex-shrink:0';
-      icon.textContent = '📦';
       const info = document.createElement('div');
       const nameSpan = document.createElement('span');
       nameSpan.textContent = p.name || 'Produkt';
@@ -625,9 +628,13 @@
         img.width = 32;
         img.height = 32;
         img.loading = 'lazy';
-        img.style.cssText = 'border-radius:6px;object-fit:cover;flex-shrink:0';
+        img.className = 'hero-product-thumb';
         item.appendChild(img);
       } else {
+        const icon = document.createElement('div');
+        icon.className = 'product-api-img-placeholder hero-product-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = '📦';
         item.appendChild(icon);
       }
       info.appendChild(nameSpan);
@@ -639,7 +646,8 @@
 
   function loadFeedSection(gridEl, emptyEl, section, limit){
     const apiBase = window.QM_API_BASE || 'https://api.uszefaqualitet.pl/api';
-    fetch(`${apiBase}/feed?section=${encodeURIComponent(section)}&limit=${limit}`)
+    const safeLimit = Math.max(1, Math.min(100, parseInt(limit) || 20));
+    fetch(`${apiBase}/feed?section=${encodeURIComponent(section)}&limit=${safeLimit}`)
       .then(r => r.ok ? r.json() : null)
       .catch(() => null)
       .then(data => {

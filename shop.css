@@ -122,3 +122,19 @@ body.store-shop .product-card .price{
     gap:14px;
   }
 }
+
+/* ── Sidebar "Top produkty" thumbnails ──────────────────────────────────── */
+.hero-product-thumb{
+  border-radius:6px;
+  object-fit:cover;
+  flex-shrink:0;
+}
+
+.hero-product-icon{
+  width:32px;
+  height:32px;
+  font-size:18px;
+  border-radius:6px;
+  flex-shrink:0;
+}
+
