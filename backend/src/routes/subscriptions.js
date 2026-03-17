@@ -209,6 +209,12 @@ router.post(
         [id, shop_id, plan, config.product_limit, config.commission_rate, startedAt, expiresAt]
       );
 
+      // Sync the owner's users.plan so both tables stay consistent
+      await db.query(
+        'UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2',
+        [plan, store.owner_id]
+      );
+
       return res.status(201).json(result.rows[0]);
     } catch (err) {
       console.error('create subscription error:', err.message);

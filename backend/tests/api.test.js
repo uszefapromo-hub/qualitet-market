@@ -736,7 +736,8 @@ describe('POST /api/subscriptions', () => {
     db.query
       .mockResolvedValueOnce({ rows: [{ owner_id: SELLER_ID }] })  // store ownership check
       .mockResolvedValueOnce({ rows: [] })  // deactivate old
-      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, plan: 'pro', status: 'active' }] }); // insert
+      .mockResolvedValueOnce({ rows: [{ id: 'sub-1', shop_id: STORE_ID, plan: 'pro', status: 'active' }] }) // insert
+      .mockResolvedValueOnce({ rows: [] }); // sync users.plan
 
     const res = await request(app)
       .post('/api/subscriptions')
@@ -1967,6 +1968,84 @@ describe('POST /api/auth/refresh', () => {
       .post('/api/auth/refresh')
       .set('Authorization', `Bearer ${sellerToken}`);
     expect(res.status).toBe(401);
+  });
+});
+
+// ─── PATCH /api/users/me/plan – self-service plan change ─────────────────────
+
+describe('PATCH /api/users/me/plan', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).patch('/api/users/me/plan').send({ plan: 'pro' });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects invalid plan', async () => {
+    const res = await request(app)
+      .patch('/api/users/me/plan')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ plan: 'diamond' });
+    expect(res.status).toBe(422);
+  });
+
+  it('updates plan successfully', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SELLER_ID, email: 'seller@test.pl', name: 'Seller', role: 'seller', plan: 'pro' }],
+    });
+
+    const res = await request(app)
+      .patch('/api/users/me/plan')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ plan: 'pro' });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.plan).toBe('pro');
+    expect(res.body.user.plan).toBe('pro');
+  });
+
+  it('accepts all valid plans including supplier_basic', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SELLER_ID, email: 'seller@test.pl', name: 'Seller', role: 'seller', plan: 'supplier_basic' }],
+    });
+
+    const res = await request(app)
+      .patch('/api/users/me/plan')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ plan: 'supplier_basic' });
+    expect(res.status).toBe(200);
+    expect(res.body.plan).toBe('supplier_basic');
+  });
+});
+
+// ─── PATCH /api/admin/users/:id – update user role / plan ────────────────────
+
+describe('PATCH /api/admin/users/:id', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .patch(`/api/admin/users/${SELLER_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ plan: 'pro' });
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects invalid plan', async () => {
+    const res = await request(app)
+      .patch(`/api/admin/users/${SELLER_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ plan: 'invalid_plan' });
+    expect(res.status).toBe(422);
+  });
+
+  it('updates user plan with any valid plan type', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SELLER_ID, email: 'seller@test.pl', name: 'Seller', role: 'seller', plan: 'supplier_pro' }],
+    });
+
+    const res = await request(app)
+      .patch(`/api/admin/users/${SELLER_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ plan: 'supplier_pro' });
+    expect(res.status).toBe(200);
+    expect(res.body.plan).toBe('supplier_pro');
   });
 });
 

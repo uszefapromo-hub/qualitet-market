@@ -9,6 +9,7 @@ const db = require('../config/database');
 const { authenticate, requireRole, signToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { getPromoTier } = require('../helpers/promo');
+const { VALID_PLANS } = require('./subscriptions');
 
 const router = express.Router();
 
@@ -194,6 +195,30 @@ router.put(
       return res.json({ message: 'Hasło zmienione' });
     } catch (err) {
       console.error('change password error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── Change own subscription plan ─────────────────────────────────────────────
+
+router.patch(
+  '/me/plan',
+  authenticate,
+  [body('plan').isIn(VALID_PLANS)],
+  validate,
+  async (req, res) => {
+    const { plan } = req.body;
+    try {
+      const result = await db.query(
+        `UPDATE users SET plan = $1, updated_at = NOW() WHERE id = $2
+         RETURNING id, email, name, role, plan`,
+        [plan, req.user.id]
+      );
+      if (!result.rows[0]) return res.status(404).json({ error: 'Użytkownik nie znaleziony' });
+      return res.json({ success: true, plan: result.rows[0].plan, user: result.rows[0] });
+    } catch (err) {
+      console.error('change plan error:', err.message);
       return res.status(500).json({ error: 'Błąd serwera' });
     }
   }
