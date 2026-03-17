@@ -102,6 +102,8 @@
       text-align: center;
     }
   </style>
+  <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'self'; object-src 'none'">
+  <script src="js/security-guard.js"></script>
 </head>
 <body data-page="cennik" class="pricing-page has-bottom-nav">
   <div class="app-splash" data-app-splash>
@@ -551,6 +553,14 @@
     // When the user is logged in, we intercept plan buttons to use the backend
     // checkout API so the subscription is linked to their account properly.
     // If not logged in, the default href (Stripe Payment Link) is used.
+    function safeCheckoutRedirect(url, fallback) {
+      if (typeof window.QMSafeRedirect === 'function') {
+        window.QMSafeRedirect(url, fallback || '#plany');
+      } else {
+        window.location.href = fallback || '#plany';
+      }
+    }
+
     function initApiCheckout() {
       var token = getToken();
       if (!token) return; // not logged in – let Payment Links handle it
@@ -592,7 +602,7 @@
             return r.ok ? r.json() : null;
           }).then(function (data) {
             if (data && data.redirect_url) {
-              window.location.href = data.redirect_url;
+              safeCheckoutRedirect(data.redirect_url, btn.href || '#plany');
             } else {
               // Fall back to Payment Link
               window.location.href = btn.href || '#plany';

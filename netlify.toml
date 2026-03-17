@@ -12,12 +12,54 @@
   to = "/sklep.html"
   status = 301
 
+[[redirects]]
+  from = "/sklep/*"
+  to = "/sklep.html"
+  status = 200
+
+[[redirects]]
+  from = "/koszyk"
+  to = "/koszyk.html"
+  status = 301
+
+[[redirects]]
+  from = "/koszyk/*"
+  to = "/koszyk.html"
+  status = 200
+
+[[redirects]]
+  from = "/checkout"
+  to = "/koszyk.html"
+  status = 301
+
+[[redirects]]
+  from = "/checkout/*"
+  to = "/koszyk.html"
+  status = 200
+
+[[redirects]]
+  from = "/shop"
+  to = "/sklep.html"
+  status = 301
+
+[[redirects]]
+  from = "/shop/*"
+  to = "/sklep.html"
+  status = 200
+
+# Catch-all: route all unmatched paths to our 404 handler instead of Netlify's own page
+[[redirects]]
+  from = "/*"
+  to = "/404.html"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]
     X-Frame-Options = "SAMEORIGIN"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy = "frame-ancestors 'self'; frame-src 'self' https://www.youtube.com https://www.tiktok.com https://js.stripe.com https://hooks.stripe.com; object-src 'none'"
 
 [[headers]]
   for = "/*.html"

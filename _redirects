@@ -1,3 +1,12 @@
 # Netlify _redirects – backup for netlify.toml
 /        /index.html   200
 /sklep   /sklep.html   301
+/sklep/* /sklep.html   200
+/koszyk  /koszyk.html  301
+/koszyk/* /koszyk.html 200
+/checkout  /koszyk.html  301
+/checkout/* /koszyk.html 200
+/shop    /sklep.html   301
+/shop/*  /sklep.html   200
+# Catch-all: prevent Netlify's own pages from showing on unmatched paths
+/*       /404.html     200
