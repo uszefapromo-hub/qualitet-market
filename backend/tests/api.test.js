@@ -556,6 +556,7 @@ describe('POST /api/users/login', () => {
     const res = await request(app).post('/api/users/login').send({ email: 'seller@test.pl', password: 'Password123!' });
     expect(res.status).toBe(200);
     expect(res.body.token).toBeDefined();
+    expect(res.body.user.plan).toBe('basic');
   });
 });
 
@@ -878,6 +879,115 @@ describe('POST /api/cart/items', () => {
     expect(res.status).toBe(201);
     expect(res.body.items).toHaveLength(1);
     expect(res.body.total).toBeCloseTo(141.45);
+  });
+});
+
+// ─── Admin users ───────────────────────────────────────────────────────────────
+
+describe('GET /api/admin/users', () => {
+  it('requires admin role', async () => {
+    const res = await request(app).get('/api/admin/users').set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns user list as admin', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '2' }] })
+      .mockResolvedValueOnce({
+        rows: [
+          { id: SELLER_ID, email: 'seller@test.pl', name: 'Seller', role: 'seller', plan: 'basic', created_at: new Date().toISOString() },
+          { id: ADMIN_ID,  email: 'admin@test.pl',  name: 'Admin',  role: 'owner',  plan: 'elite', created_at: new Date().toISOString() },
+        ],
+      });
+
+    const res = await request(app).get('/api/admin/users').set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.users)).toBe(true);
+    expect(res.body.users).toHaveLength(2);
+    expect(res.body.users[0]).toHaveProperty('email');
+    expect(res.body.users[0]).not.toHaveProperty('password_hash');
+  });
+});
+
+describe('PATCH /api/admin/users/:id', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .patch(`/api/admin/users/${SELLER_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ plan: 'pro' });
+    expect(res.status).toBe(403);
+  });
+
+  it('updates user plan as admin', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SELLER_ID, email: 'seller@test.pl', name: 'Seller', role: 'seller', plan: 'pro', trial_ends_at: null, created_at: new Date().toISOString() }],
+    });
+
+    const res = await request(app)
+      .patch(`/api/admin/users/${SELLER_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ plan: 'pro' });
+    expect(res.status).toBe(200);
+    expect(res.body.plan).toBe('pro');
+  });
+
+  it('accepts all valid plans', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SELLER_ID, email: 'seller@test.pl', name: 'Seller', role: 'supplier_basic', plan: 'supplier_basic', trial_ends_at: null, created_at: new Date().toISOString() }],
+    });
+
+    const res = await request(app)
+      .patch(`/api/admin/users/${SELLER_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ plan: 'supplier_basic' });
+    expect(res.status).toBe(200);
+    expect(res.body.plan).toBe('supplier_basic');
+  });
+
+  it('rejects invalid plan name', async () => {
+    const res = await request(app)
+      .patch(`/api/admin/users/${SELLER_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ plan: 'diamond' });
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 404 when user not found', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .patch(`/api/admin/users/${SELLER_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ plan: 'basic' });
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('DELETE /api/admin/users/:id', () => {
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .delete(`/api/admin/users/${SELLER_ID}`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('deletes a user as admin', async () => {
+    db.query.mockResolvedValueOnce({ rows: [{ id: SELLER_ID }] });
+
+    const res = await request(app)
+      .delete(`/api/admin/users/${SELLER_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('message');
+  });
+
+  it('returns 404 when user not found', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .delete(`/api/admin/users/${SELLER_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(404);
   });
 });
 
@@ -1862,6 +1972,7 @@ describe('POST /api/auth/login', () => {
     const res = await request(app).post('/api/auth/login').send({ email: 'seller@test.pl', password: 'Password123!' });
     expect(res.status).toBe(200);
     expect(res.body.token).toBeDefined();
+    expect(res.body.user.plan).toBe('basic');
   });
 
   it('returns 422 when neither email nor phone is provided', async () => {

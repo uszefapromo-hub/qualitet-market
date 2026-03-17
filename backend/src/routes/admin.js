@@ -11,7 +11,7 @@ const fetch = require('node-fetch');
 const db = require('../config/database');
 const { authenticate, requireRole, requireSuperAdmin } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
-const { PLAN_CONFIG } = require('./subscriptions');
+const { PLAN_CONFIG, VALID_PLANS } = require('./subscriptions');
 const { upsertSupplierProducts, fetchSupplierProducts, importSupplierProducts } = require('../services/supplier-import');
 const { computePlatformPrice, dbTiersToArray, DEFAULT_PLATFORM_TIERS, computeQualityScore, isProductFeatured, isLowQuality, computeResellerPrice, computeExpectedPlatformProfit, computeExpectedResellerProfit, DEFAULT_RESELLER_MARGIN_PCT } = require('../helpers/pricing');
 const { selectBestSupplier, buildAlternativesSummary } = require('../services/supplier-comparison');
@@ -185,7 +185,7 @@ router.patch(
   [
     param('id').isUUID(),
     body('role').optional().isIn(['buyer', 'seller', 'admin', 'owner']),
-    body('plan').optional().isIn(['trial', 'basic', 'pro', 'elite']),
+    body('plan').optional().isIn(VALID_PLANS),
     body('name').optional().trim().notEmpty(),
   ],
   validate,
