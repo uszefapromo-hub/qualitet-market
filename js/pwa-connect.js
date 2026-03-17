@@ -60,6 +60,14 @@
     var api = window.QMApi;
     if (!api) return;
 
+    // If already logged in, redirect away from the login page immediately
+    if (api.Auth.isLoggedIn()) {
+      var params = new URLSearchParams(window.location.search);
+      var redirectTarget = params.get('redirect');
+      window.location.replace(redirectTarget || 'dashboard.html');
+      return;
+    }
+
     // Intercept form submit in capture phase at document level
     document.addEventListener('submit', function (e) {
       var form = e.target;
@@ -87,7 +95,9 @@
         .then(function () {
           // QMApi.Auth.login stores the JWT token under 'qm_token'; that is
           // sufficient for app.js guards (isAppLoggedIn checks qm_token first).
-          window.location.href = 'dashboard.html';
+          var params = new URLSearchParams(window.location.search);
+          var redirectTarget = params.get('redirect');
+          window.location.href = redirectTarget || 'dashboard.html';
         })
         .catch(function (err) {
           restoreButton(submitBtn, origText);
@@ -842,7 +852,67 @@
     }).catch(function () { /* fire-and-forget – ignore errors */ });
   }());
 
-  // ─── Entry point ─────────────────────────────────────────────────────────────
+    // ─── Pricing / Cennik page ────────────────────────────────────────────────────
+
+  /**
+   * Runs on the cennik (pricing) page.
+   * - When the user is logged in: updates the topbar CTA to "Dashboard",
+   *   highlights their current plan card with an "AKTYWNY" badge, and marks
+   *   that plan's CTA button as the active plan (disabled, no checkout).
+   * - When not logged in: adds a ?redirect= parameter to the free-plan button
+   *   so that after registration the user lands back on the pricing page.
+   */
+  function initCennikPage() {
+    var api = window.QMApi;
+
+    if (!api || !api.Auth.isLoggedIn()) {
+      // Guest: update the FREE plan "Zacznij za darmo" button to carry a
+      // redirect param so the user comes back to cennik after logging in.
+      var freeBtn = document.querySelector('[data-plan-card][data-plan="free"] .btn-plan');
+      if (freeBtn && freeBtn.href && freeBtn.href.indexOf('login.html') !== -1) {
+        freeBtn.href = 'login.html?redirect=cennik.html';
+      }
+      return;
+    }
+
+    // Logged-in user: switch the topbar CTA to the user dashboard
+    var topbarCta = document.querySelector('.topbar-cta');
+    if (topbarCta && topbarCta.href && topbarCta.href.indexOf('login.html') !== -1) {
+      topbarCta.textContent = 'Dashboard';
+      topbarCta.href = 'dashboard.html';
+    }
+
+    // Fetch the user profile to know their current plan
+    api.Auth.me()
+      .then(function (user) {
+        var currentPlan = user && user.plan ? user.plan : 'trial';
+        // Normalize legacy alias
+        if (currentPlan === 'trial') currentPlan = 'free';
+
+        document.querySelectorAll('[data-plan-card]').forEach(function (card) {
+          if (card.dataset.plan !== currentPlan) return;
+
+          // Reveal the "AKTYWNY" badge
+          var badge = card.querySelector('[data-current-plan]');
+          if (badge) badge.hidden = false;
+
+          // Mark the CTA button as the active plan
+          var btn = card.querySelector('.btn-plan');
+          if (btn) {
+            btn.textContent = 'Tw\u00f3j aktualny plan';
+            btn.removeAttribute('href');
+            btn.removeAttribute('data-plan-checkout');
+            btn.setAttribute('aria-disabled', 'true');
+            btn.style.opacity = '0.65';
+            btn.style.pointerEvents = 'none';
+            btn.style.cursor = 'default';
+          }
+        });
+      })
+      .catch(function () { /* ignore – best-effort UI enhancement */ });
+  }
+
+// ─── Entry point ─────────────────────────────────────────────────────────────
 
   var page = document.body ? document.body.dataset.page : null;
 
