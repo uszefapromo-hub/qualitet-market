@@ -1649,7 +1649,7 @@ body.store-shop .shop-contact h2{
   .product-card .price{font-size:20px}
   .product-card img{border-radius:12px}
   body.store-shop .category-grid{
-    grid-template-columns:repeat(2,1fr);
+    grid-template-columns:1fr;
   }
   body.store-shop .product-grid-large{
     grid-template-columns:1fr 1fr;
