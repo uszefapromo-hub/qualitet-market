@@ -283,6 +283,13 @@
   <script>
   /* ── Skrypty page logic ── */
   (function() {
+    /* Auth guard — redirect to login if not authenticated */
+    try {
+      if (!localStorage.getItem('qm_token') && localStorage.getItem('app_user_logged') !== 'true') {
+        window.location.replace('login.html');
+      }
+    } catch(_) {}
+
     var TYPE_LABELS = {analytics:'📊 Analityka',tracking:'🎯 Śledzenie',chat:'💬 Chat',pixel:'📌 Piksel',custom:'⚙️ Własny'};
     var PLACEMENT_LABELS = {head:'<head>',body_start:'Pocz. <body>',body_end:'Kon. <body>'};
 
