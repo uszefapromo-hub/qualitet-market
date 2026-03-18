@@ -6,22 +6,25 @@
   <title>QualitetMarket | Sklep</title>
   <style>
     :root{
-      --bg:#f6f7fb;
-      --card:#ffffff;
+      --bg:#f5f7fb;
+      --surface:#ffffff;
+      --surface-2:#f8fafc;
       --text:#0f172a;
       --muted:#64748b;
       --line:#e2e8f0;
-      --primary:#6d28d9;
-      --primary2:#7c3aed;
-      --green:#16a34a;
-      --orange:#ea580c;
-      --red:#dc2626;
-      --shadow:0 10px 30px rgba(15,23,42,.08);
-      --radius:16px;
+      --primary:#7c3aed;
+      --primary-2:#6d28d9;
+      --accent:#ff6a00;
+      --danger:#dc2626;
+      --success:#16a34a;
+      --yellow:#f59e0b;
+      --shadow:0 12px 30px rgba(15,23,42,.08);
+      --radius:18px;
       --container:1440px;
     }
 
     *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
     body{
       margin:0;
       font-family:Arial, Helvetica, sans-serif;
@@ -30,280 +33,345 @@
     }
 
     a{text-decoration:none;color:inherit}
-    button{font:inherit}
-
-    .topbar{
-      background:#111827;
-      color:#fff;
-      padding:10px 20px;
-      font-size:14px;
-      display:flex;
-      justify-content:space-between;
-      gap:12px;
-      flex-wrap:wrap;
-    }
-
-    .header{
-      background:#fff;
-      border-bottom:1px solid var(--line);
-      position:sticky;
-      top:0;
-      z-index:50;
-    }
+    img{display:block;max-width:100%}
+    button,input,select{font:inherit}
 
     .wrap{
-      width:min(var(--container), calc(100% - 32px));
+      width:min(var(--container), calc(100% - 28px));
       margin:0 auto;
     }
 
-    .header-row{
+    .top-strip{
+      background:#111827;
+      color:#e5e7eb;
+      font-size:13px;
+    }
+
+    .top-strip .wrap{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      padding:10px 0;
+    }
+
+    .header{
+      position:sticky;
+      top:0;
+      z-index:100;
+      background:#fff;
+      border-bottom:1px solid var(--line);
+    }
+
+    .header-main{
       display:grid;
-      grid-template-columns:220px 1fr auto;
+      grid-template-columns:240px 1fr auto;
       gap:18px;
       align-items:center;
       padding:18px 0;
     }
 
     .logo{
-      font-size:28px;
-      font-weight:800;
-      color:var(--primary);
-      letter-spacing:.2px;
-    }
-
-    .searchbar{
-      display:grid;
-      grid-template-columns:1fr 170px 130px;
+      display:flex;
+      align-items:center;
       gap:10px;
+      font-size:28px;
+      font-weight:900;
+      letter-spacing:.2px;
+      color:var(--primary);
     }
 
-    .searchbar input,
-    .searchbar select{
+    .logo-badge{
+      width:42px;
+      height:42px;
+      border-radius:14px;
+      background:linear-gradient(135deg,var(--primary),#3b82f6);
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:22px;
+      font-weight:900;
+      box-shadow:var(--shadow);
+    }
+
+    .search-bar{
+      display:grid;
+      grid-template-columns:1fr 180px 130px;
+      gap:10px;
+      align-items:center;
+    }
+
+    .search-bar input,
+    .search-bar select{
       width:100%;
+      height:52px;
       border:1px solid var(--line);
+      border-radius:14px;
       background:#fff;
-      border-radius:12px;
-      padding:14px 14px;
+      padding:0 16px;
       outline:none;
     }
 
-    .searchbar button{
+    .search-bar input:focus,
+    .search-bar select:focus{
+      border-color:var(--primary);
+    }
+
+    .search-btn{
+      height:52px;
       border:none;
-      background:linear-gradient(135deg,var(--primary),var(--primary2));
+      border-radius:14px;
+      background:linear-gradient(135deg,var(--primary),var(--primary-2));
       color:#fff;
-      border-radius:12px;
-      font-weight:700;
+      font-weight:800;
       cursor:pointer;
     }
 
     .header-actions{
       display:flex;
       align-items:center;
-      gap:12px;
+      gap:10px;
     }
 
-    .header-link{
+    .action-link{
       position:relative;
-      padding:12px 14px;
-      border:1px solid var(--line);
-      border-radius:12px;
       background:#fff;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:13px 15px;
       font-weight:700;
+      white-space:nowrap;
     }
 
-    .cart-count{
+    .cart-badge{
       position:absolute;
       top:-8px;
       right:-8px;
       min-width:22px;
       height:22px;
       border-radius:999px;
-      background:var(--red);
+      background:var(--danger);
       color:#fff;
-      font-size:12px;
       display:flex;
       align-items:center;
       justify-content:center;
+      font-size:12px;
+      font-weight:800;
       padding:0 6px;
-      font-weight:700;
     }
 
-    .nav{
+    .cat-nav{
       background:#fff;
       border-top:1px solid var(--line);
       border-bottom:1px solid var(--line);
     }
 
-    .nav-row{
+    .cat-row{
       display:flex;
+      align-items:center;
       gap:10px;
       overflow:auto;
       padding:12px 0;
     }
 
-    .nav-chip{
-      white-space:nowrap;
+    .cat-chip{
       border:1px solid var(--line);
       background:#fff;
-      border-radius:999px;
+      color:var(--text);
       padding:10px 14px;
+      border-radius:999px;
+      white-space:nowrap;
       cursor:pointer;
       font-weight:700;
     }
 
-    .nav-chip.active{
+    .cat-chip.active{
       background:var(--primary);
       color:#fff;
       border-color:var(--primary);
     }
 
     .hero{
-      padding:22px 0;
+      padding:20px 0;
     }
 
-    .hero-box{
-      background:linear-gradient(135deg,#0f172a,#1e293b);
-      color:#fff;
-      border-radius:24px;
-      padding:28px;
+    .hero-grid{
       display:grid;
-      grid-template-columns:1.2fr .8fr;
-      gap:20px;
+      grid-template-columns:1.4fr .8fr;
+      gap:18px;
+    }
+
+    .hero-main{
+      background:linear-gradient(135deg,#0f172a,#1e293b 60%,#312e81);
+      color:#fff;
+      border-radius:28px;
+      padding:32px;
+      min-height:260px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
       box-shadow:var(--shadow);
     }
 
-    .hero h1{
-      margin:0 0 10px;
-      font-size:40px;
-      line-height:1.05;
+    .hero-main h1{
+      margin:0 0 12px;
+      font-size:46px;
+      line-height:1.02;
+      max-width:720px;
     }
 
-    .hero p{
-      margin:0 0 18px;
-      color:#cbd5e1;
+    .hero-main p{
+      margin:0 0 20px;
       font-size:16px;
+      color:#dbeafe;
       line-height:1.6;
-      max-width:700px;
+      max-width:720px;
     }
 
-    .hero-stats{
+    .hero-buttons{
       display:flex;
       gap:12px;
       flex-wrap:wrap;
     }
 
-    .stat{
-      background:rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:16px;
-      padding:14px 16px;
-      min-width:160px;
+    .hero-btn{
+      border:none;
+      border-radius:14px;
+      padding:14px 18px;
+      font-weight:800;
+      cursor:pointer;
     }
 
-    .stat strong{
-      display:block;
-      font-size:22px;
-      margin-bottom:4px;
+    .hero-btn.primary{
+      background:#fff;
+      color:#111827;
+    }
+
+    .hero-btn.secondary{
+      background:rgba(255,255,255,.08);
+      color:#fff;
+      border:1px solid rgba(255,255,255,.16);
     }
 
     .hero-side{
       display:grid;
-      gap:12px;
+      gap:18px;
     }
 
-    .hero-card{
-      background:rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.12);
-      border-radius:18px;
-      padding:16px;
+    .small-promo{
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:24px;
+      padding:20px;
+      box-shadow:var(--shadow);
+      min-height:121px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+
+    .small-promo strong{
+      font-size:20px;
+      margin-bottom:6px;
+    }
+
+    .small-promo span{
+      color:var(--muted);
+      line-height:1.5;
+      font-size:14px;
+    }
+
+    .section{
+      padding:6px 0 30px;
     }
 
     .layout{
       display:grid;
       grid-template-columns:280px 1fr;
       gap:20px;
-      padding-bottom:40px;
+      align-items:start;
     }
 
     .sidebar{
       position:sticky;
-      top:145px;
-      align-self:start;
+      top:156px;
       display:grid;
       gap:16px;
     }
 
-    .box{
-      background:var(--card);
+    .card{
+      background:#fff;
       border:1px solid var(--line);
-      border-radius:20px;
+      border-radius:22px;
       padding:18px;
       box-shadow:var(--shadow);
     }
 
-    .box h3{
+    .card h3{
       margin:0 0 14px;
       font-size:18px;
     }
 
-    .filters{
+    .filter-list{
       display:grid;
       gap:10px;
     }
 
-    .filters label{
+    .filter-list label{
       display:flex;
       gap:10px;
       align-items:center;
-      font-size:14px;
       color:var(--muted);
+      font-size:14px;
       cursor:pointer;
     }
 
-    .price-inputs{
+    .price-grid{
       display:grid;
       grid-template-columns:1fr 1fr;
       gap:10px;
     }
 
-    .price-inputs input,
+    .price-grid input,
     .sort-select{
       width:100%;
       border:1px solid var(--line);
       border-radius:12px;
+      background:#fff;
       padding:12px;
       outline:none;
-      background:#fff;
     }
 
     .clear-btn{
       width:100%;
       border:none;
+      border-radius:14px;
+      padding:13px 14px;
+      cursor:pointer;
+      font-weight:800;
       background:#111827;
       color:#fff;
-      padding:12px 14px;
-      border-radius:12px;
-      cursor:pointer;
-      font-weight:700;
     }
 
-    .main-head{
+    .content-head{
       display:flex;
       justify-content:space-between;
-      align-items:center;
-      gap:12px;
-      margin-bottom:14px;
+      align-items:flex-end;
+      gap:16px;
+      margin-bottom:16px;
       flex-wrap:wrap;
     }
 
-    .main-head h2{
-      margin:0;
-      font-size:28px;
+    .content-head h2{
+      margin:0 0 4px;
+      font-size:30px;
     }
 
-    .meta{
+    .content-head p{
+      margin:0;
       color:var(--muted);
-      font-size:14px;
     }
 
     .product-grid{
@@ -313,64 +381,64 @@
     }
 
     .product-card{
-      background:var(--card);
+      background:#fff;
       border:1px solid var(--line);
-      border-radius:18px;
+      border-radius:22px;
       overflow:hidden;
       box-shadow:var(--shadow);
-      transition:transform .15s ease, box-shadow .15s ease;
       display:flex;
       flex-direction:column;
+      transition:transform .16s ease, box-shadow .16s ease;
     }
 
     .product-card:hover{
-      transform:translateY(-3px);
-      box-shadow:0 14px 36px rgba(15,23,42,.12);
+      transform:translateY(-4px);
+      box-shadow:0 16px 36px rgba(15,23,42,.12);
     }
 
-    .product-image-wrap{
+    .product-media{
       position:relative;
-      background:#fff;
       aspect-ratio:1/1;
+      background:#fff;
+      padding:18px;
       display:flex;
       align-items:center;
       justify-content:center;
-      padding:16px;
       border-bottom:1px solid var(--line);
     }
 
-    .product-image{
+    .product-media img{
       max-width:100%;
       max-height:100%;
       object-fit:contain;
-      display:block;
     }
 
-    .badge{
+    .product-badge{
       position:absolute;
       top:12px;
       left:12px;
-      background:var(--orange);
-      color:#fff;
-      font-size:12px;
-      font-weight:700;
-      border-radius:999px;
       padding:6px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:800;
+      color:#fff;
+      background:linear-gradient(135deg,var(--accent),#ef4444);
     }
 
-    .fav{
+    .product-fav{
       position:absolute;
       top:12px;
       right:12px;
-      width:34px;
-      height:34px;
+      width:36px;
+      height:36px;
       border-radius:50%;
-      border:1px solid var(--line);
       background:#fff;
+      border:1px solid var(--line);
       display:flex;
       align-items:center;
       justify-content:center;
       font-size:16px;
+      color:#64748b;
     }
 
     .product-body{
@@ -382,10 +450,10 @@
     }
 
     .product-title{
-      font-size:16px;
-      font-weight:700;
+      font-size:15px;
+      font-weight:800;
       line-height:1.35;
-      min-height:44px;
+      min-height:42px;
     }
 
     .supplier{
@@ -393,117 +461,134 @@
       font-size:13px;
     }
 
-    .rating{
-      color:#f59e0b;
+    .meta-row{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
       font-size:13px;
-      font-weight:700;
+      flex-wrap:wrap;
+    }
+
+    .rating{
+      color:var(--yellow);
+      font-weight:800;
+    }
+
+    .sold{
+      color:var(--muted);
     }
 
     .price-row{
       display:flex;
-      align-items:end;
+      align-items:flex-end;
       gap:8px;
       flex-wrap:wrap;
     }
 
     .price{
       font-size:24px;
-      font-weight:800;
-      color:var(--text);
+      font-weight:900;
+      line-height:1;
     }
 
     .old-price{
+      font-size:14px;
       color:var(--muted);
       text-decoration:line-through;
-      font-size:14px;
     }
 
     .moq{
-      color:var(--green);
       font-size:13px;
-      font-weight:700;
+      color:var(--success);
+      font-weight:800;
     }
 
-    .product-actions{
+    .actions{
+      margin-top:auto;
       display:grid;
       grid-template-columns:1fr 1fr;
       gap:10px;
-      margin-top:auto;
     }
 
     .btn{
       border:none;
-      border-radius:12px;
+      border-radius:13px;
       padding:12px 14px;
-      font-weight:700;
+      font-weight:800;
       cursor:pointer;
     }
 
-    .btn-primary{
-      background:linear-gradient(135deg,var(--primary),var(--primary2));
-      color:#fff;
-    }
-
-    .btn-secondary{
+    .btn-light{
       background:#eef2ff;
       color:var(--primary);
     }
 
+    .btn-primary{
+      background:linear-gradient(135deg,var(--primary),var(--primary-2));
+      color:#fff;
+    }
+
     .empty{
+      display:none;
       background:#fff;
       border:1px dashed #cbd5e1;
-      border-radius:18px;
-      padding:40px 20px;
-      text-align:center;
+      border-radius:22px;
+      padding:44px 20px;
       color:var(--muted);
-      display:none;
+      text-align:center;
     }
 
     .footer{
-      margin-top:40px;
+      margin-top:20px;
       background:#0f172a;
       color:#cbd5e1;
       padding:28px 0;
+      font-size:14px;
     }
 
-    @media (max-width: 1280px){
+    @media (max-width:1280px){
       .product-grid{grid-template-columns:repeat(3, minmax(0,1fr))}
     }
 
-    @media (max-width: 1024px){
-      .header-row{grid-template-columns:1fr;gap:14px}
+    @media (max-width:1100px){
+      .header-main{grid-template-columns:1fr;gap:14px}
+      .hero-grid{grid-template-columns:1fr}
       .layout{grid-template-columns:1fr}
       .sidebar{position:static}
-      .hero-box{grid-template-columns:1fr}
     }
 
-    @media (max-width: 768px){
-      .searchbar{grid-template-columns:1fr}
+    @media (max-width:768px){
+      .search-bar{grid-template-columns:1fr}
       .product-grid{grid-template-columns:repeat(2, minmax(0,1fr))}
-      .hero h1{font-size:32px}
+      .hero-main h1{font-size:34px}
     }
 
-    @media (max-width: 520px){
+    @media (max-width:520px){
       .wrap{width:min(var(--container), calc(100% - 20px))}
       .product-grid{grid-template-columns:1fr}
-      .product-actions{grid-template-columns:1fr}
+      .actions{grid-template-columns:1fr}
     }
   </style>
 </head>
 <body>
-
-  <div class="topbar">
-    <div>QualitetMarket B2B/B2C • Hurt • Detal • Dostawcy • Sprzedawcy</div>
-    <div>API: <strong>http://localhost:3001/api/products</strong></div>
+  <div class="top-strip">
+    <div class="wrap">
+      <div>QualitetMarket • sklep marketplace • B2B/B2C • szybki start</div>
+      <div>API: http://localhost:3001/api/products</div>
+    </div>
   </div>
 
   <header class="header">
     <div class="wrap">
-      <div class="header-row">
-        <a href="#" class="logo">QualitetMarket</a>
+      <div class="header-main">
+        <a href="#" class="logo">
+          <span class="logo-badge">Q</span>
+          <span>QualitetMarket</span>
+        </a>
 
-        <div class="searchbar">
-          <input id="searchInput" type="text" placeholder="Szukaj produktów, marek, kategorii...">
+        <div class="search-bar">
+          <input id="searchInput" type="text" placeholder="Szukaj produktów, marek, dostawców...">
           <select id="categorySelect">
             <option value="all">Wszystkie kategorie</option>
             <option value="electronics">Elektronika</option>
@@ -512,25 +597,28 @@
             <option value="sport">Sport</option>
             <option value="beauty">Beauty</option>
           </select>
-          <button id="searchBtn">Szukaj</button>
+          <button id="searchBtn" class="search-btn" type="button">Szukaj</button>
         </div>
 
         <div class="header-actions">
-          <a class="header-link" href="#">Panel</a>
-          <a class="header-link" href="koszyk.html">Koszyk <span class="cart-count" id="cartCount">0</span></a>
+          <a class="action-link" href="#">Panel</a>
+          <a class="action-link" href="koszyk.html">
+            Koszyk
+            <span class="cart-badge" id="cartCount">0</span>
+          </a>
         </div>
       </div>
     </div>
 
-    <nav class="nav">
+    <nav class="cat-nav">
       <div class="wrap">
-        <div class="nav-row" id="quickCategories">
-          <button class="nav-chip active" data-category="all">Wszystko</button>
-          <button class="nav-chip" data-category="electronics">Elektronika</button>
-          <button class="nav-chip" data-category="fashion">Moda</button>
-          <button class="nav-chip" data-category="home">Dom</button>
-          <button class="nav-chip" data-category="sport">Sport</button>
-          <button class="nav-chip" data-category="beauty">Beauty</button>
+        <div class="cat-row">
+          <button class="cat-chip active" data-category="all" type="button">Wszystko</button>
+          <button class="cat-chip" data-category="electronics" type="button">Elektronika</button>
+          <button class="cat-chip" data-category="fashion" type="button">Moda</button>
+          <button class="cat-chip" data-category="home" type="button">Dom i ogród</button>
+          <button class="cat-chip" data-category="sport" type="button">Sport</button>
+          <button class="cat-chip" data-category="beauty" type="button">Beauty</button>
         </div>
       </div>
     </nav>
@@ -538,99 +626,87 @@
 
   <section class="hero">
     <div class="wrap">
-      <div class="hero-box">
-        <div>
-          <h1>Produkty które sprzedają się jak na marketplace</h1>
+      <div class="hero-grid">
+        <div class="hero-main">
+          <h1>Normalny sklep marketplace jak AliExpress</h1>
           <p>
-            Gotowy widok sklepu z dużą siatką produktów, cenami, dostawcami, badge promocyjnymi i koszykiem.
-            Podłączony pod Twój backend na localhost:3001.
+            Duże karty produktów, promocje, wyszukiwarka, kategorie, filtrowanie i działający koszyk.
+            Produkty pobierają się z Twojego backendu Node.js.
           </p>
-          <div class="hero-stats">
-            <div class="stat">
-              <strong id="statProducts">0</strong>
-              <span>produktów</span>
-            </div>
-            <div class="stat">
-              <strong>24h</strong>
-              <span>szybki start</span>
-            </div>
-            <div class="stat">
-              <strong>B2B/B2C</strong>
-              <span>jeden sklep</span>
-            </div>
+          <div class="hero-buttons">
+            <button class="hero-btn primary" type="button" onclick="document.getElementById('products').scrollIntoView()">Przeglądaj produkty</button>
+            <button class="hero-btn secondary" type="button">Oferty dnia</button>
           </div>
         </div>
 
         <div class="hero-side">
-          <div class="hero-card">
-            <strong>Widoczny układ</strong>
-            <p>Duże zdjęcia, cena, dostawca, rating, akcja kupna.</p>
+          <div class="small-promo">
+            <strong>Oferty hurtowe</strong>
+            <span>Importuj produkty od dostawców i sprzedawaj w swoim sklepie.</span>
           </div>
-          <div class="hero-card">
-            <strong>Gotowy koszyk</strong>
-            <p>Dodawanie do localStorage i licznik w headerze.</p>
-          </div>
-          <div class="hero-card">
-            <strong>Podpięty backend</strong>
-            <p>Pobiera dane z /api/products.</p>
+          <div class="small-promo">
+            <strong>Promocje do -40%</strong>
+            <span>Widoczna cena, stara cena, badge rabatowy i szybki zakup.</span>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <main class="wrap">
-    <div class="layout">
-      <aside class="sidebar">
-        <div class="box">
-          <h3>Filtrowanie</h3>
-          <div class="filters">
-            <label><input type="checkbox" class="promoFilter" value="discount"> Tylko promocje</label>
-            <label><input type="checkbox" class="promoFilter" value="cheap"> Do 500 zł</label>
-            <label><input type="checkbox" class="promoFilter" value="premium"> Premium 2000+ zł</label>
+  <section class="section" id="products">
+    <div class="wrap">
+      <div class="layout">
+        <aside class="sidebar">
+          <div class="card">
+            <h3>Filtry</h3>
+            <div class="filter-list">
+              <label><input type="checkbox" class="promoFilter" value="discount"> Tylko promocje</label>
+              <label><input type="checkbox" class="promoFilter" value="cheap"> Do 500 zł</label>
+              <label><input type="checkbox" class="promoFilter" value="premium"> Premium 2000+ zł</label>
+            </div>
           </div>
-        </div>
 
-        <div class="box">
-          <h3>Cena</h3>
-          <div class="price-inputs">
-            <input type="number" id="minPrice" placeholder="Od">
-            <input type="number" id="maxPrice" placeholder="Do">
+          <div class="card">
+            <h3>Cena</h3>
+            <div class="price-grid">
+              <input type="number" id="minPrice" placeholder="Od">
+              <input type="number" id="maxPrice" placeholder="Do">
+            </div>
           </div>
-        </div>
 
-        <div class="box">
-          <h3>Sortowanie</h3>
-          <select id="sortSelect" class="sort-select">
-            <option value="default">Domyślnie</option>
-            <option value="priceAsc">Cena rosnąco</option>
-            <option value="priceDesc">Cena malejąco</option>
-            <option value="nameAsc">Nazwa A-Z</option>
-          </select>
-        </div>
-
-        <div class="box">
-          <button class="clear-btn" id="clearFilters">Wyczyść filtry</button>
-        </div>
-      </aside>
-
-      <section>
-        <div class="main-head">
-          <div>
-            <h2>Produkty</h2>
-            <div class="meta" id="resultsMeta">Ładowanie produktów...</div>
+          <div class="card">
+            <h3>Sortowanie</h3>
+            <select id="sortSelect" class="sort-select">
+              <option value="default">Domyślnie</option>
+              <option value="priceAsc">Cena rosnąco</option>
+              <option value="priceDesc">Cena malejąco</option>
+              <option value="nameAsc">Nazwa A-Z</option>
+            </select>
           </div>
-        </div>
 
-        <div class="product-grid" id="productGrid"></div>
-        <div class="empty" id="emptyState">Brak produktów dla wybranych filtrów.</div>
-      </section>
+          <div class="card">
+            <button id="clearFilters" class="clear-btn" type="button">Wyczyść filtry</button>
+          </div>
+        </aside>
+
+        <main>
+          <div class="content-head">
+            <div>
+              <h2>Produkty</h2>
+              <p id="resultsMeta">Ładowanie produktów...</p>
+            </div>
+          </div>
+
+          <div class="product-grid" id="productGrid"></div>
+          <div class="empty" id="emptyState">Brak produktów dla wybranych filtrów.</div>
+        </main>
+      </div>
     </div>
-  </main>
+  </section>
 
   <footer class="footer">
     <div class="wrap">
-      QualitetMarket • działający sklep pod API • lokalny frontend
+      QualitetMarket • frontend sklepu • produkty z API • koszyk w localStorage
     </div>
   </footer>
 
@@ -638,27 +714,47 @@
     const API_URL = "http://localhost:3001/api/products";
 
     let allProducts = [];
-    let filteredProducts = [];
     let activeCategory = "all";
 
     function guessCategory(product) {
       const text = `${product.name} ${product.store}`.toLowerCase();
 
-      if (text.includes("iphone") || text.includes("playstation") || text.includes("sony") || text.includes("apple") || text.includes("laptop") || text.includes("smart")) {
-        return "electronics";
-      }
-      if (text.includes("nike") || text.includes("shoe") || text.includes("but") || text.includes("shirt") || text.includes("hoodie")) {
-        return "fashion";
-      }
-      if (text.includes("sofa") || text.includes("lamp") || text.includes("home") || text.includes("kitchen")) {
-        return "home";
-      }
-      if (text.includes("sport") || text.includes("bike") || text.includes("ball")) {
-        return "sport";
-      }
-      if (text.includes("beauty") || text.includes("cream") || text.includes("cosmetic")) {
-        return "beauty";
-      }
+      if (
+        text.includes("iphone") ||
+        text.includes("playstation") ||
+        text.includes("sony") ||
+        text.includes("apple") ||
+        text.includes("smart") ||
+        text.includes("laptop")
+      ) return "electronics";
+
+      if (
+        text.includes("nike") ||
+        text.includes("shoe") ||
+        text.includes("but") ||
+        text.includes("shirt") ||
+        text.includes("hoodie")
+      ) return "fashion";
+
+      if (
+        text.includes("sofa") ||
+        text.includes("lamp") ||
+        text.includes("kitchen") ||
+        text.includes("home")
+      ) return "home";
+
+      if (
+        text.includes("sport") ||
+        text.includes("bike") ||
+        text.includes("ball")
+      ) return "sport";
+
+      if (
+        text.includes("beauty") ||
+        text.includes("cream") ||
+        text.includes("cosmetic")
+      ) return "beauty";
+
       return "electronics";
     }
 
@@ -671,9 +767,9 @@
         ...product,
         category: product.category || guessCategory(product),
         rating: (4.6 + (index % 4) * 0.1).toFixed(1),
-        reviews: 120 + index * 37,
+        sold: 80 + index * 19,
         moq: index % 2 === 0 ? "MOQ: 2 szt." : "MOQ: 1 szt.",
-        badge: discount > 0 ? `-${discount}%` : (index % 3 === 0 ? "HOT" : "NOWOŚĆ")
+        badge: discount > 0 ? `-${discount}%` : (index % 2 === 0 ? "HOT" : "NOWOŚĆ")
       };
     }
 
@@ -712,11 +808,9 @@
       const grid = document.getElementById("productGrid");
       const empty = document.getElementById("emptyState");
       const meta = document.getElementById("resultsMeta");
-      const statProducts = document.getElementById("statProducts");
 
       grid.innerHTML = "";
       meta.textContent = `Znaleziono ${products.length} produktów`;
-      statProducts.textContent = allProducts.length;
 
       if (!products.length) {
         empty.style.display = "block";
@@ -734,22 +828,30 @@
         card.className = "product-card";
 
         card.innerHTML = `
-          <div class="product-image-wrap">
-            <span class="badge">${product.badge}</span>
-            <span class="fav">♡</span>
-            <img class="product-image" src="${product.image}" alt="${product.name}">
+          <div class="product-media">
+            <span class="product-badge">${product.badge}</span>
+            <span class="product-fav">♡</span>
+            <img src="${product.image}" alt="${product.name}">
           </div>
+
           <div class="product-body">
             <div class="product-title">${product.name}</div>
             <div class="supplier">Dostawca: ${product.store}</div>
-            <div class="rating">★ ${product.rating} • ${product.reviews} opinii</div>
+
+            <div class="meta-row">
+              <span class="rating">★ ${product.rating}</span>
+              <span class="sold">Sprzedano ${product.sold}+</span>
+            </div>
+
             <div class="price-row">
               <span class="price">${product.price} zł</span>
               ${oldPriceHtml}
             </div>
+
             <div class="moq">${product.moq}</div>
-            <div class="product-actions">
-              <button class="btn btn-secondary" type="button">Szczegóły</button>
+
+            <div class="actions">
+              <button class="btn btn-light" type="button">Szczegóły</button>
               <button class="btn btn-primary" type="button" onclick="addToCart(${product.id})">Dodaj do koszyka</button>
             </div>
           </div>
@@ -765,7 +867,7 @@
       const minPrice = Number(document.getElementById("minPrice").value || 0);
       const maxPrice = Number(document.getElementById("maxPrice").value || 0);
       const sort = document.getElementById("sortSelect").value;
-      const checkedPromos = [...document.querySelectorAll(".promoFilter:checked")].map(el => el.value);
+      const promoValues = [...document.querySelectorAll(".promoFilter:checked")].map(el => el.value);
 
       let list = [...allProducts];
 
@@ -790,59 +892,58 @@
         list = list.filter(p => Number(p.price) <= maxPrice);
       }
 
-      if (checkedPromos.includes("discount")) {
+      if (promoValues.includes("discount")) {
         list = list.filter(p => Number(p.oldPrice || 0) > Number(p.price || 0));
       }
 
-      if (checkedPromos.includes("cheap")) {
+      if (promoValues.includes("cheap")) {
         list = list.filter(p => Number(p.price) <= 500);
       }
 
-      if (checkedPromos.includes("premium")) {
+      if (promoValues.includes("premium")) {
         list = list.filter(p => Number(p.price) >= 2000);
       }
 
       if (sort === "priceAsc") {
-        list.sort((a,b) => Number(a.price) - Number(b.price));
+        list.sort((a, b) => Number(a.price) - Number(b.price));
       }
 
       if (sort === "priceDesc") {
-        list.sort((a,b) => Number(b.price) - Number(a.price));
+        list.sort((a, b) => Number(b.price) - Number(a.price));
       }
 
       if (sort === "nameAsc") {
-        list.sort((a,b) => a.name.localeCompare(b.name, "pl"));
+        list.sort((a, b) => a.name.localeCompare(b.name, "pl"));
       }
 
-      filteredProducts = list;
-      renderProducts(filteredProducts);
+      renderProducts(list);
     }
 
     async function loadProducts() {
       try {
         const res = await fetch(API_URL);
         const data = await res.json();
-
         allProducts = data.map((product, index) => enrichProduct(product, index));
-        filteredProducts = [...allProducts];
-
-        renderProducts(filteredProducts);
+        renderProducts(allProducts);
       } catch (error) {
         console.error(error);
         document.getElementById("resultsMeta").textContent = "Błąd ładowania produktów z API";
-        document.getElementById("emptyState").style.display = "block";
-        document.getElementById("emptyState").textContent = "Nie udało się pobrać produktów. Sprawdź czy działa node server.js";
+        const empty = document.getElementById("emptyState");
+        empty.style.display = "block";
+        empty.textContent = "Nie udało się pobrać produktów. Sprawdź czy działa node server.js";
       }
     }
 
     document.getElementById("searchBtn").addEventListener("click", applyFilters);
     document.getElementById("searchInput").addEventListener("input", applyFilters);
+
     document.getElementById("categorySelect").addEventListener("change", () => {
       activeCategory = "all";
-      document.querySelectorAll(".nav-chip").forEach(chip => chip.classList.remove("active"));
-      document.querySelector('.nav-chip[data-category="all"]').classList.add("active");
+      document.querySelectorAll(".cat-chip").forEach(chip => chip.classList.remove("active"));
+      document.querySelector('.cat-chip[data-category="all"]').classList.add("active");
       applyFilters();
     });
+
     document.getElementById("minPrice").addEventListener("input", applyFilters);
     document.getElementById("maxPrice").addEventListener("input", applyFilters);
     document.getElementById("sortSelect").addEventListener("change", applyFilters);
@@ -856,14 +957,14 @@
       document.getElementById("sortSelect").value = "default";
       document.querySelectorAll(".promoFilter").forEach(el => el.checked = false);
       activeCategory = "all";
-      document.querySelectorAll(".nav-chip").forEach(chip => chip.classList.remove("active"));
-      document.querySelector('.nav-chip[data-category="all"]').classList.add("active");
+      document.querySelectorAll(".cat-chip").forEach(chip => chip.classList.remove("active"));
+      document.querySelector('.cat-chip[data-category="all"]').classList.add("active");
       applyFilters();
     });
 
-    document.querySelectorAll(".nav-chip").forEach(chip => {
+    document.querySelectorAll(".cat-chip").forEach(chip => {
       chip.addEventListener("click", () => {
-        document.querySelectorAll(".nav-chip").forEach(c => c.classList.remove("active"));
+        document.querySelectorAll(".cat-chip").forEach(c => c.classList.remove("active"));
         chip.classList.add("active");
         activeCategory = chip.dataset.category;
         applyFilters();
