@@ -1,580 +1,877 @@
 <!doctype html>
 <html lang="pl">
 <head>
-  <title>Sklep | QualitetMarket</title>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#7c3aed">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
-  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
-  <link rel="stylesheet" href="shop.css">
-  <script>window.QM_API_BASE = 'https://api.uszefaqualitet.pl/api';</script>
-  <meta http-equiv="Content-Security-Policy" content="frame-ancestors 'self'; object-src 'none'">
-  <script src="js/security-guard.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QualitetMarket | Sklep</title>
+  <style>
+    :root{
+      --bg:#f6f7fb;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --line:#e2e8f0;
+      --primary:#6d28d9;
+      --primary2:#7c3aed;
+      --green:#16a34a;
+      --orange:#ea580c;
+      --red:#dc2626;
+      --shadow:0 10px 30px rgba(15,23,42,.08);
+      --radius:16px;
+      --container:1440px;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Arial, Helvetica, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    a{text-decoration:none;color:inherit}
+    button{font:inherit}
+
+    .topbar{
+      background:#111827;
+      color:#fff;
+      padding:10px 20px;
+      font-size:14px;
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .header{
+      background:#fff;
+      border-bottom:1px solid var(--line);
+      position:sticky;
+      top:0;
+      z-index:50;
+    }
+
+    .wrap{
+      width:min(var(--container), calc(100% - 32px));
+      margin:0 auto;
+    }
+
+    .header-row{
+      display:grid;
+      grid-template-columns:220px 1fr auto;
+      gap:18px;
+      align-items:center;
+      padding:18px 0;
+    }
+
+    .logo{
+      font-size:28px;
+      font-weight:800;
+      color:var(--primary);
+      letter-spacing:.2px;
+    }
+
+    .searchbar{
+      display:grid;
+      grid-template-columns:1fr 170px 130px;
+      gap:10px;
+    }
+
+    .searchbar input,
+    .searchbar select{
+      width:100%;
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:12px;
+      padding:14px 14px;
+      outline:none;
+    }
+
+    .searchbar button{
+      border:none;
+      background:linear-gradient(135deg,var(--primary),var(--primary2));
+      color:#fff;
+      border-radius:12px;
+      font-weight:700;
+      cursor:pointer;
+    }
+
+    .header-actions{
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+
+    .header-link{
+      position:relative;
+      padding:12px 14px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:#fff;
+      font-weight:700;
+    }
+
+    .cart-count{
+      position:absolute;
+      top:-8px;
+      right:-8px;
+      min-width:22px;
+      height:22px;
+      border-radius:999px;
+      background:var(--red);
+      color:#fff;
+      font-size:12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:0 6px;
+      font-weight:700;
+    }
+
+    .nav{
+      background:#fff;
+      border-top:1px solid var(--line);
+      border-bottom:1px solid var(--line);
+    }
+
+    .nav-row{
+      display:flex;
+      gap:10px;
+      overflow:auto;
+      padding:12px 0;
+    }
+
+    .nav-chip{
+      white-space:nowrap;
+      border:1px solid var(--line);
+      background:#fff;
+      border-radius:999px;
+      padding:10px 14px;
+      cursor:pointer;
+      font-weight:700;
+    }
+
+    .nav-chip.active{
+      background:var(--primary);
+      color:#fff;
+      border-color:var(--primary);
+    }
+
+    .hero{
+      padding:22px 0;
+    }
+
+    .hero-box{
+      background:linear-gradient(135deg,#0f172a,#1e293b);
+      color:#fff;
+      border-radius:24px;
+      padding:28px;
+      display:grid;
+      grid-template-columns:1.2fr .8fr;
+      gap:20px;
+      box-shadow:var(--shadow);
+    }
+
+    .hero h1{
+      margin:0 0 10px;
+      font-size:40px;
+      line-height:1.05;
+    }
+
+    .hero p{
+      margin:0 0 18px;
+      color:#cbd5e1;
+      font-size:16px;
+      line-height:1.6;
+      max-width:700px;
+    }
+
+    .hero-stats{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .stat{
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:16px;
+      padding:14px 16px;
+      min-width:160px;
+    }
+
+    .stat strong{
+      display:block;
+      font-size:22px;
+      margin-bottom:4px;
+    }
+
+    .hero-side{
+      display:grid;
+      gap:12px;
+    }
+
+    .hero-card{
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:18px;
+      padding:16px;
+    }
+
+    .layout{
+      display:grid;
+      grid-template-columns:280px 1fr;
+      gap:20px;
+      padding-bottom:40px;
+    }
+
+    .sidebar{
+      position:sticky;
+      top:145px;
+      align-self:start;
+      display:grid;
+      gap:16px;
+    }
+
+    .box{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:20px;
+      padding:18px;
+      box-shadow:var(--shadow);
+    }
+
+    .box h3{
+      margin:0 0 14px;
+      font-size:18px;
+    }
+
+    .filters{
+      display:grid;
+      gap:10px;
+    }
+
+    .filters label{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      font-size:14px;
+      color:var(--muted);
+      cursor:pointer;
+    }
+
+    .price-inputs{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+
+    .price-inputs input,
+    .sort-select{
+      width:100%;
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:12px;
+      outline:none;
+      background:#fff;
+    }
+
+    .clear-btn{
+      width:100%;
+      border:none;
+      background:#111827;
+      color:#fff;
+      padding:12px 14px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:700;
+    }
+
+    .main-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom:14px;
+      flex-wrap:wrap;
+    }
+
+    .main-head h2{
+      margin:0;
+      font-size:28px;
+    }
+
+    .meta{
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .product-grid{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0,1fr));
+      gap:18px;
+    }
+
+    .product-card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:18px;
+      overflow:hidden;
+      box-shadow:var(--shadow);
+      transition:transform .15s ease, box-shadow .15s ease;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .product-card:hover{
+      transform:translateY(-3px);
+      box-shadow:0 14px 36px rgba(15,23,42,.12);
+    }
+
+    .product-image-wrap{
+      position:relative;
+      background:#fff;
+      aspect-ratio:1/1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      border-bottom:1px solid var(--line);
+    }
+
+    .product-image{
+      max-width:100%;
+      max-height:100%;
+      object-fit:contain;
+      display:block;
+    }
+
+    .badge{
+      position:absolute;
+      top:12px;
+      left:12px;
+      background:var(--orange);
+      color:#fff;
+      font-size:12px;
+      font-weight:700;
+      border-radius:999px;
+      padding:6px 10px;
+    }
+
+    .fav{
+      position:absolute;
+      top:12px;
+      right:12px;
+      width:34px;
+      height:34px;
+      border-radius:50%;
+      border:1px solid var(--line);
+      background:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:16px;
+    }
+
+    .product-body{
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      flex:1;
+    }
+
+    .product-title{
+      font-size:16px;
+      font-weight:700;
+      line-height:1.35;
+      min-height:44px;
+    }
+
+    .supplier{
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .rating{
+      color:#f59e0b;
+      font-size:13px;
+      font-weight:700;
+    }
+
+    .price-row{
+      display:flex;
+      align-items:end;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .price{
+      font-size:24px;
+      font-weight:800;
+      color:var(--text);
+    }
+
+    .old-price{
+      color:var(--muted);
+      text-decoration:line-through;
+      font-size:14px;
+    }
+
+    .moq{
+      color:var(--green);
+      font-size:13px;
+      font-weight:700;
+    }
+
+    .product-actions{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:auto;
+    }
+
+    .btn{
+      border:none;
+      border-radius:12px;
+      padding:12px 14px;
+      font-weight:700;
+      cursor:pointer;
+    }
+
+    .btn-primary{
+      background:linear-gradient(135deg,var(--primary),var(--primary2));
+      color:#fff;
+    }
+
+    .btn-secondary{
+      background:#eef2ff;
+      color:var(--primary);
+    }
+
+    .empty{
+      background:#fff;
+      border:1px dashed #cbd5e1;
+      border-radius:18px;
+      padding:40px 20px;
+      text-align:center;
+      color:var(--muted);
+      display:none;
+    }
+
+    .footer{
+      margin-top:40px;
+      background:#0f172a;
+      color:#cbd5e1;
+      padding:28px 0;
+    }
+
+    @media (max-width: 1280px){
+      .product-grid{grid-template-columns:repeat(3, minmax(0,1fr))}
+    }
+
+    @media (max-width: 1024px){
+      .header-row{grid-template-columns:1fr;gap:14px}
+      .layout{grid-template-columns:1fr}
+      .sidebar{position:static}
+      .hero-box{grid-template-columns:1fr}
+    }
+
+    @media (max-width: 768px){
+      .searchbar{grid-template-columns:1fr}
+      .product-grid{grid-template-columns:repeat(2, minmax(0,1fr))}
+      .hero h1{font-size:32px}
+    }
+
+    @media (max-width: 520px){
+      .wrap{width:min(var(--container), calc(100% - 20px))}
+      .product-grid{grid-template-columns:1fr}
+      .product-actions{grid-template-columns:1fr}
+    }
+  </style>
 </head>
-<body data-page="sklep" class="store-shop has-bottom-nav">
-  <div class="app-splash" data-app-splash>
-    <div class="app-splash-card">
-      <div class="app-splash-logo">
-        <img src="assets/icons/icon-192.svg" alt="QualitetMarket">
-      </div>
-      <div class="app-splash-title">
-        <strong>QualitetMarket</strong>
-        <span>Marketplace B2B/B2C</span>
-      </div>
-      <div class="app-splash-loader"></div>
-    </div>
+<body>
+
+  <div class="topbar">
+    <div>QualitetMarket B2B/B2C • Hurt • Detal • Dostawcy • Sprzedawcy</div>
+    <div>API: <strong>http://localhost:3001/api/products</strong></div>
   </div>
-  <header class="topbar">
-    <div class="wrap topbar-inner">
-      <a class="brand" href="index.html">
-        <img src="assets/icons/favicon.svg" alt="QualitetMarket" width="40" height="40">
-        <div>
-          <strong>QualitetMarket</strong>
-          <span>Marketplace B2B/B2C</span>
+
+  <header class="header">
+    <div class="wrap">
+      <div class="header-row">
+        <a href="#" class="logo">QualitetMarket</a>
+
+        <div class="searchbar">
+          <input id="searchInput" type="text" placeholder="Szukaj produktów, marek, kategorii...">
+          <select id="categorySelect">
+            <option value="all">Wszystkie kategorie</option>
+            <option value="electronics">Elektronika</option>
+            <option value="fashion">Moda</option>
+            <option value="home">Dom</option>
+            <option value="sport">Sport</option>
+            <option value="beauty">Beauty</option>
+          </select>
+          <button id="searchBtn">Szukaj</button>
         </div>
-      </a>
-      <div class="cta-row">
-        <a class="btn btn-secondary" href="koszyk.html" style="position:relative">
-          🛒 Koszyk
-          <span data-cart-badge style="position:absolute;top:-6px;right:-6px;background:#ff4fd8;color:#fff;border-radius:999px;font-size:11px;font-weight:800;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 4px" hidden>0</span>
-        </a>
-        <a class="btn btn-secondary" href="panel-sklepu.html">Panel sklepu</a>
-        <a class="btn btn-primary" href="generator-sklepu.html">Ustawienia sklepu</a>
+
+        <div class="header-actions">
+          <a class="header-link" href="#">Panel</a>
+          <a class="header-link" href="koszyk.html">Koszyk <span class="cart-count" id="cartCount">0</span></a>
+        </div>
       </div>
     </div>
+
+    <nav class="nav">
+      <div class="wrap">
+        <div class="nav-row" id="quickCategories">
+          <button class="nav-chip active" data-category="all">Wszystko</button>
+          <button class="nav-chip" data-category="electronics">Elektronika</button>
+          <button class="nav-chip" data-category="fashion">Moda</button>
+          <button class="nav-chip" data-category="home">Dom</button>
+          <button class="nav-chip" data-category="sport">Sport</button>
+          <button class="nav-chip" data-category="beauty">Beauty</button>
+        </div>
+      </div>
+    </nav>
   </header>
 
-  <main class="wrap shop-shell" data-store-shop>
-    <div class="hero-grid" data-store-content>
-      <aside class="hero-side hero-side-left">
-        <div class="hero-side-card">
-          <span class="hero-side-title">Popularne kategorie</span>
-          <div class="hero-category-grid">
-            <div class="hero-category-tile">
-              <img src="assets/images/demo/category-electronics.svg" alt="Elektronika" width="26" height="26">
-              <span>Elektronika</span>
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-box">
+        <div>
+          <h1>Produkty które sprzedają się jak na marketplace</h1>
+          <p>
+            Gotowy widok sklepu z dużą siatką produktów, cenami, dostawcami, badge promocyjnymi i koszykiem.
+            Podłączony pod Twój backend na localhost:3001.
+          </p>
+          <div class="hero-stats">
+            <div class="stat">
+              <strong id="statProducts">0</strong>
+              <span>produktów</span>
             </div>
-            <div class="hero-category-tile">
-              <img src="assets/images/demo/category-business.svg" alt="Biznes" width="26" height="26">
-              <span>Biznes</span>
+            <div class="stat">
+              <strong>24h</strong>
+              <span>szybki start</span>
             </div>
-            <div class="hero-category-tile">
-              <img src="assets/images/demo/category-home.svg" alt="Dom i wnętrza" width="26" height="26">
-              <span>Dom i wnętrza</span>
-            </div>
-            <div class="hero-category-tile">
-              <img src="assets/images/demo/category-fashion.svg" alt="Moda" width="26" height="26">
-              <span>Moda</span>
-            </div>
-            <div class="hero-category-tile">
-              <img src="assets/images/demo/category-tools.svg" alt="Narzędzia" width="26" height="26">
-              <span>Narzędzia</span>
-            </div>
-            <div class="hero-category-tile">
-              <img src="assets/images/demo/category-auto.svg" alt="Auto i flota" width="26" height="26">
-              <span>Auto i flota</span>
+            <div class="stat">
+              <strong>B2B/B2C</strong>
+              <span>jeden sklep</span>
             </div>
           </div>
         </div>
-        <div class="hero-side-card">
-          <span class="hero-side-title">Szybkie filtry</span>
-          <div class="themes-row">
-            <span class="theme-pill">Bestsellery</span>
-            <span class="theme-pill">Nowości</span>
-            <span class="theme-pill">Dostawa 24h</span>
-            <span class="theme-pill">Top marża</span>
-          </div>
-          <div class="cta-row">
-            <a class="btn btn-secondary" href="listing.html">Pełny listing</a>
-          </div>
-        </div>
-        <div class="hero-side-card">
-          <span class="hero-side-title">Zaufani dostawcy</span>
-          <div class="hero-logo-grid">
-            <img src="assets/images/demo/supplier-neotech.svg" alt="NeoTech" width="90" height="40">
-            <img src="assets/images/demo/supplier-homehub.svg" alt="HomeHub" width="90" height="40">
-            <img src="assets/images/demo/supplier-fashionlane.svg" alt="FashionLane" width="90" height="40">
-            <img src="assets/images/demo/supplier-autofleet.svg" alt="AutoFleet" width="90" height="40">
-          </div>
-          <div class="cta-row">
-            <a class="btn btn-secondary" href="hurtownie.html">Hurtownie</a>
-          </div>
-        </div>
-      </aside>
 
-      <div class="hero-main">
-      <section class="panel-card store-hero-banner">
-        <div class="store-hero-content">
-          <div class="shop-logo" data-logo-preview>
-            <span>U</span>
-            <img alt="Logo sklepu">
+        <div class="hero-side">
+          <div class="hero-card">
+            <strong>Widoczny układ</strong>
+            <p>Duże zdjęcia, cena, dostawca, rating, akcja kupna.</p>
           </div>
-          <div class="store-hero-info">
-      <span class="eyebrow" data-store-theme></span>
-      <h1 data-store-name>Sklep</h1>
-            <p class="lead" data-store-description></p>
-            <p class="field-hint" data-store-slug></p>
-            <div class="shop-badges">
-              <span class="badge-pill" data-store-plan>Plan: Basic</span>
-              <span class="badge-pill">Oferta premium</span>
-              <span class="badge-pill">Dostawa 24h</span>
-            </div>
-            <div class="cta-row hero-actions">
-              <a class="btn btn-primary" href="listing.html">Odkryj kategorie</a>
-              <a class="btn btn-secondary" href="hurtownie.html">Hurtownie</a>
-              <a class="btn btn-secondary" href="cennik.html">Plan PRO / ELITE</a>
-            </div>
-            <div class="hero-metrics">
-              <div class="metric-tile">
-                <span>Aktywne oferty</span>
-                <strong>12 450</strong>
-              </div>
-              <div class="metric-tile">
-                <span>Hurtownie</span>
-                <strong>128</strong>
-              </div>
-              <div class="metric-tile">
-                <span>Nowości dziś</span>
-                <strong>340</strong>
-              </div>
-            </div>
+          <div class="hero-card">
+            <strong>Gotowy koszyk</strong>
+            <p>Dodawanie do localStorage i licznik w headerze.</p>
+          </div>
+          <div class="hero-card">
+            <strong>Podpięty backend</strong>
+            <p>Pobiera dane z /api/products.</p>
           </div>
         </div>
-        <div class="store-hero-visual">
-          <img src="assets/images/demo/hero-market.svg" alt="Marketplace Uszefa Qualitet">
-          <div class="hero-floating-cards">
-            <div class="floating-card">
-              <span>Top kategoria</span>
-              <strong>Elektronika</strong>
-              <p>Najwyższa sprzedaż w tym tygodniu</p>
-            </div>
-            <div class="floating-card">
-              <span>Super promocja</span>
-              <strong>-22% PRO</strong>
-              <p>Odblokuj hurtownie premium</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="store-section app-cta-section" id="mobile-sklep">
-        <div class="app-cta-box app-cta-grid">
-          <div class="app-cta-content">
-            <span class="app-cta-icon" aria-hidden="true">📱</span>
-            <span class="eyebrow">Prowadź sklep z telefonu</span>
-            <h2>Sklep, hurtownie i zamówienia w jednym panelu</h2>
-            <p class="hint">Ustawienia, promocje i sprzedaż są dostępne mobilnie. Dodaj platformę do ekranu głównego i pracuj szybciej.</p>
-            <div class="app-cta-actions">
-              <button class="btn btn-primary" type="button" data-app-install-open>Otwórz aplikację</button>
-              <a class="btn btn-secondary" href="hurtownie.html">Hurtownie mobilne</a>
-            </div>
-            <div class="app-instructions">
-              <div>
-                <strong>iPhone</strong>
-                <ul>
-                  <li>Udostępnij</li>
-                  <li>Dodaj do ekranu głównego</li>
-                </ul>
-              </div>
-              <div>
-                <strong>Android</strong>
-                <ul>
-                  <li>Menu przeglądarki</li>
-                  <li>Zainstaluj aplikację</li>
-                  <li>Dodaj do ekranu głównego</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          <div class="app-cta-media">
-            <img src="assets/images/demo/product-smartphone.svg" alt="Zarządzanie sklepem z telefonu" loading="lazy" decoding="async">
-            <span class="app-cta-badge">Sklep mobile PRO</span>
-          </div>
-        </div>
-      </section>
-
-
-      <section class="store-section" id="kategorie">
-        <div class="section-head">
-          <span class="eyebrow">Kategorie z ikonami</span>
-          <h2>Otwórz nowe działy sprzedaży</h2>
-          <p>Każda kategoria to osobny świat produktów, ikon i dynamicznych kafli.</p>
-        </div>
-        <div class="category-grid">
-          <article class="category-card">
-            <div class="category-media">
-              <img loading="lazy" decoding="async" class="category-image" src="assets/images/demo/category-electronics.svg" alt="Elektronika">
-              <span class="category-icon" aria-hidden="true">📱</span>
-            </div>
-            <div class="category-info">
-              <h3>Elektronika</h3>
-              <p>Smartfony, audio, smart home</p>
-            </div>
-          </article>
-          <article class="category-card">
-            <div class="category-media">
-              <img loading="lazy" decoding="async" class="category-image" src="assets/images/demo/category-home.svg" alt="Dom i ogród">
-              <span class="category-icon" aria-hidden="true">🏡</span>
-            </div>
-            <div class="category-info">
-              <h3>Dom i ogród</h3>
-              <p>Wyposażenie, dekoracje, outdoor</p>
-            </div>
-          </article>
-          <article class="category-card">
-            <div class="category-media">
-              <img loading="lazy" decoding="async" class="category-image" src="assets/images/demo/category-fashion.svg" alt="Moda">
-              <span class="category-icon" aria-hidden="true">👗</span>
-            </div>
-            <div class="category-info">
-              <h3>Moda</h3>
-              <p>Odzież, obuwie, dodatki premium</p>
-            </div>
-          </article>
-          <article class="category-card">
-            <div class="category-media">
-              <img loading="lazy" decoding="async" class="category-image" src="assets/images/demo/category-auto.svg" alt="Auto">
-              <span class="category-icon" aria-hidden="true">🚗</span>
-            </div>
-            <div class="category-info">
-              <h3>Auto</h3>
-              <p>Akcesoria, opony, detailing</p>
-            </div>
-          </article>
-          <article class="category-card">
-            <div class="category-media">
-              <img loading="lazy" decoding="async" class="category-image" src="assets/images/demo/category-kids.svg" alt="Dziecko">
-              <span class="category-icon" aria-hidden="true">🧸</span>
-            </div>
-            <div class="category-info">
-              <h3>Dziecko</h3>
-              <p>Zabawki, wyprawka, edukacja</p>
-            </div>
-          </article>
-          <article class="category-card">
-            <div class="category-media">
-              <img loading="lazy" decoding="async" class="category-image" src="assets/images/demo/category-beauty.svg" alt="Beauty">
-              <span class="category-icon" aria-hidden="true">💄</span>
-            </div>
-            <div class="category-info">
-              <h3>Beauty</h3>
-              <p>Kosmetyki, pielęgnacja, SPA</p>
-            </div>
-          </article>
-          <article class="category-card">
-            <div class="category-media">
-              <img loading="lazy" decoding="async" class="category-image" src="assets/images/demo/category-business.svg" alt="Biznes">
-              <span class="category-icon" aria-hidden="true">💼</span>
-            </div>
-            <div class="category-info">
-              <h3>Biznes</h3>
-              <p>Biuro, fintech, B2B premium</p>
-            </div>
-          </article>
-          <article class="category-card">
-            <div class="category-media">
-              <img loading="lazy" decoding="async" class="category-image" src="assets/images/demo/category-tools.svg" alt="Narzędzia">
-              <span class="category-icon" aria-hidden="true">🛠️</span>
-            </div>
-            <div class="category-info">
-              <h3>Narzędzia</h3>
-              <p>Profesjonalne zestawy i sprzęt</p>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section class="store-section" id="polecane">
-        <div class="section-head">
-          <span class="eyebrow">Polecane produkty</span>
-          <h2>Kafle bestsellerów, które sprzedają się same</h2>
-          <p>Hity sprzedaży, szybka rotacja, widoczny efekt wow.</p>
-        </div>
-        <div class="app-cta-box app-cta-grid">
-          <div class="app-cta-content">
-            <span class="app-cta-icon" aria-hidden="true">📲</span>
-            <span class="eyebrow">Sklep mobilny</span>
-            <h3>Zarządzaj ofertą bezpośrednio z telefonu</h3>
-            <p class="hint">Wystawiaj produkty, aktualizuj ceny i reaguj na zamówienia w aplikacji webowej.</p>
-            <div class="app-cta-actions">
-              <button class="btn btn-primary" type="button" data-app-install-open>Dodaj do ekranu</button>
-              <a class="btn btn-secondary" href="panel-sklepu.html">Panel sklepu</a>
-            </div>
-          </div>
-          <div class="app-cta-media">
-            <img src="assets/images/demo/product-sneakers.svg" alt="Sprzedaż mobilna w sklepie" loading="lazy" decoding="async">
-            <span class="app-cta-badge">Sprzedaż live</span>
-          </div>
-        </div>
-        <div data-store-products-grid></div>
-        <p class="empty" data-store-products-empty hidden>Brak produktów w sklepie.</p>
-      </section>
-
-      <section class="store-section" id="nowosci">
-        <div class="section-head">
-          <span class="eyebrow">Nowe produkty</span>
-          <h2>Świeże premiery z hurtowni</h2>
-          <p>Nowości przyciągające uwagę klientów marketplace.</p>
-        </div>
-        <div data-feed-new-grid></div>
-        <p class="empty" data-feed-new-empty hidden>Ładowanie nowości…</p>
-      </section>
-
-      <section class="store-section" id="promocje">
-        <div class="section-head">
-          <span class="eyebrow">Promocje</span>
-          <h2>Promocyjne kafle z efektem glow</h2>
-          <p>Oferta sezonowa z dynamicznym podświetleniem i CTA.</p>
-        </div>
-        <div class="promo-grid">
-          <article class="promo-card highlight">
-            <span>Promocja tygodnia</span>
-            <strong class="promo-value">-22%</strong>
-            <p>Elektronika PRO z natychmiastową dostawą.</p>
-          </article>
-          <article class="promo-card">
-            <span>Hurtownia dnia</span>
-            <strong class="promo-value">+18%</strong>
-            <p>Większa sprzedaż w domu i ogrodzie.</p>
-          </article>
-          <article class="promo-card">
-            <span>Plan ELITE</span>
-            <strong class="promo-value">VIP</strong>
-            <p>Odblokuj intelligence i wsparcie AI.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="store-section" id="hurtownie">
-        <div class="section-head">
-          <span class="eyebrow">Hurtownie</span>
-          <h2>Topowe hurtownie w jednym miejscu</h2>
-          <p>Łącz się z liderami kategorii i buduj przewagę.</p>
-        </div>
-        <div class="supplier-grid supplier-grid-large">
-          <article class="supplier-card supplier-tile">
-            <img loading="lazy" decoding="async" src="assets/images/demo/supplier-neotech.svg" alt="NeoTech">
-            <h3>NeoTech</h3>
-            <p class="hint">Elektronika i smart home premium</p>
-            <div class="supplier-meta">
-              <span>12 500 produktów</span>
-              <span>Dostawa 24h</span>
-            </div>
-            <a class="btn btn-secondary" href="hurtownie.html">Zobacz hurtownię</a>
-          </article>
-          <article class="supplier-card supplier-tile">
-            <img loading="lazy" decoding="async" src="assets/images/demo/supplier-homehub.svg" alt="HomeHub">
-            <h3>HomeHub</h3>
-            <p class="hint">Dom, ogród i lifestyle premium</p>
-            <div class="supplier-meta">
-              <span>8 900 produktów</span>
-              <span>Nowe kolekcje</span>
-            </div>
-            <a class="btn btn-secondary" href="hurtownie.html">Zobacz hurtownię</a>
-          </article>
-          <article class="supplier-card supplier-tile">
-            <img loading="lazy" decoding="async" src="assets/images/demo/supplier-fashionlane.svg" alt="FashionLane">
-            <h3>FashionLane</h3>
-            <p class="hint">Moda, sneakersy, kolekcje sezonowe</p>
-            <div class="supplier-meta">
-              <span>15 200 produktów</span>
-              <span>Top sprzedaż</span>
-            </div>
-            <a class="btn btn-secondary" href="hurtownie.html">Zobacz hurtownię</a>
-          </article>
-          <article class="supplier-card supplier-tile">
-            <img loading="lazy" decoding="async" src="assets/images/demo/supplier-autofleet.svg" alt="AutoFleet">
-            <h3>AutoFleet</h3>
-            <p class="hint">Auto, narzędzia i detailing PRO</p>
-            <div class="supplier-meta">
-              <span>6 400 produktów</span>
-              <span>Gotowe do wysyłki</span>
-            </div>
-            <a class="btn btn-secondary" href="hurtownie.html">Zobacz hurtownię</a>
-          </article>
-        </div>
-      </section>
-
-      <section class="store-section" id="pro-elite">
-        <div class="section-head">
-          <span class="eyebrow">Banner PRO / ELITE</span>
-          <h2>Odblokuj hurtownie PRO i intelligence ELITE</h2>
-          <p>Włącz pakiety premium, aby uzyskać dostęp do największych dostawców.</p>
-        </div>
-        <div class="plan-cta-grid">
-          <article class="plan-card plan-pro">
-            <div>
-              <span class="plan-tag">PRO</span>
-              <h3>Odblokuj hurtownie PRO</h3>
-              <p>Większa sprzedaż, szybsze dostawy, więcej automatyzacji.</p>
-              <ul>
-                <li>Ekskluzywne hurtownie elektroniki</li>
-                <li>Automatyczne aktualizacje stanów</li>
-                <li>Pakiet marketingowy marketplace</li>
-              </ul>
-              <a class="btn btn-primary" href="cennik.html">Aktywuj PRO</a>
-            </div>
-            <div class="plan-visual">
-              <span>+80 hurtowni</span>
-              <strong>PRO ACCESS</strong>
-            </div>
-          </article>
-          <article class="plan-card plan-elite">
-            <div>
-              <span class="plan-tag">ELITE</span>
-              <h3>Odblokuj intelligence ELITE</h3>
-              <p>AI do prognoz sprzedaży, rekomendacje i automatyczny upsell.</p>
-              <ul>
-                <li>Predictive pricing i analityka</li>
-                <li>Automatyczne kampanie AI</li>
-                <li>Dashboard ELITE z KPI</li>
-              </ul>
-              <a class="btn btn-primary" href="cennik.html">Aktywuj ELITE</a>
-            </div>
-            <div class="plan-visual">
-              <span>AI BOOST</span>
-              <strong>ELITE</strong>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section class="panel-card shop-contact">
-        <h2>Kontakt i obsługa</h2>
-        <p class="hint">Dane kontaktowe uzupełnione w generatorze sklepu.</p>
-        <div class="panel-metrics">
-          <div class="metric-card">
-            <span>Email</span>
-            <strong data-store-email>---</strong>
-            <p class="hint">Kontakt do obsługi klienta</p>
-          </div>
-          <div class="metric-card">
-            <span>Telefon</span>
-            <strong data-store-phone>---</strong>
-            <p class="hint">Wsparcie sprzedaży</p>
-          </div>
-          <div class="metric-card">
-            <span>Dostawa</span>
-            <strong data-store-delivery>---</strong>
-            <p class="hint">Deklarowany czas realizacji</p>
-          </div>
-        </div>
-      </section>
       </div>
-
-      <aside class="hero-side hero-side-right">
-        <div class="hero-side-card">
-          <span class="hero-side-title">Top produkty</span>
-          <div class="hero-product-list" data-feed-top-list>
-            <p class="hint" style="padding:8px 0">Ładowanie…</p>
-          </div>
-        </div>
-        <div class="hero-side-card hero-market-card">
-          <span class="hero-side-title">Rynek w liczbach</span>
-          <img class="hero-market-graphic" src="assets/images/demo/hero-market.svg" alt="Wykres statystyk rynku">
-          <div class="hero-market-stats">
-            <div>
-              <strong>12 450</strong>
-              <span>ofert</span>
-            </div>
-            <div>
-              <strong>128</strong>
-              <span>hurtowni</span>
-            </div>
-            <div>
-              <strong>98%</strong>
-              <span>satysfakcji</span>
-            </div>
-            <div>
-              <strong>24/7</strong>
-              <span>obsługi</span>
-            </div>
-          </div>
-        </div>
-        <div class="hero-side-card">
-          <span class="hero-side-title">Plan PRO / ELITE</span>
-          <p class="hint">Odblokuj hurtownie premium, pakiet AI i promocje marketplace.</p>
-          <div class="cta-row">
-            <a class="btn btn-primary" href="cennik.html">Aktywuj plan</a>
-            <a class="btn btn-secondary" href="login.html">Zaloguj</a>
-          </div>
-        </div>
-      </aside>
     </div>
+  </section>
 
-    <section class="panel-card shop-empty" data-store-empty hidden>
-      <h2>Brak aktywnego sklepu</h2>
-      <p class="hint">Najpierw utwórz sklep w generatorze, aby zobaczyć podgląd.</p>
-      <div class="cta-row">
-        <a class="btn btn-primary" href="generator-sklepu.html">Utwórz sklep</a>
-      </div>
-    </section>
+  <main class="wrap">
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="box">
+          <h3>Filtrowanie</h3>
+          <div class="filters">
+            <label><input type="checkbox" class="promoFilter" value="discount"> Tylko promocje</label>
+            <label><input type="checkbox" class="promoFilter" value="cheap"> Do 500 zł</label>
+            <label><input type="checkbox" class="promoFilter" value="premium"> Premium 2000+ zł</label>
+          </div>
+        </div>
+
+        <div class="box">
+          <h3>Cena</h3>
+          <div class="price-inputs">
+            <input type="number" id="minPrice" placeholder="Od">
+            <input type="number" id="maxPrice" placeholder="Do">
+          </div>
+        </div>
+
+        <div class="box">
+          <h3>Sortowanie</h3>
+          <select id="sortSelect" class="sort-select">
+            <option value="default">Domyślnie</option>
+            <option value="priceAsc">Cena rosnąco</option>
+            <option value="priceDesc">Cena malejąco</option>
+            <option value="nameAsc">Nazwa A-Z</option>
+          </select>
+        </div>
+
+        <div class="box">
+          <button class="clear-btn" id="clearFilters">Wyczyść filtry</button>
+        </div>
+      </aside>
+
+      <section>
+        <div class="main-head">
+          <div>
+            <h2>Produkty</h2>
+            <div class="meta" id="resultsMeta">Ładowanie produktów...</div>
+          </div>
+        </div>
+
+        <div class="product-grid" id="productGrid"></div>
+        <div class="empty" id="emptyState">Brak produktów dla wybranych filtrów.</div>
+      </section>
+    </div>
   </main>
 
-  <footer class="wrap panel-footer">
-    <div class="panel-footer-inner">
-      <span>© 2026 QualitetMarket — Wszelkie prawa zastrzeżone. Projekt i marka platformy stworzone przez Henryka Ślusarskiego</span>
-      <div class="panel-footer-links">
-        <a href="dashboard.html">Dashboard</a>
-        <a href="cennik.html">Cennik</a>
-        <a href="index.html">Strona główna</a>
-      </div>
+  <footer class="footer">
+    <div class="wrap">
+      QualitetMarket • działający sklep pod API • lokalny frontend
     </div>
   </footer>
 
-  <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
-    <a href="index.html" rel="nofollow noreferrer" data-nav="index">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M3 11.5L12 4l9 7.5"></path>
-        <path d="M5 10.5V20h14v-9.5"></path>
-      </svg>
-      <span>Start</span>
-    </a>
-    <a href="sklep.html" rel="nofollow noreferrer" data-nav="sklep">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M3 9h18l-1.5 11H4.5L3 9z"></path>
-        <path d="M7 9V7a5 5 0 0 1 10 0v2"></path>
-      </svg>
-      <span>Sklep</span>
-    </a>
-    <a href="koszyk.html" rel="nofollow noreferrer" data-nav="koszyk" style="position:relative">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="9" cy="21" r="1"></circle>
-        <circle cx="20" cy="21" r="1"></circle>
-        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-      </svg>
-      <span data-cart-badge style="position:absolute;top:2px;right:14px;background:#ff4fd8;color:#fff;border-radius:999px;font-size:10px;font-weight:800;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px" hidden>0</span>
-      <span>Koszyk</span>
-    </a>
-    <a href="dashboard.html" rel="nofollow noreferrer" data-nav="dashboard">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <rect x="3" y="3" width="7" height="7" rx="1.2"></rect>
-        <rect x="14" y="3" width="7" height="7" rx="1.2"></rect>
-        <rect x="14" y="14" width="7" height="7" rx="1.2"></rect>
-        <rect x="3" y="14" width="7" height="7" rx="1.2"></rect>
-      </svg>
-      <span>Panel</span>
-    </a>
-    <a href="login.html" rel="nofollow noreferrer" data-nav="login">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="8" r="4"></circle>
-        <path d="M4 20c2-3.5 6-5 8-5s6 1.5 8 5"></path>
-      </svg>
-      <span>Konto</span>
-    </a>
-  </nav>
+  <script>
+    const API_URL = "http://localhost:3001/api/products";
 
-  <script src="js/api.js" defer></script>
-  <script src="js/pwa-connect.js" defer></script>
-  <script src="js/flow.js" defer></script>
-  <script src="js/app.js" defer></script>
-  <script src="stores.js" defer></script>
-  <script src="shop.js" defer></script>
-  <script src="js/cart.js" defer></script>
+    let allProducts = [];
+    let filteredProducts = [];
+    let activeCategory = "all";
+
+    function guessCategory(product) {
+      const text = `${product.name} ${product.store}`.toLowerCase();
+
+      if (text.includes("iphone") || text.includes("playstation") || text.includes("sony") || text.includes("apple") || text.includes("laptop") || text.includes("smart")) {
+        return "electronics";
+      }
+      if (text.includes("nike") || text.includes("shoe") || text.includes("but") || text.includes("shirt") || text.includes("hoodie")) {
+        return "fashion";
+      }
+      if (text.includes("sofa") || text.includes("lamp") || text.includes("home") || text.includes("kitchen")) {
+        return "home";
+      }
+      if (text.includes("sport") || text.includes("bike") || text.includes("ball")) {
+        return "sport";
+      }
+      if (text.includes("beauty") || text.includes("cream") || text.includes("cosmetic")) {
+        return "beauty";
+      }
+      return "electronics";
+    }
+
+    function enrichProduct(product, index) {
+      const price = Number(product.price || 0);
+      const oldPrice = Number(product.oldPrice || 0);
+      const discount = oldPrice > price ? Math.round((1 - price / oldPrice) * 100) : 0;
+
+      return {
+        ...product,
+        category: product.category || guessCategory(product),
+        rating: (4.6 + (index % 4) * 0.1).toFixed(1),
+        reviews: 120 + index * 37,
+        moq: index % 2 === 0 ? "MOQ: 2 szt." : "MOQ: 1 szt.",
+        badge: discount > 0 ? `-${discount}%` : (index % 3 === 0 ? "HOT" : "NOWOŚĆ")
+      };
+    }
+
+    function updateCartCount() {
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      const count = cart.reduce((sum, item) => sum + (item.qty || 0), 0);
+      document.getElementById("cartCount").textContent = count;
+    }
+
+    function addToCart(id) {
+      const product = allProducts.find(p => p.id === id);
+      if (!product) return;
+
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      const existing = cart.find(item => item.id === id);
+
+      if (existing) {
+        existing.qty += 1;
+      } else {
+        cart.push({
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: product.image,
+          store: product.store,
+          qty: 1
+        });
+      }
+
+      localStorage.setItem("cart", JSON.stringify(cart));
+      updateCartCount();
+      alert("Dodano do koszyka");
+    }
+
+    function renderProducts(products) {
+      const grid = document.getElementById("productGrid");
+      const empty = document.getElementById("emptyState");
+      const meta = document.getElementById("resultsMeta");
+      const statProducts = document.getElementById("statProducts");
+
+      grid.innerHTML = "";
+      meta.textContent = `Znaleziono ${products.length} produktów`;
+      statProducts.textContent = allProducts.length;
+
+      if (!products.length) {
+        empty.style.display = "block";
+        return;
+      }
+
+      empty.style.display = "none";
+
+      products.forEach(product => {
+        const oldPriceHtml = product.oldPrice
+          ? `<span class="old-price">${product.oldPrice} zł</span>`
+          : "";
+
+        const card = document.createElement("article");
+        card.className = "product-card";
+
+        card.innerHTML = `
+          <div class="product-image-wrap">
+            <span class="badge">${product.badge}</span>
+            <span class="fav">♡</span>
+            <img class="product-image" src="${product.image}" alt="${product.name}">
+          </div>
+          <div class="product-body">
+            <div class="product-title">${product.name}</div>
+            <div class="supplier">Dostawca: ${product.store}</div>
+            <div class="rating">★ ${product.rating} • ${product.reviews} opinii</div>
+            <div class="price-row">
+              <span class="price">${product.price} zł</span>
+              ${oldPriceHtml}
+            </div>
+            <div class="moq">${product.moq}</div>
+            <div class="product-actions">
+              <button class="btn btn-secondary" type="button">Szczegóły</button>
+              <button class="btn btn-primary" type="button" onclick="addToCart(${product.id})">Dodaj do koszyka</button>
+            </div>
+          </div>
+        `;
+
+        grid.appendChild(card);
+      });
+    }
+
+    function applyFilters() {
+      const search = document.getElementById("searchInput").value.trim().toLowerCase();
+      const categorySelect = document.getElementById("categorySelect").value;
+      const minPrice = Number(document.getElementById("minPrice").value || 0);
+      const maxPrice = Number(document.getElementById("maxPrice").value || 0);
+      const sort = document.getElementById("sortSelect").value;
+      const checkedPromos = [...document.querySelectorAll(".promoFilter:checked")].map(el => el.value);
+
+      let list = [...allProducts];
+
+      const finalCategory = activeCategory !== "all" ? activeCategory : categorySelect;
+
+      if (finalCategory !== "all") {
+        list = list.filter(p => p.category === finalCategory);
+      }
+
+      if (search) {
+        list = list.filter(p =>
+          p.name.toLowerCase().includes(search) ||
+          p.store.toLowerCase().includes(search)
+        );
+      }
+
+      if (minPrice > 0) {
+        list = list.filter(p => Number(p.price) >= minPrice);
+      }
+
+      if (maxPrice > 0) {
+        list = list.filter(p => Number(p.price) <= maxPrice);
+      }
+
+      if (checkedPromos.includes("discount")) {
+        list = list.filter(p => Number(p.oldPrice || 0) > Number(p.price || 0));
+      }
+
+      if (checkedPromos.includes("cheap")) {
+        list = list.filter(p => Number(p.price) <= 500);
+      }
+
+      if (checkedPromos.includes("premium")) {
+        list = list.filter(p => Number(p.price) >= 2000);
+      }
+
+      if (sort === "priceAsc") {
+        list.sort((a,b) => Number(a.price) - Number(b.price));
+      }
+
+      if (sort === "priceDesc") {
+        list.sort((a,b) => Number(b.price) - Number(a.price));
+      }
+
+      if (sort === "nameAsc") {
+        list.sort((a,b) => a.name.localeCompare(b.name, "pl"));
+      }
+
+      filteredProducts = list;
+      renderProducts(filteredProducts);
+    }
+
+    async function loadProducts() {
+      try {
+        const res = await fetch(API_URL);
+        const data = await res.json();
+
+        allProducts = data.map((product, index) => enrichProduct(product, index));
+        filteredProducts = [...allProducts];
+
+        renderProducts(filteredProducts);
+      } catch (error) {
+        console.error(error);
+        document.getElementById("resultsMeta").textContent = "Błąd ładowania produktów z API";
+        document.getElementById("emptyState").style.display = "block";
+        document.getElementById("emptyState").textContent = "Nie udało się pobrać produktów. Sprawdź czy działa node server.js";
+      }
+    }
+
+    document.getElementById("searchBtn").addEventListener("click", applyFilters);
+    document.getElementById("searchInput").addEventListener("input", applyFilters);
+    document.getElementById("categorySelect").addEventListener("change", () => {
+      activeCategory = "all";
+      document.querySelectorAll(".nav-chip").forEach(chip => chip.classList.remove("active"));
+      document.querySelector('.nav-chip[data-category="all"]').classList.add("active");
+      applyFilters();
+    });
+    document.getElementById("minPrice").addEventListener("input", applyFilters);
+    document.getElementById("maxPrice").addEventListener("input", applyFilters);
+    document.getElementById("sortSelect").addEventListener("change", applyFilters);
+    document.querySelectorAll(".promoFilter").forEach(el => el.addEventListener("change", applyFilters));
+
+    document.getElementById("clearFilters").addEventListener("click", () => {
+      document.getElementById("searchInput").value = "";
+      document.getElementById("categorySelect").value = "all";
+      document.getElementById("minPrice").value = "";
+      document.getElementById("maxPrice").value = "";
+      document.getElementById("sortSelect").value = "default";
+      document.querySelectorAll(".promoFilter").forEach(el => el.checked = false);
+      activeCategory = "all";
+      document.querySelectorAll(".nav-chip").forEach(chip => chip.classList.remove("active"));
+      document.querySelector('.nav-chip[data-category="all"]').classList.add("active");
+      applyFilters();
+    });
+
+    document.querySelectorAll(".nav-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        document.querySelectorAll(".nav-chip").forEach(c => c.classList.remove("active"));
+        chip.classList.add("active");
+        activeCategory = chip.dataset.category;
+        applyFilters();
+      });
+    });
+
+    updateCartCount();
+    loadProducts();
+  </script>
 </body>
 </html>
