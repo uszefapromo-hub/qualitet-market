@@ -9,6 +9,7 @@ const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { computeRealProfit, estimatePaymentFee } = require('../helpers/pricing');
+const { parsePagination } = require('../helpers/pagination');
 
 const router = express.Router();
 
@@ -26,7 +27,6 @@ function getStripe() {
   if (!key) return null;
   // eslint-disable-next-line global-require
   _stripe = require('stripe')(key);
-const { parsePagination } = require('../helpers/pagination');
   return _stripe;
 }
 
