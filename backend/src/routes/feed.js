@@ -23,6 +23,7 @@
 
 const express = require('express');
 const db = require('../config/database');
+const { parsePagination } = require('../helpers/pagination');
 
 const router = express.Router();
 
@@ -85,9 +86,7 @@ router.get('/', async (req, res) => {
       ? req.query.section
       : 'recommended';
 
-    const limit  = Math.min(MAX_LIMIT, Math.max(1, parseInt(req.query.limit,  10) || 20));
-    const page   = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const offset = (page - 1) * limit;
+    const { page, limit, offset } = parsePagination(req, { maxLimit: MAX_LIMIT });
 
     const orderBy = sectionOrderBy(section);
 
