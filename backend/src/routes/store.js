@@ -15,6 +15,7 @@ const express = require('express');
 
 const db = require('../config/database');
 const { resolveStoreFromSubdomain } = require('../middleware/subdomain');
+const { parsePagination } = require('../helpers/pagination');
 
 const router = express.Router();
 
@@ -37,9 +38,7 @@ router.get('/products', async (req, res) => {
     return res.status(404).json({ error: 'Sklep nie znaleziony' });
   }
 
-  const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
-  const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   const search   = req.query.search   || null;
   const category = req.query.category || null;
 

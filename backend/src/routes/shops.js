@@ -17,6 +17,7 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const { validate, sanitizeText } = require('../middleware/validate');
 const { PLAN_CONFIG } = require('./subscriptions');
 const { nameToSlug, uniqueSlug } = require('../helpers/slug');
+const { parsePagination } = require('../helpers/pagination');
 
 const router = express.Router();
 
@@ -108,9 +109,7 @@ router.get('/:slug', async (req, res) => {
 // ─── GET /api/shops/:slug/products – public product listing ───────────────────
 
 router.get('/:slug/products', async (req, res) => {
-  const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
-  const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   const search   = req.query.search   || null;
   const category = req.query.category || null;
 

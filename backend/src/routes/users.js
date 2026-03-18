@@ -9,6 +9,7 @@ const db = require('../config/database');
 const { authenticate, requireRole, signToken } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { getPromoTier } = require('../helpers/promo');
+const { parsePagination } = require('../helpers/pagination');
 
 const router = express.Router();
 
@@ -202,9 +203,7 @@ router.put(
 // ─── Admin: list all users ─────────────────────────────────────────────────────
 
 router.get('/', authenticate, requireRole('owner', 'admin'), async (req, res) => {
-  const page = Math.max(1, parseInt(req.query.page || '1', 10));
-  const limit = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
 
   try {
     const countResult = await db.query('SELECT COUNT(*) FROM users');

@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { parsePagination } = require('../helpers/pagination');
 
 const router = express.Router();
 
@@ -17,9 +18,7 @@ router.get('/', async (req, res) => {
   const { store_id } = req.query;
   if (!store_id) return res.status(422).json({ error: 'Wymagany parametr: store_id' });
 
-  const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
-  const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
 
   try {
     const countResult = await db.query(

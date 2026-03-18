@@ -22,6 +22,7 @@ const { sendImportNotification } = require('../helpers/mailer');
 // Loaded once at startup; null when the package is not installed.
 let nodemailer = null;
 try { nodemailer = require('nodemailer'); } catch (_) { /* non-critical */ }
+const { parsePagination } = require('../helpers/pagination');
 
 const router = express.Router();
 
@@ -143,9 +144,7 @@ router.get('/stats', authenticate, requireRole('owner', 'admin'), async (req, re
 // ─── GET /api/admin/users – all users (paginated) ─────────────────────────────
 
 router.get('/users', authenticate, requireRole('owner', 'admin'), async (req, res) => {
-  const page  = Math.max(1, parseInt(req.query.page  || '1',  10));
-  const limit = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   const role   = req.query.role   || null;
   const search = req.query.search || null;
 
@@ -228,9 +227,7 @@ router.delete('/users/:id', authenticate, requireRole('owner', 'admin'), async (
 // ─── GET /api/admin/orders – all orders (paginated, filterable by status) ─────
 
 router.get('/orders', authenticate, requireRole('owner', 'admin'), async (req, res) => {
-  const page   = Math.max(1, parseInt(req.query.page   || '1',  10));
-  const limit  = Math.min(100, parseInt(req.query.limit  || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   const status = req.query.status || null;
 
   try {
@@ -254,9 +251,7 @@ router.get('/orders', authenticate, requireRole('owner', 'admin'), async (req, r
 // ─── GET /api/admin/stores – all stores (paginated) ───────────────────────────
 
 router.get('/stores', authenticate, requireRole('owner', 'admin'), async (req, res) => {
-  const page   = Math.max(1, parseInt(req.query.page   || '1',  10));
-  const limit  = Math.min(100, parseInt(req.query.limit  || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   const status = req.query.status || null;
 
   try {
@@ -285,9 +280,7 @@ router.get('/stores', authenticate, requireRole('owner', 'admin'), async (req, r
 // ─── GET /api/admin/shops – alias for /api/admin/stores ───────────────────────
 
 router.get('/shops', authenticate, requireRole('owner', 'admin'), async (req, res) => {
-  const page   = Math.max(1, parseInt(req.query.page   || '1',  10));
-  const limit  = Math.min(100, parseInt(req.query.limit  || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   const status = req.query.status || null;
   const search = req.query.search || null;
 
@@ -327,9 +320,7 @@ router.get('/shops', authenticate, requireRole('owner', 'admin'), async (req, re
 // ─── GET /api/admin/suppliers – all suppliers (paginated) ────────────────────
 
 router.get('/suppliers', authenticate, requireRole('owner', 'admin'), async (req, res) => {
-  const page   = Math.max(1, parseInt(req.query.page   || '1',  10));
-  const limit  = Math.min(100, parseInt(req.query.limit  || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   const search = req.query.search || null;
 
   try {
@@ -631,9 +622,7 @@ router.post(
 // ─── GET /api/admin/import-logs – list recent import/sync logs ────────────────
 
 router.get('/import-logs', authenticate, requireRole('owner', 'admin'), async (req, res) => {
-  const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
-  const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
 
   try {
     const countResult = await db.query('SELECT COUNT(*) FROM import_logs');
@@ -683,9 +672,7 @@ router.get('/sync-status', authenticate, requireRole('owner', 'admin'), async (r
 // ─── GET /api/admin/profit-report – order-level profitability report ──────────
 
 router.get('/profit-report', authenticate, requireRole('owner', 'admin'), async (req, res) => {
-  const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
-  const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
 
   try {
     const summaryResult = await db.query(
@@ -1032,9 +1019,7 @@ router.patch(
 // ─── GET /api/admin/subscriptions – all subscriptions (paginated) ─────────────
 
 router.get('/subscriptions', authenticate, requireRole('owner', 'admin'), async (req, res) => {
-  const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
-  const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   const status = req.query.status || null;
 
   try {
@@ -1116,9 +1101,7 @@ router.patch(
 // ─── GET /api/admin/catalogue – central catalogue products (paginated) ─────────
 
 router.get('/catalogue', authenticate, requireRole('owner', 'admin'), async (req, res) => {
-  const page     = Math.max(1, parseInt(req.query.page   || '1',  10));
-  const limit    = Math.min(100, parseInt(req.query.limit  || '20', 10));
-  const offset   = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   const category = req.query.category || null;
   const search   = req.query.search   || null;
 
@@ -1158,9 +1141,7 @@ router.get('/catalogue', authenticate, requireRole('owner', 'admin'), async (req
 // ─── GET /api/admin/products – all products (paginated) ───────────────────────
 
 router.get('/products', authenticate, requireRole('owner', 'admin'), async (req, res) => {
-  const page      = Math.max(1, parseInt(req.query.page   || '1',  10));
-  const limit     = Math.min(100, parseInt(req.query.limit  || '20', 10));
-  const offset    = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   const status    = req.query.status    || null;
   const isCentral = req.query.is_central != null ? req.query.is_central === 'true' : null;
   const search    = req.query.search    || null;
@@ -1251,9 +1232,7 @@ router.patch(
 // ─── GET /api/admin/audit-logs – audit log (paginated) ────────────────────────
 
 router.get('/audit-logs', authenticate, requireRole('owner', 'admin'), async (req, res) => {
-  const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
-  const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
 
   try {
     const countResult = await db.query('SELECT COUNT(*) FROM audit_logs');
@@ -1579,9 +1558,7 @@ router.patch(
 // ─── GET /api/admin/announcements – list all announcements ───────────────────
 
 router.get('/announcements', authenticate, requireRole('owner', 'admin'), async (req, res) => {
-  const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
-  const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   try {
     const countResult = await db.query('SELECT COUNT(*) FROM announcements');
     const total = parseInt(countResult.rows[0].count, 10);
@@ -1778,9 +1755,7 @@ router.post(
 // ─── GET /api/admin/mail – list sent/queued mail messages ────────────────────
 
 router.get('/mail', authenticate, requireRole('owner', 'admin'), async (req, res) => {
-  const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
-  const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   try {
     const countResult = await db.query('SELECT COUNT(*) FROM mail_messages');
     const total = parseInt(countResult.rows[0].count, 10);
@@ -1802,9 +1777,7 @@ router.get('/mail', authenticate, requireRole('owner', 'admin'), async (req, res
 // ─── GET /api/admin/featured-products – list best products from all suppliers ──
 
 router.get('/featured-products', authenticate, requireRole('owner', 'admin'), async (req, res) => {
-  const page       = Math.max(1, parseInt(req.query.page  || '1',  10));
-  const limit      = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset     = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   const supplierId = req.query.supplier_id || null;
   const pinned     = req.query.pinned === 'true' ? true : null;
 

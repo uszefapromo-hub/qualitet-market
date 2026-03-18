@@ -21,6 +21,7 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const { authenticate, requireRole, requireActiveSubscription } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { parsePagination } = require('../helpers/pagination');
 
 const router = express.Router();
 
@@ -118,9 +119,7 @@ router.get(
       }
       const storeId = store.id;
 
-      const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
-      const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
-      const offset = (page - 1) * limit;
+      const { page, limit, offset } = parsePagination(req);
 
       const countResult = await db.query(
         'SELECT COUNT(*) FROM orders WHERE store_id = $1',
@@ -205,9 +204,7 @@ router.patch(
 // ─── GET /api/my/orders – buyer's order history ────────────────────────────────
 
 router.get('/orders', authenticate, async (req, res) => {
-  const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
-  const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
 
   try {
     const countResult = await db.query(
@@ -241,9 +238,7 @@ router.get(
     const { store_id } = req.query;
     if (!store_id) return res.status(422).json({ error: 'Wymagany parametr: store_id' });
 
-    const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
-    const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
-    const offset = (page - 1) * limit;
+    const { page, limit, offset } = parsePagination(req);
 
     try {
       const storeResult = await db.query('SELECT owner_id FROM stores WHERE id = $1', [store_id]);
@@ -846,9 +841,7 @@ router.get(
   authenticate,
   requireRole('seller', 'owner', 'admin'),
   async (req, res) => {
-    const page  = Math.max(1, parseInt(req.query.page  || '1',  10));
-    const limit = Math.min(100, parseInt(req.query.limit || '20', 10));
-    const offset = (page - 1) * limit;
+    const { page, limit, offset } = parsePagination(req);
 
     try {
       const countResult = await db.query(

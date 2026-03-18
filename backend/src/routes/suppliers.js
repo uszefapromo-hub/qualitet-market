@@ -13,6 +13,7 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { sendImportNotification } = require('../helpers/mailer');
 const { computeQualityScore, isProductFeatured, isLowQuality } = require('../helpers/pricing');
+const { parsePagination } = require('../helpers/pagination');
 
 const router = express.Router();
 
@@ -25,9 +26,7 @@ const upload = multer({
 // ─── List suppliers ────────────────────────────────────────────────────────────
 
 router.get('/', authenticate, async (req, res) => {
-  const page = Math.max(1, parseInt(req.query.page || '1', 10));
-  const limit = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   try {
     const result = await db.query(
       `SELECT *, COUNT(*) OVER() AS total_count FROM suppliers ORDER BY name ASC LIMIT $1 OFFSET $2`,

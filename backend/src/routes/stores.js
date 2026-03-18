@@ -7,15 +7,14 @@ const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
+const { parsePagination } = require('../helpers/pagination');
 
 const router = express.Router();
 
 // ─── List stores ───────────────────────────────────────────────────────────────
 
 router.get('/', authenticate, async (req, res) => {
-  const page = Math.max(1, parseInt(req.query.page || '1', 10));
-  const limit = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
 
   // Sellers see only their own store; owner/admin see all
   const isAdmin = ['owner', 'admin'].includes(req.user.role);

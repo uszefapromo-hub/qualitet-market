@@ -8,6 +8,7 @@ const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { computePlatformPrice, dbTiersToArray, DEFAULT_PLATFORM_TIERS } = require('../helpers/pricing');
+const { parsePagination } = require('../helpers/pagination');
 
 const router = express.Router();
 
@@ -32,9 +33,7 @@ async function loadPlatformTiers() {
 // Query params: store_id, category, search, is_central, status, page, limit, sort
 
 router.get('/', async (req, res) => {
-  const page = Math.max(1, parseInt(req.query.page || '1', 10));
-  const limit = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   const storeId = req.query.store_id || null;
   const supplierId = req.query.supplier_id || null;
   const category = req.query.category || null;

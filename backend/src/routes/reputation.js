@@ -18,6 +18,7 @@ const { Router } = require('express')
 const { body, param, query, validationResult } = require('express-validator')
 const { authenticate } = require('../middleware/auth')
 const db = require('../config/database')
+const { parsePagination } = require('../helpers/pagination');
 
 const router = Router()
 
@@ -267,8 +268,7 @@ router.get(
     if (validationErrors(req, res)) return
 
     const { productId } = req.params
-    const limit  = Math.min(100, parseInt(req.query.limit, 10) || 20)
-    const offset = (Math.max(1, parseInt(req.query.page, 10) || 1) - 1) * limit
+    const { page, limit, offset } = parsePagination(req);
 
     try {
       const [summaryRes, reviewsRes] = await Promise.all([

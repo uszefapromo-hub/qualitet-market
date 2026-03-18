@@ -7,6 +7,7 @@ const db = require('../config/database');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { auditLog } = require('../helpers/audit');
+const { parsePagination } = require('../helpers/pagination');
 
 const router = express.Router();
 
@@ -14,9 +15,7 @@ const router = express.Router();
 
 // GET /api/auctions/artists — public list of artist profiles
 router.get('/artists', async (req, res) => {
-  const page = Math.max(1, parseInt(req.query.page || '1', 10));
-  const limit = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   try {
     const countResult = await db.query('SELECT COUNT(*) FROM artist_profiles');
     const total = parseInt(countResult.rows[0].count, 10);
@@ -88,9 +87,7 @@ router.post(
 
 // GET /api/auctions/artworks — public list
 router.get('/artworks', async (req, res) => {
-  const page = Math.max(1, parseInt(req.query.page || '1', 10));
-  const limit = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   const statusFilter = req.query.status || null;
   try {
     const countResult = await db.query(
@@ -160,9 +157,7 @@ router.post(
 
 // GET /api/auctions — public list of auctions
 router.get('/', async (req, res) => {
-  const page = Math.max(1, parseInt(req.query.page || '1', 10));
-  const limit = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   const statusFilter = req.query.status || 'active';
   try {
     const countResult = await db.query(
@@ -356,9 +351,7 @@ router.get(
   [param('id').isUUID()],
   validate,
   async (req, res) => {
-    const page = Math.max(1, parseInt(req.query.page || '1', 10));
-    const limit = Math.min(100, parseInt(req.query.limit || '20', 10));
-    const offset = (page - 1) * limit;
+    const { page, limit, offset } = parsePagination(req);
     try {
       const countResult = await db.query(
         'SELECT COUNT(*) FROM auction_bids WHERE auction_id = $1',

@@ -26,6 +26,7 @@ function getStripe() {
   if (!key) return null;
   // eslint-disable-next-line global-require
   _stripe = require('stripe')(key);
+const { parsePagination } = require('../helpers/pagination');
   return _stripe;
 }
 
@@ -81,9 +82,7 @@ async function recordOrderProfit(orderId, saleTotal) {
 // ─── List payments ─────────────────────────────────────────────────────────────
 
 router.get('/', authenticate, async (req, res) => {
-  const page   = Math.max(1, parseInt(req.query.page  || '1',  10));
-  const limit  = Math.min(100, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req);
   const isAdmin = ['owner', 'admin'].includes(req.user.role);
 
   try {

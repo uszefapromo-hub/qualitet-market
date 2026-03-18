@@ -9,6 +9,7 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { auditLog } = require('../helpers/audit');
 const wsManager = require('../services/websocket');
+const { parsePagination } = require('../helpers/pagination');
 
 const router = express.Router();
 
@@ -33,9 +34,7 @@ async function ownStream(streamId, userId, role) {
 // Public endpoint; optional ?status=live|scheduled|ended&page=&limit=
 
 router.get('/streams', async (req, res) => {
-  const page = Math.max(1, parseInt(req.query.page || '1', 10));
-  const limit = Math.min(50, parseInt(req.query.limit || '20', 10));
-  const offset = (page - 1) * limit;
+  const { page, limit, offset } = parsePagination(req, { maxLimit: 50 });
   const statusFilter = req.query.status || null;
 
   try {
