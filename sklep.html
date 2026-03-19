@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>QualitetMarket – Sklep hurtowy online</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>window.QM_API_BASE = 'https://api.uszefaqualitet.pl/api';</script>
     <style>
         :root {
             --bg-main: #050712;
@@ -2656,7 +2657,7 @@
     (function () {
         const searchInput = document.getElementById('searchInput');
         const productsGrid = document.getElementById('productsGrid');
-        const productCards = Array.from(productsGrid.querySelectorAll('.product-card'));
+        let productCards = Array.from(productsGrid.querySelectorAll('.product-card'));
         const categoryNav = document.getElementById('categoryNav');
         const navPills = Array.from(categoryNav.querySelectorAll('.nav-pill'));
         const popularCards = Array.from(document.querySelectorAll('.popular-card'));
@@ -2870,19 +2871,24 @@
             applyFilters();
         });
 
-        const addButtons = Array.from(document.querySelectorAll('.product-add-btn'));
-        addButtons.forEach(btn => {
-            btn.addEventListener('click', function () {
-                cartItems++;
-                cartCounter.textContent = String(cartItems);
-                btn.classList.add('added');
-                btn.textContent = 'Dodano';
-                setTimeout(() => {
-                    btn.classList.remove('added');
-                    btn.innerHTML = '<span class="icon">＋</span><span>Dodaj do koszyka</span>';
-                }, 1200);
+        const boundButtons = new WeakSet();
+        function bindAddToCartButtons() {
+            const addButtons = Array.from(productsGrid.querySelectorAll('.product-add-btn'));
+            addButtons.forEach(btn => {
+                if (boundButtons.has(btn)) return;
+                boundButtons.add(btn);
+                btn.addEventListener('click', function () {
+                    cartItems++;
+                    cartCounter.textContent = String(cartItems);
+                    btn.classList.add('added');
+                    btn.textContent = 'Dodano';
+                    setTimeout(() => {
+                        btn.classList.remove('added');
+                        btn.innerHTML = '<span class="icon">＋</span><span>Dodaj do koszyka</span>';
+                    }, 1200);
+                });
             });
-        });
+        }
 
         if (scrollToProductsBtn) {
             scrollToProductsBtn.addEventListener('click', function () {
@@ -2903,6 +2909,131 @@
 
         sortProducts();
         applyFilters();
+        bindAddToCartButtons();
+
+        window._sklepRefresh = function () {
+            productCards = Array.from(productsGrid.querySelectorAll('.product-card'));
+            sortProducts();
+            applyFilters();
+            bindAddToCartButtons();
+        };
+    })();
+</script>
+<script src="js/api.js"></script>
+<script>
+    (function () {
+        var API_BASE = window.QM_API_BASE || 'https://api.uszefaqualitet.pl/api';
+        var productsGrid = document.getElementById('productsGrid');
+        var productsTitle = document.getElementById('productsTitle');
+
+        function formatPrice(val) {
+            var num = parseFloat(val);
+            if (isNaN(num)) return '0,00 zł';
+            return num.toFixed(2).replace('.', ',') + ' zł';
+        }
+
+        function createProductCard(p) {
+            var priceNetto = parseFloat(p.price_net !== null && p.price_net !== undefined ? p.price_net : (p.selling_price !== null && p.selling_price !== undefined ? p.selling_price : 0));
+            var priceGross = parseFloat(p.price_gross !== null && p.price_gross !== undefined ? p.price_gross : (p.selling_price !== null && p.selling_price !== undefined ? p.selling_price : 0));
+            var stock = parseInt(p.stock || 0, 10);
+            var category = p.category || 'Inne';
+            var is24h = stock > 50;
+            var article = document.createElement('article');
+            article.className = 'product-card';
+            article.dataset.name = p.name || '';
+            article.dataset.category = category;
+            article.dataset.branch = '';
+            article.dataset.brand = p.brand || '';
+            article.dataset.sale = 'hurt';
+            article.dataset.priceNetto = priceNetto.toFixed(2);
+            article.dataset.stock = stock;
+            article.dataset['24h'] = is24h ? 'true' : 'false';
+
+            var badges = '';
+            badges += '<span class="badge badge-hurt">Hurt</span>';
+            if (is24h) badges += '<span class="badge badge-24h">24H</span>';
+            if (p.is_pinned) badges += '<span class="badge badge-bestseller">Bestseller</span>';
+
+            var imgHtml = p.image_url
+                ? '<img src="' + p.image_url.replace(/"/g, '&quot;') + '" alt="' + (p.name || '').replace(/"/g, '&quot;') + '" loading="lazy" style="width:100%;height:100%;object-fit:cover;">'
+                : '<div class="product-image-placeholder">Zdjęcie produktu</div>';
+
+            article.innerHTML =
+                '<div class="product-image-wrapper">' +
+                    '<div class="product-badges">' + badges + '</div>' +
+                    imgHtml +
+                '</div>' +
+                '<div class="product-body">' +
+                    '<h3 class="product-name">' + (p.name || '').replace(/</g, '&lt;') +
+                        '<br><span class="category">' + category.replace(/</g, '&lt;') + '</span>' +
+                    '</h3>' +
+                    '<div class="product-prices">' +
+                        '<div class="price-netto">' + formatPrice(priceNetto) + ' netto</div>' +
+                        '<div class="price-brutto"><span>' + formatPrice(priceGross) + '</span> brutto</div>' +
+                    '</div>' +
+                    '<div class="product-stock">' +
+                        '<span class="stock-dot"></span>' +
+                        '<span>Stan magazynowy: <strong>' + stock + ' szt.</strong></span>' +
+                    '</div>' +
+                    '<div class="product-footer">' +
+                        '<div class="product-footer-left">' +
+                            (p.description ? (p.description.replace(/</g, '&lt;').substring(0, 60) + (p.description.length > 60 ? '…' : '')) : 'Dostępny w magazynie') +
+                        '</div>' +
+                        '<button class="product-add-btn" type="button" data-product-id="' + (p.id || '') + '">' +
+                            '<span class="icon">＋</span><span>Dodaj do koszyka</span>' +
+                        '</button>' +
+                    '</div>' +
+                '</div>';
+            return article;
+        }
+
+        function showLoading() {
+            productsGrid.innerHTML =
+                '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-muted);">' +
+                    '<div style="font-size:2rem;margin-bottom:12px;">⏳</div>' +
+                    '<div>Ładowanie produktów…</div>' +
+                '</div>';
+        }
+
+        function loadProducts() {
+            showLoading();
+            fetch(API_BASE + '/products?is_central=true&status=active&limit=50&sort=new')
+                .then(function (res) {
+                    if (!res.ok) throw new Error('HTTP ' + res.status);
+                    return res.json();
+                })
+                .then(function (data) {
+                    var products = (data && data.products) ? data.products : [];
+                    if (products.length === 0) {
+                        productsGrid.innerHTML =
+                            '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-muted);">' +
+                                '<div style="font-size:2rem;margin-bottom:12px;">📦</div>' +
+                                '<div>Brak produktów w katalogu.</div>' +
+                            '</div>';
+                        if (window._sklepRefresh) window._sklepRefresh();
+                        return;
+                    }
+                    productsGrid.innerHTML = '';
+                    products.forEach(function (p) {
+                        productsGrid.appendChild(createProductCard(p));
+                    });
+                    if (productsTitle && data.total !== null && data.total !== undefined) {
+                        productsTitle.textContent = 'Oferta produktów (' + data.total + ')';
+                    }
+                    if (window._sklepRefresh) window._sklepRefresh();
+                })
+                .catch(function (err) {
+                    console.error('Błąd ładowania produktów:', err);
+                    productsGrid.innerHTML =
+                        '<div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--text-muted);">' +
+                            '<div style="font-size:2rem;margin-bottom:12px;">⚠️</div>' +
+                            '<div>Nie udało się załadować produktów. Spróbuj odświeżyć stronę.</div>' +
+                        '</div>';
+                    if (window._sklepRefresh) window._sklepRefresh();
+                });
+        }
+
+        loadProducts();
     })();
 </script>
 </body>
