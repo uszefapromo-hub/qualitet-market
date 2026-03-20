@@ -10,4 +10,4 @@ RUN npm ci --only=production
 COPY . .
 
 # Run migrations then start server
-CMD ["sh", "-c", "node migrations/migrate.js && node src/app.js"]
+CMD ["sh", "-c", "node backend/migrations/migrate.js && node server.js"]

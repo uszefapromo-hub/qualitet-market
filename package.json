@@ -1,6 +1,46 @@
 {
+  "name": "qualitet-market-backend",
+  "version": "1.0.0",
+  "description": "Backend API for HurtDetalUszefaQUALITET platform",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "migrate": "node backend/migrations/migrate.js",
+    "seed:owner": "node backend/scripts/seed-owner.js",
+    "test": "jest --forceExit"
+  },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.6",
-    "express": "^5.2.1"
+    "csv-parse": "^5.5.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.22.1",
+    "express-rate-limit": "^7.3.1",
+    "express-validator": "^7.1.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.1.1",
+    "node-fetch": "^2.7.0",
+    "nodemailer": "^8.0.2",
+    "pg": "^8.12.0",
+    "stripe": "^17.7.0",
+    "uuid": "^10.0.0",
+    "ws": "^8.19.0",
+    "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.4",
+    "supertest": "^7.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ]
   }
 }

@@ -1,19 +1,26 @@
-const express = require("express");
-const app = express();
+'use strict';
 
-const PORT = process.env.PORT || 3000;
+/**
+ * Root entry point for Railway deployment.
+ *
+ * Loads the full application from backend/src/app.js and starts the
+ * HTTP + WebSocket server.  All relative requires inside app.js are
+ * resolved relative to that file, so no paths need to change.
+ */
 
-app.get("/", (req, res) => {
-  res.send("API działa 🚀");
-});
+const http = require('http');
+const { WebSocketServer } = require('ws');
 
-app.get("/api/products", (req, res) => {
-  res.json([
-    { id: 1, name: "Produkt 1", price: 99 },
-    { id: 2, name: "Produkt 2", price: 149 }
-  ]);
-});
+const app = require('./backend/src/app');
+const wsManager = require('./backend/src/services/websocket');
 
-app.listen(PORT, () => {
-  console.log("Serwer działa na porcie " + PORT);
+const PORT = parseInt(process.env.PORT || '3000', 10);
+
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server });
+wsManager.attach(wss);
+
+server.listen(PORT, () => {
+  console.log(`HurtDetalUszefaQUALITET API running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
+  console.log(`WebSocket server active on ws://localhost:${PORT}`);
 });
