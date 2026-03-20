@@ -1970,7 +1970,78 @@ describe('POST /api/auth/refresh', () => {
   });
 });
 
-// ─── PUT /api/users/me/password – change password ────────────────────────────
+// ─── POST /api/auth/forgot-password ──────────────────────────────────────────
+
+describe('POST /api/auth/forgot-password', () => {
+  it('returns 422 for invalid email', async () => {
+    const res = await request(app).post('/api/auth/forgot-password').send({ email: 'not-an-email' });
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 200 with generic message when user does not exist (anti-enumeration)', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // user lookup
+
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: 'nobody@example.com' });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('message');
+  });
+
+  it('returns 200 and creates a reset token when user exists', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: SELLER_ID, name: 'Seller' }] }) // user lookup
+      .mockResolvedValueOnce({ rows: [] }) // invalidate old tokens
+      .mockResolvedValueOnce({ rows: [] }); // insert new token
+
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: 'seller@test.pl' });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('message');
+  });
+});
+
+// ─── POST /api/auth/reset-password ───────────────────────────────────────────
+
+describe('POST /api/auth/reset-password', () => {
+  it('returns 422 when token is missing', async () => {
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ password: 'newpassword1' });
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 422 when password is too short', async () => {
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ token: 'abc', password: 'short' });
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 400 for an invalid or expired token', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // no matching token
+
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ token: 'invalidtoken', password: 'newpassword1' });
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
+  });
+
+  it('returns 200 and updates password for a valid token', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: 'token-uuid', user_id: SELLER_ID }] }) // token lookup
+      .mockResolvedValueOnce({ rows: [] }) // UPDATE users password_hash
+      .mockResolvedValueOnce({ rows: [] }); // UPDATE token used_at
+
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ token: 'validtoken123', password: 'newpassword1' });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('message');
+  });
+});
 
 describe('PUT /api/users/me/password', () => {
   it('requires authentication', async () => {

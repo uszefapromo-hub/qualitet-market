@@ -68,6 +68,38 @@
             <button class="btn btn-primary" type="submit">Zaloguj</button>
             <button class="btn btn-secondary" type="button" data-register-btn>Utwórz konto</button>
           </div>
+          <div style="text-align:center;margin-top:12px">
+            <button type="button" class="btn-link" data-forgot-password-btn style="background:none;border:none;color:var(--accent,#7c3aed);font-size:.875rem;cursor:pointer;text-decoration:underline;padding:0">Nie pamiętam hasła</button>
+          </div>
+        </form>
+
+        <!-- Forgot password form (hidden by default) -->
+        <form class="form-card" id="forgot-password-form" style="display:none" data-forgot-form>
+          <h2 style="font-size:1.1rem;margin-bottom:8px">Resetowanie hasła</h2>
+          <p class="hint" style="margin-bottom:16px">Podaj swój adres e-mail, a wyślemy Ci link do ustawienia nowego hasła.</p>
+          <label>
+            Email
+            <input type="email" name="forgot_email" placeholder="email@domena.pl" autocomplete="email" required>
+          </label>
+          <div id="forgot-password-msg" role="alert" style="display:none;margin-bottom:8px;padding:8px 12px;border-radius:6px;font-size:.875rem"></div>
+          <div class="cta-row auth-actions">
+            <button class="btn btn-primary" type="submit">Wyślij link</button>
+            <button class="btn btn-secondary" type="button" data-back-to-login-btn>Wróć do logowania</button>
+          </div>
+        </form>
+
+        <!-- Reset password form (shown when ?reset_token=... is in URL) -->
+        <form class="form-card" id="reset-password-form" style="display:none" data-reset-form>
+          <h2 style="font-size:1.1rem;margin-bottom:8px">Nowe hasło</h2>
+          <p class="hint" style="margin-bottom:16px">Wpisz swoje nowe hasło (minimum 8 znaków).</p>
+          <label>
+            Nowe hasło
+            <input type="password" name="new_password" placeholder="••••••••" autocomplete="new-password" required minlength="8">
+          </label>
+          <div id="reset-password-msg" role="alert" style="display:none;margin-bottom:8px;padding:8px 12px;border-radius:6px;font-size:.875rem"></div>
+          <div class="cta-row auth-actions">
+            <button class="btn btn-primary" type="submit">Zmień hasło</button>
+          </div>
         </form>
       </div>
 
@@ -175,9 +207,151 @@
     </a>
   </nav>
 
+  <script>window.QM_API_BASE = 'https://api.uszefaqualitet.pl/api';</script>
   <script src="js/api.js" defer></script>
   <script src="js/pwa-connect.js" defer></script>
   <script src="js/flow.js" defer></script>
   <script src="js/app.js" defer></script>
+  <script>
+  (function () {
+    'use strict';
+
+    // ─── Password reset helpers ──────────────────────────────────────────────
+
+    function showMsg(elId, msg, isError) {
+      var el = document.getElementById(elId);
+      if (!el) return;
+      el.textContent = msg;
+      el.style.display = 'block';
+      el.style.background = isError ? '#fee2e2' : '#dcfce7';
+      el.style.color      = isError ? '#991b1b' : '#166534';
+    }
+
+    function hideMsg(elId) {
+      var el = document.getElementById(elId);
+      if (el) el.style.display = 'none';
+    }
+
+    function showLoginForm() {
+      var loginForm = document.querySelector('[data-login-form]');
+      if (loginForm) loginForm.style.display = '';
+      document.getElementById('forgot-password-form').style.display = 'none';
+      document.getElementById('reset-password-form').style.display  = 'none';
+    }
+
+    function showForgotForm() {
+      var loginForm = document.querySelector('[data-login-form]');
+      if (loginForm) loginForm.style.display = 'none';
+      document.getElementById('forgot-password-form').style.display = '';
+      document.getElementById('reset-password-form').style.display  = 'none';
+    }
+
+    function showResetForm() {
+      var loginForm = document.querySelector('[data-login-form]');
+      if (loginForm) loginForm.style.display = 'none';
+      document.getElementById('forgot-password-form').style.display = 'none';
+      document.getElementById('reset-password-form').style.display  = '';
+    }
+
+    // ─── "Forgot password" button ────────────────────────────────────────────
+    var forgotBtn = document.querySelector('[data-forgot-password-btn]');
+    if (forgotBtn) {
+      forgotBtn.addEventListener('click', function () { showForgotForm(); });
+    }
+
+    // ─── "Back to login" button ──────────────────────────────────────────────
+    var backBtn = document.querySelector('[data-back-to-login-btn]');
+    if (backBtn) {
+      backBtn.addEventListener('click', function () { showLoginForm(); });
+    }
+
+    // ─── Forgot-password form submit ─────────────────────────────────────────
+    var forgotForm = document.getElementById('forgot-password-form');
+    if (forgotForm) {
+      forgotForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        hideMsg('forgot-password-msg');
+        var email = (forgotForm.querySelector('[name="forgot_email"]') || {}).value || '';
+        if (!email) {
+          showMsg('forgot-password-msg', 'Podaj adres e-mail.', true);
+          return;
+        }
+        var submitBtn = forgotForm.querySelector('[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Wysyłanie…';
+        try {
+          var apiBase = window.QM_API_BASE || 'http://localhost:3000/api';
+          var res = await fetch(apiBase + '/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email }),
+          });
+          var data = await res.json();
+          if (res.ok) {
+            showMsg('forgot-password-msg', data.message || 'Link wysłany!', false);
+          } else {
+            showMsg('forgot-password-msg', data.error || 'Wystąpił błąd. Spróbuj ponownie.', true);
+          }
+        } catch (err) {
+          showMsg('forgot-password-msg', 'Brak połączenia z serwerem. Sprawdź internet.', true);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Wyślij link';
+        }
+      });
+    }
+
+    // ─── Reset-password form submit ──────────────────────────────────────────
+    var resetForm = document.getElementById('reset-password-form');
+    if (resetForm) {
+      resetForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        hideMsg('reset-password-msg');
+        var password = (resetForm.querySelector('[name="new_password"]') || {}).value || '';
+        if (password.length < 8) {
+          showMsg('reset-password-msg', 'Hasło musi mieć co najmniej 8 znaków.', true);
+          return;
+        }
+        var token = new URLSearchParams(window.location.search).get('reset_token') || '';
+        if (!token) {
+          showMsg('reset-password-msg', 'Brak tokenu resetującego. Użyj linku z e-maila.', true);
+          return;
+        }
+        var submitBtn = resetForm.querySelector('[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Zmieniam hasło…';
+        try {
+          var apiBase = window.QM_API_BASE || 'http://localhost:3000/api';
+          var res = await fetch(apiBase + '/auth/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: token, password: password }),
+          });
+          var data = await res.json();
+          if (res.ok) {
+            showMsg('reset-password-msg', (data.message || 'Hasło zmienione!') + ' Za chwilę zostaniesz przekierowany do logowania.', false);
+            setTimeout(function () {
+              window.location.href = 'login.html';
+            }, 2500);
+          } else {
+            showMsg('reset-password-msg', data.error || 'Wystąpił błąd. Spróbuj ponownie.', true);
+          }
+        } catch (err) {
+          showMsg('reset-password-msg', 'Brak połączenia z serwerem. Sprawdź internet.', true);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Zmień hasło';
+        }
+      });
+    }
+
+    // ─── Auto-show reset form when ?reset_token is in URL ────────────────────
+    if (new URLSearchParams(window.location.search).get('reset_token')) {
+      document.addEventListener('DOMContentLoaded', function () { showResetForm(); });
+      // Also call immediately in case DOM is ready
+      if (document.readyState !== 'loading') showResetForm();
+    }
+  }());
+  </script>
 </body>
 </html>

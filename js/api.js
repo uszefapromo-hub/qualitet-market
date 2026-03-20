@@ -226,6 +226,25 @@
     refresh() {
       return attemptRefresh();
     },
+
+    /**
+     * Request a password-reset email.
+     * @param {string} email
+     * @returns {Promise<{ message: string }>}
+     */
+    forgotPassword(email) {
+      return post('/auth/forgot-password', { email });
+    },
+
+    /**
+     * Set a new password using a reset token received via email.
+     * @param {string} token    Raw token from the URL parameter.
+     * @param {string} password New password (min 8 chars).
+     * @returns {Promise<{ message: string }>}
+     */
+    resetPassword(token, password) {
+      return post('/auth/reset-password', { token, password });
+    },
   };
 
   // ─── Stores ───────────────────────────────────────────────────────────────────

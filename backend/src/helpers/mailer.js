@@ -177,4 +177,68 @@ async function sendImportNotification({
   }
 }
 
-module.exports = { sendImportNotification, resolveAdminEmail };
+module.exports = { sendImportNotification, resolveAdminEmail, sendPasswordResetEmail };
+
+// ─── sendPasswordResetEmail ────────────────────────────────────────────────────
+
+/**
+ * Sends a password-reset link to the user's email address.
+ *
+ * Designed to be called WITHOUT await (fire-and-forget).
+ * All errors are caught internally; the function never rejects.
+ *
+ * @param {object} options
+ * @param {string} options.to    Recipient email address.
+ * @param {string} options.name  User's display name.
+ * @param {string} options.token Raw reset token (NOT hashed – URL-embedded).
+ */
+async function sendPasswordResetEmail({ to, name, token }) {
+  try {
+    const appUrl = process.env.APP_URL || 'https://uszefaqualitet.pl';
+    const resetUrl = `${appUrl}/login.html?reset_token=${encodeURIComponent(token)}`;
+
+    const subject = 'Resetowanie hasła – QualitetMarket';
+    const body = [
+      `Cześć ${name},`,
+      '',
+      'Otrzymaliśmy prośbę o zresetowanie hasła do Twojego konta w QualitetMarket.',
+      '',
+      'Kliknij poniższy link, aby ustawić nowe hasło (link ważny przez 1 godzinę):',
+      resetUrl,
+      '',
+      'Jeśli to nie Ty wysłałeś/aś tę prośbę, zignoruj tę wiadomość – Twoje hasło nie zostanie zmienione.',
+      '',
+      '– Zespół QualitetMarket',
+    ].join('\n');
+
+    const msgId = uuidv4();
+
+    try {
+      await db.query(
+        `INSERT INTO mail_messages (id, to_email, to_user_id, subject, body, status, created_by, created_at)
+         VALUES ($1, $2, NULL, $3, $4, 'queued', NULL, NOW())`,
+        [msgId, to, subject, body]
+      );
+    } catch (dbErr) {
+      console.error('[mailer] Failed to persist password reset mail_message:', dbErr.message);
+    }
+
+    let sent = false;
+    try {
+      sent = await dispatchSmtp(to, subject, body);
+    } catch (sendErr) {
+      console.error('[mailer] SMTP send error for password reset (non-critical):', sendErr.message);
+    }
+
+    if (sent) {
+      try {
+        await db.query(
+          `UPDATE mail_messages SET status = 'sent', sent_at = NOW() WHERE id = $1`,
+          [msgId]
+        );
+      } catch { /* ignore */ }
+    }
+  } catch (err) {
+    console.error('[mailer] sendPasswordResetEmail error (non-critical):', err.message);
+  }
+}

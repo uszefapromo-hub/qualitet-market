@@ -3,15 +3,18 @@
 /**
  * Auth routes – short canonical aliases used by the onboarding flow.
  *
- * POST /api/auth/register  – create a new account (default role: seller)
- * POST /api/auth/login     – obtain a JWT
- * POST /api/auth/refresh   – exchange a valid JWT for a fresh one (extends session)
- * GET  /api/auth/me        – return the authenticated user's profile
- * PUT  /api/auth/me        – update the authenticated user's profile
+ * POST /api/auth/register        – create a new account (default role: seller)
+ * POST /api/auth/login           – obtain a JWT
+ * POST /api/auth/refresh         – exchange a valid JWT for a fresh one (extends session)
+ * GET  /api/auth/me              – return the authenticated user's profile
+ * PUT  /api/auth/me              – update the authenticated user's profile
+ * POST /api/auth/forgot-password – request a password-reset link via email
+ * POST /api/auth/reset-password  – set a new password using a valid reset token
  */
 
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const { body } = require('express-validator');
 const { v4: uuidv4 } = require('uuid');
 
@@ -22,6 +25,7 @@ const { PLAN_CONFIG } = require('./subscriptions');
 const { nameToSlug, uniqueSlug } = require('../helpers/slug');
 const { getPromoTier } = require('../helpers/promo');
 const { ensureReferralCode } = require('./referral');
+const { sendPasswordResetEmail } = require('../helpers/mailer');
 
 const router = express.Router();
 
@@ -265,3 +269,99 @@ router.put(
 );
 
 module.exports = router;
+
+// ─── POST /api/auth/forgot-password ──────────────────────────────────────────
+// Accepts { email } and sends a password-reset link to that address.
+// Always returns 200 to avoid user-enumeration attacks.
+
+router.post(
+  '/forgot-password',
+  [body('email').isEmail().normalizeEmail()],
+  validate,
+  async (req, res) => {
+    const { email } = req.body;
+    try {
+      const userResult = await db.query(
+        'SELECT id, name FROM users WHERE email = $1',
+        [email]
+      );
+      // Always respond 200 regardless of whether the email exists
+      if (!userResult.rows[0]) {
+        return res.json({ message: 'Jeśli konto istnieje, link resetujący zostanie wysłany na podany adres.' });
+      }
+
+      const user = userResult.rows[0];
+      const token = crypto.randomBytes(32).toString('hex');
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+      // Invalidate any existing unused tokens for this user
+      await db.query(
+        `UPDATE password_reset_tokens SET used_at = NOW()
+         WHERE user_id = $1 AND used_at IS NULL AND expires_at > NOW()`,
+        [user.id]
+      );
+
+      await db.query(
+        `INSERT INTO password_reset_tokens (id, user_id, token, expires_at)
+         VALUES ($1, $2, $3, $4)`,
+        [uuidv4(), user.id, tokenHash, expiresAt]
+      );
+
+      // Send raw (unhashed) token in the email link; only the hash is stored in DB
+      sendPasswordResetEmail({ to: email, name: user.name, token }).catch(
+        (err) => console.error('forgot-password email error:', err.message)
+      );
+
+      return res.json({ message: 'Jeśli konto istnieje, link resetujący zostanie wysłany na podany adres.' });
+    } catch (err) {
+      console.error('forgot-password error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── POST /api/auth/reset-password ───────────────────────────────────────────
+// Accepts { token, password } and updates the user's password.
+
+router.post(
+  '/reset-password',
+  [
+    body('token').trim().notEmpty(),
+    body('password').isLength({ min: 8 }),
+  ],
+  validate,
+  async (req, res) => {
+    const { token, password } = req.body;
+    try {
+      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+      const tokenResult = await db.query(
+        `SELECT id, user_id FROM password_reset_tokens
+         WHERE token = $1 AND used_at IS NULL AND expires_at > NOW()`,
+        [tokenHash]
+      );
+
+      if (!tokenResult.rows[0]) {
+        return res.status(400).json({ error: 'Link resetujący jest nieprawidłowy lub wygasł.' });
+      }
+
+      const { id: tokenId, user_id } = tokenResult.rows[0];
+      const passwordHash = await bcrypt.hash(password, 12);
+
+      await db.query(
+        `UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2`,
+        [passwordHash, user_id]
+      );
+
+      await db.query(
+        `UPDATE password_reset_tokens SET used_at = NOW() WHERE id = $1`,
+        [tokenId]
+      );
+
+      return res.json({ message: 'Hasło zostało zmienione. Możesz się teraz zalogować.' });
+    } catch (err) {
+      console.error('reset-password error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
