@@ -643,7 +643,9 @@
   </aside>
 
   <script>
-    const API_URL = "https://qualitet-market-production.up.railway.app/api/products";
+    const API_BASE = window.QM_API_BASE || "https://api.uszefaqualitet.pl/api";
+    const API_URL = API_BASE + "/products?status=active&limit=100";
+    const FALLBACK_URL = "https://fakestoreapi.com/products";
 
     let allProducts = [];
     let currentCategory = "all";
@@ -665,20 +667,23 @@
 
     function normalizeProducts(data) {
       if (Array.isArray(data)) return data;
-      if (Array.isArray(data.products)) return data.products;
+      if (data && Array.isArray(data.products)) return data.products;
+      if (data && Array.isArray(data.data)) return data.data;
+      if (data && Array.isArray(data.items)) return data.items;
+      if (data && Array.isArray(data.results)) return data.results;
       return [];
     }
 
     function getName(product) {
-      return product.name || product.nazwa || "Produkt";
+      return product.name || product.nazwa || product.title || product.product_name || "Produkt";
     }
 
     function getPrice(product) {
-      return product.price ?? product.cena ?? 0;
+      return product.selling_price ?? product.platform_price ?? product.price_gross ?? product.price_net ?? product.price ?? product.cena ?? 0;
     }
 
     function getDescription(product) {
-      return product.description || product.opis || "Produkt dostępny w sklepie QualitetMarket.";
+      return product.description || product.short_description || product.opis || "Produkt dostępny w sklepie QualitetMarket.";
     }
 
     function getCategory(product) {
@@ -686,7 +691,7 @@
     }
 
     function getImage(product) {
-      return product.image || product.imageUrl || product.thumbnail || product.zdjecie || "";
+      return product.image_url || product.image || product.imageUrl || product.thumbnail || product.photo || product.zdjecie || "";
     }
 
     function updateCartCount() {
@@ -777,15 +782,20 @@
     function renderProducts() {
       const grid = document.getElementById("productsGrid");
       const emptyBox = document.getElementById("emptyBox");
-      const searchValue = document.getElementById("searchInput").value.trim().toLowerCase();
-      const sortValue = document.getElementById("sortSelect").value;
+
+      if (!grid) return;
+
+      const searchInput = document.getElementById("searchInput");
+      const sortSelect = document.getElementById("sortSelect");
+      const searchValue = searchInput ? searchInput.value.trim().toLowerCase() : "";
+      const sortValue = sortSelect ? sortSelect.value : "default";
 
       let filtered = allProducts.filter(product => {
         const name = getName(product).toLowerCase();
         const desc = getDescription(product).toLowerCase();
         const category = getCategory(product);
 
-        const searchOk = name.includes(searchValue) || desc.includes(searchValue);
+        const searchOk = !searchValue || name.includes(searchValue) || desc.includes(searchValue);
         const categoryOk = currentCategory === "all" || category === currentCategory;
 
         return searchOk && categoryOk;
@@ -803,14 +813,14 @@
 
       if (!filtered.length) {
         grid.innerHTML = "";
-        emptyBox.style.display = "block";
+        if (emptyBox) emptyBox.style.display = "block";
         return;
       }
 
-      emptyBox.style.display = "none";
+      if (emptyBox) emptyBox.style.display = "none";
 
-      grid.innerHTML = filtered.map(product => {
-        const id = product.id ?? getName(product);
+      const cards = filtered.map((product, index) => {
+        const id = product.id != null ? product.id : (getName(product) + "_" + index);
         const name = getName(product);
         const description = getDescription(product);
         const price = getPrice(product);
@@ -819,38 +829,47 @@
         const safeName = escapeHtml(name);
         const safeDesc = escapeHtml(description);
         const safePrice = formatPrice(price);
+        const safeImage = escapeHtml(image);
+        const productPrice = Number(price) || 0;
 
-        const addId = String(id).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-        const addName = String(name).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-
-        return `
-          <article class="product-card">
-            <div class="product-image">
-              ${
-                image
-                  ? `<img src="${escapeHtml(image)}" alt="${safeName}" onerror="this.parentNode.innerHTML='<span>🛒</span>'">`
-                  : `<span>🛒</span>`
-              }
-            </div>
-
-            <div class="product-body">
-              <div class="product-title">${safeName}</div>
-              <div class="product-desc">${safeDesc}</div>
-
-              <div class="product-meta">
-                <div>
-                  <div class="price">${safePrice}</div>
-                  <div class="price-note">Dostępny online</div>
-                </div>
-
-                <button class="btn btn-main" onclick="addToCart({id:'${addId}', name:'${addName}', price:${Number(price) || 0}})">
-                  Do koszyka
-                </button>
+        const card = document.createElement("article");
+        card.className = "product-card";
+        card.innerHTML = `
+          <div class="product-image">
+            ${image ? `<img src="${safeImage}" alt="${safeName}" loading="lazy">` : `<span>🛒</span>`}
+          </div>
+          <div class="product-body">
+            <div class="product-title">${safeName}</div>
+            <div class="product-desc">${safeDesc}</div>
+            <div class="product-meta">
+              <div>
+                <div class="price">${safePrice}</div>
+                <div class="price-note">Dostępny online</div>
               </div>
+              <button class="btn btn-main">Do koszyka</button>
             </div>
-          </article>
+          </div>
         `;
-      }).join("");
+
+        if (image) {
+          const img = card.querySelector("img");
+          if (img) img.addEventListener("error", function () {
+            const span = document.createElement("span");
+            span.textContent = "🛒";
+            this.parentNode.replaceChild(span, this);
+          });
+        }
+
+        const btn = card.querySelector(".btn.btn-main");
+        if (btn) btn.addEventListener("click", function () {
+          addToCart({ id: id, name: name, price: productPrice });
+        });
+
+        return card;
+      });
+
+      grid.innerHTML = "";
+      cards.forEach(card => grid.appendChild(card));
     }
 
     async function loadProducts() {
@@ -862,16 +881,25 @@
       errorBox.innerHTML = "";
 
       try {
-        const response = await fetch(API_URL);
-
-        if (!response.ok) {
-          throw new Error("API zwróciło błąd: " + response.status);
+        let data;
+        let usingFallback = false;
+        try {
+          const response = await fetch(API_URL, { cache: "no-store" });
+          if (!response.ok) throw new Error("API zwróciło błąd: " + response.status);
+          data = await response.json();
+        } catch (primaryError) {
+          console.warn("Główne API niedostępne, używam fallback:", primaryError.message);
+          const fallbackResponse = await fetch(FALLBACK_URL, { cache: "no-store" });
+          if (!fallbackResponse.ok) throw new Error("Fallback API zwróciło błąd: " + fallbackResponse.status);
+          data = await fallbackResponse.json();
+          usingFallback = true;
         }
 
-        const data = await response.json();
-        allProducts = normalizeProducts(data);
+        const products = normalizeProducts(data);
+        allProducts = products;
 
-        statusText.textContent = "Załadowano produktów: " + allProducts.length;
+        statusText.textContent = "Załadowano produktów: " + allProducts.length +
+          (usingFallback ? " (dane demonstracyjne)" : "");
         renderProducts();
       } catch (error) {
         allProducts = [];
