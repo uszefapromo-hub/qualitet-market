@@ -98,6 +98,9 @@ app.use('/api/users/register', authLimiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
+// ─── Root endpoint ─────────────────────────────────────────────────────────────
+app.get('/', (_req, res) => res.send('API działa 🚀'));
+
 // ─── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
@@ -454,7 +457,7 @@ if (require.main === module) {
   const wss = new WebSocketServer({ server });
   wsManager.attach(wss);
 
-  server.listen(PORT, () => {
+  server.listen(PORT, '0.0.0.0', () => {
     console.log(`HurtDetalUszefaQUALITET API running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
     console.log(`WebSocket server active on ws://localhost:${PORT}`);
   });

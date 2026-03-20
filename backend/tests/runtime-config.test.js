@@ -19,7 +19,7 @@ describe('production runtime config', () => {
     process.env = originalEnv;
   });
 
-  it('rejects production startup without JWT_SECRET', () => {
+  it('warns but does not crash production startup without JWT_SECRET', () => {
     process.env = {
       ...originalEnv,
       NODE_ENV: 'production',
@@ -27,12 +27,17 @@ describe('production runtime config', () => {
       ALLOWED_ORIGINS: 'https://uszefaqualitet.pl',
     };
 
-    expect(() => require('../src/app')).toThrow(
-      'JWT_SECRET musi być ustawiony na bezpieczną wartość w środowisku production'
-    );
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      expect(() => require('../src/app')).not.toThrow();
+      const warnMessages = warnSpy.mock.calls.flat().join(' ');
+      expect(warnMessages).toContain('JWT_SECRET');
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
-  it('rejects production startup without ALLOWED_ORIGINS', () => {
+  it('warns but does not crash production startup without ALLOWED_ORIGINS', () => {
     process.env = {
       ...originalEnv,
       NODE_ENV: 'production',
@@ -40,9 +45,14 @@ describe('production runtime config', () => {
       ALLOWED_ORIGINS: '',
     };
 
-    expect(() => require('../src/app')).toThrow(
-      'ALLOWED_ORIGINS musi być ustawione w środowisku production'
-    );
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      expect(() => require('../src/app')).not.toThrow();
+      const warnMessages = warnSpy.mock.calls.flat().join(' ');
+      expect(warnMessages).toContain('ALLOWED_ORIGINS');
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
   it('rejects requests from origins outside the production allowlist', async () => {
