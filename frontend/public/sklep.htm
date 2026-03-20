@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>QualitetMarket Shop</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{font-family:Arial;background:#0f172a;color:#fff;margin:0;padding:40px}
+h1{font-size:32px}
+.products{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-top:30px}
+.card{background:#1e293b;padding:20px;border-radius:16px}
+button{margin-top:10px;padding:10px;border:none;border-radius:10px;background:#7c3aed;color:#fff;cursor:pointer}
+
+.cart{
+position:fixed;right:20px;top:20px;
+background:#111827;padding:15px;border-radius:12px
+}
+</style>
+</head>
+
+<body>
+
+<h1>QualitetMarket 🔥</h1>
+
+<div class="products">
+
+<div class="card">
+<h3>Smartfon AI</h3>
+<p>1299 zł</p>
+<button onclick="add('Smartfon AI',1299)">Dodaj</button>
+</div>
+
+<div class="card">
+<h3>Sneakers Pro</h3>
+<p>199 zł</p>
+<button onclick="add('Sneakers Pro',199)">Dodaj</button>
+</div>
+
+</div>
+
+<div class="cart">
+🛒 <span id="count">0</span>
+</div>
+
+<script>
+let cart = [];
+
+function add(name,price){
+cart.push({name,price});
+document.getElementById('count').innerText = cart.length;
+}
+</script>
+
+</body>
+</html>
