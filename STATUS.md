@@ -126,10 +126,12 @@
 ### PWA Frontend (HTML5 / Vanilla JS)
 
 - ✅ `js/api.js` – pełny klient REST API (`window.QMApi`) – Auth, Products, Cart, Orders, Admin, Social, Live, AI, Creator, Gamification, Collaboration
+- ✅ `js/cart.js` – `window.QMCart`: addToCart, removeFromCart, updateQty, createOrder, badge auto-update (`[data-cart-badge]`); localStorage-first z synchronizacją API
 - ✅ `js/pwa-connect.js` – mostek frontend → backend (login, rejestracja, checkout)
 - ✅ `js/flow.js` – koordynator przepływów stron
 - ✅ `js/api-client.js` – shim kompatybilności `QualitetAPI → QMApi`
 - ✅ Service Worker (`service-worker.js`) – tryb offline/PWA
+- ✅ **Koszyk w `sklep.html`** – przycisk „Dodaj do koszyka" wywołuje `QMCart.addToCart()`, badge aktualizuje się automatycznie, przejście do `koszyk.html` działa (PR #333)
 - ✅ Strony HTML: `login.html`, `dashboard.html`, `sklep.html`, `koszyk.html`, `panel-sklepu.html`, `owner-panel.html`, `listing.html`, `generator-sklepu.html`, `affiliate.html`, `live.html`, `intelligence.html`, `zarabiaj.html`, `hurtownie.html`, `brand.html`, `cennik.html`, `crm.html`, `qualitetverse.html`, `qualitetmarket.html`
 
 ### Next.js Frontend (`frontend/`)
