@@ -162,7 +162,7 @@ router.get('/users', authenticate, requireRole('owner', 'admin'), async (req, re
     const total = parseInt(countResult.rows[0].count, 10);
 
     const result = await db.query(
-      `SELECT id, email, name, role, plan, trial_ends_at, created_at
+      `SELECT id, email, name, role, approved, plan, trial_ends_at, created_at
        FROM users ${where}
        ORDER BY created_at DESC
        LIMIT $${nextParamIndex} OFFSET $${nextParamIndex + 1}`,
@@ -183,13 +183,16 @@ router.patch(
   requireRole('owner', 'admin'),
   [
     param('id').isUUID(),
-    body('role').optional().isIn(['buyer', 'seller', 'admin', 'owner']),
+    body('role').optional().isIn(['customer', 'buyer', 'seller', 'admin', 'owner']),
     body('plan').optional().isIn(['trial', 'basic', 'pro', 'elite']),
     body('name').optional().trim().notEmpty(),
+    body('approved').optional().isBoolean(),
   ],
   validate,
   async (req, res) => {
-    const { role, plan, name } = req.body;
+    const { role, plan, name, approved } = req.body;
+    // Normalise legacy 'buyer' to 'customer'
+    const effectiveRole = role === 'buyer' ? 'customer' : (role || null);
 
     try {
       const result = await db.query(
@@ -197,15 +200,107 @@ router.patch(
            role       = COALESCE($1, role),
            plan       = COALESCE($2, plan),
            name       = COALESCE($3, name),
+           approved   = CASE WHEN $4::boolean IS NOT NULL THEN $4::boolean ELSE approved END,
            updated_at = NOW()
-         WHERE id = $4
-         RETURNING id, email, name, role, plan, trial_ends_at, created_at`,
-        [role || null, plan || null, name || null, req.params.id]
+         WHERE id = $5
+         RETURNING id, email, name, role, approved, plan, trial_ends_at, created_at`,
+        [effectiveRole, plan || null, name || null, approved !== undefined ? approved : null, req.params.id]
       );
       if (!result.rows[0]) return res.status(404).json({ error: 'Użytkownik nie znaleziony' });
       return res.json(result.rows[0]);
     } catch (err) {
       console.error('admin update user error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── POST /api/admin/users/:id/approve – approve seller account ───────────────
+// Sets approved = true and role = 'seller'. Creates a shop + subscription if the
+// user does not already have one (mirrors the registration flow for sellers).
+
+router.post(
+  '/users/:id/approve',
+  authenticate,
+  requireRole('owner', 'admin'),
+  [param('id').isUUID()],
+  validate,
+  async (req, res) => {
+    const { v4: uuidv4 } = require('uuid');
+    const { nameToSlug, uniqueSlug } = require('../helpers/slug');
+    const { PLAN_CONFIG } = require('./subscriptions');
+
+    try {
+      const userResult = await db.query(
+        'SELECT id, email, name, role, approved FROM users WHERE id = $1',
+        [req.params.id]
+      );
+      const user = userResult.rows[0];
+      if (!user) return res.status(404).json({ error: 'Użytkownik nie znaleziony' });
+
+      // Mark as approved seller
+      await db.query(
+        `UPDATE users SET role = 'seller', approved = TRUE, updated_at = NOW() WHERE id = $1`,
+        [user.id]
+      );
+
+      // Create shop if seller doesn't have one yet
+      const storeResult = await db.query(
+        'SELECT id FROM stores WHERE owner_id = $1 LIMIT 1',
+        [user.id]
+      );
+      let shop = storeResult.rows[0] || null;
+      if (!shop) {
+        const shopId    = uuidv4();
+        const slug      = await uniqueSlug(nameToSlug(user.name));
+        const subdomain = `${slug}.qualitetmarket.pl`;
+        const newStore  = await db.query(
+          `INSERT INTO stores (id, owner_id, name, slug, subdomain, margin, plan, status, created_at)
+           VALUES ($1, $2, $3, $4, $5, 30, 'trial', 'active', NOW())
+           RETURNING *`,
+          [shopId, user.id, user.name, slug, subdomain]
+        );
+        shop = newStore.rows[0];
+
+        const trialConfig  = PLAN_CONFIG['trial'];
+        const subExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        await db.query(
+          `INSERT INTO subscriptions
+             (id, shop_id, plan, status, product_limit, commission_rate, started_at, expires_at, created_at)
+           VALUES ($1, $2, 'trial', 'active', $3, $4, NOW(), $5, NOW())`,
+          [uuidv4(), shopId, trialConfig.product_limit, trialConfig.commission_rate, subExpiresAt]
+        );
+      }
+
+      return res.json({ message: 'Sprzedawca zatwierdzony', shop });
+    } catch (err) {
+      console.error('admin approve seller error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── POST /api/admin/users/:id/reject – reject/revoke seller approval ─────────
+// Sets approved = false and role = 'customer'.
+
+router.post(
+  '/users/:id/reject',
+  authenticate,
+  requireRole('owner', 'admin'),
+  [param('id').isUUID()],
+  validate,
+  async (req, res) => {
+    try {
+      const result = await db.query(
+        `UPDATE users SET role = 'customer', approved = FALSE, updated_at = NOW()
+         WHERE id = $1
+         RETURNING id, email, name, role, approved`,
+        [req.params.id]
+      );
+      if (!result.rows[0]) return res.status(404).json({ error: 'Użytkownik nie znaleziony' });
+      return res.json({ message: 'Zatwierdzenie sprzedawcy cofnięte', user: result.rows[0] });
+    } catch (err) {
+      console.error('admin reject seller error:', err.message);
       return res.status(500).json({ error: 'Błąd serwera' });
     }
   }

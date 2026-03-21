@@ -37,13 +37,15 @@ router.post(
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 8 }),
     body('name').trim().notEmpty(),
-    body('role').optional().isIn(['seller', 'buyer']),
+    body('role').optional().isIn(['seller', 'buyer', 'customer']),
     body('ref_code').optional().trim(),
   ],
   validate,
   async (req, res) => {
-    // Default role for new sign-ups through this endpoint is 'seller'
-    const { email, password, name, role = 'seller', ref_code } = req.body;
+    // Default role for new sign-ups is 'customer'; sellers require admin approval
+    const { email, password, name, role = 'customer', ref_code } = req.body;
+    // Normalise legacy 'buyer' to 'customer'
+    const effectiveRole = role === 'buyer' ? 'customer' : role;
     try {
       const existing = await db.query('SELECT id FROM users WHERE email = $1', [email]);
       if (existing.rows.length > 0) {
@@ -62,12 +64,14 @@ router.post(
       await db.query(
         `INSERT INTO users (id, email, password_hash, name, role, plan, trial_ends_at, created_at)
          VALUES ($1, $2, $3, $4, $5, 'trial', $6, NOW())`,
-        [id, email, passwordHash, name, role, trialEndsAt]
+        [id, email, passwordHash, name, effectiveRole, trialEndsAt]
       );
 
-      // ── Auto-create shop for sellers ──────────────────────────────────────
+      // ── Auto-create shop for approved sellers ─────────────────────────────
+      // Customers (default role) do not get a shop; sellers registered directly
+      // (e.g. admin-created) get one automatically.
       let shop = null;
-      if (role === 'seller' || role === 'owner') {
+      if (effectiveRole === 'seller' || effectiveRole === 'owner') {
         const shopId   = uuidv4();
         const shopName = name;
         const slug     = await uniqueSlug(nameToSlug(shopName));
@@ -111,10 +115,10 @@ router.post(
           .catch((err) => console.error('referral record error:', err.message));
       }
 
-      const token = signToken({ id, email, role });
+      const token = signToken({ id, email, role: effectiveRole });
       return res.status(201).json({
         token,
-        user: { id, email, name, role, plan: 'trial' },
+        user: { id, email, name, role: effectiveRole, plan: 'trial' },
         shop,
         promo: { bonusMonths: promoTier.bonusMonths, label: promoTier.label },
       });

@@ -835,6 +835,8 @@ router.get(
 // ─── GET /api/my/opportunities – products with best seller profit potential ────
 // Returns central-catalogue products sorted by expected_reseller_profit DESC.
 // Sellers use this to discover products worth adding to their store.
+// NOTE: supplier_price, cost_price and supplier identity are intentionally omitted
+//       so sellers cannot see wholesale pricing or supplier details.
 
 router.get(
   '/opportunities',
@@ -853,13 +855,11 @@ router.get(
 
       const result = await db.query(
         `SELECT p.id, p.name, p.sku, p.category, p.image_url,
-                p.supplier_price, p.platform_price, p.min_selling_price,
-                p.recommended_reseller_price, p.expected_platform_profit,
+                p.platform_price, p.min_selling_price,
+                p.recommended_reseller_price,
                 p.expected_reseller_profit, p.quality_score, p.is_featured,
-                p.stock, p.description,
-                s.name AS supplier_name
+                p.stock, p.description
            FROM products p
-           LEFT JOIN suppliers s ON p.supplier_id = s.id
           WHERE p.is_central = true AND p.status = 'active' AND p.stock > 0
             AND p.expected_reseller_profit IS NOT NULL AND p.expected_reseller_profit > 0
           ORDER BY p.expected_reseller_profit DESC, p.quality_score DESC
@@ -870,6 +870,141 @@ router.get(
       return res.json({ total, page, limit, opportunities: result.rows });
     } catch (err) {
       console.error('my opportunities error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── GET /api/my/catalog – central platform catalog for sellers ───────────────
+// Returns all active central-catalogue products that sellers can add to their
+// shop.  Wholesale pricing (supplier_price, cost_price) and supplier identity
+// are intentionally hidden from sellers (business rule).
+
+router.get(
+  '/catalog',
+  authenticate,
+  requireRole('seller', 'owner', 'admin'),
+  async (req, res) => {
+    const { page, limit, offset } = parsePagination(req);
+    const search   = req.query.search   || null;
+    const category = req.query.category || null;
+
+    const conditions = ["p.is_central = true", "p.status = 'active'", "p.stock > 0"];
+    const params = [];
+    let nextParamIndex = 1;
+
+    if (search) {
+      conditions.push(`(p.name ILIKE $${nextParamIndex} OR p.description ILIKE $${nextParamIndex})`);
+      params.push(`%${search}%`);
+      nextParamIndex++;
+    }
+    if (category) {
+      conditions.push(`p.category = $${nextParamIndex++}`);
+      params.push(category);
+    }
+
+    const where = conditions.join(' AND ');
+
+    try {
+      const countResult = await db.query(
+        `SELECT COUNT(*) FROM products p WHERE ${where}`,
+        params
+      );
+      const total = parseInt(countResult.rows[0].count, 10);
+
+      const result = await db.query(
+        `SELECT p.id, p.name, p.sku, p.category, p.image_url,
+                p.platform_price, p.min_selling_price,
+                p.recommended_reseller_price,
+                p.expected_reseller_profit, p.quality_score, p.is_featured,
+                p.stock, p.description
+           FROM products p
+          WHERE ${where}
+          ORDER BY p.is_featured DESC, p.quality_score DESC, p.name ASC
+          LIMIT $${nextParamIndex} OFFSET $${nextParamIndex + 1}`,
+        [...params, limit, offset]
+      );
+
+      return res.json({ total, page, limit, products: result.rows });
+    } catch (err) {
+      console.error('my catalog error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── POST /api/my/seller-products – add a central catalog product to seller's shop
+// Simplified "Add to my store" endpoint.  The seller provides a product_id and
+// an optional seller_price; the platform resolves the seller's primary store.
+// Uses shop_products under the hood (same table, simpler interface).
+
+router.post(
+  '/seller-products',
+  authenticate,
+  requireRole('seller', 'owner', 'admin'),
+  [
+    body('product_id').isUUID(),
+    body('seller_price').optional({ nullable: true }).isFloat({ min: 0 }),
+    body('active').optional().isBoolean(),
+  ],
+  validate,
+  requireActiveSubscription,
+  async (req, res) => {
+    const { product_id, seller_price = null, active = true } = req.body;
+
+    try {
+      // Resolve seller's primary store
+      const storeResult = await db.query(
+        'SELECT id FROM stores WHERE owner_id = $1 ORDER BY created_at ASC LIMIT 1',
+        [req.user.id]
+      );
+      const store = storeResult.rows[0];
+      if (!store) return res.status(404).json({ error: 'Nie masz jeszcze sklepu' });
+
+      // Verify product is a central-catalog product
+      const productResult = await db.query(
+        `SELECT id, min_selling_price, platform_price FROM products
+         WHERE id = $1 AND is_central = true AND status = 'active'`,
+        [product_id]
+      );
+      const product = productResult.rows[0];
+      if (!product) return res.status(404).json({ error: 'Produkt nie istnieje w katalogu platformy' });
+
+      // Enforce minimum price
+      const minPrice = parseFloat(product.min_selling_price || product.platform_price || 0);
+      if (seller_price !== null && parseFloat(seller_price) < minPrice) {
+        return res.status(422).json({ error: 'Cena sprzedaży nie może być niższa niż cena platformy', min_selling_price: minPrice });
+      }
+
+      // Product-limit gate
+      const sub = req.subscription;
+      if (sub && sub.product_limit !== null && sub.product_limit !== undefined) {
+        const countResult = await db.query(
+          'SELECT COUNT(*) FROM shop_products WHERE store_id = $1',
+          [store.id]
+        );
+        const currentCount = parseInt(countResult.rows[0].count, 10);
+        if (currentCount >= sub.product_limit) {
+          return res.status(403).json({ error: 'product_limit_reached' });
+        }
+      }
+
+      const id = uuidv4();
+      const result = await db.query(
+        `INSERT INTO shop_products
+           (id, store_id, product_id, price_override, active, created_at)
+         VALUES ($1, $2, $3, $4, $5, NOW())
+         ON CONFLICT (store_id, product_id) DO UPDATE SET
+           price_override = EXCLUDED.price_override,
+           active         = EXCLUDED.active,
+           updated_at     = NOW()
+         RETURNING *`,
+        [id, store.id, product_id, seller_price, active]
+      );
+
+      return res.status(201).json(result.rows[0]);
+    } catch (err) {
+      console.error('my seller-products add error:', err.message);
       return res.status(500).json({ error: 'Błąd serwera' });
     }
   }

@@ -474,8 +474,27 @@
       .then(function (user) {
         updateDashboardUser(user);
 
+        // Show/hide sections based on role
+        var isSeller = user.role === 'seller' || user.role === 'owner' || user.role === 'admin';
+        var isAdmin  = user.role === 'owner'  || user.role === 'admin';
+
+        // Seller-only sections: store summary, margin summary, scripts panel
+        document.querySelectorAll('[data-seller-only]').forEach(function (el) {
+          el.hidden = !isSeller;
+        });
+
+        // Customer notice (shown only for customers)
+        document.querySelectorAll('[data-customer-only]').forEach(function (el) {
+          el.hidden = isSeller;
+        });
+
+        // Load catalog for sellers
+        if (isSeller) {
+          loadDashboardCatalog();
+        }
+
         // Load promo slots for admin/owner users
-        if (user.role === 'owner' || user.role === 'admin') {
+        if (isAdmin) {
           api.Admin.dashboard()
             .then(function (data) {
               var slots = data && data.promo_slots;
@@ -499,6 +518,70 @@
       });
 
     loadDashboardOrders();
+  }
+
+  function loadDashboardCatalog() {
+    var api = window.QMApi;
+    if (!api) return;
+    var listEl = document.getElementById('dashboard-catalog-list');
+    if (!listEl) return;
+
+    fetch((api._base || '/api') + '/my/catalog?limit=6', {
+      headers: { Authorization: 'Bearer ' + (localStorage.getItem('app_token') || '') },
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var products = data.products || [];
+        if (!products.length) {
+          listEl.innerHTML = '<p class="hint" style="grid-column:1/-1">Brak produktów w katalogu.</p>';
+          return;
+        }
+        listEl.innerHTML = '';
+        products.forEach(function (p) {
+          var card = document.createElement('div');
+          card.className = 'store-summary-item';
+          card.innerHTML =
+            '<strong>' + escapeHtml(p.name) + '</strong>' +
+            '<span>Cena platformy: ' + (p.platform_price ? formatPrice(parseFloat(p.platform_price)) : '—') + '</span>' +
+            '<span>Sugerowana: ' + (p.recommended_reseller_price ? formatPrice(parseFloat(p.recommended_reseller_price)) : '—') + '</span>' +
+            '<button class="btn btn-primary btn-sm" data-add-to-store="' + escapeHtml(p.id) + '" style="margin-top:8px">+ Dodaj do sklepu</button>';
+          listEl.appendChild(card);
+        });
+
+        listEl.addEventListener('click', function (e) {
+          var btn = e.target.closest('[data-add-to-store]');
+          if (!btn) return;
+          var productId = btn.getAttribute('data-add-to-store');
+          btn.disabled = true;
+          btn.textContent = '…';
+          fetch((api._base || '/api') + '/my/seller-products', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: 'Bearer ' + (localStorage.getItem('app_token') || ''),
+            },
+            body: JSON.stringify({ product_id: productId }),
+          })
+            .then(function (r) { return r.json().then(function (body) { return { ok: r.ok, body: body }; }); })
+            .then(function (res) {
+              if (res.ok) {
+                btn.textContent = '✓ Dodano';
+                btn.classList.add('btn-success');
+              } else {
+                btn.textContent = '+ Dodaj do sklepu';
+                btn.disabled = false;
+                alert(res.body.error || 'Błąd podczas dodawania produktu');
+              }
+            })
+            .catch(function () {
+              btn.textContent = '+ Dodaj do sklepu';
+              btn.disabled = false;
+            });
+        });
+      })
+      .catch(function () {
+        listEl.innerHTML = '<p class="hint" style="grid-column:1/-1">Nie udało się załadować katalogu.</p>';
+      });
   }
 
   function updateDashboardUser(user) {
@@ -619,6 +702,23 @@
       return;
     }
 
+    // Guard: only sellers/admins/owners may access the store panel
+    api.Auth.me()
+      .then(function (user) {
+        var isSeller = user.role === 'seller' || user.role === 'owner' || user.role === 'admin';
+        if (!isSeller) {
+          // Customer trying to access seller panel – redirect to shop
+          window.location.href = 'sklep.html';
+          return;
+        }
+        _loadStorePanelContent(api);
+      })
+      .catch(function () {
+        _loadStorePanelContent(api);
+      });
+  }
+
+  function _loadStorePanelContent(api) {
     var contentEl = document.querySelector('[data-store-content]');
     var emptyEl = document.querySelector('[data-store-empty]');
 
@@ -658,8 +758,6 @@
         }
       });
   }
-
-  // ─── Owner panel page (owner-panel.html) ─────────────────────────────────────
 
   function initOwnerPanelPage() {
     var api = window.QMApi;

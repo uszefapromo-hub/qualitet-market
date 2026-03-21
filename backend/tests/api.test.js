@@ -1813,20 +1813,38 @@ describe('POST /api/auth/register', () => {
     expect(res.status).toBe(422);
   });
 
-  it('registers with default seller role and auto-creates shop', async () => {
-    const shopRow = { id: 'shop-new', owner_id: 'user-new', name: 'New Seller', slug: 'new-seller', subdomain: 'new-seller.qualitetmarket.pl', status: 'active', plan: 'trial' };
+  it('registers with default customer role (no shop created)', async () => {
     db.query
-      .mockResolvedValueOnce({ rows: [] })        // SELECT – no duplicate email
+      .mockResolvedValueOnce({ rows: [] })               // SELECT – no duplicate email
       .mockResolvedValueOnce({ rows: [{ count: '0' }] }) // SELECT COUNT – promo tier
-      .mockResolvedValueOnce({ rows: [] })         // INSERT user
-      .mockResolvedValueOnce({ rows: [] })         // uniqueSlug: slug check (free)
-      .mockResolvedValueOnce({ rows: [shopRow] }) // INSERT store
-      .mockResolvedValueOnce({ rows: [] });        // INSERT subscription
+      .mockResolvedValueOnce({ rows: [] });               // INSERT user
 
     const res = await request(app).post('/api/auth/register').send({
       email: 'newseller@test.pl',
       password: 'Password123!',
+      name: 'New Customer',
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.token).toBeDefined();
+    expect(res.body.user.role).toBe('customer');
+    expect(res.body.shop).toBeNull();
+  });
+
+  it('registers explicit seller role and auto-creates shop', async () => {
+    const shopRow = { id: 'shop-new', owner_id: 'user-new', name: 'New Seller', slug: 'new-seller', subdomain: 'new-seller.qualitetmarket.pl', status: 'active', plan: 'trial' };
+    db.query
+      .mockResolvedValueOnce({ rows: [] })               // SELECT – no duplicate email
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] }) // SELECT COUNT – promo tier
+      .mockResolvedValueOnce({ rows: [] })               // INSERT user
+      .mockResolvedValueOnce({ rows: [] })               // uniqueSlug: slug check (free)
+      .mockResolvedValueOnce({ rows: [shopRow] })        // INSERT store
+      .mockResolvedValueOnce({ rows: [] });               // INSERT subscription
+
+    const res = await request(app).post('/api/auth/register').send({
+      email: 'newseller2@test.pl',
+      password: 'Password123!',
       name: 'New Seller',
+      role: 'seller',
     });
     expect(res.status).toBe(201);
     expect(res.body.token).toBeDefined();
@@ -10454,7 +10472,230 @@ describe('GET /api/my/opportunities', () => {
   });
 });
 
-// ─── logImport helper ─────────────────────────────────────────────────────────
+// ─── GET /api/my/catalog ──────────────────────────────────────────────────────
+
+describe('GET /api/my/catalog', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/my/catalog');
+    expect(res.status).toBe(401);
+  });
+
+  it('blocks customer role from accessing seller catalog', async () => {
+    const { signToken } = require('../src/middleware/auth');
+    const customerToken = signToken({ id: 'cust-id', email: 'cust@test.pl', role: 'customer' });
+    const res = await request(app)
+      .get('/api/my/catalog')
+      .set('Authorization', `Bearer ${customerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns central catalog products for seller (without supplier/cost data)', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: PRODUCT_ID, name: 'Laptop XYZ', sku: 'LAP-001', category: 'Elektronika',
+            platform_price: 1400, min_selling_price: 1400,
+            recommended_reseller_price: 1680,
+            expected_reseller_profit: 280, quality_score: 90, is_featured: true,
+            stock: 5, description: 'Opis',
+          },
+        ],
+      });
+
+    const res = await request(app)
+      .get('/api/my/catalog')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('total', 1);
+    expect(res.body).toHaveProperty('products');
+    expect(Array.isArray(res.body.products)).toBe(true);
+    // Must not expose wholesale pricing or supplier identity
+    expect(res.body.products[0]).not.toHaveProperty('supplier_price');
+    expect(res.body.products[0]).not.toHaveProperty('cost_price');
+    expect(res.body.products[0]).not.toHaveProperty('supplier_name');
+    // Should include seller-facing fields
+    expect(res.body.products[0]).toHaveProperty('platform_price');
+    expect(res.body.products[0]).toHaveProperty('recommended_reseller_price');
+  });
+
+  it('supports search and category filters', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .get('/api/my/catalog?search=Laptop&category=Elektronika')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('total', 0);
+  });
+});
+
+// ─── POST /api/my/seller-products ─────────────────────────────────────────────
+
+describe('POST /api/my/seller-products', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).post('/api/my/seller-products').send({ product_id: PRODUCT_ID });
+    expect(res.status).toBe(401);
+  });
+
+  it('blocks customer role from adding products', async () => {
+    const { signToken } = require('../src/middleware/auth');
+    const customerToken = signToken({ id: 'cust-id', email: 'cust@test.pl', role: 'customer' });
+    const res = await request(app)
+      .post('/api/my/seller-products')
+      .set('Authorization', `Bearer ${customerToken}`)
+      .send({ product_id: PRODUCT_ID });
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 404 when seller has no store', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [] }); // no store found
+
+    const res = await request(app)
+      .post('/api/my/seller-products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ product_id: PRODUCT_ID });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/sklep/i);
+  });
+
+  it('returns 404 when product is not in central catalog', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] }) // store found
+      .mockResolvedValueOnce({ rows: [] });                 // product not in central catalog
+
+    const res = await request(app)
+      .post('/api/my/seller-products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ product_id: PRODUCT_ID });
+    expect(res.status).toBe(404);
+  });
+
+  it('adds a central catalog product to seller store', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] })                            // store
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, min_selling_price: 100, platform_price: 100 }] }) // product
+      .mockResolvedValueOnce({ rows: [{ id: 'sp-new', store_id: STORE_ID, product_id: PRODUCT_ID, active: true }] }); // insert
+
+    const res = await request(app)
+      .post('/api/my/seller-products')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({ product_id: PRODUCT_ID, seller_price: 120 });
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty('product_id', PRODUCT_ID);
+  });
+});
+
+// ─── POST /api/admin/users/:id/approve ───────────────────────────────────────
+
+describe('POST /api/admin/users/:id/approve', () => {
+  const CUSTOMER_ID = 'c0000000-0000-4000-8000-000000000099';
+
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post(`/api/admin/users/${CUSTOMER_ID}/approve`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 404 for unknown user', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // user not found
+
+    const res = await request(app)
+      .post(`/api/admin/users/${CUSTOMER_ID}/approve`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('approves a customer and creates a shop', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: CUSTOMER_ID, email: 'cust@test.pl', name: 'New Seller', role: 'customer', approved: false }] }) // user SELECT
+      .mockResolvedValueOnce({ rowCount: 1 })                                         // UPDATE users
+      .mockResolvedValueOnce({ rows: [] })                                            // no existing store
+      .mockResolvedValueOnce({ rows: [{ id: 'slug-check', count: '0' }] })           // uniqueSlug check
+      .mockResolvedValueOnce({ rows: [{ id: 'new-store-id', owner_id: CUSTOMER_ID, name: 'New Seller', slug: 'new-seller', status: 'active' }] }) // INSERT store
+      .mockResolvedValueOnce({ rows: [] });                                           // INSERT subscription
+
+    const res = await request(app)
+      .post(`/api/admin/users/${CUSTOMER_ID}/approve`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('message');
+    expect(res.body).toHaveProperty('shop');
+  });
+});
+
+// ─── POST /api/admin/users/:id/reject ────────────────────────────────────────
+
+describe('POST /api/admin/users/:id/reject', () => {
+  const SELLER_USER_ID = 'c0000000-0000-4000-8000-000000000088';
+
+  it('requires admin role', async () => {
+    const res = await request(app)
+      .post(`/api/admin/users/${SELLER_USER_ID}/reject`)
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('returns 404 for unknown user', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .post(`/api/admin/users/${SELLER_USER_ID}/reject`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('revokes seller approval and sets role to customer', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: SELLER_USER_ID, email: 's@test.pl', name: 'Revoked', role: 'customer', approved: false }],
+    });
+
+    const res = await request(app)
+      .post(`/api/admin/users/${SELLER_USER_ID}/reject`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('message');
+  });
+});
+
+// ─── PATCH /api/admin/users/:id – role/approved updates ──────────────────────
+
+describe('PATCH /api/admin/users/:id', () => {
+  const TARGET_ID = 'd0000000-0000-4000-8000-000000000001';
+
+  it('allows setting approved flag', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: TARGET_ID, email: 't@test.pl', name: 'Target', role: 'seller', approved: true, plan: 'trial', trial_ends_at: null, created_at: new Date().toISOString() }],
+    });
+
+    const res = await request(app)
+      .patch(`/api/admin/users/${TARGET_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ approved: true });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('approved', true);
+  });
+
+  it('accepts customer as a valid role', async () => {
+    db.query.mockResolvedValueOnce({
+      rows: [{ id: TARGET_ID, email: 't@test.pl', name: 'Target', role: 'customer', approved: false, plan: 'trial', trial_ends_at: null, created_at: new Date().toISOString() }],
+    });
+
+    const res = await request(app)
+      .patch(`/api/admin/users/${TARGET_ID}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ role: 'customer' });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('role', 'customer');
+  });
+});
+
+
 
 describe('logImport helper (supplier-import service)', () => {
   const { logImport } = require('../src/services/supplier-import');
