@@ -387,7 +387,7 @@
         <input type="text" id="searchInput" placeholder="Szukaj produktu..." />
       </div>
       <button class="cart-btn" onclick="openCart()">
-        Koszyk (<span id="cartCount">0</span>)
+        Koszyk (<span id="cartCount" data-cart-badge>0</span>)
       </button>
     </div>
   </header>
@@ -452,6 +452,7 @@
     </div>
   </div>
 
+  <script src="js/cart.js"></script>
   <script>
     const API_BASE = window.QM_API_BASE || 'https://api.uszefaqualitet.pl/api';
 
@@ -530,7 +531,6 @@
     const onlyNewInput = document.getElementById('onlyNew');
     const statusEl = document.getElementById('status');
     const visibleCountEl = document.getElementById('visibleCount');
-    const cartCountEl = document.getElementById('cartCount');
     const resetFiltersBtn = document.getElementById('resetFilters');
 
     function normalizeCategoryName(category) {
@@ -558,46 +558,6 @@
         minimumFractionDigits: 0,
         maximumFractionDigits: 2
       }) + ' zł';
-    }
-
-    function getCart() {
-      try {
-        const cart = JSON.parse(localStorage.getItem('qm_cart') || '[]');
-        return Array.isArray(cart) ? cart : [];
-      } catch (e) {
-        return [];
-      }
-    }
-
-    function saveCart(cart) {
-      localStorage.setItem('qm_cart', JSON.stringify(cart));
-    }
-
-    function updateCartCount() {
-      const cart = getCart();
-      const total = cart.reduce((sum, item) => sum + (item.qty || 1), 0);
-      cartCountEl.textContent = total;
-    }
-
-    function addToCart(product) {
-      const cart = getCart();
-      const existing = cart.find(item => String(item.id) === String(product.id));
-
-      if (existing) {
-        existing.qty += 1;
-      } else {
-        cart.push({
-          id: product.id,
-          title: product.title,
-          price: product.displayPrice,
-          image: product.image,
-          qty: 1
-        });
-      }
-
-      saveCart(cart);
-      updateCartCount();
-      alert('Dodano do koszyka');
     }
 
     function openCart() {
@@ -931,12 +891,16 @@
 
         const buyBtn = card.querySelector('.buy-btn');
         buyBtn.addEventListener('click', function () {
-          addToCart({
-            id: product.id,
-            title: product.title,
-            displayPrice: product.displayPrice,
-            image: safeImage
-          });
+          if (window.QMCart) {
+            window.QMCart.addToCart({id: product.id, name: product.title, price: product.displayPrice, img: safeImage});
+          }
+          var origText = buyBtn.textContent;
+          buyBtn.textContent = '✓ Dodano';
+          buyBtn.disabled = true;
+          setTimeout(function () {
+            buyBtn.textContent = origText;
+            buyBtn.disabled = false;
+          }, 1500);
         });
 
         const img = card.querySelector('img');
@@ -1031,7 +995,6 @@
     onlyNewInput.addEventListener('change', applyFilters);
     resetFiltersBtn.addEventListener('click', resetFilters);
 
-    updateCartCount();
     loadProducts();
   </script>
 </body>
