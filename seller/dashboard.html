@@ -551,7 +551,7 @@
         grid.innerHTML = '';
 
         var cards = [
-          { label: 'Zarobione', value: formatPrice(data.seller_earnings || data.ref_earnings || 0) },
+          { label: 'Zarobione', value: formatPrice(data.seller_earnings != null ? data.seller_earnings : (data.ref_earnings || 0)) },
           { label: 'Sprzedaży', value: fmt(data.order_count) },
           { label: 'Kliknięć', value: fmt(data.click_count) },
           { label: 'Sprzedaży z linków', value: fmt(data.ref_sale_count) },

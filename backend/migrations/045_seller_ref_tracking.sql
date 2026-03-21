@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS seller_clicks (
   id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   seller_id   UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   product_id  UUID        NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  -- SHA-256 hash of the visitor IP – never stored raw for GDPR / privacy compliance
   ip_hash     TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -18,6 +18,7 @@
  */
 
 const express = require('express');
+const crypto = require('crypto');
 const { body, param } = require('express-validator');
 const { v4: uuidv4 } = require('uuid');
 
@@ -1136,7 +1137,6 @@ router.post(
     const { product_id, seller_id } = req.body;
 
     // Hash the IP to avoid storing PII while still enabling rate-limiting
-    const crypto = require('crypto');
     const rawIp = req.ip || req.headers['x-forwarded-for'] || '';
     const ipHash = crypto.createHash('sha256').update(rawIp).digest('hex');
 
