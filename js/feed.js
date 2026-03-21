@@ -298,9 +298,27 @@
     loadNextPage();
   }
 
+  // ─── Auto-refresh feed every 60 seconds ──────────────────────────────────────
+  // Only reloads when the user is still on the first page of results so that
+  // actively browsing users are not interrupted. New products that arrive in the
+  // catalogue will appear on the next natural load.
+  function startFeedAutoRefresh() {
+    setInterval(() => {
+      // Skip the refresh if the user has scrolled past the first page
+      if (currentPage > 2) return;
+      currentPage = 1;
+      hasMore = true;
+      totalLoaded = 0;
+      const container = document.getElementById('feed-container');
+      if (container) container.innerHTML = '';
+      loadNextPage();
+    }, 60_000);
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+    document.addEventListener('DOMContentLoaded', () => { init(); startFeedAutoRefresh(); });
   } else {
     init();
+    startFeedAutoRefresh();
   }
 })();

@@ -11417,3 +11417,156 @@ describe('Subscription monetization E2E flow', () => {
     expect(stripeMock.subscriptions.retrieve).toHaveBeenCalledWith(STRIPE_SUB);
   });
 });
+
+// ─── Product Importer unit tests ───────────────────────────────────────────────
+describe('Product Importer – filterProducts()', () => {
+  const {
+    filterProducts,
+    applyProfitabilityFilter,
+    sortProducts,
+    MOCK_PRODUCTS,
+    MIN_PRICE,
+    MIN_MARGIN,
+  } = require('../src/products/importer');
+
+  it('rejects products with price <= MIN_PRICE', () => {
+    const products = [
+      { id: 'a', name: 'Tani produkt', price: MIN_PRICE, image: 'http://img.test/a.jpg', created_at: '2024-01-01T00:00:00Z' },
+      { id: 'b', name: 'Trochę droższy', price: MIN_PRICE + 0.01, image: 'http://img.test/b.jpg', created_at: '2024-01-01T00:00:00Z' },
+    ];
+    const result = filterProducts(products);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('b');
+  });
+
+  it('rejects products without an image', () => {
+    const products = [
+      { id: 'a', name: 'Produkt bez zdjęcia', price: 100, image: '', created_at: '2024-01-01T00:00:00Z' },
+      { id: 'b', name: 'Produkt ze zdjęciem', price: 100, image: 'http://img.test/b.jpg', created_at: '2024-01-01T00:00:00Z' },
+    ];
+    const result = filterProducts(products);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('b');
+  });
+
+  it('rejects products without a name', () => {
+    const products = [
+      { id: 'a', name: '', price: 100, image: 'http://img.test/a.jpg', created_at: '2024-01-01T00:00:00Z' },
+      { id: 'b', name: 'Nazwa produktu', price: 100, image: 'http://img.test/b.jpg', created_at: '2024-01-01T00:00:00Z' },
+    ];
+    const result = filterProducts(products);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('b');
+  });
+
+  it('deduplicates by id (first occurrence wins)', () => {
+    const products = [
+      { id: 'dup', name: 'Pierwszy', price: 100, image: 'http://img.test/a.jpg', created_at: '2024-01-01T00:00:00Z' },
+      { id: 'dup', name: 'Drugi',    price: 200, image: 'http://img.test/b.jpg', created_at: '2024-01-02T00:00:00Z' },
+    ];
+    const result = filterProducts(products);
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe('Pierwszy');
+  });
+
+  it('filters by optional rating >= 4.0 when rating is present', () => {
+    const products = [
+      { id: 'a', name: 'Dobry',  price: 100, image: 'http://img.test/a.jpg', rating: 4.0, created_at: '2024-01-01T00:00:00Z' },
+      { id: 'b', name: 'Słaby',  price: 100, image: 'http://img.test/b.jpg', rating: 3.9, created_at: '2024-01-01T00:00:00Z' },
+      { id: 'c', name: 'Brak oceny', price: 100, image: 'http://img.test/c.jpg', created_at: '2024-01-01T00:00:00Z' },
+    ];
+    const result = filterProducts(products);
+    // 'a' passes (rating exactly 4.0), 'b' rejected, 'c' passes (no rating field)
+    expect(result.map((p) => p.id)).toEqual(['a', 'c']);
+  });
+
+  it('filters by optional sales > 10 when sales is present', () => {
+    const products = [
+      { id: 'a', name: 'Popularny',  price: 100, image: 'http://img.test/a.jpg', sales: 11, created_at: '2024-01-01T00:00:00Z' },
+      { id: 'b', name: 'Mało',       price: 100, image: 'http://img.test/b.jpg', sales:  5, created_at: '2024-01-01T00:00:00Z' },
+      { id: 'c', name: 'Bez sprzedaży', price: 100, image: 'http://img.test/c.jpg', created_at: '2024-01-01T00:00:00Z' },
+    ];
+    const result = filterProducts(products);
+    expect(result.map((p) => p.id)).toEqual(['a', 'c']);
+  });
+});
+
+describe('Product Importer – applyProfitabilityFilter()', () => {
+  const { applyProfitabilityFilter, MIN_MARGIN } = require('../src/products/importer');
+
+  it('rejects products where platform margin < MIN_MARGIN', () => {
+    // Price 25 PLN → tier ≤100 → 40% markup → platform_price 35 → margin 10 < 30 → REJECT
+    const products = [
+      { id: 'cheap', name: 'Tani', price: 25, image: 'http://img.test/a.jpg', created_at: '2024-01-01T00:00:00Z' },
+    ];
+    const result = applyProfitabilityFilter(products);
+    expect(result).toHaveLength(0);
+  });
+
+  it('accepts products where platform margin >= MIN_MARGIN', () => {
+    // Price 100 PLN → tier ≤100 → 40% markup → platform_price 140 → margin 40 >= 30 → ACCEPT
+    const products = [
+      { id: 'ok', name: 'Dobry', price: 100, image: 'http://img.test/b.jpg', created_at: '2024-01-01T00:00:00Z' },
+    ];
+    const result = applyProfitabilityFilter(products);
+    expect(result).toHaveLength(1);
+    expect(result[0].margin).toBeGreaterThanOrEqual(MIN_MARGIN);
+  });
+
+  it('adds platform_price and margin fields to accepted products', () => {
+    const products = [
+      { id: 'ok', name: 'Test', price: 200, image: 'http://img.test/c.jpg', created_at: '2024-01-01T00:00:00Z' },
+    ];
+    const result = applyProfitabilityFilter(products);
+    expect(result[0]).toHaveProperty('platform_price');
+    expect(result[0]).toHaveProperty('margin');
+    expect(typeof result[0].platform_price).toBe('number');
+    expect(typeof result[0].margin).toBe('number');
+  });
+});
+
+describe('Product Importer – sortProducts()', () => {
+  const { sortProducts } = require('../src/products/importer');
+
+  it('sorts by created_at DESC (newest first)', () => {
+    const products = [
+      { id: 'old',  name: 'Stary',  price: 100, margin: 40, created_at: '2024-01-01T00:00:00Z' },
+      { id: 'new',  name: 'Nowy',   price: 100, margin: 40, created_at: '2024-03-01T00:00:00Z' },
+      { id: 'mid',  name: 'Środkowy', price: 100, margin: 40, created_at: '2024-02-01T00:00:00Z' },
+    ];
+    const sorted = sortProducts(products);
+    expect(sorted.map((p) => p.id)).toEqual(['new', 'mid', 'old']);
+  });
+
+  it('sorts by margin DESC as tiebreaker when created_at is equal', () => {
+    const ts = '2024-03-01T00:00:00Z';
+    const products = [
+      { id: 'low',  margin: 30, created_at: ts },
+      { id: 'high', margin: 80, created_at: ts },
+      { id: 'mid',  margin: 50, created_at: ts },
+    ];
+    const sorted = sortProducts(products);
+    expect(sorted.map((p) => p.id)).toEqual(['high', 'mid', 'low']);
+  });
+});
+
+describe('Product Importer – MOCK_PRODUCTS sanity check', () => {
+  const { MOCK_PRODUCTS, filterProducts, applyProfitabilityFilter, MAX_RESULTS } = require('../src/products/importer');
+
+  it('contains at least 30 entries', () => {
+    expect(MOCK_PRODUCTS.length).toBeGreaterThanOrEqual(30);
+  });
+
+  it('pipeline passes at least 20 products from the mock source', () => {
+    const filtered = filterProducts(MOCK_PRODUCTS);
+    const viable = applyProfitabilityFilter(filtered);
+    expect(viable.length).toBeGreaterThanOrEqual(20);
+  });
+
+  it('pipeline result does not exceed MAX_RESULTS', () => {
+    const filtered = filterProducts(MOCK_PRODUCTS);
+    const viable = applyProfitabilityFilter(filtered);
+    const limited = viable.slice(0, MAX_RESULTS);
+    expect(limited.length).toBeLessThanOrEqual(MAX_RESULTS);
+  });
+});

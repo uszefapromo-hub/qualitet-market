@@ -40,6 +40,7 @@ const aiRouter = require('./modules/ai/routes');
 const feedRouter = require('./routes/feed');
 const errorHandler = require('./middleware/errorHandler');
 const { importSupplierProducts } = require('./services/supplier-import');
+const { startAutoRefresh: startProductImporter } = require('./products/importer');
 const { getPromoSlots } = require('./helpers/promo');
 const { sendImportNotification } = require('./helpers/mailer');
 const db = require('./config/database');
@@ -443,6 +444,12 @@ if (process.env.NODE_ENV !== 'test') {
   };
 
   setInterval(syncAllSuppliers, SYNC_INTERVAL_MS);
+}
+
+// ─── Product auto-importer – every 60 seconds ──────────────────────────────────
+// Disabled in test environment to avoid interference with mocked DB queries.
+if (process.env.NODE_ENV !== 'test') {
+  startProductImporter();
 }
 
 // ─── Start server ──────────────────────────────────────────────────────────────
