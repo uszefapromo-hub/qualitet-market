@@ -67,8 +67,20 @@
 
     <main class="dashboard-main">
 
-      <!-- 1. Generator sklepu w 60 sekund – GŁÓWNA FUNKCJA -->
-      <section class="panel-card generator-hero" aria-label="Generator sklepu w 60 sekund">
+      <!-- Powiadomienie dla klientów prywatnych (ukryte dla sprzedawców) -->
+      <section class="panel-card" data-customer-only hidden>
+        <div class="store-summary-head">
+          <div>
+            <span class="eyebrow">Twoje konto</span>
+            <h2>Konto klienta prywatnego</h2>
+            <p class="hint">Możesz przeglądać sklep, kupować produkty i śledzić swoje zamówienia. Aby uzyskać dostęp do panelu sprzedawcy, skontaktuj się z administratorem platformy.</p>
+          </div>
+          <a class="btn btn-primary" href="sklep.html">🛒 Przejdź do sklepu</a>
+        </div>
+      </section>
+
+      <!-- 1. Generator sklepu w 60 sekund – GŁÓWNA FUNKCJA (tylko dla sprzedawców) -->
+      <section class="panel-card generator-hero" aria-label="Generator sklepu w 60 sekund" data-seller-only hidden>
         <div class="generator-hero-inner">
           <div class="generator-hero-content">
             <span class="generator-hero-tag">⭐ Główna funkcja platformy</span>
@@ -152,8 +164,8 @@
         </div>
       </section>
 
-      <!-- 4. Mój sklep -->
-      <section class="panel-card store-summary" data-store-summary>
+      <!-- 4. Mój sklep (tylko dla sprzedawców) -->
+      <section class="panel-card store-summary" data-store-summary data-seller-only hidden>
         <div class="store-summary-head">
           <div>
             <span class="eyebrow">Mój sklep</span>
@@ -179,8 +191,8 @@
         <p class="hint store-summary-helper" data-store-helper>Najpierw stwórz sklep, aby przejść dalej.</p>
       </section>
 
-      <!-- 5. Marża -->
-      <section class="panel-card margin-summary" data-margin-summary>
+      <!-- 5. Marża (tylko dla sprzedawców) -->
+      <section class="panel-card margin-summary" data-margin-summary data-seller-only hidden>
         <div class="store-summary-head">
           <div>
             <span class="eyebrow">Marża sklepu</span>
@@ -201,8 +213,26 @@
         <p class="hint" data-platform-margin-info></p>
       </section>
 
-      <!-- 6. Sprzedaż przez link -->
-      <section class="panel-card" data-sales-links-summary>
+      <!-- 5b. Katalog platformy – Dodaj do swojego sklepu (tylko dla sprzedawców) -->
+      <section class="panel-card" data-seller-only data-catalog-section hidden>
+        <div class="store-summary-head">
+          <div>
+            <span class="eyebrow">Katalog platformy</span>
+            <h2>Produkty dostępne do sprzedaży</h2>
+            <p class="hint">Wybierz produkty z centralnego katalogu i dodaj je do swojego sklepu jednym kliknięciem.</p>
+          </div>
+          <a class="btn btn-secondary" href="panel-sklepu.html">Zarządzaj sklepem</a>
+        </div>
+        <div id="dashboard-catalog-list" class="store-summary-grid">
+          <p class="hint" style="grid-column:1/-1">Ładowanie katalogu…</p>
+        </div>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="panel-sklepu.html">📦 Pełny katalog produktów</a>
+        </div>
+      </section>
+
+      <!-- 6. Sprzedaż przez link (tylko dla sprzedawców) -->
+      <section class="panel-card" data-sales-links-summary data-seller-only hidden>
         <div class="store-summary-head">
           <div>
             <span class="eyebrow">Sprzedaż przez link</span>
