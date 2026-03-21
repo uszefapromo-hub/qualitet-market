@@ -465,6 +465,53 @@
 
     const FALLBACK_LIVE_ENDPOINT = 'https://fakestoreapi.com/products';
 
+    const STATIC_FALLBACK_PRODUCTS = [
+      {
+        id: 'static-1',
+        title: 'Słuchawki Bezprzewodowe Pro',
+        description: 'Wysokiej jakości słuchawki z redukcją szumów i 30h czasu pracy.',
+        category: 'Elektronika',
+        image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop',
+        price: 299,
+        selling_price: 299,
+        is_featured: true,
+        stock: 10
+      },
+      {
+        id: 'static-2',
+        title: 'Smartwatch Sport Edition',
+        description: 'Zegarek sportowy z GPS, monitorem tętna i wodoodpornością IP68.',
+        category: 'Elektronika',
+        image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop',
+        price: 499,
+        selling_price: 499,
+        is_featured: true,
+        stock: 5
+      },
+      {
+        id: 'static-3',
+        title: 'Torba Skórzana Premium',
+        description: 'Elegancka torba ze skóry naturalnej, idealna na każdą okazję.',
+        category: 'Moda',
+        image: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=400&h=400&fit=crop',
+        price: 189,
+        selling_price: 189,
+        is_featured: false,
+        stock: 15
+      },
+      {
+        id: 'static-4',
+        title: 'Kawa Specialty Arabica 250g',
+        description: 'Świeżo palona kawa single origin z Etiopii. Nuty cytrusów i czekolady.',
+        category: 'Żywność',
+        image: 'https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=400&h=400&fit=crop',
+        price: 49,
+        selling_price: 49,
+        is_featured: false,
+        stock: 50
+      }
+    ];
+
     const MY_PRICE_MULTIPLIER = 1.18;
     const MY_PRICE_FIXED_ADD = 0;
 
@@ -801,9 +848,12 @@
         renderCategories();
         applyFilters();
       } catch (e) {
-        console.error(e);
-        productsEl.innerHTML = '<div class="empty">Nie udało się załadować produktów.</div>';
-        statusEl.textContent = 'Błąd ładowania produktów.';
+        console.warn('Wszystkie źródła API niedostępne, używam produktów zastępczych.', e);
+        rawOffers = STATIC_FALLBACK_PRODUCTS.map(item => normalizeOffer(item, 'Katalog'));
+        groupedProducts = groupOffersIntoProducts(rawOffers);
+        statusEl.textContent = 'Produkty z katalogu demonstracyjnego.';
+        renderCategories();
+        applyFilters();
       }
     }
 
