@@ -4,7 +4,7 @@
  * "My" routes – user-facing endpoints for the currently authenticated user.
  *
  * GET    /api/my/store                       – seller's primary store
- * GET    /api/my/store/stats                 – seller's store dashboard stats
+ * GET    /api/my/store/stats                 – seller's store dashboard stats (incl. click/ref data)
  * GET    /api/my/store/orders                – orders for the seller's store
  * GET    /api/my/orders                      – buyer's order history
  * GET    /api/my/store/products              – list my store's shop products
@@ -12,6 +12,9 @@
  * POST   /api/my/store/products/bulk         – add multiple products to my store at once
  * PATCH  /api/my/store/products/:id          – update a shop product in my store
  * DELETE /api/my/store/products/:id          – remove a product from my store
+ * GET    /api/my/links                       – seller's product sales links with click/sale stats
+ * POST   /api/my/track-click                 – record a click on a seller ref link (no auth)
+ * GET    /api/my/dashboard                   – full automation dashboard (earnings, clicks, top products)
  */
 
 const express = require('express');
@@ -65,8 +68,9 @@ router.get(
         return res.status(404).json({ error: 'Nie masz jeszcze sklepu' });
       }
       const storeId = store.id;
+      const sellerId = req.user.id;
 
-      const [orderStats, productCount, customerCount] = await Promise.all([
+      const [orderStats, productCount, customerCount, clickCount, refOrderStats, topProducts] = await Promise.all([
         db.query(
           `SELECT COUNT(*) AS order_count,
                   COALESCE(SUM(total), 0) AS revenue,
@@ -83,9 +87,40 @@ router.get(
           'SELECT COUNT(DISTINCT buyer_id) FROM orders WHERE store_id = $1',
           [storeId]
         ),
+        db.query(
+          'SELECT COUNT(*) FROM seller_clicks WHERE seller_id = $1',
+          [sellerId]
+        ),
+        db.query(
+          `SELECT COUNT(*) AS ref_sale_count,
+                  COALESCE(SUM(seller_revenue), 0) AS ref_earnings
+           FROM orders WHERE ref_seller_id = $1`,
+          [sellerId]
+        ),
+        db.query(
+          `SELECT p.id, p.name, p.image_url,
+                  COUNT(sc.id) AS click_count,
+                  COUNT(DISTINCT o.id) AS sale_count,
+                  COALESCE(SUM(o.seller_revenue), 0) AS earnings
+           FROM shop_products sp
+           JOIN products p ON p.id = sp.product_id
+           LEFT JOIN seller_clicks sc ON sc.product_id = p.id AND sc.seller_id = $1
+           LEFT JOIN orders o ON o.ref_seller_id = $1
+             AND EXISTS (
+               SELECT 1 FROM order_items oi
+               WHERE oi.order_id = o.id AND oi.product_id = p.id
+             )
+           WHERE sp.store_id = $2
+           GROUP BY p.id, p.name, p.image_url
+           ORDER BY click_count DESC, sale_count DESC
+           LIMIT 5`,
+          [sellerId, storeId]
+        ),
       ]);
 
       const stats = orderStats.rows[0];
+      const refStats = refOrderStats.rows[0];
+      const baseUrl = process.env.APP_URL || 'https://uszefaqualitet.pl';
       return res.json({
         order_count:         parseInt(stats.order_count, 10),
         revenue:             parseFloat(stats.revenue),
@@ -93,6 +128,18 @@ router.get(
         seller_earnings:     parseFloat(stats.seller_earnings),
         product_count:       parseInt(productCount.rows[0].count, 10),
         customer_count:      parseInt(customerCount.rows[0].count, 10),
+        click_count:         parseInt(clickCount.rows[0].count, 10),
+        ref_sale_count:      parseInt(refStats.ref_sale_count, 10),
+        ref_earnings:        parseFloat(refStats.ref_earnings),
+        top_products:        topProducts.rows.map((p) => ({
+          id:          p.id,
+          name:        p.name,
+          image_url:   p.image_url,
+          click_count: parseInt(p.click_count, 10),
+          sale_count:  parseInt(p.sale_count, 10),
+          earnings:    parseFloat(p.earnings),
+          link:        `${baseUrl}/product.html?id=${p.id}&ref=${sellerId}`,
+        })),
       });
     } catch (err) {
       console.error('my store stats error:', err.message);
@@ -1005,6 +1052,205 @@ router.post(
       return res.status(201).json(result.rows[0]);
     } catch (err) {
       console.error('my seller-products add error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── GET /api/my/links – seller's product sales links with stats ──────────────
+// Returns all active shop products for the seller's store, each with an
+// auto-generated sales link (/product.html?id={id}&ref={seller_id}) plus
+// click counts and ref-sale counts so the seller can see what's working.
+
+router.get(
+  '/links',
+  authenticate,
+  requireRole('seller', 'owner', 'admin'),
+  async (req, res) => {
+    try {
+      const storeResult = await db.query(
+        'SELECT id FROM stores WHERE owner_id = $1 ORDER BY created_at ASC LIMIT 1',
+        [req.user.id]
+      );
+      const store = storeResult.rows[0];
+      if (!store) {
+        return res.status(404).json({ error: 'Nie masz jeszcze sklepu' });
+      }
+      const sellerId = req.user.id;
+      const baseUrl = process.env.APP_URL || 'https://uszefaqualitet.pl';
+
+      const result = await db.query(
+        `SELECT p.id, p.name, p.image_url, p.category,
+                COALESCE(sp.price_override, p.recommended_reseller_price, p.min_selling_price) AS selling_price,
+                COUNT(DISTINCT sc.id)   AS click_count,
+                COUNT(DISTINCT o.id)    AS sale_count,
+                COALESCE(SUM(o.seller_revenue), 0) AS earnings
+           FROM shop_products sp
+           JOIN products p ON p.id = sp.product_id
+           LEFT JOIN seller_clicks sc ON sc.product_id = p.id AND sc.seller_id = $1
+           LEFT JOIN orders o ON o.ref_seller_id = $1
+             AND EXISTS (
+               SELECT 1 FROM order_items oi
+               WHERE oi.order_id = o.id AND oi.product_id = p.id
+             )
+          WHERE sp.store_id = $2 AND sp.active = true
+          GROUP BY p.id, p.name, p.image_url, p.category, sp.price_override,
+                   p.recommended_reseller_price, p.min_selling_price
+          ORDER BY click_count DESC, p.name ASC`,
+        [sellerId, store.id]
+      );
+
+      const links = result.rows.map((row) => ({
+        product_id:   row.id,
+        name:         row.name,
+        image_url:    row.image_url,
+        category:     row.category,
+        selling_price: row.selling_price !== null ? parseFloat(row.selling_price) : null,
+        click_count:  parseInt(row.click_count, 10),
+        sale_count:   parseInt(row.sale_count, 10),
+        earnings:     parseFloat(row.earnings),
+        link:         `${baseUrl}/product.html?id=${row.id}&ref=${sellerId}`,
+      }));
+
+      return res.json({ seller_id: sellerId, links });
+    } catch (err) {
+      console.error('my links error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── POST /api/my/track-click – record a seller ref link click ────────────────
+// Called by the product page when it detects a ?ref= parameter.
+// No authentication required – this is a public tracking endpoint.
+// Rate-limited by IP hash (max 5 clicks per IP per seller+product per hour).
+
+router.post(
+  '/track-click',
+  [
+    body('product_id').isUUID(),
+    body('seller_id').isUUID(),
+  ],
+  validate,
+  async (req, res) => {
+    const { product_id, seller_id } = req.body;
+
+    // Hash the IP to avoid storing PII while still enabling rate-limiting
+    const crypto = require('crypto');
+    const rawIp = req.ip || req.headers['x-forwarded-for'] || '';
+    const ipHash = crypto.createHash('sha256').update(rawIp).digest('hex');
+
+    try {
+      // Rate limit: max 5 recorded clicks per ip_hash + seller + product per hour
+      const recentCount = await db.query(
+        `SELECT COUNT(*) FROM seller_clicks
+         WHERE seller_id = $1 AND product_id = $2 AND ip_hash = $3
+           AND created_at > NOW() - INTERVAL '1 hour'`,
+        [seller_id, product_id, ipHash]
+      );
+      if (parseInt(recentCount.rows[0].count, 10) >= 5) {
+        // Silent success – don't reveal rate limiting to avoid gaming
+        return res.json({ recorded: false });
+      }
+
+      await db.query(
+        `INSERT INTO seller_clicks (seller_id, product_id, ip_hash) VALUES ($1, $2, $3)`,
+        [seller_id, product_id, ipHash]
+      );
+
+      return res.json({ recorded: true });
+    } catch (err) {
+      console.error('track-click error:', err.message);
+      return res.status(500).json({ error: 'Błąd serwera' });
+    }
+  }
+);
+
+// ─── GET /api/my/dashboard – full automation dashboard ───────────────────────
+// One-stop endpoint returning everything needed for the seller automation
+// dashboard: overall stats + top products + active product links.
+
+router.get(
+  '/dashboard',
+  authenticate,
+  requireRole('seller', 'owner', 'admin'),
+  async (req, res) => {
+    try {
+      const storeResult = await db.query(
+        'SELECT id, name, slug FROM stores WHERE owner_id = $1 ORDER BY created_at ASC LIMIT 1',
+        [req.user.id]
+      );
+      const store = storeResult.rows[0];
+      if (!store) {
+        return res.status(404).json({ error: 'Nie masz jeszcze sklepu' });
+      }
+      const storeId = store.id;
+      const sellerId = req.user.id;
+      const baseUrl = process.env.APP_URL || 'https://uszefaqualitet.pl';
+
+      const [orderStats, clickCount, refOrderStats, topProducts] = await Promise.all([
+        db.query(
+          `SELECT COUNT(*) AS order_count,
+                  COALESCE(SUM(seller_revenue), 0) AS seller_earnings
+           FROM orders WHERE store_id = $1`,
+          [storeId]
+        ),
+        db.query(
+          'SELECT COUNT(*) FROM seller_clicks WHERE seller_id = $1',
+          [sellerId]
+        ),
+        db.query(
+          `SELECT COUNT(*) AS ref_sale_count,
+                  COALESCE(SUM(seller_revenue), 0) AS ref_earnings
+           FROM orders WHERE ref_seller_id = $1`,
+          [sellerId]
+        ),
+        db.query(
+          `SELECT p.id, p.name, p.image_url,
+                  COUNT(DISTINCT sc.id)  AS click_count,
+                  COUNT(DISTINCT o.id)   AS sale_count,
+                  COALESCE(SUM(o.seller_revenue), 0) AS earnings
+           FROM shop_products sp
+           JOIN products p ON p.id = sp.product_id
+           LEFT JOIN seller_clicks sc ON sc.product_id = p.id AND sc.seller_id = $1
+           LEFT JOIN orders o ON o.ref_seller_id = $1
+             AND EXISTS (
+               SELECT 1 FROM order_items oi
+               WHERE oi.order_id = o.id AND oi.product_id = p.id
+             )
+           WHERE sp.store_id = $2 AND sp.active = true
+           GROUP BY p.id, p.name, p.image_url
+           ORDER BY sale_count DESC, click_count DESC
+           LIMIT 10`,
+          [sellerId, storeId]
+        ),
+      ]);
+
+      const os = orderStats.rows[0];
+      const rs = refOrderStats.rows[0];
+
+      return res.json({
+        seller_id:      sellerId,
+        store_id:       storeId,
+        store_name:     store.name,
+        store_url:      `${baseUrl}/sklep.html?slug=${store.slug}`,
+        order_count:    parseInt(os.order_count, 10),
+        seller_earnings: parseFloat(os.seller_earnings),
+        click_count:    parseInt(clickCount.rows[0].count, 10),
+        ref_sale_count: parseInt(rs.ref_sale_count, 10),
+        ref_earnings:   parseFloat(rs.ref_earnings),
+        top_products:   topProducts.rows.map((p) => ({
+          id:          p.id,
+          name:        p.name,
+          image_url:   p.image_url,
+          click_count: parseInt(p.click_count, 10),
+          sale_count:  parseInt(p.sale_count, 10),
+          earnings:    parseFloat(p.earnings),
+          link:        `${baseUrl}/product.html?id=${p.id}&ref=${sellerId}`,
+        })),
+      });
+    } catch (err) {
+      console.error('my dashboard error:', err.message);
       return res.status(500).json({ error: 'Błąd serwera' });
     }
   }

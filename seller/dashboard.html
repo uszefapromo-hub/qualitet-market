@@ -75,6 +75,7 @@
       margin-bottom: 20px;
       border-bottom: 2px solid #e5e7eb;
       padding-bottom: 0;
+      flex-wrap: wrap;
     }
     .seller-tab-bar button {
       padding: 8px 18px;
@@ -109,6 +110,135 @@
       justify-content: center;
       font-size: 2rem;
       color: #d1d5db;
+    }
+    /* Stats cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+    .stat-card .stat-label {
+      font-size: 0.75rem;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+    .stat-card .stat-value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #7c3aed;
+      line-height: 1.1;
+    }
+    .stat-card .stat-sub {
+      font-size: 0.78rem;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+    /* Link cards */
+    .link-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+    .link-card img, .link-card .link-img-placeholder {
+      width: 56px;
+      height: 56px;
+      object-fit: cover;
+      border-radius: 8px;
+      background: #f3f4f6;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+    }
+    .link-card .link-info { flex: 1; min-width: 0; }
+    .link-card .link-name {
+      font-weight: 600;
+      font-size: 0.92rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .link-card .link-meta {
+      font-size: 0.78rem;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+    .link-card .link-url-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .link-card .link-url {
+      font-size: 0.78rem;
+      color: #7c3aed;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+    .btn-copy {
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      border: 1px solid #7c3aed;
+      border-radius: 5px;
+      background: #fff;
+      color: #7c3aed;
+      cursor: pointer;
+      flex-shrink: 0;
+      font-weight: 600;
+    }
+    .btn-copy.copied {
+      background: #16a34a;
+      border-color: #16a34a;
+      color: #fff;
+    }
+    /* Top products table */
+    .top-products-list { margin-top: 8px; }
+    .top-product-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .top-product-row:last-child { border-bottom: none; }
+    .top-product-rank {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #7c3aed;
+      width: 20px;
+      flex-shrink: 0;
+      text-align: center;
+    }
+    .top-product-name {
+      flex: 1;
+      font-size: 0.88rem;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .top-product-stat {
+      font-size: 0.8rem;
+      color: #6b7280;
+      white-space: nowrap;
     }
   </style>
 </head>
@@ -159,22 +289,43 @@
       <section class="panel-card dashboard-welcome">
         <span class="eyebrow">Sprzedawca</span>
         <h1>Dashboard sprzedawcy</h1>
-        <p class="hint">Wybieraj produkty z katalogu i dodawaj je do swojego sklepu.</p>
+        <p class="hint">Produkty wpadają automatycznie. Kliknij "Dodaj" i zarabiaj.</p>
       </section>
 
       <section class="panel-card">
         <div class="seller-tab-bar" role="tablist" aria-label="Sekcje dashboardu">
-          <button type="button" role="tab" aria-selected="true" data-seller-tab="catalog" class="active">📦 Katalog produktów</button>
+          <button type="button" role="tab" aria-selected="true"  data-seller-tab="stats"   class="active">📊 Zarobki</button>
+          <button type="button" role="tab" aria-selected="false" data-seller-tab="links">🔗 Linki sprzedażowe</button>
+          <button type="button" role="tab" aria-selected="false" data-seller-tab="catalog">📦 Katalog</button>
           <button type="button" role="tab" aria-selected="false" data-seller-tab="mine">🛒 Moje produkty</button>
         </div>
 
-        <!-- ── TAB: Katalog ───────────────────────────────────────────── -->
-        <div class="seller-tab-panel active" id="seller-tab-catalog" role="tabpanel">
+        <!-- ── TAB: Zarobki (Stats) ────────────────────────────────────────── -->
+        <div class="seller-tab-panel active" id="seller-tab-stats" role="tabpanel">
+          <p class="seller-status-msg" id="stats-loading">Ładowanie statystyk…</p>
+          <div id="stats-content" hidden>
+            <div class="stats-grid" id="stats-grid"></div>
+            <h3 style="font-size:1rem;font-weight:700;margin:0 0 8px">🏆 Top produkty</h3>
+            <div class="top-products-list" id="top-products-list">
+              <p class="seller-status-msg" id="top-products-empty" hidden>Brak sprzedaży. Udostępnij linki i zarabiaj!</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── TAB: Linki sprzedażowe ─────────────────────────────────────── -->
+        <div class="seller-tab-panel" id="seller-tab-links" role="tabpanel">
+          <p class="seller-status-msg" id="links-loading" hidden>Ładowanie linków…</p>
+          <p class="seller-status-msg" id="links-empty" hidden>Dodaj produkty do sklepu, a tutaj pojawią się Twoje linki sprzedażowe.</p>
+          <div id="links-list"></div>
+        </div>
+
+        <!-- ── TAB: Katalog ───────────────────────────────────────────────── -->
+        <div class="seller-tab-panel" id="seller-tab-catalog" role="tabpanel">
           <p class="seller-status-msg" id="catalog-status">Ładowanie katalogu…</p>
           <div class="seller-grid" id="catalog-grid"></div>
         </div>
 
-        <!-- ── TAB: Moje produkty ────────────────────────────────────── -->
+        <!-- ── TAB: Moje produkty ────────────────────────────────────────── -->
         <div class="seller-tab-panel" id="seller-tab-mine" role="tabpanel">
           <p class="seller-status-msg" id="mine-status" hidden>Brak aktywowanych produktów. Przejdź do katalogu i dodaj produkty do sklepu.</p>
           <div class="seller-grid" id="mine-grid"></div>
@@ -239,6 +390,19 @@
         return true;
       }
 
+      // ── API helper ────────────────────────────────────────────────────────────
+      function apiBase() { return window.QM_API_BASE || 'https://api.uszefaqualitet.pl/api'; }
+      function authHeaders() {
+        var token = '';
+        try { token = localStorage.getItem('qm_token') || ''; } catch (e) { console.error('[seller/dashboard] Failed to retrieve token:', e); }
+        var h = { 'Content-Type': 'application/json' };
+        if (token) h['Authorization'] = 'Bearer ' + token;
+        return h;
+      }
+      function apiFetch(path, opts) {
+        return fetch(apiBase() + path, Object.assign({ headers: authHeaders() }, opts || {}));
+      }
+
       // ── localStorage helpers ──────────────────────────────────────────────────
       function loadSellerProducts() {
         try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch (e) { console.error('[seller/dashboard] Failed to parse seller_products:', e); return []; }
@@ -257,7 +421,7 @@
       function activateProduct(product, sellerId) {
         var list = loadSellerProducts();
         if (list.some(function (p) { return p.product_id === product.id && p.seller_id === sellerId; })) {
-          return false; // already added
+          return false;
         }
         list.push({ product_id: product.id, seller_id: sellerId, active: true, _product: product });
         saveSellerProducts(list);
@@ -266,11 +430,11 @@
 
       // ── Image helper ──────────────────────────────────────────────────────────
       function productImageEl(product) {
-        var imageUrl = product.image_url || product.thumbnail_url || product.image || '';
+        var imageUrl = (product && (product.image_url || product.thumbnail_url || product.image)) || '';
         if (imageUrl) {
           var img = document.createElement('img');
           img.src = imageUrl;
-          img.alt = product.name || '';
+          img.alt = (product && product.name) || '';
           img.loading = 'lazy';
           img.onerror = function () {
             var ph = document.createElement('div');
@@ -293,6 +457,9 @@
         if (isNaN(n)) return '—';
         return n.toFixed(2).replace('.', ',') + ' zł';
       }
+
+      // ── Format number ─────────────────────────────────────────────────────────
+      function fmt(n) { return parseInt(n, 10) || 0; }
 
       // ── Build catalog card ────────────────────────────────────────────────────
       function buildCatalogCard(product, sellerId) {
@@ -327,6 +494,11 @@
             btn.textContent = '✔ W moim sklepie';
             btn.disabled = true;
             btn.classList.add('added');
+            // Best-effort API call to persist to backend
+            apiFetch('/my/seller-products', {
+              method: 'POST',
+              body: JSON.stringify({ product_id: product.id }),
+            }).catch(function (err) { console.warn('[seller/dashboard] seller-products API error:', err); });
           }
         });
         body.appendChild(btn);
@@ -364,6 +536,178 @@
 
         card.appendChild(body);
         return card;
+      }
+
+      // ── Render stats tab ──────────────────────────────────────────────────────
+      function renderStats(data) {
+        var loading = document.getElementById('stats-loading');
+        var content = document.getElementById('stats-content');
+        var grid = document.getElementById('stats-grid');
+        var topList = document.getElementById('top-products-list');
+        var topEmpty = document.getElementById('top-products-empty');
+
+        loading.hidden = true;
+        content.hidden = false;
+        grid.innerHTML = '';
+
+        var cards = [
+          { label: 'Zarobione', value: formatPrice(data.seller_earnings || data.ref_earnings || 0) },
+          { label: 'Sprzedaży', value: fmt(data.order_count) },
+          { label: 'Kliknięć', value: fmt(data.click_count) },
+          { label: 'Sprzedaży z linków', value: fmt(data.ref_sale_count) },
+          { label: 'Produktów', value: fmt(data.product_count) },
+          { label: 'Zarobek z linków', value: formatPrice(data.ref_earnings) },
+        ];
+
+        cards.forEach(function (c) {
+          var card = document.createElement('div');
+          card.className = 'stat-card';
+          card.innerHTML = '<div class="stat-label">' + c.label + '</div><div class="stat-value">' + c.value + '</div>';
+          grid.appendChild(card);
+        });
+
+        // Top products
+        var top = data.top_products || [];
+        if (top.length === 0) {
+          topEmpty.hidden = false;
+        } else {
+          topEmpty.hidden = true;
+          top.forEach(function (p, i) {
+            var row = document.createElement('div');
+            row.className = 'top-product-row';
+            row.innerHTML =
+              '<span class="top-product-rank">' + (i + 1) + '</span>' +
+              '<span class="top-product-name">' + (p.name || '') + '</span>' +
+              '<span class="top-product-stat">' + fmt(p.click_count) + ' klik / ' + fmt(p.sale_count) + ' sprzed.</span>';
+            topList.appendChild(row);
+          });
+        }
+      }
+
+      // ── Load stats ────────────────────────────────────────────────────────────
+      function loadStats() {
+        apiFetch('/my/store/stats')
+          .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+          })
+          .then(function (data) {
+            renderStats(data);
+          })
+          .catch(function (err) {
+            var loading = document.getElementById('stats-loading');
+            loading.textContent = 'Nie udało się załadować statystyk.';
+            console.error('[seller/dashboard] stats error:', err);
+          });
+      }
+
+      // ── Render link card ──────────────────────────────────────────────────────
+      function buildLinkCard(item) {
+        var card = document.createElement('div');
+        card.className = 'link-card';
+
+        // Thumbnail
+        if (item.image_url) {
+          var img = document.createElement('img');
+          img.src = item.image_url;
+          img.alt = item.name || '';
+          img.onerror = function () { img.style.display = 'none'; };
+          card.appendChild(img);
+        } else {
+          var ph = document.createElement('div');
+          ph.className = 'link-img-placeholder';
+          ph.textContent = '📦';
+          card.appendChild(ph);
+        }
+
+        var info = document.createElement('div');
+        info.className = 'link-info';
+
+        var nameEl = document.createElement('div');
+        nameEl.className = 'link-name';
+        nameEl.textContent = item.name || '—';
+        info.appendChild(nameEl);
+
+        var meta = document.createElement('div');
+        meta.className = 'link-meta';
+        meta.textContent = fmt(item.click_count) + ' kliknięć · ' + fmt(item.sale_count) + ' sprzedaży · ' + formatPrice(item.earnings) + ' zarobku';
+        info.appendChild(meta);
+
+        var urlRow = document.createElement('div');
+        urlRow.className = 'link-url-row';
+
+        var urlSpan = document.createElement('span');
+        urlSpan.className = 'link-url';
+        urlSpan.title = item.link;
+        urlSpan.textContent = item.link;
+        urlRow.appendChild(urlSpan);
+
+        var copyBtn = document.createElement('button');
+        copyBtn.className = 'btn-copy';
+        copyBtn.type = 'button';
+        copyBtn.textContent = 'Kopiuj';
+        copyBtn.addEventListener('click', function () {
+          navigator.clipboard.writeText(item.link).then(function () {
+            copyBtn.textContent = '✔ Skopiowano';
+            copyBtn.classList.add('copied');
+            setTimeout(function () {
+              copyBtn.textContent = 'Kopiuj';
+              copyBtn.classList.remove('copied');
+            }, 2000);
+          }).catch(function () {
+            // Fallback for older browsers
+            var ta = document.createElement('textarea');
+            ta.value = item.link;
+            ta.style.position = 'fixed';
+            ta.style.top = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            copyBtn.textContent = '✔ Skopiowano';
+            copyBtn.classList.add('copied');
+            setTimeout(function () {
+              copyBtn.textContent = 'Kopiuj';
+              copyBtn.classList.remove('copied');
+            }, 2000);
+          });
+        });
+        urlRow.appendChild(copyBtn);
+        info.appendChild(urlRow);
+
+        card.appendChild(info);
+        return card;
+      }
+
+      // ── Load links ────────────────────────────────────────────────────────────
+      function loadLinks() {
+        var loading = document.getElementById('links-loading');
+        var empty = document.getElementById('links-empty');
+        var list = document.getElementById('links-list');
+        loading.hidden = false;
+        list.innerHTML = '';
+
+        apiFetch('/my/links')
+          .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+          })
+          .then(function (data) {
+            loading.hidden = true;
+            var items = data.links || [];
+            if (items.length === 0) {
+              empty.hidden = false;
+              return;
+            }
+            empty.hidden = true;
+            items.forEach(function (item) {
+              list.appendChild(buildLinkCard(item));
+            });
+          })
+          .catch(function (err) {
+            loading.textContent = 'Nie udało się załadować linków.';
+            console.error('[seller/dashboard] links error:', err);
+          });
       }
 
       // ── Render catalog ────────────────────────────────────────────────────────
@@ -404,6 +748,9 @@
       // ── Tab switching ─────────────────────────────────────────────────────────
       function initTabs(sellerId) {
         var tabBtns = document.querySelectorAll('[data-seller-tab]');
+        var catalogLoaded = false;
+        var linksLoaded = false;
+
         tabBtns.forEach(function (btn) {
           btn.addEventListener('click', function () {
             var tabId = btn.dataset.sellerTab;
@@ -415,8 +762,32 @@
               panel.classList.toggle('active', panel.id === 'seller-tab-' + tabId);
             });
             if (tabId === 'mine') renderMine(sellerId);
+            if (tabId === 'catalog' && !catalogLoaded) { catalogLoaded = true; fetchProducts(sellerId); }
+            if (tabId === 'links' && !linksLoaded) { linksLoaded = true; loadLinks(); }
           });
         });
+      }
+
+      // ── Load catalog products ─────────────────────────────────────────────────
+      function fetchProducts(sellerId) {
+        var statusEl = document.getElementById('catalog-status');
+        statusEl.textContent = 'Ładowanie katalogu…';
+        statusEl.hidden = false;
+
+        apiFetch('/products?is_central=true&limit=50&status=active')
+          .then(function (res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.json();
+          })
+          .then(function (data) {
+            var products = Array.isArray(data) ? data : (data.products || []);
+            renderCatalog(products, sellerId);
+          })
+          .catch(function (err) {
+            statusEl.textContent = 'Nie udało się załadować katalogu. Spróbuj ponownie później.';
+            statusEl.hidden = false;
+            console.error('[seller/dashboard] catalog fetch error:', err);
+          });
       }
 
       // ── Init ──────────────────────────────────────────────────────────────────
@@ -428,36 +799,8 @@
 
         initTabs(sellerId);
 
-        // Load products from central catalog via QMApi or direct fetch
-        function fetchProducts() {
-          var statusEl = document.getElementById('catalog-status');
-          statusEl.textContent = 'Ładowanie katalogu…';
-          statusEl.hidden = false;
-
-          var apiBase = (window.QM_API_BASE || 'https://api.uszefaqualitet.pl/api');
-          var token = '';
-          try { token = localStorage.getItem('qm_token') || ''; } catch (e) { console.error('[seller/dashboard] Failed to retrieve token:', e); }
-
-          var headers = { 'Content-Type': 'application/json' };
-          if (token) headers['Authorization'] = 'Bearer ' + token;
-
-          fetch(apiBase + '/products?is_central=true&limit=50&status=active', { headers: headers })
-            .then(function (res) {
-              if (!res.ok) throw new Error('HTTP ' + res.status);
-              return res.json();
-            })
-            .then(function (data) {
-              var products = Array.isArray(data) ? data : (data.products || []);
-              renderCatalog(products, sellerId);
-            })
-            .catch(function (err) {
-              statusEl.textContent = 'Nie udało się załadować katalogu. Spróbuj ponownie później.';
-              statusEl.hidden = false;
-              console.error('[seller/dashboard] catalog fetch error:', err);
-            });
-        }
-
-        fetchProducts();
+        // Default tab: stats — load immediately
+        loadStats();
 
         // Hide splash screen
         var splash = document.querySelector('[data-app-splash]');

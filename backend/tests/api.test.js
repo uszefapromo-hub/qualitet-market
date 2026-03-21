@@ -1753,7 +1753,10 @@ describe('GET /api/my/store/stats', () => {
       .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] }) // find store
       .mockResolvedValueOnce({ rows: [{ order_count: '5', revenue: '1500.00', platform_commission: '225.00', seller_earnings: '1275.00' }] }) // order stats
       .mockResolvedValueOnce({ rows: [{ count: '10' }] }) // product count
-      .mockResolvedValueOnce({ rows: [{ count: '3' }] }); // customer count
+      .mockResolvedValueOnce({ rows: [{ count: '3' }] })  // customer count
+      .mockResolvedValueOnce({ rows: [{ count: '20' }] }) // click count
+      .mockResolvedValueOnce({ rows: [{ ref_sale_count: '2', ref_earnings: '50.00' }] }) // ref order stats
+      .mockResolvedValueOnce({ rows: [] }); // top products
 
     const res = await request(app)
       .get('/api/my/store/stats')
@@ -2222,7 +2225,10 @@ describe('GET /api/my/store/stats', () => {
       .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] }) // find store
       .mockResolvedValueOnce({ rows: [{ order_count: '3', revenue: '450.00', platform_commission: '45.00', seller_earnings: '405.00' }] }) // orderStats
       .mockResolvedValueOnce({ rows: [{ count: '12' }] }) // productCount
-      .mockResolvedValueOnce({ rows: [{ count: '2' }] }); // customerCount
+      .mockResolvedValueOnce({ rows: [{ count: '2' }] })  // customerCount
+      .mockResolvedValueOnce({ rows: [{ count: '8' }] })  // clickCount
+      .mockResolvedValueOnce({ rows: [{ ref_sale_count: '1', ref_earnings: '30.00' }] }) // refOrderStats
+      .mockResolvedValueOnce({ rows: [] }); // topProducts
 
     const res = await request(app)
       .get('/api/my/store/stats')
@@ -11809,5 +11815,210 @@ describe('Product Importer – MOCK_PRODUCTS sanity check', () => {
     const viable = applyProfitabilityFilter(filtered);
     const limited = viable.slice(0, MAX_RESULTS);
     expect(limited.length).toBeLessThanOrEqual(MAX_RESULTS);
+  });
+});
+
+// ─── POST /api/my/track-click ─────────────────────────────────────────────────
+
+describe('POST /api/my/track-click', () => {
+  it('returns 422 when product_id is missing', async () => {
+    const res = await request(app)
+      .post('/api/my/track-click')
+      .send({ seller_id: SELLER_ID });
+    expect(res.status).toBe(422);
+  });
+
+  it('returns 422 when seller_id is not a UUID', async () => {
+    const res = await request(app)
+      .post('/api/my/track-click')
+      .send({ product_id: PRODUCT_ID, seller_id: 'not-a-uuid' });
+    expect(res.status).toBe(422);
+  });
+
+  it('records a click and returns recorded:true', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] }) // rate limit check
+      .mockResolvedValueOnce({ rows: [] });               // insert
+
+    const res = await request(app)
+      .post('/api/my/track-click')
+      .send({ product_id: PRODUCT_ID, seller_id: SELLER_ID });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('recorded', true);
+  });
+
+  it('returns recorded:false when rate limit exceeded', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '5' }] }); // limit hit
+
+    const res = await request(app)
+      .post('/api/my/track-click')
+      .send({ product_id: PRODUCT_ID, seller_id: SELLER_ID });
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('recorded', false);
+  });
+
+  it('does not require authentication', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ count: '0' }] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app)
+      .post('/api/my/track-click')
+      .send({ product_id: PRODUCT_ID, seller_id: SELLER_ID });
+    expect(res.status).toBe(200);
+  });
+});
+
+// ─── GET /api/my/links ────────────────────────────────────────────────────────
+
+describe('GET /api/my/links', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/my/links');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 when seller has no store', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // no store
+
+    const res = await request(app)
+      .get('/api/my/links')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns product links with stats for seller', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] }) // store
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: PRODUCT_ID, name: 'Fotel Ergonomiczny', image_url: null, category: 'Meble',
+            selling_price: '141.45', click_count: '12', sale_count: '3', earnings: '45.00',
+          },
+        ],
+      });
+
+    const res = await request(app)
+      .get('/api/my/links')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('seller_id', SELLER_ID);
+    expect(Array.isArray(res.body.links)).toBe(true);
+    expect(res.body.links[0]).toHaveProperty('link');
+    expect(res.body.links[0].link).toContain(`ref=${SELLER_ID}`);
+    expect(res.body.links[0]).toHaveProperty('click_count', 12);
+    expect(res.body.links[0]).toHaveProperty('sale_count', 3);
+    expect(res.body.links[0]).toHaveProperty('earnings', 45);
+  });
+
+  it('returns empty links array when seller has no active products', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] }) // store
+      .mockResolvedValueOnce({ rows: [] });                 // no products
+
+    const res = await request(app)
+      .get('/api/my/links')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body.links).toHaveLength(0);
+  });
+
+  it('blocks customer role', async () => {
+    const { signToken } = require('../src/middleware/auth');
+    const customerToken = signToken({ id: 'cust-id', email: 'cust@test.pl', role: 'customer' });
+    const res = await request(app)
+      .get('/api/my/links')
+      .set('Authorization', `Bearer ${customerToken}`);
+    expect(res.status).toBe(403);
+  });
+});
+
+// ─── GET /api/my/dashboard ────────────────────────────────────────────────────
+
+describe('GET /api/my/dashboard', () => {
+  it('requires authentication', async () => {
+    const res = await request(app).get('/api/my/dashboard');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 when seller has no store', async () => {
+    db.query.mockResolvedValueOnce({ rows: [] }); // no store
+
+    const res = await request(app)
+      .get('/api/my/dashboard')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('returns full automation dashboard data', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID, name: 'Mój Sklep', slug: 'moj-sklep' }] }) // store
+      .mockResolvedValueOnce({ rows: [{ order_count: '5', seller_earnings: '120.00' }] })         // order stats
+      .mockResolvedValueOnce({ rows: [{ count: '30' }] })                                         // click count
+      .mockResolvedValueOnce({ rows: [{ ref_sale_count: '2', ref_earnings: '40.00' }] })          // ref order stats
+      .mockResolvedValueOnce({ rows: [] });                                                        // top products
+
+    const res = await request(app)
+      .get('/api/my/dashboard')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('seller_id', SELLER_ID);
+    expect(res.body).toHaveProperty('order_count', 5);
+    expect(res.body).toHaveProperty('seller_earnings', 120);
+    expect(res.body).toHaveProperty('click_count', 30);
+    expect(res.body).toHaveProperty('ref_sale_count', 2);
+    expect(res.body).toHaveProperty('ref_earnings', 40);
+    expect(Array.isArray(res.body.top_products)).toBe(true);
+  });
+});
+
+// ─── GET /api/my/store/stats – click and ref tracking data ───────────────────
+
+describe('GET /api/my/store/stats – with click and ref tracking', () => {
+  it('includes click_count, ref_sale_count, ref_earnings and top_products', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID }] })                                         // store
+      .mockResolvedValueOnce({ rows: [{ order_count: '3', revenue: '300', platform_commission: '24', seller_earnings: '276' }] }) // order stats
+      .mockResolvedValueOnce({ rows: [{ count: '2' }] })                                           // product count
+      .mockResolvedValueOnce({ rows: [{ count: '1' }] })                                           // customer count
+      .mockResolvedValueOnce({ rows: [{ count: '15' }] })                                          // click count
+      .mockResolvedValueOnce({ rows: [{ ref_sale_count: '1', ref_earnings: '50.00' }] })           // ref order stats
+      .mockResolvedValueOnce({ rows: [] });                                                         // top products
+
+    const res = await request(app)
+      .get('/api/my/store/stats')
+      .set('Authorization', `Bearer ${sellerToken}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('click_count', 15);
+    expect(res.body).toHaveProperty('ref_sale_count', 1);
+    expect(res.body).toHaveProperty('ref_earnings', 50);
+    expect(Array.isArray(res.body.top_products)).toBe(true);
+  });
+});
+
+// ─── POST /api/orders – ref_seller_id tracking ───────────────────────────────
+
+describe('POST /api/orders – ref_seller_id attribution', () => {
+  it('accepts ref_seller_id and stores it in the created order', async () => {
+    db.query
+      .mockResolvedValueOnce({ rows: [{ id: STORE_ID, owner_id: SELLER_ID, margin: 15 }] }) // store
+      .mockResolvedValueOnce({ rows: [] })                                                   // platform settings
+      .mockResolvedValueOnce({ rows: [{ id: PRODUCT_ID, name: 'Fotel', selling_price: 141.45, stock: 10, margin: 15 }] }) // products
+      .mockResolvedValueOnce({ rows: [{ id: ORDER_ID, store_id: STORE_ID, total: 141.45, ref_seller_id: SELLER_ID }] }) // insert order
+      .mockResolvedValueOnce({ rows: [{ id: 'item-1', order_id: ORDER_ID, product_id: PRODUCT_ID, name: 'Fotel', quantity: 1, unit_price: 141.45, line_total: 141.45, margin: 15 }] }) // insert items
+      .mockResolvedValueOnce({ rows: [] }); // stock update
+
+    const res = await request(app)
+      .post('/api/orders')
+      .set('Authorization', `Bearer ${sellerToken}`)
+      .send({
+        store_id: STORE_ID,
+        items: [{ product_id: PRODUCT_ID, quantity: 1 }],
+        shipping_address: 'ul. Testowa 1, Warszawa',
+        ref_seller_id: SELLER_ID,
+      });
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty('ref_seller_id', SELLER_ID);
   });
 });

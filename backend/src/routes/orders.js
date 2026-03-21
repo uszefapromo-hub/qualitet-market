@@ -75,10 +75,11 @@ router.post(
     body('items.*.product_id').isUUID(),
     body('items.*.quantity').isInt({ min: 1 }),
     body('shipping_address').notEmpty(),
+    body('ref_seller_id').optional({ nullable: true }).isUUID(),
   ],
   validate,
   async (req, res) => {
-    const { store_id, items, shipping_address, notes = '' } = req.body;
+    const { store_id, items, shipping_address, notes = '', ref_seller_id = null } = req.body;
     // Sanitize user-supplied free-text to prevent stored XSS
     const safeAddress = sanitizeText(shipping_address);
     const safeNotes = sanitizeText(notes);
@@ -162,11 +163,12 @@ router.post(
           `INSERT INTO orders
              (id, store_id, store_owner_id, buyer_id, status, subtotal, platform_fee,
               order_total, platform_commission, seller_revenue, total,
-              shipping_address, notes, created_at)
-           VALUES ($1,$2,$3,$4,'created',$5,$6,$7,$8,$9,$10,$11,$12,NOW())
+              shipping_address, notes, ref_seller_id, created_at)
+           VALUES ($1,$2,$3,$4,'created',$5,$6,$7,$8,$9,$10,$11,$12,$13,NOW())
            RETURNING *`,
           [orderId, store_id, store.owner_id, req.user.id, subtotal.toFixed(2), platformFee,
-           orderTotal, platform_commission, seller_revenue, orderTotal, safeAddress, safeNotes]
+           orderTotal, platform_commission, seller_revenue, orderTotal, safeAddress, safeNotes,
+           ref_seller_id]
         );
 
         // Batch INSERT all order_items in a single query
