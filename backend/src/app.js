@@ -41,6 +41,7 @@ const feedRouter = require('./routes/feed');
 const errorHandler = require('./middleware/errorHandler');
 const { importSupplierProducts } = require('./services/supplier-import');
 const { startAutoRefresh: startProductImporter } = require('./products/importer');
+const { startEngine: startImportEngine }         = require('./products/import-engine');
 const { getPromoSlots } = require('./helpers/promo');
 const { sendImportNotification } = require('./helpers/mailer');
 const db = require('./config/database');
@@ -450,6 +451,13 @@ if (process.env.NODE_ENV !== 'test') {
 // Disabled in test environment to avoid interference with mocked DB queries.
 if (process.env.NODE_ENV !== 'test') {
   startProductImporter();
+}
+
+// ─── Multi-wholesaler import engine – every 5 minutes ─────────────────────────
+// Fetches from all registered connectors, scores products, and upserts to the
+// central catalogue.  Disabled in test environment.
+if (process.env.NODE_ENV !== 'test') {
+  startImportEngine();
 }
 
 // ─── Start server ──────────────────────────────────────────────────────────────

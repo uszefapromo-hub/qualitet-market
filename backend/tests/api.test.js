@@ -11811,3 +11811,303 @@ describe('Product Importer – MOCK_PRODUCTS sanity check', () => {
     expect(limited.length).toBeLessThanOrEqual(MAX_RESULTS);
   });
 });
+
+// ─── Import Engine: normalizer unit tests ─────────────────────────────────────
+describe('Import Engine – normalizer.normalizeProduct()', () => {
+  const { normalizeProduct, MIN_PRICE } = require('../src/products/normalizer');
+
+  const valid = {
+    source: 'wholesaler-a',
+    external_id: 'wa-001',
+    name: 'Test Product',
+    cost_price: 100,
+    image: 'https://cdn.example.com/img.jpg',
+    category: 'elektronika',
+    stock: 10,
+    created_at: '2024-01-01T00:00:00Z',
+    rating: 4.5,
+    sales: 50,
+    shipping_time: 2,
+    currency: 'PLN',
+  };
+
+  it('accepts a fully valid product', () => {
+    const result = normalizeProduct(valid);
+    expect(result).not.toBeNull();
+    expect(result.name).toBe('Test Product');
+    expect(result.cost_price).toBe(100);
+    expect(result.stock).toBe(10);
+  });
+
+  it('rejects product with missing source', () => {
+    expect(normalizeProduct({ ...valid, source: '' })).toBeNull();
+  });
+
+  it('rejects product with missing external_id', () => {
+    expect(normalizeProduct({ ...valid, external_id: '' })).toBeNull();
+  });
+
+  it('rejects product with missing name', () => {
+    expect(normalizeProduct({ ...valid, name: '' })).toBeNull();
+  });
+
+  it('rejects product with missing image', () => {
+    expect(normalizeProduct({ ...valid, image: '' })).toBeNull();
+  });
+
+  it('rejects product with price <= MIN_PRICE', () => {
+    expect(normalizeProduct({ ...valid, cost_price: MIN_PRICE })).toBeNull();
+    expect(normalizeProduct({ ...valid, cost_price: MIN_PRICE - 1 })).toBeNull();
+  });
+
+  it('accepts product with price just above MIN_PRICE', () => {
+    const result = normalizeProduct({ ...valid, cost_price: MIN_PRICE + 0.01 });
+    expect(result).not.toBeNull();
+  });
+
+  it('rejects product with zero stock', () => {
+    expect(normalizeProduct({ ...valid, stock: 0 })).toBeNull();
+  });
+
+  it('rejects product with negative stock', () => {
+    expect(normalizeProduct({ ...valid, stock: -5 })).toBeNull();
+  });
+
+  it('normalizes optional fields to null when absent', () => {
+    const { rating, sales, shipping_time, category, ...rest } = valid;
+    const result = normalizeProduct(rest);
+    expect(result).not.toBeNull();
+    expect(result.rating).toBeNull();
+    expect(result.sales).toBeNull();
+    expect(result.shipping_time).toBeNull();
+    expect(result.category).toBeNull();
+  });
+
+  it('defaults currency to PLN when absent', () => {
+    const { currency, ...rest } = valid;
+    const result = normalizeProduct(rest);
+    expect(result).not.toBeNull();
+    expect(result.currency).toBe('PLN');
+  });
+});
+
+describe('Import Engine – normalizer.normalizeProducts() deduplication', () => {
+  const { normalizeProducts } = require('../src/products/normalizer');
+
+  it('deduplicates by source:external_id (first occurrence wins)', () => {
+    const raw = [
+      { source: 'wa', external_id: 'x1', name: 'First',  cost_price: 100, image: 'http://a.com/1.jpg', stock: 5 },
+      { source: 'wa', external_id: 'x1', name: 'Second', cost_price: 200, image: 'http://a.com/2.jpg', stock: 5 },
+    ];
+    const result = normalizeProducts(raw);
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe('First');
+  });
+
+  it('keeps products from different sources with same external_id', () => {
+    const raw = [
+      { source: 'wa', external_id: 'x1', name: 'Product A', cost_price: 100, image: 'http://a.com/1.jpg', stock: 5 },
+      { source: 'wb', external_id: 'x1', name: 'Product B', cost_price: 100, image: 'http://a.com/2.jpg', stock: 5 },
+    ];
+    const result = normalizeProducts(raw);
+    expect(result).toHaveLength(2);
+  });
+
+  it('drops invalid products and keeps valid ones', () => {
+    const raw = [
+      { source: 'wa', external_id: 'ok',  name: 'Good', cost_price: 100, image: 'http://a.com/1.jpg', stock: 5 },
+      { source: 'wa', external_id: 'bad', name: '',     cost_price: 100, image: 'http://a.com/2.jpg', stock: 5 },
+    ];
+    const result = normalizeProducts(raw);
+    expect(result).toHaveLength(1);
+    expect(result[0].external_id).toBe('ok');
+  });
+});
+
+// ─── Import Engine: scoring unit tests ───────────────────────────────────────
+describe('Import Engine – scoring.computeScore()', () => {
+  const { computeScore, MIN_MARGIN } = require('../src/products/scoring');
+
+  const base = {
+    cost_price: 200,
+    created_at: new Date().toISOString(),
+    stock: 20,
+    rating: 4.5,
+    sales: 50,
+    shipping_time: 2,
+  };
+
+  it('returns a numeric score', () => {
+    const { score } = computeScore(base);
+    expect(typeof score).toBe('number');
+  });
+
+  it('returns positive score for a good product', () => {
+    const { score } = computeScore(base);
+    expect(score).toBeGreaterThan(0);
+  });
+
+  it('score decreases when shipping_time is very high', () => {
+    const fast = computeScore({ ...base, shipping_time: 0 });
+    const slow = computeScore({ ...base, shipping_time: 20 });
+    expect(fast.score).toBeGreaterThan(slow.score);
+  });
+
+  it('score increases with larger stock', () => {
+    const low  = computeScore({ ...base, stock: 2 });
+    const high = computeScore({ ...base, stock: 100 });
+    expect(high.score).toBeGreaterThan(low.score);
+  });
+
+  it('returns margin_value, sell_price, and margin_percent', () => {
+    const result = computeScore(base);
+    expect(result).toHaveProperty('margin_value');
+    expect(result).toHaveProperty('sell_price');
+    expect(result).toHaveProperty('margin_percent');
+    expect(result.margin_value).toBeGreaterThanOrEqual(MIN_MARGIN);
+  });
+
+  it('margin_value is at least MIN_MARGIN for above-floor cost_price', () => {
+    // MIN_MARGIN = 30: cost_price=21 → max(21*0.3, 30) = 30
+    const { margin_value } = computeScore({ ...base, cost_price: 21 });
+    expect(margin_value).toBeGreaterThanOrEqual(MIN_MARGIN);
+  });
+});
+
+describe('Import Engine – scoring.scoreAndSort()', () => {
+  const { scoreAndSort, MIN_MARGIN } = require('../src/products/scoring');
+
+  const makeProduct = (override = {}) => ({
+    source: 'wa',
+    external_id: 'x1',
+    name: 'Test',
+    cost_price: 200,
+    image: 'http://img.test/a.jpg',
+    stock: 10,
+    created_at: new Date().toISOString(),
+    ...override,
+  });
+
+  it('returns an array', () => {
+    expect(Array.isArray(scoreAndSort([makeProduct()]))).toBe(true);
+  });
+
+  it('sorts by score descending', () => {
+    const p1 = makeProduct({ external_id: 'p1', cost_price: 500, stock: 100 });
+    const p2 = makeProduct({ external_id: 'p2', cost_price: 30,  stock: 1   });
+    const result = scoreAndSort([p2, p1]);
+    expect(result[0].external_id).toBe('p1');
+  });
+
+  it('filters out products whose margin is below MIN_MARGIN', () => {
+    // cost_price just above MIN_PRICE (21 PLN) → margin = max(21*0.3, 30) = 30 → passes
+    const borderline = makeProduct({ cost_price: 21 });
+    const result = scoreAndSort([borderline]);
+    expect(result).toHaveLength(1);
+  });
+
+  it('enriches products with score, sell_price, margin_value fields', () => {
+    const result = scoreAndSort([makeProduct()]);
+    expect(result[0]).toHaveProperty('score');
+    expect(result[0]).toHaveProperty('sell_price');
+    expect(result[0]).toHaveProperty('margin_value');
+    expect(result[0]).toHaveProperty('margin_percent');
+  });
+});
+
+// ─── Import Engine: connector sanity checks ───────────────────────────────────
+describe('Import Engine – wholesaler connectors sanity', () => {
+  const wholesalerA = require('../src/integrations/wholesalers/wholesaler-a');
+  const wholesalerB = require('../src/integrations/wholesalers/wholesaler-b');
+
+  it('wholesaler-a fetchProducts() resolves to an array', async () => {
+    const items = await wholesalerA.fetchProducts();
+    expect(Array.isArray(items)).toBe(true);
+    expect(items.length).toBeGreaterThan(0);
+  });
+
+  it('wholesaler-a products all have source = "wholesaler-a"', async () => {
+    const items = await wholesalerA.fetchProducts();
+    expect(items.every((p) => p.source === 'wholesaler-a')).toBe(true);
+  });
+
+  it('wholesaler-b fetchProducts() resolves to an array', async () => {
+    const items = await wholesalerB.fetchProducts();
+    expect(Array.isArray(items)).toBe(true);
+    expect(items.length).toBeGreaterThan(0);
+  });
+
+  it('wholesaler-b products all have source = "wholesaler-b"', async () => {
+    const items = await wholesalerB.fetchProducts();
+    expect(items.every((p) => p.source === 'wholesaler-b')).toBe(true);
+  });
+
+  it('connectors registry exports exactly 2 connectors', () => {
+    const connectors = require('../src/integrations/wholesalers/index');
+    expect(connectors).toHaveLength(2);
+  });
+});
+
+// ─── Import Engine: end-to-end pipeline (no DB) ───────────────────────────────
+describe('Import Engine – runImportCycle() pipeline (no DB)', () => {
+  const { normalizeProducts } = require('../src/products/normalizer');
+  const { scoreAndSort }      = require('../src/products/scoring');
+  const wholesalerA           = require('../src/integrations/wholesalers/wholesaler-a');
+  const wholesalerB           = require('../src/integrations/wholesalers/wholesaler-b');
+
+  it('normalized + scored pipeline yields products from both sources', async () => {
+    const [itemsA, itemsB] = await Promise.all([
+      wholesalerA.fetchProducts(),
+      wholesalerB.fetchProducts(),
+    ]);
+    const normalized = normalizeProducts([...itemsA, ...itemsB]);
+    const scored     = scoreAndSort(normalized);
+
+    expect(scored.length).toBeGreaterThan(0);
+    const sources = new Set(scored.map((p) => p.source));
+    expect(sources.has('wholesaler-a')).toBe(true);
+    expect(sources.has('wholesaler-b')).toBe(true);
+  });
+
+  it('all pipeline products have required fields for DB upsert', async () => {
+    const [itemsA, itemsB] = await Promise.all([
+      wholesalerA.fetchProducts(),
+      wholesalerB.fetchProducts(),
+    ]);
+    const scored = scoreAndSort(normalizeProducts([...itemsA, ...itemsB]));
+
+    for (const p of scored) {
+      expect(p).toHaveProperty('source');
+      expect(p).toHaveProperty('external_id');
+      expect(p).toHaveProperty('name');
+      expect(p).toHaveProperty('cost_price');
+      expect(p).toHaveProperty('sell_price');
+      expect(p).toHaveProperty('margin_value');
+      expect(p).toHaveProperty('margin_percent');
+      expect(p).toHaveProperty('score');
+      expect(p).toHaveProperty('image');
+      expect(p).toHaveProperty('stock');
+      expect(p.stock).toBeGreaterThan(0);
+    }
+  });
+
+  it('pipeline rejects invalid products (no image, no name, zero stock, price <= 20)', async () => {
+    const rawInvalid = [
+      // no image
+      { source: 'wa', external_id: 'bad-1', name: 'X', cost_price: 100, image: '',   stock: 5  },
+      // no name
+      { source: 'wa', external_id: 'bad-2', name: '',  cost_price: 100, image: 'http://x.com/a.jpg', stock: 5 },
+      // price <= 20
+      { source: 'wa', external_id: 'bad-3', name: 'Y', cost_price: 10,  image: 'http://x.com/b.jpg', stock: 5 },
+      // zero stock
+      { source: 'wa', external_id: 'bad-4', name: 'Z', cost_price: 100, image: 'http://x.com/c.jpg', stock: 0 },
+    ];
+    const normalized = normalizeProducts(rawInvalid);
+    expect(normalized).toHaveLength(0);
+  });
+
+  it('CYCLE_INTERVAL_MS is 5 minutes', () => {
+    const { CYCLE_INTERVAL_MS } = require('../src/products/import-engine');
+    expect(CYCLE_INTERVAL_MS).toBe(5 * 60 * 1000);
+  });
+});
