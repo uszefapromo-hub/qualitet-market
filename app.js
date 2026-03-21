@@ -1,7 +1,8 @@
 (() => {
-  const API_URL = 'https://dummyjson.com/products';
-  const CART_KEY = 'qm_prod_cart';
-  const ORDERS_KEY = 'qm_prod_orders';
+  const API_URL = 'https://dummyjson.com/products?limit=0';
+  const CART_KEY = 'qm_publish_today_cart';
+  const ORDERS_KEY = 'qm_publish_today_orders';
+  const PAGE_SIZE = 24;
 
   const FALLBACK_PRODUCTS = [
     {id:101,title:'Smartfon Pro Max',description:'Bestseller do sklepu z dobrą marżą.',price:2999,compareAt:3499,category:'smartfony',brand:'Qualitet',stock:18,image:'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=900&q=80'},
@@ -17,6 +18,7 @@
   const state = {
     products: [],
     filtered: [],
+    visibleCount: PAGE_SIZE,
     cart: safeJson(localStorage.getItem(CART_KEY), [])
   };
 
@@ -29,8 +31,8 @@
     statusBox: document.getElementById('statusBox'),
     sourceLabel: document.getElementById('sourceLabel'),
     statProducts: document.getElementById('statProducts'),
+    statCategories: document.getElementById('statCategories'),
     statCartCount: document.getElementById('statCartCount'),
-    statCartTotal: document.getElementById('statCartTotal'),
     statMode: document.getElementById('statMode'),
     cartItems: document.getElementById('cartItems'),
     sumItems: document.getElementById('sumItems'),
@@ -41,20 +43,17 @@
     customerEmail: document.getElementById('customerEmail'),
     customerAddress: document.getElementById('customerAddress'),
     checkoutStatus: document.getElementById('checkoutStatus'),
-    reloadProductsBtn: document.getElementById('reloadProductsBtn'),
+    refreshBtn: document.getElementById('refreshBtn'),
     resetFiltersBtn: document.getElementById('resetFiltersBtn'),
     clearCartBtn: document.getElementById('clearCartBtn'),
     checkoutBtn: document.getElementById('checkoutBtn'),
     scrollCartBtn: document.getElementById('scrollCartBtn'),
-    cartPanel: document.getElementById('cartPanel')
+    cartPanel: document.getElementById('cartPanel'),
+    loadMoreBtn: document.getElementById('loadMoreBtn')
   };
 
   function safeJson(value, fallback){
-    try {
-      return value ? JSON.parse(value) : fallback;
-    } catch {
-      return fallback;
-    }
+    try { return value ? JSON.parse(value) : fallback; } catch { return fallback; }
   }
 
   function currency(value){
@@ -67,11 +66,7 @@
 
   function escapeHtml(value = ''){
     return String(value).replace(/[&<>"']/g, (m) => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#39;'
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
     }[m]));
   }
 
@@ -92,12 +87,7 @@
   function normalizeProduct(p, i = 0){
     const rawPrice = Number(p.price || 0);
     const price = rawPrice > 100 ? rawPrice : Math.round(rawPrice * 4.2 * 100) / 100;
-    const compareAt = Number(
-      p.compareAt ||
-      p.compare_at ||
-      Math.round(price * 1.18 * 100) / 100
-    );
-
+    const compareAt = Number(p.compareAt || p.compare_at || Math.round(price * 1.18 * 100) / 100);
     return {
       id: p.id || ('p-' + i),
       title: p.title || p.name || ('Produkt ' + (i + 1)),
@@ -112,48 +102,43 @@
   }
 
   async function loadProducts(){
-    if (els.productsGrid) {
-      els.productsGrid.innerHTML = '<div class="empty">Ładowanie produktów...</div>';
-    }
-    if (els.productsInfo) {
-      els.productsInfo.textContent = 'Ładowanie...';
-    }
+    if (els.productsGrid) els.productsGrid.innerHTML = '<div class="empty">Ładowanie produktów...</div>';
+    if (els.productsInfo) els.productsInfo.textContent = 'Ładowanie...';
 
     try {
       const response = await withTimeout(fetch(API_URL, {
         method: 'GET',
         mode: 'cors',
         cache: 'no-store'
-      }), 3000);
+      }), 3500);
 
-      if (!response.ok) {
-        throw new Error('HTTP ' + response.status);
-      }
-
+      if (!response.ok) throw new Error('HTTP ' + response.status);
       const data = await response.json();
       const rows = Array.isArray(data.products) ? data.products.map(normalizeProduct) : [];
-      if (!rows.length) {
-        throw new Error('Brak produktów');
-      }
+      if (!rows.length) throw new Error('Brak produktów');
 
-      state.products = rows.slice(0, 24);
-      if (els.statMode) els.statMode.textContent = 'LIVE';
+      state.products = rows;
       if (els.sourceLabel) els.sourceLabel.textContent = 'publiczne API';
-      setStatus('Produkty pobrane z API.');
+      if (els.statMode) els.statMode.textContent = 'LIVE';
+      setStatus('Produkty pobrane z feedu.');
     } catch (error) {
       state.products = FALLBACK_PRODUCTS.map(normalizeProduct);
+      if (els.sourceLabel) els.sourceLabel.textContent = 'lokalny katalog awaryjny';
       if (els.statMode) els.statMode.textContent = 'FALLBACK';
-      if (els.sourceLabel) els.sourceLabel.textContent = 'lokalne produkty awaryjne';
-      setStatus('API nie odpowiedziało. Wczytano lokalne produkty.', 'err');
+      setStatus('Feed nie odpowiedział. Wczytano katalog awaryjny.', 'err');
     }
 
+    state.visibleCount = PAGE_SIZE;
     state.filtered = [...state.products];
     hydrateCategories();
     applyFilters();
+    updateStats();
+  }
 
-    if (els.statProducts) {
-      els.statProducts.textContent = String(state.products.length);
-    }
+  function updateStats(){
+    if (els.statProducts) els.statProducts.textContent = String(state.products.length);
+    const categories = new Set(state.products.map((p) => p.category));
+    if (els.statCategories) els.statCategories.textContent = String(categories.size);
   }
 
   function hydrateCategories(){
@@ -179,22 +164,26 @@
     if (sort === 'featured') rows.sort((a, b) => (b.compareAt - b.price) - (a.compareAt - a.price));
 
     state.filtered = rows;
+    state.visibleCount = PAGE_SIZE;
     renderProducts();
   }
 
   function renderProducts(){
-    if (els.productsInfo) {
-      els.productsInfo.textContent = `Pokazuję ${state.filtered.length} z ${state.products.length} produktów`;
-    }
-
     if (!els.productsGrid) return;
 
-    if (!state.filtered.length) {
+    const visible = state.filtered.slice(0, state.visibleCount);
+
+    if (els.productsInfo) {
+      els.productsInfo.textContent = `Pokazuję ${visible.length} z ${state.filtered.length} produktów`;
+    }
+
+    if (!visible.length) {
       els.productsGrid.innerHTML = '<div class="empty">Brak produktów dla wybranych filtrów.</div>';
+      if (els.loadMoreBtn) els.loadMoreBtn.style.display = 'none';
       return;
     }
 
-    els.productsGrid.innerHTML = state.filtered.map((p) => `
+    els.productsGrid.innerHTML = visible.map((p) => `
       <article class="product-card">
         <div class="product-media">
           <img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.title)}" loading="lazy">
@@ -206,7 +195,7 @@
             <span class="chip">Stan: ${Math.max(0, p.stock)}</span>
           </div>
           <div class="product-title">${escapeHtml(p.title)}</div>
-          <div class="product-desc">${escapeHtml((p.description || '').slice(0, 90))}</div>
+          <div class="product-desc">${escapeHtml((p.description || '').slice(0, 100))}</div>
           <div>
             <span class="product-price">${currency(p.price)}</span>
             ${p.compareAt > p.price ? `<span class="product-old">${currency(p.compareAt)}</span>` : ''}
@@ -222,6 +211,10 @@
     els.productsGrid.querySelectorAll('[data-add-id]').forEach((btn) => {
       btn.addEventListener('click', () => addToCart(btn.getAttribute('data-add-id')));
     });
+
+    if (els.loadMoreBtn) {
+      els.loadMoreBtn.style.display = state.visibleCount < state.filtered.length ? 'inline-flex' : 'none';
+    }
   }
 
   function saveCart(){
@@ -237,11 +230,8 @@
     const qty = Math.max(1, Number(qtyInput?.value || 1));
     const existing = state.cart.find((item) => String(item.id) === String(product.id));
 
-    if (existing) {
-      existing.qty += qty;
-    } else {
-      state.cart.push({ ...product, qty });
-    }
+    if (existing) existing.qty += qty;
+    else state.cart.push({ ...product, qty });
 
     saveCart();
     setStatus(`Dodano do koszyka: ${product.title}`);
@@ -271,14 +261,7 @@
           <div>
             <span class="cart-item-title">${escapeHtml(item.title)}</span>
             <div class="cart-price">${currency(item.price)} / szt.</div>
-            <input
-              class="field"
-              style="width:74px;padding:8px 10px;margin-top:6px"
-              type="number"
-              min="1"
-              value="${item.qty}"
-              data-qty-id="${String(item.id)}"
-            >
+            <input class="field" style="width:74px;padding:8px 10px;margin-top:6px" type="number" min="1" value="${item.qty}" data-qty-id="${String(item.id)}">
           </div>
           <div style="text-align:right">
             <strong>${currency(item.price * item.qty)}</strong>
@@ -290,7 +273,6 @@
       els.cartItems.querySelectorAll('[data-remove-id]').forEach((btn) => {
         btn.addEventListener('click', () => removeFromCart(btn.getAttribute('data-remove-id')));
       });
-
       els.cartItems.querySelectorAll('[data-qty-id]').forEach((input) => {
         input.addEventListener('change', () => changeQty(input.getAttribute('data-qty-id'), input.value));
       });
@@ -306,13 +288,10 @@
     if (els.sumShipping) els.sumShipping.textContent = currency(shipping);
     if (els.sumTotal) els.sumTotal.textContent = currency(total);
     if (els.statCartCount) els.statCartCount.textContent = String(count);
-    if (els.statCartTotal) els.statCartTotal.textContent = currency(total);
   }
 
   function checkout(){
-    if (!state.cart.length) {
-      return setStatus('Koszyk jest pusty.', 'err', els.checkoutStatus);
-    }
+    if (!state.cart.length) return setStatus('Koszyk jest pusty.', 'err', els.checkoutStatus);
 
     const name = (els.customerName?.value || '').trim();
     const email = (els.customerEmail?.value || '').trim();
@@ -359,15 +338,17 @@
   els.searchInput?.addEventListener('input', applyFilters);
   els.categorySelect?.addEventListener('change', applyFilters);
   els.sortSelect?.addEventListener('change', applyFilters);
-  els.reloadProductsBtn?.addEventListener('click', loadProducts);
+  els.refreshBtn?.addEventListener('click', loadProducts);
   els.resetFiltersBtn?.addEventListener('click', resetFilters);
   els.clearCartBtn?.addEventListener('click', () => {
     state.cart = [];
     saveCart();
   });
   els.checkoutBtn?.addEventListener('click', checkout);
-  els.scrollCartBtn?.addEventListener('click', () => {
-    els.cartPanel?.scrollIntoView({ behavior: 'smooth' });
+  els.scrollCartBtn?.addEventListener('click', () => els.cartPanel?.scrollIntoView({ behavior: 'smooth' }));
+  els.loadMoreBtn?.addEventListener('click', () => {
+    state.visibleCount += PAGE_SIZE;
+    renderProducts();
   });
 
   renderCart();
