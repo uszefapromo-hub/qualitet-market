@@ -2,401 +2,257 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Odkryj produkty na QualitetMarket – przewijaj, znajdź zyski, dodaj do sklepu jednym klikiem.">
-  <title>Odkryj Produkty – QualitetMarket</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="Przewijaj produkty i kupuj jednym kliknięciem – QualitetMarket.">
+  <title>Feed Produktów – QualitetMarket</title>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="assets/logo.png" type="image/png">
   <style>
-    /* ── Reset & base ─────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    :root {
-      --brand:        #6c63ff;
-      --brand-dark:   #5548e0;
-      --accent:       #ff6b6b;
-      --success:      #22c55e;
-      --warning:      #f59e0b;
-      --bg:           #0f0f13;
-      --surface:      #1a1a24;
-      --surface2:     #24243a;
-      --text:         #f1f1f5;
-      --text-muted:   #9898b8;
-      --border:       #2e2e4a;
-      --radius:       14px;
-      --card-max:     480px;
-      --transition:   0.2s ease;
-    }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: #000;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      min-height: 100vh;
-      overflow-x: hidden;
+      color: #fff;
     }
 
     a { color: inherit; text-decoration: none; }
     button { cursor: pointer; font-family: inherit; }
-    img { display: block; max-width: 100%; }
 
-    /* ── Top bar ──────────────────────────────────────────────────── */
+    /* ── Floating top bar ─────────────────────────────────────────── */
     .topbar {
-      position: sticky;
+      position: fixed;
       top: 0;
+      left: 0;
+      right: 0;
       z-index: 100;
-      background: rgba(15, 15, 19, 0.92);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
-      padding: 0 16px;
-    }
-
-    .topbar-inner {
+      padding: 12px 16px;
+      padding-top: calc(12px + env(safe-area-inset-top, 0px));
+      background: linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      max-width: var(--card-max);
-      margin: 0 auto;
-      height: 52px;
+      pointer-events: none;
     }
+
+    .topbar a { pointer-events: all; }
 
     .topbar-logo {
       font-weight: 700;
-      font-size: 1.1rem;
-      background: linear-gradient(135deg, var(--brand) 0%, #a78bfa 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+      font-size: 1.05rem;
+      color: #fff;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.6);
     }
 
-    .topbar-nav a {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      margin-left: 14px;
-      transition: color var(--transition);
-    }
-    .topbar-nav a:hover { color: var(--text); }
-
-    /* ── Section tabs ─────────────────────────────────────────────── */
-    .tabs-wrapper {
-      position: sticky;
-      top: 52px;
-      z-index: 90;
-      background: rgba(15, 15, 19, 0.88);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      border-bottom: 1px solid var(--border);
-    }
-
-    #feed-tabs {
+    .topbar-cart {
       display: flex;
-      gap: 4px;
-      overflow-x: auto;
-      scrollbar-width: none;
-      padding: 8px 12px;
-      max-width: var(--card-max);
-      margin: 0 auto;
-    }
-    #feed-tabs::-webkit-scrollbar { display: none; }
-
-    .feed-tab {
-      flex-shrink: 0;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.18);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.25);
       padding: 6px 14px;
-      border: 1.5px solid var(--border);
       border-radius: 20px;
-      background: transparent;
-      color: var(--text-muted);
-      font-size: 0.82rem;
-      font-weight: 500;
-      transition: all var(--transition);
-      white-space: nowrap;
-    }
-    .feed-tab:hover { border-color: var(--brand); color: var(--text); }
-    .feed-tab.active {
-      background: var(--brand);
-      border-color: var(--brand);
-      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 600;
     }
 
-    /* ── Feed layout ──────────────────────────────────────────────── */
-    #feed-container {
+    /* ── Snap scroll feed ─────────────────────────────────────────── */
+    #feed {
+      height: 100vh;
+      height: 100dvh;
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+      overscroll-behavior-y: none;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── Single product slide ─────────────────────────────────────── */
+    .product {
+      height: 100vh;
+      height: 100dvh;
+      scroll-snap-align: start;
+      position: relative;
       display: flex;
       flex-direction: column;
+      justify-content: flex-end;
+      overflow: hidden;
+    }
+
+    .product-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    .product-placeholder {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      display: flex;
       align-items: center;
-      gap: 24px;
-      padding: 20px 16px 40px;
-      max-width: var(--card-max);
+      justify-content: center;
+      font-size: 6rem;
+    }
+
+    /* dark gradient so text is always readable */
+    .product-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.08) 0%,
+        rgba(0,0,0,0.08) 35%,
+        rgba(0,0,0,0.65) 65%,
+        rgba(0,0,0,0.92) 100%
+      );
+    }
+
+    /* ── Product info panel ───────────────────────────────────────── */
+    .product-content {
+      position: relative;
+      z-index: 2;
+      padding: 20px 20px calc(28px + env(safe-area-inset-bottom, 0px));
+      max-width: 480px;
+      width: 100%;
       margin: 0 auto;
     }
 
-    .feed-empty {
+    .product-name {
+      font-size: 1.35rem;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+
+    .product-price {
+      font-size: 1.9rem;
+      font-weight: 800;
+      margin-bottom: 18px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+
+    /* ── Buy now button ───────────────────────────────────────────── */
+    .btn-buy {
+      display: block;
+      width: 100%;
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #6c63ff 0%, #a78bfa 100%);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 1.1rem;
+      font-weight: 700;
       text-align: center;
-      color: var(--text-muted);
-      padding: 60px 20px;
-      font-size: 1rem;
+      box-shadow: 0 4px 20px rgba(108,99,255,0.45);
+      transition: transform 0.12s, opacity 0.12s;
+      -webkit-tap-highlight-color: transparent;
     }
 
-    /* ── Product card ─────────────────────────────────────────────── */
-    .feed-card {
-      width: 100%;
-      background: var(--surface);
-      border-radius: var(--radius);
-      overflow: hidden;
-      border: 1px solid var(--border);
-      transition: transform var(--transition), box-shadow var(--transition);
-      animation: fadeInUp 0.35s ease both;
+    .btn-buy:active {
+      transform: scale(0.97);
+      opacity: 0.88;
     }
 
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .feed-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 12px 40px rgba(108, 99, 255, 0.18);
-    }
-
-    /* Card media */
-    .feed-card-media { position: relative; }
-
-    .feed-card-img {
-      width: 100%;
-      aspect-ratio: 4 / 3;
-      object-fit: cover;
-      background: var(--surface2);
-    }
-
-    .feed-card-img-placeholder {
-      width: 100%;
-      aspect-ratio: 4 / 3;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 4rem;
-      background: var(--surface2);
-    }
-
-    .feed-card-badges {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 5px;
-    }
-
-    /* Badges */
-    .feed-badge {
-      padding: 3px 9px;
-      border-radius: 10px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-
-    .badge-new        { background: var(--success);  color: #fff; }
-    .badge-featured   { background: var(--brand);    color: #fff; }
-    .badge-bestseller { background: var(--warning);  color: #111; }
-    .badge-margin     { background: #10b981;          color: #fff; }
-
-    /* Card body */
-    .feed-card-body { padding: 14px 16px 16px; }
-
-    .feed-card-name {
-      font-size: 1.05rem;
-      font-weight: 700;
-      margin-bottom: 6px;
-      line-height: 1.35;
-    }
-
-    .feed-supplier {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      margin-bottom: 10px;
-    }
-
-    .feed-card-pricing {
-      background: var(--surface2);
-      border-radius: 10px;
-      padding: 10px 12px;
-      margin-bottom: 14px;
+    /* ── Loading screen ───────────────────────────────────────────── */
+    #feed-loading {
+      height: 100vh;
+      height: 100dvh;
       display: flex;
       flex-direction: column;
-      gap: 5px;
-    }
-
-    .feed-platform-price {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-    }
-
-    .feed-platform-price strong {
-      color: var(--text);
-      font-size: 1rem;
-    }
-
-    .feed-reseller-price {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-    }
-
-    .feed-profit {
-      font-size: 0.9rem;
-      color: #34d399;
-    }
-
-    .feed-profit strong {
-      font-size: 1.05rem;
-    }
-
-    /* Action buttons */
-    .feed-card-actions {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-    }
-
-    .feed-btn {
-      padding: 10px 16px;
-      border-radius: 10px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      border: none;
-      transition: all var(--transition);
-      display: flex;
       align-items: center;
       justify-content: center;
-      gap: 5px;
-    }
-
-    .feed-btn-add {
-      background: var(--brand);
-      color: #fff;
-    }
-    .feed-btn-add:hover:not(:disabled) { background: var(--brand-dark); }
-    .feed-btn-add:disabled { opacity: 0.65; cursor: not-allowed; }
-    .feed-btn-add.added {
-      background: var(--success);
-    }
-
-    .feed-btn-view {
-      background: var(--surface2);
-      color: var(--text);
-      border: 1px solid var(--border);
-      white-space: nowrap;
-    }
-    .feed-btn-view:hover { border-color: var(--brand); color: var(--brand); }
-
-    /* ── Loader ────────────────────────────────────────────────────── */
-    #feed-loader {
-      display: none;
-      justify-content: center;
-      align-items: center;
-      gap: 10px;
-      padding: 24px;
-      color: var(--text-muted);
+      gap: 16px;
+      color: rgba(255,255,255,0.6);
+      background: #0f0f13;
+      scroll-snap-align: start;
     }
 
     .spinner {
-      width: 22px;
-      height: 22px;
-      border: 3px solid var(--border);
-      border-top-color: var(--brand);
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(255,255,255,0.12);
+      border-top-color: #6c63ff;
       border-radius: 50%;
-      animation: spin 0.7s linear infinite;
+      animation: spin 0.75s linear infinite;
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── End / error messages ──────────────────────────────────────── */
-    #feed-end {
-      display: none;
+    /* ── Error / empty state ──────────────────────────────────────── */
+    .feed-state {
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
       text-align: center;
-      padding: 20px;
-      color: var(--text-muted);
-      font-size: 0.9rem;
+      padding: 32px;
+      background: #0f0f13;
+      scroll-snap-align: start;
     }
 
-    #feed-error {
-      display: none;
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--accent);
+    .feed-state p { color: rgba(255,255,255,0.55); font-size: 1rem; line-height: 1.6; }
+
+    .feed-state a {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 12px 28px;
+      background: #6c63ff;
       color: #fff;
-      padding: 12px 20px;
-      border-radius: 10px;
-      font-size: 0.9rem;
+      border-radius: 12px;
       font-weight: 600;
-      z-index: 999;
-      max-width: 320px;
-      text-align: center;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      font-size: 0.95rem;
     }
 
-    /* ── Mobile tweaks ─────────────────────────────────────────────── */
-    @media (max-width: 480px) {
-      .feed-card-actions {
-        grid-template-columns: 1fr;
+    /* ── Desktop: center-column layout ───────────────────────────── */
+    @media (min-width: 600px) {
+      #feed {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
       }
-    }
 
-    /* ── Desktop: wider layout ─────────────────────────────────────── */
-    @media (min-width: 768px) {
-      :root { --card-max: 520px; }
-
-      #feed-container {
-        gap: 28px;
+      .product {
+        width: 400px;
+        border-radius: 0;
       }
     }
   </style>
 </head>
 <body>
 
-  <!-- ── Top bar ──────────────────────────────────────────────────── -->
-  <header class="topbar">
-    <div class="topbar-inner">
-      <a href="index.html" class="topbar-logo">✨ QualitetMarket</a>
-      <nav class="topbar-nav">
-        <a href="panel-sklepu.html">Sklep</a>
-        <a href="qualitetmarket.html">Katalog</a>
-        <a href="dashboard.html">Dashboard</a>
-      </nav>
-    </div>
+  <!-- Floating top bar -->
+  <header class="topbar" aria-label="Nawigacja">
+    <a href="index.html" class="topbar-logo">✨ QualitetMarket</a>
+    <a href="koszyk.html" class="topbar-cart" aria-label="Przejdź do koszyka">
+      🛒 <span data-cart-badge>0</span>
+    </a>
   </header>
 
-  <!-- ── Section tabs ─────────────────────────────────────────────── -->
-  <div class="tabs-wrapper">
-    <div id="feed-tabs" role="tablist" aria-label="Sekcje feedu produktów"></div>
-  </div>
+  <!-- Snap-scroll feed -->
+  <div id="feed" role="feed" aria-label="Feed produktów">
 
-  <!-- ── Main feed ────────────────────────────────────────────────── -->
-  <main>
-    <div id="feed-container" role="feed" aria-label="Feed produktów"></div>
-
-    <div id="feed-loader" aria-live="polite" aria-label="Ładowanie produktów">
+    <!-- Loading placeholder (replaced after data loads) -->
+    <div id="feed-loading" aria-live="polite">
       <div class="spinner"></div>
-      <span>Ładowanie…</span>
+      <span>Ładowanie produktów…</span>
     </div>
 
-    <p id="feed-end">🎉 To już wszystko w tej sekcji!</p>
+  </div>
 
-    <!-- Intersection Observer sentinel for infinite scroll -->
-    <div id="feed-sentinel" aria-hidden="true" style="height:1px;"></div>
-  </main>
-
-  <!-- ── Error toast ───────────────────────────────────────────────── -->
-  <div id="feed-error" role="alert"></div>
-
-  <!-- ── Scripts ──────────────────────────────────────────────────── -->
   <script>window.QM_API_BASE = 'https://api.uszefaqualitet.pl/api';</script>
   <script src="js/api.js"></script>
+  <script src="js/cart.js"></script>
   <script src="js/feed.js"></script>
 </body>
 </html>
