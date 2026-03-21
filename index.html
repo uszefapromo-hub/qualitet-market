@@ -645,6 +645,33 @@
   <script>
     const API_URL = "https://qualitet-market-production.up.railway.app/api/products";
 
+    const FALLBACK_PRODUCTS = [
+      {
+        id: "demo-1",
+        name: "Słuchawki Bezprzewodowe BT Pro",
+        selling_price: 129.99,
+        category: "elektronika",
+        description: "Słuchawki bezprzewodowe z redukcją szumów ANC, 30h baterii.",
+        image_url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=80"
+      },
+      {
+        id: "demo-2",
+        name: "Kabel USB-C do USB-C 2m",
+        selling_price: 24.99,
+        category: "elektronika",
+        description: "Szybkie ładowanie 100W, transfer danych 10 Gbps.",
+        image_url: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80"
+      },
+      {
+        id: "demo-3",
+        name: "Podkładka pod mysz XL",
+        selling_price: 49.90,
+        category: "elektronika",
+        description: "Duża podkładka gamingowa 80×40 cm z obszyciem na krawędziach.",
+        image_url: "https://images.unsplash.com/photo-1527814050087-3793815479db?w=400&q=80"
+      }
+    ];
+
     let allProducts = [];
     let currentCategory = "all";
     let cart = JSON.parse(localStorage.getItem("qualitet_cart")) || [];
@@ -674,7 +701,7 @@
     }
 
     function getPrice(product) {
-      return product.price ?? product.cena ?? 0;
+      return product.selling_price ?? product.price_gross ?? product.price ?? product.cena ?? 0;
     }
 
     function getDescription(product) {
@@ -686,7 +713,7 @@
     }
 
     function getImage(product) {
-      return product.image || product.imageUrl || product.thumbnail || product.zdjecie || "";
+      return product.image_url || product.image || product.imageUrl || product.thumbnail || product.zdjecie || "";
     }
 
     function updateCartCount() {
@@ -869,20 +896,26 @@
         }
 
         const data = await response.json();
-        allProducts = normalizeProducts(data);
+        const loaded = normalizeProducts(data);
 
-        statusText.textContent = "Załadowano produktów: " + allProducts.length;
+        if (loaded.length > 0) {
+          allProducts = loaded;
+          statusText.textContent = "Załadowano produktów: " + allProducts.length;
+        } else {
+          allProducts = FALLBACK_PRODUCTS;
+          statusText.textContent = "Produkty demonstracyjne (" + allProducts.length + ")";
+        }
+
         renderProducts();
       } catch (error) {
-        allProducts = [];
+        allProducts = FALLBACK_PRODUCTS;
+        statusText.textContent = "Produkty demonstracyjne (" + allProducts.length + ")";
         renderProducts();
-        statusText.textContent = "Błąd ładowania";
 
         errorBox.style.display = "block";
         errorBox.innerHTML = `
-          <strong>Nie udało się pobrać produktów z API.</strong><br><br>
-          Szczegóły błędu:<br>
-          <strong>${escapeHtml(error.message)}</strong>
+          <strong>Nie udało się pobrać produktów z API.</strong> Wyświetlono produkty demonstracyjne.<br>
+          Szczegóły: <strong>${escapeHtml(error.message)}</strong>
         `;
 
         console.error("Błąd ładowania produktów:", error);
