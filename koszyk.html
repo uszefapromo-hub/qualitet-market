@@ -50,6 +50,7 @@
     .btn-checkout{width:100%;min-height:52px;border-radius:16px;border:0;cursor:pointer;font-weight:800;font-size:16px;background:linear-gradient(135deg,#0ea5e9,#16a34a);color:#fff;box-shadow:0 8px 28px rgba(14,165,233,.35);margin-top:6px;transition:transform .15s,box-shadow .15s}
     .btn-checkout:hover{transform:translateY(-2px);box-shadow:0 12px 36px rgba(14,165,233,.45)}
     .btn-checkout:disabled{opacity:.6;cursor:not-allowed;transform:none}
+    .btn-checkout+.btn-checkout{margin-top:10px}
 
     .order-success{text-align:center;padding:40px 20px}
     .order-success-icon{font-size:64px;margin-bottom:16px}
@@ -212,6 +213,7 @@
             </div>
             <button class="btn-checkout" type="submit" data-checkout-btn>Złóż zamówienie</button>
           </form>
+          <button class="btn-checkout" type="button" onclick="goToCheckout()">Przejdź dalej</button>
         </div>
       </div>
     </div>
@@ -265,6 +267,17 @@
   <script src="js/app.js" defer></script>
   <script src="js/cart.js" defer></script>
   <script>
+    function goToCheckout() {
+      var cart = JSON.parse(localStorage.getItem('qm_cart') || '[]');
+
+      if (!cart.length) {
+        alert('Koszyk jest pusty.');
+        return;
+      }
+
+      window.location.href = "https://buy.stripe.com/4gM00je5t7GTdbl89kak003";
+    }
+
     document.addEventListener('DOMContentLoaded', function(){
       var cart = window.QMCart;
       if(!cart){ return; }
