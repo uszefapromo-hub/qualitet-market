@@ -110,6 +110,64 @@
       font-size: 2rem;
       color: #d1d5db;
     }
+    .content-box {
+      margin-top: 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #faf5ff;
+      padding: 10px;
+    }
+    .content-box-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #7c3aed;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .content-box textarea {
+      width: 100%;
+      min-height: 90px;
+      border: 1px solid #ddd6fe;
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      resize: vertical;
+      background: #fff;
+      color: #1f2937;
+      box-sizing: border-box;
+    }
+    .content-box-btns {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .content-box-btns button {
+      padding: 6px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-copy-all {
+      background: #7c3aed;
+      color: #fff;
+    }
+    .btn-copy-all:hover { background: #6d28d9; }
+    .btn-copy-link {
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+    .btn-copy-link:hover { background: #c7d2fe; }
+    .btn-copy-desc {
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+    .btn-copy-desc:hover { background: #c7d2fe; }
   </style>
 </head>
 <body data-page="seller-dashboard" class="dashboard-page has-bottom-nav">
@@ -335,8 +393,96 @@
         return card;
       }
 
+      // ── Copy helper ───────────────────────────────────────────────────────────
+      function copyText(text, btn, label) {
+        var original = btn.textContent;
+        function onSuccess() {
+          btn.textContent = label || 'Skopiowano ✓';
+          setTimeout(function () { btn.textContent = original; }, 2000);
+        }
+        function onFail() {
+          btn.textContent = '⚠ Błąd kopiowania';
+          setTimeout(function () { btn.textContent = original; }, 2000);
+        }
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+          navigator.clipboard.writeText(text).then(onSuccess).catch(function () {
+            try { fallbackCopy(text); onSuccess(); } catch (e) { onFail(); }
+          });
+        } else {
+          try { fallbackCopy(text); onSuccess(); } catch (e) { onFail(); }
+        }
+      }
+
+      function fallbackCopy(text) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+
+      // ── Generate sales content ────────────────────────────────────────────────
+      function generateContent(product, productId, sellerId) {
+        var name = product.name || '(produkt)';
+        var link = '/product/' + encodeURIComponent(productId) + '?ref=' + encodeURIComponent(sellerId);
+        var title = '🔥 HIT: ' + name + ' – musisz to mieć!';
+        var desc = 'Ten produkt robi robotę 🔥\nSprawdź teraz zanim zniknie ⏳\n👉 ' + link;
+        var cta = 'Kup teraz 👇';
+        return { title: title, desc: desc, link: link, cta: cta };
+      }
+
+      // ── Build content box ─────────────────────────────────────────────────────
+      function buildContentBox(product, productId, sellerId) {
+        var c = generateContent(product, productId, sellerId);
+        var fullContent = c.title + '\n\n' + c.desc + '\n\n' + c.cta;
+
+        var box = document.createElement('div');
+        box.className = 'content-box';
+
+        var label = document.createElement('div');
+        label.className = 'content-box-label';
+        label.textContent = '📣 Content sprzedażowy';
+        box.appendChild(label);
+
+        var ta = document.createElement('textarea');
+        ta.readOnly = true;
+        ta.value = fullContent;
+        ta.setAttribute('aria-label', 'Gotowy content sprzedażowy');
+        box.appendChild(ta);
+
+        var btns = document.createElement('div');
+        btns.className = 'content-box-btns';
+
+        var btnAll = document.createElement('button');
+        btnAll.type = 'button';
+        btnAll.className = 'btn-copy-all';
+        btnAll.textContent = '📋 Kopiuj content';
+        btnAll.addEventListener('click', function () { copyText(fullContent, btnAll, 'Skopiowano ✓'); });
+        btns.appendChild(btnAll);
+
+        var btnLink = document.createElement('button');
+        btnLink.type = 'button';
+        btnLink.className = 'btn-copy-link';
+        btnLink.textContent = '🔗 Kopiuj tylko link';
+        btnLink.addEventListener('click', function () { copyText(c.link, btnLink, 'Link skopiowany ✓'); });
+        btns.appendChild(btnLink);
+
+        var btnDesc = document.createElement('button');
+        btnDesc.type = 'button';
+        btnDesc.className = 'btn-copy-desc';
+        btnDesc.textContent = '📝 Kopiuj tylko opis';
+        btnDesc.addEventListener('click', function () { copyText(c.desc, btnDesc, 'Opis skopiowany ✓'); });
+        btns.appendChild(btnDesc);
+
+        box.appendChild(btns);
+        return box;
+      }
+
       // ── Build "my products" card ──────────────────────────────────────────────
-      function buildMineCard(entry) {
+      function buildMineCard(entry, sellerId) {
         var product = entry._product || {};
         var card = document.createElement('div');
         card.className = 'seller-product-card';
@@ -363,6 +509,10 @@
         body.appendChild(statusBadge);
 
         card.appendChild(body);
+
+        // ── Content box ───────────────────────────────────────────────────────
+        card.appendChild(buildContentBox(product, entry.product_id, sellerId));
+
         return card;
       }
 
@@ -397,7 +547,7 @@
         }
         statusEl.hidden = true;
         list.forEach(function (entry) {
-          grid.appendChild(buildMineCard(entry));
+          grid.appendChild(buildMineCard(entry, sellerId));
         });
       }
 
