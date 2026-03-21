@@ -892,7 +892,7 @@
         const buyBtn = card.querySelector('.buy-btn');
         buyBtn.addEventListener('click', function () {
           if (window.QMCart) {
-            window.QMCart.addToCart({id: product.id, name: product.title, price: product.displayPrice, img: safeImage});
+            window.QMCart.addToCart({id: product.id, name: safeTitle, price: product.displayPrice, img: safeImage});
           }
           var origText = buyBtn.textContent;
           buyBtn.textContent = '✓ Dodano';
