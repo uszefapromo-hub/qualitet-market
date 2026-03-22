@@ -1,861 +1,195 @@
 <!doctype html>
 <html lang="pl">
 <head>
-  <title>Hurtownie | QualitetMarket</title>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#7c3aed">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
-  <link rel="icon" type="image/svg+xml" sizes="192x192" href="assets/icons/icon-192.svg">
-  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.svg">
-  <link rel="stylesheet" href="panel.css">
-  <style>
-    /* ── Supplier catalogue cards ── */
-    .suppliers-catalogue-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;margin-top:24px}
-    .supplier-catalogue-card{border:1px solid var(--stroke);border-radius:18px;padding:20px;background:var(--surface);display:flex;flex-direction:column;gap:14px;transition:box-shadow .2s,border-color .2s}
-    .supplier-catalogue-card:hover{box-shadow:0 6px 28px rgba(0,0,0,.18);border-color:var(--purple)}
-    .supplier-logo-wrap{display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:14px;background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(0,212,255,.12));font-size:28px}
-    .supplier-logo-emoji{line-height:1}
-    .supplier-info h3{font-size:18px;margin:0 0 6px}
-    .supplier-desc{color:var(--muted);font-size:13px;line-height:1.5;margin:0}
-    .supplier-categories{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-    .supplier-cat{font-size:11px;padding:2px 9px;border-radius:20px;background:rgba(124,58,237,.12);color:var(--purple-bright);border:1px solid rgba(124,58,237,.2)}
-    .supplier-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto}
-    .btn-sm{font-size:13px;padding:7px 14px}
-    .supplier-selector-card{cursor:pointer;padding:16px}
-    .supplier-selector-card.is-selected{border:2px solid var(--purple)}
-    [data-admin-only]{display:none}
-    body[data-role="admin"] [data-admin-only],
-    body[data-role="owner"] [data-admin-only]{display:inline-flex}
-  </style>
-  <script>window.QM_API_BASE = 'https://api.uszefaqualitet.pl/api';</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Import z hurtowni</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial,sans-serif;background:#0b0b13;color:#fff;padding:20px;padding-bottom:80px}
+  .wrap{max-width:980px;margin:0 auto}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+  .nav{display:flex;gap:10px;flex-wrap:wrap}
+  .nav a{color:#fff;text-decoration:none;padding:10px 14px;border:1px solid #333;border-radius:12px;background:#111}
+  .card{background:#111;border:1px solid #222;border-radius:16px;padding:20px;margin-bottom:16px}
+  h1{margin:0 0 16px}
+  h3{margin-top:0}
+  .row{display:grid;grid-template-columns:1fr auto;gap:10px}
+  input,select{padding:12px;border-radius:10px;border:1px solid #333;background:#000;color:#fff;width:100%}
+  button{padding:12px 16px;border:none;border-radius:10px;background:#7c3aed;color:#fff;cursor:pointer;font-weight:700}
+  button.secondary{background:#222;border:1px solid #333}
+  .products{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+  .product{background:#0d0d15;border:1px solid #222;border-radius:14px;padding:16px}
+  .muted{color:#aaa;font-size:14px}
+  .price{font-size:22px;font-weight:800;margin:8px 0}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .status{margin-top:10px;color:#9ca3af}
+  .bottom-nav{
+    position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-around;
+    background:#0b0b13;padding:10px;border-top:1px solid #222;z-index:999;
+  }
+  .bottom-nav a{color:#fff;text-decoration:none}
+  @media (max-width:700px){
+    .row{grid-template-columns:1fr}
+  }
+</style>
 </head>
-<body data-page="hurtownie" class="feature-page has-bottom-nav">
-  <div class="app-splash" data-app-splash>
-    <div class="app-splash-card">
-      <div class="app-splash-logo">
-        <img src="assets/icons/icon-192.svg" alt="QualitetMarket">
-      </div>
-      <div class="app-splash-title">
-        <strong>QualitetMarket</strong>
-        <span>Marketplace B2B/B2C</span>
-      </div>
-      <div class="app-splash-loader"></div>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div>
+      <h1>Hurtownie</h1>
+      <div class="muted">Import produktów z feedu XML / JSON do sklepu</div>
     </div>
+    <nav class="nav">
+      <a href="sklep.html">Sklep</a>
+      <a href="feed.html">Feed</a>
+      <a href="panel-sklepu.html">Panel</a>
+    </nav>
   </div>
-  <header class="topbar">
-    <div class="wrap topbar-inner">
-      <a class="brand" href="index.html">
-        <div>
-          <strong>QualitetMarket</strong>
-          <span>Marketplace B2B/B2C</span>
-          
-        </div>
-      </a>
-      <nav class="nav" aria-label="Główna nawigacja">
-        <a href="index.html">Start</a>
-        <a href="dashboard.html">Dashboard</a>
-        <a href="cennik.html">Cennik</a>
-      </nav>
-      <a class="btn btn-primary topbar-cta" href="dashboard.html">Panel</a>
-      <button class="menu-toggle" type="button" aria-label="Otwórz menu" data-menu-toggle>☰</button>
+
+  <div class="card">
+    <h3>1. URL feedu</h3>
+    <div class="row">
+      <input id="feedUrl" placeholder="https://hurtownia.pl/feed.xml">
+      <button onclick="loadFeed()">Pobierz produkty</button>
     </div>
-  </header>
+    <div class="toolbar">
+      <button class="secondary" onclick="loadDemo()">Wczytaj demo</button>
+      <select id="margin">
+        <option value="0">Bez marży</option>
+        <option value="10">Marża 10%</option>
+        <option value="20" selected>Marża 20%</option>
+        <option value="30">Marża 30%</option>
+        <option value="50">Marża 50%</option>
+      </select>
+    </div>
+    <div class="status" id="status">Wklej URL albo kliknij demo.</div>
+  </div>
 
-  <main>
-    <section class="page-hero">
-      <div class="wrap">
-        <span class="eyebrow">Hurtownie dropshipping</span>
-        <h1>Hurtownie</h1>
-        <p class="lead">Wybieraj hurtownie, importuj produkty i ustawiaj marże bez wychodzenia z panelu.</p>
-         <div class="cta-row">
-           <a class="btn btn-primary" href="sklep.html">Przejdź do QualitetMarket Hurt / Detal</a>
-           <a class="btn btn-secondary" href="dashboard.html">Panel zarządzania</a>
-         </div>
-      </div>
-    </section>
+  <div class="card">
+    <h3>2. Produkty</h3>
+    <div class="products" id="products"></div>
+  </div>
+</div>
 
-    <section class="wrap stats-grid">
-      <div class="stat-card">
-        <span>Hurtownie</span>
-        <strong data-counter data-counter-format="grouped" data-suppliers-count>0</strong>
-      </div>
-      <div class="stat-card">
-        <span>Produkty w katalogu</span>
-        <strong data-counter data-counter-format="grouped" data-products-count>0</strong>
-      </div>
-      <div class="stat-card">
-        <span>Średni koszt zakupu</span>
-        <strong data-counter data-counter-format="currency" data-average-cost>0</strong>
-      </div>
-      <div class="stat-card">
-        <span>Importy dziś</span>
-        <strong data-counter data-counter-format="grouped" data-imports-today>0</strong>
-      </div>
-    </section>
+<nav class="bottom-nav">
+  <a href="sklep.html">Sklep</a>
+  <a href="feed.html">Feed</a>
+  <a href="panel-sklepu.html">Panel</a>
+  <a href="hurtownie.html">Import</a>
+</nav>
 
-    <section class="app-cta-section">
-      <div class="wrap app-cta-box app-cta-grid">
-        <div class="app-cta-content">
-          <span class="app-cta-icon" aria-hidden="true">📲</span>
-          <span class="eyebrow">Hurtownie mobilnie</span>
-          <h2>Zarządzaj hurtowniami z aplikacji</h2>
-          <p class="hint">Dodaj platformę do ekranu głównego i importuj produkty bezpośrednio z telefonu.</p>
-           <div class="app-cta-actions">
-             <button class="btn btn-primary" type="button" data-app-install-open>Otwórz aplikację</button>
-             <a class="btn btn-secondary" href="sklep.html">Katalog QualitetMarket</a>
-           </div>
-          <div class="app-instructions">
-            <div>
-              <strong>iPhone</strong>
-              <ul>
-                <li>Udostępnij</li>
-                <li>Dodaj do ekranu głównego</li>
-              </ul>
-            </div>
-            <div>
-              <strong>Android</strong>
-              <ul>
-                <li>Menu przeglądarki</li>
-                <li>Zainstaluj aplikację</li>
-                <li>Dodaj do ekranu głównego</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-        <div class="app-cta-media">
-          <img src="https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=900&q=80" alt="Zespół zarządzający hurtowniami" loading="lazy" decoding="async">
-           <span class="app-cta-badge">QualitetMarket</span>
-        </div>
-      </div>
-    </section>
+<script>
+const API = 'https://api.uszefaqualitet.pl/api';
 
-    <section class="wrap section-grid">
-      <article class="feature-card gradient-a">
-        <h2>Agregacja dostawców</h2>
-        <p class="hint">Porównuj oferty hurtowe i dostępność w jednym miejscu.</p>
-      </article>
-      <article class="feature-card gradient-b">
-        <h2>Monitorowanie marż</h2>
-        <p class="hint">Ustawiaj marże i natychmiast sprawdzaj cenę końcową.</p>
-      </article>
-      <article class="feature-card gradient-c">
-        <h2>Synchronizacja katalogu</h2>
-        <p class="hint">Dodawaj produkty do sklepu jednym kliknięciem.</p>
-      </article>
-    </section>
+function getMarginMultiplier(){
+  const val = Number(document.getElementById('margin').value || 0);
+  return 1 + (val / 100);
+}
 
-    <section class="wrap">
-      <div class="section-head">
-        <span class="eyebrow">Hurtownie</span>
-        <h2>Lista hurtowni</h2>
-        <p class="hint">Wybierz hurtownię, aby zobaczyć dostępne produkty i ceny zakupu.</p>
-      </div>
-      <div class="app-cta-box app-cta-grid">
-        <div class="app-cta-content">
-          <span class="app-cta-icon" aria-hidden="true">📱</span>
-          <span class="eyebrow">Mobilny import</span>
-          <h3>Dodawaj dostawców z telefonu</h3>
-          <p class="hint">Przeglądaj hurtownie i importuj produkty mobilnie, bez czekania na komputer.</p>
-          <div class="app-cta-actions">
-            <button class="btn btn-primary" type="button" data-app-install-open>Dodaj do ekranu</button>
-            <a class="btn btn-secondary" href="dashboard.html">Panel zarządzania</a>
-          </div>
-        </div>
-        <div class="app-cta-media">
-          <img src="https://images.unsplash.com/photo-1556740749-887f6717d7e4?auto=format&fit=crop&w=900&q=80" alt="Mobilne zarządzanie hurtowniami" loading="lazy" decoding="async">
-          <span class="app-cta-badge">Import 24/7</span>
-        </div>
-      </div>
-      <div class="supplier-grid" data-suppliers-grid></div>
-      <p class="empty" data-suppliers-empty hidden>Brak dostępnych hurtowni. Dodaj nowe w panelu właściciela.</p>
-    </section>
+function setStatus(text){
+  document.getElementById('status').textContent = text;
+}
 
-    <!-- ══════════════ HURTOWNIE DROPSHIPPING ══════════════ -->
-    <section class="wrap" id="suppliers-catalogue" style="padding:40px 0">
-      <div class="section-head">
-        <span class="eyebrow">Katalog hurtowni</span>
-        <h2>Hurtownie / Dostawcy</h2>
-        <p class="hint">Wybierz hurtownię, kliknij „Otwórz hurtownię" aby przejść do katalogu lub „Import produktów" aby zaimportować asortyment do platformy (wymagane uprawnienia administratora).</p>
-      </div>
-      <div class="suppliers-catalogue-grid" id="suppliers-catalogue-grid">
+function normalizeProducts(list){
+  const m = getMarginMultiplier();
+  return list.map((p, idx) => {
+    const basePrice = Number(p.price || p.cena || 99);
+    return {
+      id: p.id || ('p' + idx),
+      name: p.name || p.title || p.nazwa || 'Produkt hurtownia',
+      price: Math.round(basePrice * m * 100) / 100,
+      stock: Number(p.stock || p.ilosc || 10),
+      description: p.description || p.opis || 'Produkt zaimportowany z hurtowni'
+    };
+  });
+}
 
-        <!-- BigBuy -->
-        <article class="supplier-catalogue-card" data-supplier-slug="bigbuy">
-          <div class="supplier-logo-wrap">
-            <span class="supplier-logo-emoji" aria-hidden="true">🏭</span>
-          </div>
-          <div class="supplier-info">
-            <h3>BigBuy</h3>
-            <p class="supplier-desc">Europejski lider dropshippingu z ponad 200 000 produktami. Automatyczna synchronizacja zapasów, API i integracje z marketplace.</p>
-            <div class="supplier-categories">
-              <span class="supplier-cat">Elektronika</span>
-              <span class="supplier-cat">Dom &amp; Ogród</span>
-              <span class="supplier-cat">Zabawki</span>
-              <span class="supplier-cat">Sport</span>
-              <span class="supplier-cat">Moda</span>
-            </div>
-          </div>
-          <div class="supplier-actions">
-            <a class="btn btn-primary btn-sm" href="https://www.bigbuy.eu" target="_blank" rel="noopener noreferrer">Otwórz hurtownię</a>
-            <button class="btn btn-secondary btn-sm" data-import-supplier="bigbuy" data-admin-only>Import produktów</button>
-          </div>
-        </article>
-
-        <!-- Syncee -->
-        <article class="supplier-catalogue-card" data-supplier-slug="syncee">
-          <div class="supplier-logo-wrap">
-            <span class="supplier-logo-emoji" aria-hidden="true">🔄</span>
-          </div>
-          <div class="supplier-info">
-            <h3>Syncee</h3>
-            <p class="supplier-desc">Platforma B2B łącząca sprzedawców z hurtownikami z całego świata. Import CSV/XML/API, automatyczna aktualizacja cen i stanów.</p>
-            <div class="supplier-categories">
-              <span class="supplier-cat">Odzież</span>
-              <span class="supplier-cat">Akcesoria</span>
-              <span class="supplier-cat">Kosmetyki</span>
-              <span class="supplier-cat">Dom</span>
-            </div>
-          </div>
-          <div class="supplier-actions">
-            <a class="btn btn-primary btn-sm" href="https://syncee.com" target="_blank" rel="noopener noreferrer">Otwórz hurtownię</a>
-            <button class="btn btn-secondary btn-sm" data-import-supplier="syncee" data-admin-only>Import produktów</button>
-          </div>
-        </article>
-
-        <!-- Spocket -->
-        <article class="supplier-catalogue-card" data-supplier-slug="spocket">
-          <div class="supplier-logo-wrap">
-            <span class="supplier-logo-emoji" aria-hidden="true">📦</span>
-          </div>
-          <div class="supplier-info">
-            <h3>Spocket</h3>
-            <p class="supplier-desc">Dropshipping z dostawcami z UE i USA. Szybka dostawa 2–7 dni. Markowe opakowania i produkty premium dla wymagających sklepów.</p>
-            <div class="supplier-categories">
-              <span class="supplier-cat">Moda</span>
-              <span class="supplier-cat">Biżuteria</span>
-              <span class="supplier-cat">Dom</span>
-              <span class="supplier-cat">Uroda</span>
-            </div>
-          </div>
-          <div class="supplier-actions">
-            <a class="btn btn-primary btn-sm" href="https://www.spocket.co" target="_blank" rel="noopener noreferrer">Otwórz hurtownię</a>
-            <button class="btn btn-secondary btn-sm" data-import-supplier="spocket" data-admin-only>Import produktów</button>
-          </div>
-        </article>
-
-        <!-- Dropcom -->
-        <article class="supplier-catalogue-card" data-supplier-slug="dropcom">
-          <div class="supplier-logo-wrap">
-            <span class="supplier-logo-emoji" aria-hidden="true">🚀</span>
-          </div>
-          <div class="supplier-info">
-            <h3>Dropcom</h3>
-            <p class="supplier-desc">Europejska hurtownia dropshipping z szerokim asortymentem. Integracja API, niskie ceny zakupu i szybka realizacja zamówień.</p>
-            <div class="supplier-categories">
-              <span class="supplier-cat">Elektronika</span>
-              <span class="supplier-cat">AGD</span>
-              <span class="supplier-cat">Sport</span>
-              <span class="supplier-cat">Zabawki</span>
-            </div>
-          </div>
-          <div class="supplier-actions">
-            <a class="btn btn-primary btn-sm" href="https://www.dropcom.eu" target="_blank" rel="noopener noreferrer">Otwórz hurtownię</a>
-            <button class="btn btn-secondary btn-sm" data-import-supplier="dropcom" data-admin-only>Import produktów</button>
-          </div>
-        </article>
-
-        <!-- EU-Trade -->
-        <article class="supplier-catalogue-card" data-supplier-slug="eu-trade">
-          <div class="supplier-logo-wrap">
-            <span class="supplier-logo-emoji" aria-hidden="true">🇪🇺</span>
-          </div>
-          <div class="supplier-info">
-            <h3>EU-Trade</h3>
-            <p class="supplier-desc">Hurtownia z certyfikowanymi produktami europejskimi. Duży wybór artykułów RTV/AGD, kosmetyków i artykułów przemysłowych.</p>
-            <div class="supplier-categories">
-              <span class="supplier-cat">RTV/AGD</span>
-              <span class="supplier-cat">Kosmetyki</span>
-              <span class="supplier-cat">Przemysłowe</span>
-              <span class="supplier-cat">Ogród</span>
-            </div>
-          </div>
-          <div class="supplier-actions">
-            <a class="btn btn-primary btn-sm" href="https://eu-trade.net" target="_blank" rel="noopener noreferrer">Otwórz hurtownię</a>
-            <button class="btn btn-secondary btn-sm" data-import-supplier="eu-trade" data-admin-only>Import produktów</button>
-          </div>
-        </article>
-
-        <!-- VidaXL -->
-        <article class="supplier-catalogue-card" data-supplier-slug="vidaxl">
-          <div class="supplier-logo-wrap">
-            <span class="supplier-logo-emoji" aria-hidden="true">🏠</span>
-          </div>
-          <div class="supplier-info">
-            <h3>VidaXL</h3>
-            <p class="supplier-desc">Holenderski gigant dropshippingowy z ponad 90 000 produktami. Specjalizacja: meble, ogród, sport. API dropshipping dostępne globalnie.</p>
-            <div class="supplier-categories">
-              <span class="supplier-cat">Meble</span>
-              <span class="supplier-cat">Ogród</span>
-              <span class="supplier-cat">Sport</span>
-              <span class="supplier-cat">Zwierzęta</span>
-              <span class="supplier-cat">Dom</span>
-            </div>
-          </div>
-          <div class="supplier-actions">
-            <a class="btn btn-primary btn-sm" href="https://www.vidaxl.pl" target="_blank" rel="noopener noreferrer">Otwórz hurtownię</a>
-            <button class="btn btn-secondary btn-sm" data-import-supplier="vidaxl" data-admin-only>Import produktów</button>
-          </div>
-        </article>
-
-      </div>
-      <p class="hint" style="margin-top:16px;text-align:center">
-        💡 Przycisk <strong>Import produktów</strong> jest dostępny tylko dla administratora i właściciela platformy.
-        Zaimportowane produkty trafiają do sklepu <strong>QualitetMarket Hurt/Detal</strong>.
-      </p>
-    </section>
-
-    <section class="wrap supplier-layout">
-      <article class="panel-card supplier-products">
-        <div class="section-head">
-          <span class="eyebrow">Wybrana hurtownia</span>
-          <h2 data-selected-supplier-name>Wybierz hurtownię</h2>
-          <p class="hint" data-selected-supplier-desc>Po lewej stronie wybierz hurtownię, aby zobaczyć produkty.</p>
-        </div>
-        <div class="filter-row">
-          <div class="filter-field">
-            <label for="product-search">Wyszukiwarka</label>
-            <input id="product-search" type="search" placeholder="Szukaj produktu" data-product-search>
-          </div>
-          <div class="filter-field">
-            <label for="product-category">Kategoria</label>
-            <select id="product-category" data-product-category>
-              <option value="all">Wszystkie</option>
-            </select>
-          </div>
-          <div class="filter-field">
-            <label for="bulk-margin">Marża importu (%)</label>
-            <input id="bulk-margin" type="number" min="0" max="300" step="1" value="15" data-bulk-margin>
-          </div>
-        </div>
-        <div class="cta-row">
-          <button class="btn btn-secondary" type="button" data-import-store data-admin-only>Importuj do sklepu</button>
-          <span class="hint" data-import-status>Wybierz produkty i dodaj je do sklepu.</span>
-        </div>
-        <div class="products-grid" data-products-grid></div>
-        <p class="empty" data-products-empty hidden>Brak produktów spełniających kryteria.</p>
-      </article>
-
-      <aside class="panel-card calculator-card" data-calculator>
-        <span class="eyebrow">Kalkulator marży</span>
-        <h2>Kontrola ceny końcowej</h2>
-        <p class="hint" data-calculator-desc>Wybierz produkt z listy, aby policzyć zysk.</p>
-        <div class="calculator-grid">
-          <div class="calculator-item">
-            <span>Koszt zakupu</span>
-            <strong data-calculator-cost>0 zł</strong>
-          </div>
-          <label class="calculator-item">
-            Marża (%)
-            <input type="number" min="0" max="300" step="1" value="15" data-calculator-margin>
-          </label>
-          <div class="calculator-item">
-            <span>Cena końcowa</span>
-            <strong data-calculator-final>0 zł</strong>
-          </div>
-          <div class="calculator-item">
-            <span>Zysk</span>
-            <strong data-calculator-profit>0 zł</strong>
-          </div>
-        </div>
-        <div class="cta-row">
-          <button class="btn btn-primary" type="button" data-calculator-add>Dodaj do mojego sklepu</button>
-        </div>
-      </aside>
-    </section>
-  </main>
-
-  <footer class="wrap panel-footer">
-    <div class="panel-footer-inner">
-      <span>© 2026 QualitetMarket — Wszelkie prawa zastrzeżone. Projekt i marka platformy stworzone przez Henryka Ślusarskiego</span>
-      <div class="panel-footer-links">
-        <a href="dashboard.html">Dashboard</a>
-        <a href="cennik.html">Cennik</a>
-        <a href="index.html">Strona główna</a>
+function render(list){
+  const el = document.getElementById('products');
+  if(!list.length){
+    el.innerHTML = '<div class="muted">Brak produktów.</div>';
+    return;
+  }
+  el.innerHTML = list.map(p => `
+    <div class="product">
+      <strong>${p.name}</strong>
+      <div class="muted">Stan: ${p.stock} szt.</div>
+      <div class="price">${p.price.toFixed(2)} zł</div>
+      <div class="muted">${p.description}</div>
+      <div class="toolbar">
+        <button onclick='addProduct(${JSON.stringify(p).replace(/'/g, "&apos;")})'>Dodaj do sklepu</button>
       </div>
     </div>
-  </footer>
+  `).join('');
+}
 
-  <nav class="bottom-nav" data-bottom-nav aria-label="Nawigacja dolna">
-    <a href="index.html" rel="nofollow noreferrer" data-nav="index">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M3 11.5L12 4l9 7.5"></path>
-        <path d="M5 10.5V20h14v-9.5"></path>
-      </svg>
-      <span>Start</span>
-    </a>
-    <a href="sklep.html" rel="nofollow noreferrer" data-nav="sklep">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M3 9h18l-1.5 11H4.5L3 9z"></path>
-        <path d="M7 9V7a5 5 0 0 1 10 0v2"></path>
-      </svg>
-      <span>Sklep</span>
-    </a>
-    <a href="hurtownie.html" rel="nofollow noreferrer" data-nav="hurtownie">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <rect x="3" y="7" width="7" height="10" rx="1.4"></rect>
-        <rect x="14" y="7" width="7" height="10" rx="1.4"></rect>
-        <path d="M6.5 7V5.5a1.5 1.5 0 0 1 3 0V7"></path>
-      </svg>
-      <span>Hurtownie</span>
-    </a>
-    <a href="dashboard.html" rel="nofollow noreferrer" data-nav="dashboard">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <rect x="3" y="3" width="7" height="7" rx="1.2"></rect>
-        <rect x="14" y="3" width="7" height="7" rx="1.2"></rect>
-        <rect x="14" y="14" width="7" height="7" rx="1.2"></rect>
-        <rect x="3" y="14" width="7" height="7" rx="1.2"></rect>
-      </svg>
-      <span>Panel</span>
-    </a>
-    <a href="login.html" rel="nofollow noreferrer" data-nav="login">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="8" r="4"></circle>
-        <path d="M4 20c2-3.5 6-5 8-5s6 1.5 8 5"></path>
-      </svg>
-      <span>Konto</span>
-    </a>
-  </nav>
+function parseXmlProducts(text){
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(text, 'text/xml');
+  const items = [...xml.querySelectorAll('item, product')].slice(0, 24);
+  return items.map((item, idx) => ({
+    id: idx + 1,
+    name: item.querySelector('title, name')?.textContent?.trim() || `Produkt ${idx+1}`,
+    price: Number((item.querySelector('price, cena')?.textContent || '99').replace(',', '.')),
+    stock: Number(item.querySelector('stock, ilosc')?.textContent || 10),
+    description: item.querySelector('description, opis')?.textContent?.trim() || 'Import z XML'
+  }));
+}
 
-  <script src="js/api.js" defer></script>
-  <script src="js/pwa-connect.js" defer></script>
-  <script src="js/flow.js" defer></script>
-  <script src="js/app.js" defer></script>
-  <script>
-  (function () {
-    'use strict';
+async function loadFeed(){
+  const url = document.getElementById('feedUrl').value.trim();
+  if(!url) return alert('Wklej URL feedu');
 
-    var API_BASE = window.QM_API_BASE || '/api';
-    var selectedSupplierId = null;
-    var currentProducts = [];
-    var filtersInitialized = false;
-    var DEFAULT_PRODUCT_COUNT = 18;
-    var MIN_IMPORTS_PER_DAY = 6;
-    var MAX_IMPORTS_PER_DAY = 48;
-    var STATIC_SUPPLIERS = [
-      {
-        id: 'bigbuy',
-        name: 'BigBuy',
-        slug: 'bigbuy',
-        integration_type: 'API',
-        url: 'https://www.bigbuy.eu',
-        notes: 'Europejski lider dropshippingu z automatyczną synchronizacją zapasów.',
-        categories: ['Elektronika', 'Dom & Ogród', 'Sport', 'Moda'],
-        products: [
-          { id: 'bb-1', name: 'Smartwatch BigFit S2', category: 'Elektronika', cost: 129.9 },
-          { id: 'bb-2', name: 'Zestaw garnków Inox 12 el.', category: 'Dom & Ogród', cost: 189.5 },
-          { id: 'bb-3', name: 'Rowerek balansowy Rider', category: 'Sport', cost: 95.0 }
-        ],
-      },
-      {
-        id: 'syncee',
-        name: 'Syncee',
-        slug: 'syncee',
-        integration_type: 'API',
-        url: 'https://syncee.com',
-        notes: 'Globalna platforma B2B z automatyczną aktualizacją cen i stanów.',
-        categories: ['Moda', 'Akcesoria', 'Kosmetyki', 'Dom'],
-        products: [
-          { id: 'sy-1', name: 'Torebka eco-leather', category: 'Akcesoria', cost: 79.0 },
-          { id: 'sy-2', name: 'Serum witamina C 30ml', category: 'Kosmetyki', cost: 39.9 },
-          { id: 'sy-3', name: 'Koc bawełniany 150x200', category: 'Dom', cost: 58.0 }
-        ],
-      },
-      {
-        id: 'spocket',
-        name: 'Spocket',
-        slug: 'spocket',
-        integration_type: 'API',
-        url: 'https://www.spocket.co',
-        notes: 'Dostawcy z UE i USA z dostawą 2–7 dni.',
-        categories: ['Moda', 'Biżuteria', 'Dom', 'Uroda'],
-        products: [
-          { id: 'sp-1', name: 'Naszyjnik minimalistyczny', category: 'Biżuteria', cost: 45.0 },
-          { id: 'sp-2', name: 'Zestaw świec sojowych', category: 'Dom', cost: 54.0 },
-          { id: 'sp-3', name: 'Kurtka softshell', category: 'Moda', cost: 210.0 }
-        ],
-      },
-      {
-        id: 'dropcom',
-        name: 'Dropcom',
-        slug: 'dropcom',
-        integration_type: 'API',
-        url: 'https://www.dropcom.eu',
-        notes: 'Integracja API, niskie ceny zakupu i szybka realizacja zamówień.',
-        categories: ['Elektronika', 'AGD', 'Sport', 'Zabawki'],
-        products: [
-          { id: 'dc-1', name: 'Blender kielichowy 1200W', category: 'AGD', cost: 159.0 },
-          { id: 'dc-2', name: 'Drukarka termiczna etykiet', category: 'Elektronika', cost: 239.0 },
-          { id: 'dc-3', name: 'Hulajnoga miejska', category: 'Sport', cost: 320.0 }
-        ],
-      },
-      {
-        id: 'eu-trade',
-        name: 'EU-Trade',
-        slug: 'eu-trade',
-        integration_type: 'API',
-        url: 'https://eu-trade.net',
-        notes: 'Certyfikowane produkty europejskie: RTV/AGD, kosmetyki i artykuły przemysłowe.',
-        categories: ['RTV/AGD', 'Kosmetyki', 'Przemysłowe', 'Ogród'],
-        products: [
-          { id: 'eu-1', name: 'Suszarka do włosów PRO', category: 'RTV/AGD', cost: 119.0 },
-          { id: 'eu-2', name: 'Zestaw kosmetyków SPA', category: 'Kosmetyki', cost: 68.0 },
-          { id: 'eu-3', name: 'Latarka czołowa LED', category: 'Przemysłowe', cost: 42.5 }
-        ],
-      },
-      {
-        id: 'vidaxl',
-        name: 'VidaXL',
-        slug: 'vidaxl',
-        integration_type: 'API',
-        url: 'https://www.vidaxl.pl',
-        notes: 'Ponad 90 000 produktów: meble, ogród, sport i dom.',
-        categories: ['Meble', 'Ogród', 'Sport', 'Dom'],
-        products: [
-          { id: 'vx-1', name: 'Stół ogrodowy drewniany', category: 'Ogród', cost: 420.0 },
-          { id: 'vx-2', name: 'Regał industrialny 5 półek', category: 'Dom', cost: 285.0 },
-          { id: 'vx-3', name: 'Zestaw hantli 2x10kg', category: 'Sport', cost: 155.0 }
-        ],
-      },
-    ];
+  setStatus('Pobieranie feedu...');
+  try{
+    const res = await fetch(url);
+    const text = await res.text();
 
-    function authHeaders() {
-      var token = localStorage.getItem('token') || '';
-      return token ? { 'Authorization': 'Bearer ' + token } : {};
+    let list = [];
+    if(url.toLowerCase().includes('.json') || text.trim().startsWith('{') || text.trim().startsWith('[')){
+      const json = JSON.parse(text);
+      const raw = Array.isArray(json) ? json : (json.items || json.products || []);
+      list = normalizeProducts(raw);
+    } else {
+      list = normalizeProducts(parseXmlProducts(text));
     }
 
-    function apiGet(path) {
-      return fetch(API_BASE + path, { headers: Object.assign({ 'Accept': 'application/json' }, authHeaders()) })
-        .then(function (r) { return r.json(); });
-    }
+    render(list);
+    setStatus(`Załadowano ${list.length} produktów.`);
+  }catch(e){
+    console.log(e);
+    setStatus('Feed nie odpowiedział. Wczytano demo.');
+    loadDemo();
+  }
+}
 
-    function normaliseSlug(value) {
-      return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    }
+function loadDemo(){
+  const demo = normalizeProducts([
+    {name:'Produkt hurtownia 1', price:59, stock:14, description:'Demo produkt z feedu'},
+    {name:'Produkt hurtownia 2', price:129, stock:8, description:'Demo produkt z feedu'},
+    {name:'Produkt hurtownia 3', price:249, stock:4, description:'Demo produkt z feedu'},
+    {name:'Produkt hurtownia 4', price:89, stock:20, description:'Demo produkt z feedu'}
+  ]);
+  render(demo);
+  setStatus(`Wczytano ${demo.length} produktów demo.`);
+}
 
-    function escHtml(s) {
-      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
-    function findStaticSupplier(key) {
-      var norm = normaliseSlug(key || '');
-      return STATIC_SUPPLIERS.find(function (s) {
-        return normaliseSlug(s.id) === norm || normaliseSlug(s.slug) === norm || normaliseSlug(s.name) === norm;
-      });
-    }
-
-    function setText(selector, value) {
-      var el = document.querySelector(selector);
-      if (el) el.textContent = value;
-    }
-
-    function setCountersFromList(list) {
-      var items = list && list.length ? list : STATIC_SUPPLIERS;
-      var suppliersCount = items.length;
-      var productsCount = items.reduce(function (acc, s) {
-        return acc + ((s.products && s.products.length) || 0);
-      }, 0);
-      var costs = [];
-      items.forEach(function (s) {
-        (s.products || []).forEach(function (p) { if (typeof p.cost === 'number') costs.push(p.cost); });
-      });
-      var avgCost = costs.length ? (costs.reduce(function (a, b) { return a + b; }, 0) / costs.length) : 0;
-      setText('[data-suppliers-count]', suppliersCount);
-      setText('[data-products-count]', productsCount || DEFAULT_PRODUCT_COUNT);
-      setText('[data-average-cost]', Math.round(avgCost));
-      setText('[data-imports-today]', Math.max(MIN_IMPORTS_PER_DAY, Math.min(MAX_IMPORTS_PER_DAY, Math.round(productsCount / 2))));
-    }
-
-    function computePriceWithMargin(cost, margin) {
-      var numericCost = typeof cost === 'number' ? cost : parseFloat(cost) || 0;
-      var numericMargin = isNaN(margin) ? 0 : margin;
-      return numericCost * (1 + numericMargin / 100);
-    }
-
-    function mergeWithFallback(apiSupplier, fallback) {
-      var slug = apiSupplier.slug || fallback.slug || normaliseSlug(apiSupplier.name || apiSupplier.id || '');
-      return {
-        id: apiSupplier.id || fallback.id || slug,
-        slug: slug,
-        name: apiSupplier.name || fallback.name || 'Hurtownia',
-        integration_type: apiSupplier.integration_type || fallback.integration_type || 'API',
-        notes: apiSupplier.notes || fallback.notes || '',
-        categories: apiSupplier.categories || fallback.categories || [],
-        products: fallback.products || [],
-        url: apiSupplier.url || fallback.url || '#',
-      };
-    }
-
-    function setProducts(products) {
-      currentProducts = products || [];
-      var categorySelect = document.querySelector('[data-product-category]');
-      if (categorySelect) {
-        var categories = Array.from(new Set(['all'].concat(currentProducts.map(function (p) { return p.category || 'Inne'; }))));
-        categorySelect.innerHTML = categories.map(function (c) {
-          var label = c === 'all' ? 'Wszystkie' : c;
-          return '<option value="' + escHtml(c) + '">' + escHtml(label) + '</option>';
-        }).join('');
-      }
-      applyProductFilters();
-    }
-
-    function applyProductFilters() {
-      var grid = document.querySelector('[data-products-grid]');
-      var empty = document.querySelector('[data-products-empty]');
-      var searchEl = document.querySelector('[data-product-search]');
-      var categoryEl = document.querySelector('[data-product-category]');
-      var marginEl = document.querySelector('[data-bulk-margin]');
-      if (!grid) return;
-
-      var term = (searchEl && searchEl.value || '').toLowerCase();
-      var category = categoryEl ? categoryEl.value : 'all';
-      var margin = marginEl ? parseFloat(marginEl.value) || 0 : 0;
-
-      var filtered = currentProducts.filter(function (p) {
-        var matchesTerm = !term || (p.name && p.name.toLowerCase().indexOf(term) !== -1);
-        var matchesCategory = category === 'all' || normaliseSlug(p.category) === normaliseSlug(category);
-        return matchesTerm && matchesCategory;
-      });
-
-      grid.innerHTML = filtered.map(function (p) {
-        var finalPrice = computePriceWithMargin(p.cost, margin);
-        return '<article class="panel-card product-card">'
-          + '<strong>' + escHtml(p.name) + '</strong>'
-          + '<p class="hint" style="margin:6px 0 10px">' + escHtml(p.category || 'Produkt') + '</p>'
-          + '<div class="cta-row" style="gap:8px;align-items:center">'
-          + '<span style="font-size:13px;color:var(--muted)">Koszt: ' + escHtml(p.cost.toFixed(2)) + ' zł</span>'
-          + '<span style="font-size:13px;color:var(--muted)">Cena z marżą: ' + escHtml(finalPrice.toFixed(2)) + ' zł</span>'
-          + '</div>'
-          + '</article>';
-      }).join('');
-
-      if (empty) empty.hidden = filtered.length > 0;
-    }
-
-    function initFilters() {
-      if (filtersInitialized) return;
-      var searchEl = document.querySelector('[data-product-search]');
-      var categoryEl = document.querySelector('[data-product-category]');
-      var marginEl = document.querySelector('[data-bulk-margin]');
-      [searchEl, categoryEl, marginEl].forEach(function (el) {
-        if (!el) return;
-        ['input', 'change'].forEach(function (evt) {
-          el.addEventListener(evt, applyProductFilters);
-        });
-      });
-      filtersInitialized = true;
-    }
-
-    function selectSupplier(supplier, allItems) {
-      selectedSupplierId = supplier.id;
-      var nameEl = document.querySelector('[data-selected-supplier-name]');
-      var descEl = document.querySelector('[data-selected-supplier-desc]');
-      if (nameEl) nameEl.textContent = supplier.name || 'Hurtownia';
-      if (descEl) descEl.textContent = supplier.notes || 'Wybierz produkty do importu poniżej.';
-
-      var grid = document.querySelector('[data-suppliers-grid]');
-      if (grid) {
-        grid.querySelectorAll('[data-supplier-card]').forEach(function (c) {
-          if (c.dataset.sid === selectedSupplierId) {
-            c.classList.add('is-selected');
-          } else {
-            c.classList.remove('is-selected');
-          }
-        });
-      }
-
-      var fallback = findStaticSupplier(supplier.slug || supplier.name || supplier.id);
-      setProducts((fallback && fallback.products) || supplier.products || []);
-      initFilters();
-      setCountersFromList(allItems || STATIC_SUPPLIERS);
-    }
-
-    function renderSupplierGrid(list) {
-      var grid = document.querySelector('[data-suppliers-grid]');
-      var empty = document.querySelector('[data-suppliers-empty]');
-      if (!grid) return;
-
-      if (!list.length) {
-        if (empty) empty.hidden = false;
-        return;
-      }
-
-      if (empty) empty.hidden = true;
-      grid.innerHTML = list.map(function (s) {
-        return '<div class="panel-card supplier-selector-card" data-supplier-card data-sid="' + escHtml(s.id) + '" data-supplier-slug="' + escHtml(s.slug || s.id) + '">'
-          + '<strong>' + escHtml(s.name) + '</strong>'
-          + '<p style="font-size:13px;color:var(--muted);margin:4px 0 0">' + escHtml(s.integration_type || 'API') + '</p>'
-          + '</div>';
-      }).join('');
-
-      grid.onclick = function (e) {
-        var card = e.target.closest('[data-supplier-card]');
-        if (!card) return;
-        var supplier = list.find(function (x) { return x.id === card.dataset.sid; }) || list[0];
-        if (supplier) selectSupplier(supplier, list);
-      };
-
-      selectSupplier(list[0], list);
-    }
-
-    function loadSuppliers() {
-      setCountersFromList(STATIC_SUPPLIERS);
-      renderSupplierGrid(STATIC_SUPPLIERS);
-      apiGet('/suppliers')
-        .then(function (data) {
-          var items = Array.isArray(data) ? data : (data.suppliers || []);
-          var mapped = items.map(function (s) {
-            var fallback = findStaticSupplier(s.id || s.name || s.slug) || { slug: normaliseSlug(s.name || s.id || '') };
-            return mergeWithFallback(s, fallback);
-          });
-          var finalList = mapped.length ? mapped : STATIC_SUPPLIERS;
-          renderSupplierGrid(finalList);
-        })
-        .catch(function () {
-          renderSupplierGrid(STATIC_SUPPLIERS);
-        });
-    }
-
-    function initImportBtn() {
-      var importBtn = document.querySelector('[data-import-store]');
-      var statusEl = document.querySelector('[data-import-status]');
-      if (!importBtn) return;
-
-      importBtn.addEventListener('click', function () {
-        if (!selectedSupplierId) {
-          if (statusEl) statusEl.textContent = '⚠️ Najpierw wybierz hurtownię po lewej stronie.';
-          return;
-        }
-        var marginInput = document.querySelector('[data-bulk-margin]');
-        var margin = marginInput ? parseFloat(marginInput.value) : 15;
-
-        importBtn.disabled = true;
-        if (statusEl) statusEl.textContent = '⏳ Synchronizuję produkty...';
-
-        fetch(API_BASE + '/suppliers/' + encodeURIComponent(selectedSupplierId) + '/sync', {
-          method: 'POST',
-          headers: Object.assign({ 'Content-Type': 'application/json', 'Accept': 'application/json' }, authHeaders()),
-          body: JSON.stringify({ margin: margin }),
-        })
-          .then(function (r) { return r.json(); })
-          .then(function (data) {
-            if (statusEl) statusEl.textContent = '✅ ' + (data.message || 'Zaimportowano produkty.');
-          })
-          .catch(function () {
-            if (statusEl) statusEl.textContent = '❌ Błąd importu. Upewnij się, że jesteś zalogowany jako sprzedawca.';
-          })
-          .finally(function () {
-            importBtn.disabled = false;
-          });
-      });
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-      loadSuppliers();
-      initImportBtn();
+async function addProduct(p){
+  try{
+    await fetch(API + '/seller/products',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(p)
     });
-  })();
-  </script>
-  <script>
-  // ── Role-based display and catalogue import buttons ────────────────────────
-  (function () {
-    'use strict';
+    alert('Dodano do sklepu');
+  }catch(e){
+    alert('API nie odpowiedziało. Produkt dodany lokalnie demo.');
+  }
+}
 
-    var API_BASE = window.QM_API_BASE || '/api';
-
-    function authHeaders() {
-      var token = localStorage.getItem('token') || '';
-      return token ? { 'Authorization': 'Bearer ' + token } : {};
-    }
-
-    function initRoleDisplay() {
-      var token = localStorage.getItem('token') || '';
-      if (!token) return;
-      try {
-        var payload = JSON.parse(atob(token.split('.')[1]));
-        var role = payload.role || payload.user_role || '';
-        if (role === 'admin' || role === 'owner') {
-          document.body.setAttribute('data-role', role);
-        }
-      } catch (e) { /* non-critical */ }
-    }
-
-    function initCatalogueImportBtns() {
-      document.querySelectorAll('[data-import-supplier]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          var slug = btn.getAttribute('data-import-supplier');
-          var label = btn.closest('.supplier-catalogue-card')
-            .querySelector('h3').textContent;
-
-          if (!confirm('Zaimportować produkty z ' + label + ' do QualitetMarket Hurt/Detal?\n\nOperacja może potrwać kilka minut.')) return;
-
-          btn.disabled = true;
-          var original = btn.textContent;
-          btn.textContent = '⏳ Importuję…';
-
-          // We call the /api/suppliers sync by slug name lookup first, then sync
-          fetch(API_BASE + '/suppliers', {
-            headers: Object.assign({ 'Accept': 'application/json' }, authHeaders()),
-          })
-            .then(function (r) { return r.json(); })
-            .then(function (data) {
-              var list = Array.isArray(data) ? data : (data.suppliers || []);
-              var supplier = list.find(function (s) {
-                return s.name.toLowerCase().replace(/[^a-z0-9]/g, '') === slug.replace(/[^a-z0-9]/g, '');
-              });
-              if (!supplier) {
-                alert('Hurtownia „' + label + '" nie jest jeszcze skonfigurowana w systemie.\nDodaj ją najpierw w panelu właściciela (Dostawcy → Dodaj hurtownię).');
-                btn.disabled = false;
-                btn.textContent = original;
-                return;
-              }
-              return fetch(API_BASE + '/suppliers/' + encodeURIComponent(supplier.id) + '/sync', {
-                method: 'POST',
-                headers: Object.assign({ 'Content-Type': 'application/json', 'Accept': 'application/json' }, authHeaders()),
-                body: JSON.stringify({}),
-              })
-                .then(function (r) { return r.json(); })
-                .then(function (result) {
-                  alert('✅ ' + (result.message || 'Zsynchronizowano produkty z ' + label + '.'));
-                  btn.textContent = original;
-                  btn.disabled = false;
-                })
-                .catch(function () {
-                  alert('❌ Błąd synchronizacji. Sprawdź konfigurację hurtowni w panelu właściciela.');
-                  btn.textContent = original;
-                  btn.disabled = false;
-                });
-            })
-            .catch(function () {
-              alert('❌ Nie można pobrać listy hurtowni. Sprawdź połączenie z API.');
-              btn.disabled = false;
-              btn.textContent = original;
-            });
-        });
-      });
-    }
-
-    window.initRoleDisplay = initRoleDisplay;
-    window.initCatalogueImportBtns = initCatalogueImportBtns;
-
-    document.addEventListener('DOMContentLoaded', function () {
-      initRoleDisplay();
-      initCatalogueImportBtns();
-    });
-  })();
-  </script>
+loadDemo();
+</script>
 </body>
 </html>
