@@ -6,97 +6,273 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body{
-      font-family: Inter, sans-serif;
+      font-family: Inter, Arial, sans-serif;
       background:#0b0b0f;
       color:#fff;
       margin:0;
       padding:20px;
     }
     .container{
-      max-width:800px;
+      max-width:900px;
       margin:0 auto;
     }
     h1{
       margin-bottom:20px;
     }
+    .topbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom:20px;
+      flex-wrap:wrap;
+    }
     .cart-item{
       display:flex;
       justify-content:space-between;
       align-items:center;
-      padding:12px;
+      gap:12px;
+      padding:14px;
       border:1px solid #222;
-      border-radius:10px;
+      border-radius:14px;
       margin-bottom:10px;
+      background:#11131a;
     }
-    .cart-item span{
+    .item-main{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .item-name{
+      font-size:16px;
+      font-weight:700;
+    }
+    .item-meta{
       font-size:14px;
+      color:#b8bfd6;
     }
-    button{
+    button,.btn{
       background:#7c3aed;
       color:#fff;
       border:none;
-      padding:8px 12px;
-      border-radius:8px;
+      padding:10px 14px;
+      border-radius:10px;
       cursor:pointer;
+      text-decoration:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
     }
     .danger{
       background:#ef4444;
     }
-    .total{
-      margin-top:20px;
-      font-size:18px;
+    .ghost{
+      background:#1f2433;
+    }
+    .qty-box{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .qty-label{
+      min-width:34px;
+      text-align:center;
       font-weight:700;
+    }
+    .summary{
+      margin-top:24px;
+      border:1px solid #222;
+      border-radius:16px;
+      padding:18px;
+      background:#11131a;
+    }
+    .summary-row{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:10px;
+      color:#dfe5ff;
+    }
+    .summary-row.total{
+      margin-top:14px;
+      padding-top:14px;
+      border-top:1px solid #2a3043;
+      font-size:22px;
+      font-weight:800;
+      color:#fff;
+    }
+    .checkout-box{
+      margin-top:24px;
+      border:1px solid #222;
+      border-radius:16px;
+      padding:18px;
+      background:#11131a;
+    }
+    .checkout-box h2{
+      margin-top:0;
+      margin-bottom:16px;
+    }
+    .field{
+      width:100%;
+      padding:14px 16px;
+      border-radius:14px;
+      border:1px solid #2b3248;
+      background:#131827;
+      color:#fff;
+      outline:none;
+      margin-bottom:12px;
+      box-sizing:border-box;
+    }
+    .field::placeholder{
+      color:#98a2c6;
     }
     .actions{
       margin-top:20px;
       display:flex;
       gap:10px;
+      flex-wrap:wrap;
+    }
+    .notice{
+      margin-top:12px;
+      color:#b8bfd6;
+      font-size:14px;
+    }
+    .success{
+      color:#86efac;
+      font-weight:700;
+      margin-top:12px;
+    }
+    .empty{
+      padding:18px;
+      border:1px dashed #2b3248;
+      border-radius:14px;
+      color:#b8bfd6;
+      background:#11131a;
+    }
+    @media (max-width:700px){
+      .cart-item{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .qty-box{
+        width:100%;
+      }
+      .qty-box button{
+        flex:1;
+      }
     }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>Twój koszyk</h1>
+  <div class="topbar">
+    <h1>Twój koszyk</h1>
+    <a class="btn ghost" href="sklep.html">← Wróć do sklepu</a>
+  </div>
 
   <div id="cart-items"></div>
 
-  <div class="total">
-    Razem: <span id="cart-total">0 zł</span>
+  <div class="summary">
+    <div class="summary-row"><span>Pozycje</span><strong id="cart-count">0</strong></div>
+    <div class="summary-row"><span>Suma produktów</span><strong id="cart-subtotal">0,00 zł</strong></div>
+    <div class="summary-row"><span>Dostawa</span><strong id="cart-shipping">0,00 zł</strong></div>
+    <div class="summary-row total"><span>Razem</span><strong id="cart-total">0,00 zł</strong></div>
   </div>
 
   <div class="actions">
     <button onclick="clearCart()" class="danger">Wyczyść</button>
-    <button onclick="goCheckout()">Przejdź do płatności</button>
+  </div>
+
+  <div class="checkout-box">
+    <h2>Dane klienta</h2>
+    <input id="name" class="field" placeholder="Imię i nazwisko">
+    <input id="email" class="field" placeholder="Email">
+    <input id="address" class="field" placeholder="Adres">
+    <div class="actions">
+      <button onclick="payDemo()">Zapłać demo</button>
+    </div>
+    <div class="notice">Płatność demo zapisuje zamówienie lokalnie i czyści koszyk.</div>
+    <div id="checkout-message"></div>
   </div>
 </div>
 
 <script>
-let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+const CART_KEYS = ["cart", "qm_cart"];
+let cart = loadCart();
+
+function loadCart(){
+  for (const key of CART_KEYS){
+    try{
+      const data = JSON.parse(localStorage.getItem(key) || "[]");
+      if(Array.isArray(data) && data.length) return normalizeCart(data);
+    }catch(e){}
+  }
+  return [];
+}
+
+function normalizeCart(items){
+  return items
+    .map((item, index) => ({
+      id: String(item.id ?? item.productId ?? index),
+      name: item.name || item.title || "Produkt",
+      price: Number(item.price ?? item.unitPrice ?? 0) || 0,
+      qty: Math.max(1, Number(item.qty ?? item.quantity ?? 1) || 1)
+    }))
+    .filter(item => item.name);
+}
+
+function save(){
+  localStorage.setItem("cart", JSON.stringify(cart));
+  localStorage.setItem("qm_cart", JSON.stringify(cart));
+  renderCart();
+}
+
+function money(value){
+  const num = Number(value) || 0;
+  return num.toFixed(2).replace(".", ",") + " zł";
+}
 
 function renderCart(){
   const container = document.getElementById("cart-items");
   const totalEl = document.getElementById("cart-total");
+  const subtotalEl = document.getElementById("cart-subtotal");
+  const shippingEl = document.getElementById("cart-shipping");
+  const countEl = document.getElementById("cart-count");
 
   container.innerHTML = "";
 
   if(cart.length === 0){
-    container.innerHTML = "<p>Koszyk jest pusty</p>";
-    totalEl.innerText = "0 zł";
+    container.innerHTML = "<div class='empty'>Koszyk jest pusty.</div>";
+    countEl.innerText = "0";
+    subtotalEl.innerText = "0,00 zł";
+    shippingEl.innerText = "0,00 zł";
+    totalEl.innerText = "0,00 zł";
     return;
   }
 
-  let total = 0;
+  let subtotal = 0;
+  let count = 0;
 
-  cart.forEach(item=>{
-    total += item.price * item.qty;
+  cart.forEach(item => {
+    const price = Number(item.price) || 0;
+    const qty = Math.max(1, Number(item.qty) || 1);
+    const lineTotal = price * qty;
+
+    subtotal += lineTotal;
+    count += qty;
 
     const div = document.createElement("div");
     div.className = "cart-item";
     div.innerHTML = `
-      <span>${item.name} (x${item.qty})</span>
-      <div>
-        <button onclick="decreaseQty('${item.id}')">-</button>
+      <div class="item-main">
+        <div class="item-name">${escapeHtml(item.name)}</div>
+        <div class="item-meta">Cena: ${money(price)} · Ilość: ${qty} · Razem: ${money(lineTotal)}</div>
+      </div>
+      <div class="qty-box">
+        <button class="ghost" onclick="decreaseQty('${item.id}')">-</button>
+        <span class="qty-label">${qty}</span>
         <button onclick="increaseQty('${item.id}')">+</button>
         <button onclick="removeItem('${item.id}')" class="danger">Usuń</button>
       </div>
@@ -104,23 +280,36 @@ function renderCart(){
     container.appendChild(div);
   });
 
-  totalEl.innerText = total.toFixed(2) + " zł";
+  const shipping = subtotal > 0 ? 15 : 0;
+  const total = subtotal + shipping;
+
+  countEl.innerText = String(count);
+  subtotalEl.innerText = money(subtotal);
+  shippingEl.innerText = money(shipping);
+  totalEl.innerText = money(total);
 }
 
 function increaseQty(id){
-  const item = cart.find(p=>p.id===id);
-  if(item) item.qty++;
+  const item = cart.find(p => p.id === id);
+  if(item) item.qty = (Number(item.qty) || 1) + 1;
   save();
 }
 
 function decreaseQty(id){
-  const item = cart.find(p=>p.id===id);
-  if(item && item.qty > 1) item.qty--;
+  const item = cart.find(p => p.id === id);
+  if(item){
+    const next = (Number(item.qty) || 1) - 1;
+    if(next <= 0){
+      cart = cart.filter(p => p.id !== id);
+    } else {
+      item.qty = next;
+    }
+  }
   save();
 }
 
 function removeItem(id){
-  cart = cart.filter(p=>p.id!==id);
+  cart = cart.filter(p => p.id !== id);
   save();
 }
 
@@ -129,13 +318,55 @@ function clearCart(){
   save();
 }
 
-function save(){
-  localStorage.setItem("cart", JSON.stringify(cart));
-  renderCart();
+function payDemo(){
+  const name = document.getElementById("name").value.trim();
+  const email = document.getElementById("email").value.trim();
+  const address = document.getElementById("address").value.trim();
+  const msg = document.getElementById("checkout-message");
+
+  if(cart.length === 0){
+    msg.innerHTML = '<div class="notice">Koszyk jest pusty.</div>';
+    return;
+  }
+
+  if(!name || !email || !address){
+    msg.innerHTML = '<div class="notice">Uzupełnij dane klienta.</div>';
+    return;
+  }
+
+  const subtotal = cart.reduce((sum, item) => sum + ((Number(item.price) || 0) * (Math.max(1, Number(item.qty) || 1))), 0);
+  const order = {
+    id: "QM-" + Date.now(),
+    customer: {name, email, address},
+    items: cart,
+    subtotal,
+    shipping: subtotal > 0 ? 15 : 0,
+    total: subtotal + (subtotal > 0 ? 15 : 0),
+    createdAt: new Date().toISOString(),
+    mode: "demo"
+  };
+
+  const orders = JSON.parse(localStorage.getItem("qm_orders") || "[]");
+  orders.push(order);
+  localStorage.setItem("qm_orders", JSON.stringify(orders));
+
+  cart = [];
+  save();
+
+  document.getElementById("name").value = "";
+  document.getElementById("email").value = "";
+  document.getElementById("address").value = "";
+
+  msg.innerHTML = '<div class="success">Zamówienie demo zapisane. Numer: ' + order.id + '</div>';
 }
 
-function goCheckout(){
-  window.location.href = "checkout.html";
+function escapeHtml(str){
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 renderCart();
